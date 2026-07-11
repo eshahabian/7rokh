@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/7rokhir/public_html/
+    - /bin/cp -R . $DEPLOYPATH
