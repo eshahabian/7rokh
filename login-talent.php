@@ -5,6 +5,8 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/layout.php';
 
+casting_nocache();
+
 $user = casting_current_user();
 if ($user && casting_get_user_role((int) $user->ID) === 'talent') {
     casting_redirect('dashboard-talent.php');

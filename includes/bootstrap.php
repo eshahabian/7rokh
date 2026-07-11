@@ -20,6 +20,30 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+if (!function_exists('str_starts_with')) {
+    function str_starts_with(string $haystack, string $needle): bool
+    {
+        return $needle === '' || strncmp($haystack, $needle, strlen($needle)) === 0;
+    }
+}
+
+function casting_strlen(string $value): int
+{
+    if (function_exists('mb_strlen')) {
+        return (int) mb_strlen($value, 'UTF-8');
+    }
+    return strlen($value);
+}
+
+function casting_nocache(): void
+{
+    if (function_exists('nocache_headers')) {
+        nocache_headers();
+    }
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+}
+
 function casting_brand(): string
 {
     return CASTING_BRAND;

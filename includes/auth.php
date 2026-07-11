@@ -10,7 +10,7 @@ function casting_register_user(string $name, string $email, string $password, st
     $email = sanitize_email($email);
     $role = sanitize_key($role);
 
-    if ($name === '' || mb_strlen($name) < 2) {
+    if ($name === '' || casting_strlen($name) < 2) {
         return ['ok' => false, 'error' => 'نام باید حداقل ۲ کاراکتر باشد.'];
     }
     if (!is_email($email)) {
@@ -37,24 +37,23 @@ function casting_register_user(string $name, string $email, string $password, st
         $i++;
     }
 
-    $user_id = wp_create_user($username, $password, $email);
-    if (is_wp_error($user_id)) {
-        return ['ok' => false, 'error' => $user_id->get_error_message()];
-    }
-
-    wp_update_user([
-        'ID'           => $user_id,
+    $user_id = wp_insert_user([
+        'user_login'   => $username,
+        'user_pass'    => $password,
+        'user_email'   => $email,
         'display_name' => $name,
         'nickname'     => $name,
         'first_name'   => $name,
+        'role'         => 'subscriber',
     ]);
+
+    if (is_wp_error($user_id)) {
+        return ['ok' => false, 'error' => 'ثبت‌نام ناموفق: ' . $user_id->get_error_message()];
+    }
 
     update_user_meta((int) $user_id, 'casting_role', $role);
     update_user_meta((int) $user_id, 'casting_registered_at', current_time('mysql'));
-
-    // نقش وردپرس ساده (subscriber) — نقش کستینگ در usermeta است
-    $wp_user = new WP_User((int) $user_id);
-    $wp_user->set_role('subscriber');
+    update_user_meta((int) $user_id, 'casting_visible', '1');
 
     return ['ok' => true, 'user_id' => (int) $user_id, 'role' => $role];
 }

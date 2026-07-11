@@ -77,8 +77,8 @@ a:hover {
 .site-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  justify-content: flex-start;
+  gap: 1.25rem 1.75rem;
   padding: 1.25rem clamp(1.25rem, 4vw, 3rem);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(10px);
@@ -100,7 +100,8 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem 1rem;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  margin-inline-end: auto;
 }
 
 .nav a {
@@ -659,7 +660,12 @@ a:hover {
 @media (max-width: 720px) {
   .site-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: flex-end;
+  }
+
+  .nav {
+    margin-inline-end: 0;
+    justify-content: flex-end;
   }
 
   .gates {

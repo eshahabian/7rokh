@@ -5,6 +5,8 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/layout.php';
 
+casting_nocache();
+
 if (casting_current_user()) {
     casting_redirect('index.php');
 }
@@ -15,8 +17,9 @@ $email = '';
 $role = 'talent';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_register')) {
-        $error = 'درخواست نامعتبر است. دوباره تلاش کنید.';
+    $nonce = (string) ($_POST['_wpnonce'] ?? '');
+    if ($nonce === '' || !wp_verify_nonce($nonce, 'casting_register')) {
+        $error = 'نشست منقضی شده یا صفحه از کش آمده است. صفحه را رفرش کنید و دوباره تلاش کنید.';
     } else {
         $name = (string) ($_POST['name'] ?? '');
         $email = (string) ($_POST['email'] ?? '');
@@ -27,15 +30,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($password !== $password2) {
             $error = 'تکرار رمز عبور مطابقت ندارد.';
         } else {
-            $result = casting_register_user($name, $email, $password, $role);
-            if (!$result['ok']) {
-                $error = $result['error'];
-            } else {
-                casting_set_flash('success', 'ثبت‌نام موفق بود. حالا وارد شوید.');
-                if ($result['role'] === 'talent') {
-                    casting_redirect('login-talent.php');
+            try {
+                $result = casting_register_user($name, $email, $password, $role);
+                if (!$result['ok']) {
+                    $error = $result['error'];
+                } else {
+                    casting_set_flash('success', 'ثبت‌نام موفق بود. حالا وارد شوید.');
+                    if ($result['role'] === 'talent') {
+                        casting_redirect('login-talent.php');
+                    }
+                    casting_redirect('login-employer.php');
                 }
-                casting_redirect('login-employer.php');
+            } catch (Throwable $e) {
+                $error = 'خطای سرور در ثبت‌نام. اگر ادامه داشت با پشتیبانی هاست چک کنید: ' . $e->getMessage();
             }
         }
     }
@@ -53,7 +60,7 @@ casting_render_flash();
     <h1>ثبت‌نام</h1>
     <p class="lede">نقش خود را انتخاب کنید؛ بعداً از درگاه مناسب وارد می‌شوید.</p>
 
-    <form class="form" method="post" action="" data-loading>
+    <form class="form" method="post" action="register.php" data-loading autocomplete="on">
       <?php wp_nonce_field('casting_register'); ?>
 
       <div class="field">
@@ -67,7 +74,7 @@ casting_render_flash();
       </div>
 
       <div class="field">
-        <label for="password">رمز عبور</label>
+        <label for="password">رمز عبور (حداقل ۸ کاراکتر)</label>
         <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password">
       </div>
 
