@@ -1,5 +1,0 @@
----
-deployment:
-  tasks:
-    - export DEPLOYPATH=/home/rokhir/public_html/casting-portal
-    - /bin/cp -R * $DEPLOYPATH
