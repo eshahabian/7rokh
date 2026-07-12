@@ -13,15 +13,15 @@ if ($user && casting_get_user_role((int) $user->ID) === 'talent') {
 }
 
 $error = '';
-$email = '';
+$login = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_login_talent')) {
         $error = 'درخواست نامعتبر است. دوباره تلاش کنید.';
     } else {
-        $email = (string) ($_POST['email'] ?? '');
+        $login = (string) ($_POST['login'] ?? '');
         $password = (string) ($_POST['password'] ?? '');
-        $result = casting_login($email, $password, 'talent');
+        $result = casting_login($login, $password, 'talent');
         if (!$result['ok']) {
             $error = $result['error'];
         } else {
@@ -49,8 +49,8 @@ casting_render_flash();
       <?php wp_nonce_field('casting_login_talent'); ?>
 
       <div class="field">
-        <label for="email">ایمیل</label>
-        <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($email) ?>">
+        <label for="login">نام کاربری یا ایمیل</label>
+        <input id="login" name="login" type="text" required autocomplete="username" value="<?= casting_e($login) ?>">
       </div>
 
       <div class="field">

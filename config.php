@@ -13,7 +13,7 @@
 define('CASTING_WP_LOAD', __DIR__ . '/../wp-load.php');
 
 /** نام نمایشی برند (قابل تغییر) */
-define('CASTING_BRAND', 'کستینگ');
+define('CASTING_BRAND', 'هفت رخ');
 
 /** نقش‌های مجاز */
 define('CASTING_ROLES', [
