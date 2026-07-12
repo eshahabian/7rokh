@@ -7,19 +7,26 @@ require_once __DIR__ . '/includes/layout.php';
 
 casting_nocache();
 
-if (casting_current_user()) {
-    casting_redirect('index.php');
-}
-
 $error = '';
 $name = '';
 $email = '';
 $role = 'talent';
 
+$current = casting_current_user();
+if ($current) {
+    $existing_role = casting_get_user_role((int) $current->ID);
+    if ($existing_role === 'talent') {
+        casting_redirect('dashboard-talent.php');
+    }
+    if (casting_is_employer_role($existing_role)) {
+        casting_redirect('dashboard-employer.php');
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nonce = (string) ($_POST['_wpnonce'] ?? '');
     if ($nonce === '' || !wp_verify_nonce($nonce, 'casting_register')) {
-        $error = 'نشست منقضی شده یا صفحه از کش آمده است. صفحه را رفرش کنید و دوباره تلاش کنید.';
+        $error = 'نشست منقضی شده. یک‌بار صفحه را رفرش کنید و دوباره فرم را بفرستید.';
     } else {
         $name = (string) ($_POST['name'] ?? '');
         $email = (string) ($_POST['email'] ?? '');
@@ -35,14 +42,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$result['ok']) {
                     $error = $result['error'];
                 } else {
-                    casting_set_flash('success', 'ثبت‌نام موفق بود. حالا وارد شوید.');
-                    if ($result['role'] === 'talent') {
-                        casting_redirect('login-talent.php');
+                    // ورود خودکار بعد از ثبت‌نام + پیام واضح در URL
+                    $portal = $result['role'] === 'talent' ? 'talent' : 'employer';
+                    $login = casting_login($email, $password, $portal);
+                    if ($login['ok']) {
+                        $dest = $result['role'] === 'talent'
+                            ? 'dashboard-talent.php?welcome=1'
+                            : 'dashboard-employer.php?welcome=1';
+                        casting_redirect($dest);
                     }
-                    casting_redirect('login-employer.php');
+
+                    // اگر ورود خودکار نشد، برو به صفحه ورود با پیام موفقیت
+                    $login_page = $result['role'] === 'talent' ? 'login-talent.php' : 'login-employer.php';
+                    casting_redirect($login_page . '?registered=1');
                 }
             } catch (Throwable $e) {
-                $error = 'خطای سرور در ثبت‌نام. اگر ادامه داشت با پشتیبانی هاست چک کنید: ' . $e->getMessage();
+                $error = 'خطای سرور در ثبت‌نام: ' . $e->getMessage();
             }
         }
     }
@@ -50,17 +65,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 casting_render_head('ثبت‌نام', 'page-register');
 casting_render_header('register');
+
+if ($current && casting_get_user_role((int) $current->ID) === '') {
+    echo '<div class="flash flash-error" role="alert">شما با یک حساب وردپرس وارد هستید که نقش کستینگ ندارد. اول از وردپرس خارج شوید، بعد اینجا ثبت‌نام کنید. <a href="' . casting_e(wp_logout_url(casting_url('register.php'))) . '">خروج</a></div>';
+}
+
 if ($error !== '') {
     echo '<div class="flash flash-error" role="alert">' . casting_e($error) . '</div>';
 }
-casting_render_flash();
 ?>
 <main class="wrap panel-page">
   <section class="panel">
     <h1>ثبت‌نام</h1>
-    <p class="lede">نقش خود را انتخاب کنید؛ بعداً از درگاه مناسب وارد می‌شوید.</p>
+    <p class="lede">نقش خود را انتخاب کنید. بعد از ثبت‌نام مستقیم وارد پنل می‌شوید.</p>
 
-    <form class="form" method="post" action="register.php" data-loading autocomplete="on">
+    <form class="form" method="post" action="register.php" autocomplete="on">
       <?php wp_nonce_field('casting_register'); ?>
 
       <div class="field">
@@ -88,14 +107,14 @@ casting_render_flash();
         <div class="role-grid">
           <?php foreach (CASTING_ROLES as $key => $label) : ?>
             <label class="role-option">
-              <input type="radio" name="role" value="<?= casting_e($key) ?>" <?= $role === $key ? 'checked' : '' ?> required>
+              <input type="radio" name="role" value="<?= casting_e($key) ?>" <?= $role === $key ? 'checked' : '' ?>>
               <span><?= casting_e($label) ?></span>
             </label>
           <?php endforeach; ?>
         </div>
       </fieldset>
 
-      <button class="btn btn-primary" type="submit">ایجاد حساب</button>
+      <button class="btn btn-primary" type="submit" name="casting_submit" value="1">ایجاد حساب</button>
     </form>
 
     <p class="form-foot">

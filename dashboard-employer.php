@@ -9,6 +9,9 @@ $role = casting_get_user_role((int) $user->ID);
 
 casting_render_head('پنل کارفرما', 'page-dash');
 casting_render_header('dash');
+if (isset($_GET['welcome'])) {
+    echo '<div class="flash flash-success" role="alert">ثبت‌نام و ورود با موفقیت انجام شد.</div>';
+}
 casting_render_flash();
 ?>
 <main class="wrap dash">

@@ -12,6 +12,9 @@ $complete = casting_profile_complete($profile);
 
 casting_render_head('پنل هنرجو', 'page-dash');
 casting_render_header('dash');
+if (isset($_GET['welcome'])) {
+    echo '<div class="flash flash-success" role="alert">ثبت‌نام و ورود با موفقیت انجام شد. پروفایلتان را تکمیل کنید.</div>';
+}
 casting_render_flash();
 ?>
 <main class="wrap dash">

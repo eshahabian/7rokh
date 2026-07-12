@@ -32,6 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 casting_render_head('ورود کارفرما', 'page-login');
 casting_render_header('employer');
+if (isset($_GET['registered'])) {
+    echo '<div class="flash flash-success" role="alert">ثبت‌نام موفق بود. حالا وارد شوید.</div>';
+}
 if ($error !== '') {
     echo '<div class="flash flash-error" role="alert">' . casting_e($error) . '</div>';
 }
@@ -42,7 +45,7 @@ casting_render_flash();
     <h1>ورود کارفرما</h1>
     <p class="lede">برای کارگردان‌ها و تهیه‌کنندگان</p>
 
-    <form class="form" method="post" action="" data-loading>
+    <form class="form" method="post" action="login-employer.php">
       <?php wp_nonce_field('casting_login_employer'); ?>
 
       <div class="field">
