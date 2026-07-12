@@ -1,5 +1,0 @@
----
-deployment:
-  tasks:
-    - export DEPLOYPATH=/home/rokhir/repositories
-    - /bin/cp -R . $DEPLOYPATH
