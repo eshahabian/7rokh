@@ -26,7 +26,7 @@ casting_render_header('home');
     <p class="hero-lead">هنرجویان استعدادشان را ثبت می‌کنند؛ کارگردان‌ها و تهیه‌کنندگان برای پروژه انتخاب می‌کنند.</p>
     <div class="cta-row hero-cta">
       <a class="btn btn-primary" href="register.php">ثبت‌نام</a>
-      <a class="btn btn-ghost" href="chat.php">تالار گفتگو</a>
+      <a class="btn btn-primary" href="chat.php">تالار گفتگو</a>
     </div>
 
     <div class="home-stats" aria-label="آمار اعضا">
