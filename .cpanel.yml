@@ -1,5 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/7rokhir/public_html/
+    - export DEPLOYPATH=/home/rokhir/repositories
     - /bin/cp -R . $DEPLOYPATH
