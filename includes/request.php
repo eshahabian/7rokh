@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * ارسال درخواست همکاری کارفرما به هنرجو + ایمیل
+ * ارسال درخواست همکاری کارفرما به هنرمند + ایمیل
  */
 function casting_send_talent_request(int $employer_id, int $talent_id, string $message, string $project = ''): array
 {
@@ -16,7 +16,7 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
         return ['ok' => false, 'error' => 'فقط کارفرما می‌تواند درخواست بفرستد.'];
     }
     if (casting_get_user_role($talent_id) !== 'talent') {
-        return ['ok' => false, 'error' => 'گیرنده هنرجو نیست.'];
+        return ['ok' => false, 'error' => 'گیرنده هنرمند نیست.'];
     }
 
     $message = sanitize_textarea_field($message);
@@ -31,7 +31,7 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
     $last_key = 'casting_req_last_' . $talent_id;
     $last = (int) get_user_meta($employer_id, $last_key, true);
     if ($last > 0 && (time() - $last) < 15 * 60) {
-        return ['ok' => false, 'error' => 'به‌تازگی به این هنرجو درخواست داده‌اید. کمی بعد دوباره تلاش کنید.'];
+        return ['ok' => false, 'error' => 'به‌تازگی به این هنرمند درخواست داده‌اید. کمی بعد دوباره تلاش کنید.'];
     }
 
     $request = [
@@ -114,7 +114,7 @@ function casting_update_request_everywhere(array $updated): bool
 }
 
 /**
- * پاسخ هنرجو: accept | reject + نظر
+ * پاسخ هنرمند: accept | reject + نظر
  */
 function casting_respond_to_request(int $talent_id, string $request_id, string $decision, string $reply): array
 {
@@ -164,12 +164,12 @@ function casting_mail_talent_request(WP_User $talent, WP_User $employer, array $
 {
     $to = $talent->user_email;
     if (!is_email($to)) {
-        return ['ok' => false, 'error' => 'ایمیل هنرجو معتبر نیست.'];
+        return ['ok' => false, 'error' => 'ایمیل هنرمند معتبر نیست.'];
     }
 
     $brand = casting_brand();
     $subject = sprintf('[%s] درخواست همکاری از %s', $brand, $employer->display_name);
-    $login_url = casting_url('login-talent.php');
+    $login_url = casting_url('login.php');
     $lines = [
         'سلام ' . $talent->display_name . '،',
         '',
@@ -208,12 +208,12 @@ function casting_mail_employer_response(WP_User $employer, WP_User $talent, arra
 
     $brand = casting_brand();
     $status_label = ($request['status'] ?? '') === 'accepted' ? 'قبول' : 'رد';
-    $subject = sprintf('[%s] پاسخ هنرجو (%s): %s', $brand, $status_label, $talent->display_name);
+    $subject = sprintf('[%s] پاسخ هنرمند (%s): %s', $brand, $status_label, $talent->display_name);
 
     $lines = [
         'سلام ' . $employer->display_name . '،',
         '',
-        'هنرجو «' . $talent->display_name . '» به درخواست شما پاسخ داد.',
+        'هنرمند «' . $talent->display_name . '» به درخواست شما پاسخ داد.',
         'نتیجه: ' . $status_label,
     ];
     if (!empty($request['project'])) {
@@ -221,11 +221,11 @@ function casting_mail_employer_response(WP_User $employer, WP_User $talent, arra
     }
     if (!empty($request['reply'])) {
         $lines[] = '';
-        $lines[] = 'نظر هنرجو:';
+        $lines[] = 'نظر هنرمند:';
         $lines[] = $request['reply'];
     }
     $lines[] = '';
-    $lines[] = 'ایمیل هنرجو: ' . $talent->user_email;
+    $lines[] = 'ایمیل هنرمند: ' . $talent->user_email;
     $lines[] = '';
     $lines[] = '— ' . $brand;
 

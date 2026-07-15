@@ -55,12 +55,23 @@ function casting_register_user(string $name, string $username, string $email, st
 }
 
 /**
- * ورود با نام کاربری یا ایمیل + بررسی نقش درگاه
+ * آدرس پنل بر اساس نقش
  */
-function casting_login(string $login, string $password, string $portal): array
+function casting_dashboard_for_role(string $role, string $query = ''): string
+{
+    $page = 'panel.php';
+    if ($query !== '') {
+        return $page . (str_contains($query, '?') ? $query : '?' . ltrim($query, '?'));
+    }
+    return $page;
+}
+
+/**
+ * ورود با نام کاربری یا ایمیل — نقش را خودش تشخیص می‌دهد
+ */
+function casting_login(string $login, string $password, string $portal = ''): array
 {
     $login = trim($login);
-    $portal = sanitize_key($portal);
 
     if ($login === '') {
         return ['ok' => false, 'error' => 'نام کاربری یا ایمیل را وارد کنید.'];
@@ -84,11 +95,12 @@ function casting_login(string $login, string $password, string $portal): array
         return ['ok' => false, 'error' => 'این حساب برای پورتال هفت رخ ثبت نشده است.'];
     }
 
+    $portal = sanitize_key($portal);
     if ($portal === 'talent' && $role !== 'talent') {
-        return ['ok' => false, 'error' => 'شما هنرجو نیستید. از ورود کارفرما استفاده کنید.'];
+        return ['ok' => false, 'error' => 'این بخش فقط برای هنرمندان است.'];
     }
     if ($portal === 'employer' && !casting_is_employer_role($role)) {
-        return ['ok' => false, 'error' => 'شما کارفرما نیستید. از ورود هنرجو استفاده کنید.'];
+        return ['ok' => false, 'error' => 'این بخش فقط برای کارفرماست.'];
     }
 
     $creds = [
@@ -103,4 +115,136 @@ function casting_login(string $login, string $password, string $portal): array
     }
 
     return ['ok' => true, 'user' => $signed, 'role' => $role];
+}
+
+/**
+ * ارسال لینک بازیابی رمز به ایمیل کاربر پورتال
+ *
+ * @return array{ok:bool,error:string,message:string}
+ */
+function casting_request_password_reset(string $login): array
+{
+    $login = trim($login);
+    if ($login === '') {
+        return ['ok' => false, 'error' => 'نام کاربری یا ایمیل را وارد کنید.', 'message' => ''];
+    }
+
+    if (is_email($login)) {
+        $user = get_user_by('email', sanitize_email($login));
+    } else {
+        $user = get_user_by('login', sanitize_user($login, true));
+    }
+
+    // پیام یکسان برای جلوگیری از افشای وجود حساب
+    $generic = 'اگر حسابی با این مشخصات در هفت رخ باشد، لینک بازیابی رمز به ایمیل آن ارسال می‌شود.';
+
+    if (!$user || casting_get_user_role((int) $user->ID) === '') {
+        return ['ok' => true, 'error' => '', 'message' => $generic];
+    }
+
+    $key = get_password_reset_key($user);
+    if (is_wp_error($key)) {
+        return ['ok' => false, 'error' => 'ارسال لینک بازیابی ممکن نشد. کمی بعد دوباره تلاش کنید.', 'message' => ''];
+    }
+
+    $url = casting_url(
+        'reset-password.php?key=' . rawurlencode((string) $key) . '&login=' . rawurlencode($user->user_login)
+    );
+
+    $brand = casting_brand();
+    $subject = sprintf('[%s] بازیابی رمز عبور', $brand);
+    $body = "سلام {$user->display_name},\n\n"
+        . "درخواست بازیابی رمز عبور برای حساب شما در {$brand} ثبت شد.\n"
+        . "برای تعیین رمز جدید روی لینک زیر کلیک کنید:\n\n"
+        . $url . "\n\n"
+        . "اگر این درخواست از طرف شما نبوده، این ایمیل را نادیده بگیرید.\n";
+
+    $sent = wp_mail($user->user_email, $subject, $body);
+    if (!$sent) {
+        return [
+            'ok'      => false,
+            'error'   => 'ارسال ایمیل ناموفق بود. تنظیم SMTP وردپرس را بررسی کنید.',
+            'message' => '',
+        ];
+    }
+
+    return ['ok' => true, 'error' => '', 'message' => $generic];
+}
+
+/**
+ * تنظیم رمز جدید با کلید بازیابی
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_reset_password_with_key(string $login, string $key, string $password, string $password2): array
+{
+    $login = sanitize_user(trim($login), true);
+    $key = trim($key);
+
+    if ($login === '' || $key === '') {
+        return ['ok' => false, 'error' => 'لینک بازیابی نامعتبر است.'];
+    }
+    if ($password === '' || strlen($password) < 8) {
+        return ['ok' => false, 'error' => 'رمز عبور باید حداقل ۸ کاراکتر باشد.'];
+    }
+    if ($password !== $password2) {
+        return ['ok' => false, 'error' => 'تکرار رمز عبور مطابقت ندارد.'];
+    }
+
+    $user = check_password_reset_key($key, $login);
+    if (is_wp_error($user)) {
+        return ['ok' => false, 'error' => 'لینک بازیابی منقضی یا نامعتبر است. دوباره درخواست دهید.'];
+    }
+
+    if (casting_get_user_role((int) $user->ID) === '') {
+        return ['ok' => false, 'error' => 'این حساب برای پورتال هفت رخ ثبت نشده است.'];
+    }
+
+    reset_password($user, $password);
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_change_password(int $user_id, string $current, string $new, string $confirm): array
+{
+    if (strlen($new) < 8) {
+        return ['ok' => false, 'error' => 'رمز جدید باید حداقل ۸ کاراکتر باشد.'];
+    }
+    if ($new !== $confirm) {
+        return ['ok' => false, 'error' => 'تکرار رمز جدید مطابقت ندارد.'];
+    }
+
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
+    }
+    if (!wp_check_password($current, $user->user_pass, $user_id)) {
+        return ['ok' => false, 'error' => 'رمز فعلی اشتباه است.'];
+    }
+
+    wp_set_password($new, $user_id);
+    wp_set_auth_cookie($user_id, true);
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_cancel_membership(int $user_id, string $password): array
+{
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
+    }
+    if (!wp_check_password($password, $user->user_pass, $user_id)) {
+        return ['ok' => false, 'error' => 'رمز عبور اشتباه است.'];
+    }
+
+    update_user_meta($user_id, 'casting_visible', '0');
+    update_user_meta($user_id, 'casting_cancelled_at', current_time('mysql'));
+    delete_user_meta($user_id, 'casting_role');
+    wp_logout();
+    return ['ok' => true, 'error' => ''];
 }

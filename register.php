@@ -12,27 +12,40 @@ $error = '';
 $name = '';
 $username = '';
 $email = '';
-$role = 'talent';
 $gender = '';
 $look = '';
+$mobile = '';
+$phone = '';
+$province = '';
 $city = '';
 $residence = '';
 $experience = '';
+$height = '';
+$weight = '';
+$health_status = '';
+$artistic_has = '';
+$artistic_orgs = [];
+$artistic_other = [];
+$activity_license = '';
 $birthdate = '';
 $work_history = '';
 $work_credits = [];
 $education = '';
 $education_items = [];
+$activities = [];
+$skill_items = [];
+$language_items = [];
+$availability = '';
 $age_preview = '';
 
 $current = casting_current_user();
 if ($current) {
     $existing_role = casting_get_user_role((int) $current->ID);
     if ($existing_role === 'talent') {
-        casting_redirect('dashboard-talent.php');
+        casting_redirect('panel.php');
     }
     if (casting_is_employer_role($existing_role)) {
-        casting_redirect('dashboard-employer.php');
+        casting_redirect('panel.php');
     }
 }
 
@@ -46,17 +59,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = (string) ($_POST['email'] ?? '');
         $password = (string) ($_POST['password'] ?? '');
         $password2 = (string) ($_POST['password2'] ?? '');
-        $role = (string) ($_POST['role'] ?? 'talent');
         $gender = (string) ($_POST['gender'] ?? '');
         $look = (string) ($_POST['look'] ?? '');
+        $mobile = (string) ($_POST['mobile'] ?? '');
+        $phone = (string) ($_POST['phone'] ?? '');
+        $province = (string) ($_POST['province'] ?? '');
         $city = (string) ($_POST['city'] ?? '');
         $residence = (string) ($_POST['residence'] ?? '');
         $experience = (string) ($_POST['experience'] ?? '');
+        $height = (string) ($_POST['height'] ?? '');
+        $weight = (string) ($_POST['weight'] ?? '');
+        $health_status = (string) ($_POST['health_status'] ?? '');
+        $artistic_parsed = casting_parse_artistic_membership_post($_POST);
+        $artistic_has = $artistic_parsed['has'];
+        $artistic_orgs = $artistic_parsed['orgs'];
+        $artistic_other = $artistic_parsed['other_items'];
+        $activity_license = (string) ($_POST['activity_license'] ?? '');
         $birthdate = casting_birthdate_from_jalali_post($_POST) ?? '';
         $work_history = (string) ($_POST['work_history'] ?? '');
         $work_credits = casting_parse_work_credits_post($_POST);
         $education = (string) ($_POST['education'] ?? '');
         $education_items = casting_parse_education_items_post($_POST);
+        $activities = casting_parse_activities_post($_POST);
+        $skill_items = casting_parse_skill_items_post($_POST);
+        $language_items = casting_parse_language_items_post($_POST);
+        $availability = (string) ($_POST['availability'] ?? '');
         $age_calc = $birthdate !== '' ? casting_age_from_birthdate($birthdate) : null;
         $age_preview = $age_calc !== null ? (string) $age_calc : '';
 
@@ -65,25 +92,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($birthdate === '' || $age_calc === null) {
             $error = 'تاریخ تولد شمسی را کامل و درست انتخاب کنید.';
         } elseif (!array_key_exists($gender, casting_gender_labels())) {
-            $error = 'جنسیت را انتخاب کنید (زن یا مرد).';
+            $error = 'جنسیت را انتخاب کنید.';
+        } elseif ($activities === []) {
+            $error = 'حداقل یک تخصص از بخش نوع فعالیت انتخاب کنید.';
+        } elseif (!array_key_exists($availability, casting_availability_labels())) {
+            $error = 'وضعیت آمادگی برای همکاری را انتخاب کنید.';
         } else {
             try {
+                $role = casting_infer_role_from_activities($activities);
                 $result = casting_register_user($name, $username, $email, $password, $role);
                 if (!$result['ok']) {
                     $error = $result['error'];
                 } else {
                     $user_id = (int) $result['user_id'];
                     $profile_save = casting_save_registration_profile($user_id, [
-                        'birthdate'    => $birthdate,
-                        'gender'       => $gender,
-                        'look'         => $look,
-                        'city'         => $city,
-                        'residence'    => $residence,
-                        'experience'   => $experience,
-                        'work_history' => $work_history,
-                        'work_credits'    => $work_credits,
-                        'education'       => $education,
-                        'education_items' => $education_items,
+                        'birthdate'        => $birthdate,
+                        'gender'           => $gender,
+                        'look'             => $look,
+                        'mobile'           => $mobile,
+                        'phone'            => $phone,
+                        'province'         => $province,
+                        'city'             => $city,
+                        'residence'        => $residence,
+                        'experience'       => $experience,
+                        'height'           => $height,
+                        'weight'           => $weight,
+                        'health_status'    => $health_status,
+                        'artistic_membership' => $artistic_has,
+                        'artistic_orgs'       => $artistic_orgs,
+                        'artistic_other_items'=> $artistic_other,
+                        'activity_license'    => $activity_license,
+                        'work_history'     => $work_history,
+                        'work_credits'     => $work_credits,
+                        'education'        => $education,
+                        'education_items'  => $education_items,
+                        'activities'       => $activities,
+                        'skill_items'      => $skill_items,
+                        'language_items'   => $language_items,
+                        'availability'     => $availability,
                     ]);
                     if (!$profile_save['ok']) {
                         $error = $profile_save['error'];
@@ -100,16 +146,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     if ($error === '') {
-                        $portal = $result['role'] === 'talent' ? 'talent' : 'employer';
-                        $login = casting_login($email, $password, $portal);
+                        $login = casting_login($email, $password);
                         if ($login['ok']) {
-                            $dest = $result['role'] === 'talent'
-                                ? 'dashboard-talent.php?welcome=1'
-                                : 'dashboard-employer.php?welcome=1';
-                            casting_redirect($dest);
+                            casting_redirect(casting_dashboard_for_role((string) $result['role'], 'welcome=1'));
                         }
-                        $login_page = $result['role'] === 'talent' ? 'login-talent.php' : 'login-employer.php';
-                        casting_redirect($login_page . '?registered=1');
+                        casting_redirect('login.php?registered=1');
                     }
                 }
             } catch (Throwable $e) {
@@ -166,28 +207,38 @@ if ($error !== '') {
         </div>
       </div>
 
-      <?php casting_render_jalali_birthday_fields($birthdate, true); ?>
       <div class="form-grid">
         <div class="field">
-          <label for="age_display">سن (خودکار)</label>
-          <input id="age_display" type="text" readonly value="<?= $age_preview !== '' ? casting_e($age_preview) . ' سال' : '' ?>" data-age-output placeholder="بعد از انتخاب تاریخ پر می‌شود">
+          <label for="mobile">موبایل</label>
+          <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($mobile) ?>" placeholder="09121234567" autocomplete="tel-national">
         </div>
-        <fieldset class="field">
-          <legend>جنسیت</legend>
-          <div class="role-grid role-grid-2">
-            <?php foreach (casting_gender_labels() as $key => $label) : ?>
-              <label class="role-option">
-                <input type="radio" name="gender" value="<?= casting_e($key) ?>" <?= $gender === $key ? 'checked' : '' ?> required>
-                <span><?= casting_e($label) ?></span>
-              </label>
-            <?php endforeach; ?>
-          </div>
-        </fieldset>
+        <div class="field">
+          <label for="phone">تلفن ثابت (اختیاری)</label>
+          <input id="phone" name="phone" type="tel" inputmode="numeric" value="<?= casting_e($phone) ?>" placeholder="02112345678" autocomplete="tel">
+        </div>
+      </div>
+
+      <?php casting_render_jalali_birthday_fields($birthdate, true); ?>
+      <div class="field">
+        <label for="age_display">سن (خودکار)</label>
+        <input id="age_display" type="text" readonly value="<?= $age_preview !== '' ? casting_e($age_preview) . ' سال' : '' ?>" data-age-output placeholder="بعد از انتخاب تاریخ پر می‌شود">
       </div>
 
       <fieldset class="field">
-        <legend>چهره</legend>
-        <div class="role-grid role-grid-2">
+        <legend>جنسیت</legend>
+        <div class="role-grid role-grid-3">
+          <?php foreach (casting_gender_labels() as $key => $label) : ?>
+            <label class="role-option">
+              <input type="radio" name="gender" value="<?= casting_e($key) ?>" <?= $gender === $key ? 'checked' : '' ?> required>
+              <span><?= casting_e($label) ?></span>
+            </label>
+          <?php endforeach; ?>
+        </div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>رنگ پوست</legend>
+        <div class="role-grid role-grid-3">
           <?php foreach (casting_look_labels() as $key => $label) : ?>
             <label class="role-option">
               <input type="radio" name="look" value="<?= casting_e($key) ?>" <?= $look === $key ? 'checked' : '' ?> required>
@@ -199,15 +250,40 @@ if ($error !== '') {
 
       <div class="form-grid">
         <div class="field">
-          <label for="city">شهر</label>
-          <input id="city" name="city" type="text" required value="<?= casting_e($city) ?>" placeholder="مثلاً تهران">
+          <label for="height">قد (سانتی‌متر)</label>
+          <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e($height) ?>" placeholder="برای بازیگران و مدل‌ها">
+          <p class="field-hint">برای بازیگران و مدل‌ها الزامی است</p>
         </div>
         <div class="field">
-          <label for="residence">محل سکونت</label>
-          <input id="residence" name="residence" type="text" required value="<?= casting_e($residence) ?>" placeholder="منطقه / محله">
+          <label for="weight">وزن (کیلوگرم)</label>
+          <input id="weight" name="weight" type="number" min="20" max="250" value="<?= casting_e($weight) ?>" placeholder="برای بازیگران و مدل‌ها">
+          <p class="field-hint">برای بازیگران و مدل‌ها الزامی است</p>
         </div>
+      </div>
+
+      <div class="field">
+        <label for="health_status">وضعیت سلامت</label>
+        <textarea id="health_status" name="health_status" rows="2" maxlength="500" placeholder="مثلاً سالم، بدون محدودیت خاص…"><?= casting_e($health_status) ?></textarea>
+      </div>
+
+      <?php casting_render_location_fields($province, $city, '', true); ?>
+
+      <?php casting_render_artistic_membership_fields($artistic_has, $artistic_orgs, $artistic_other); ?>
+
+      <div class="form-grid">
+        <fieldset class="field">
+          <legend>دارای پروانه فعالیت</legend>
+          <div class="role-grid role-grid-2">
+            <?php foreach (casting_yes_no_labels() as $key => $label) : ?>
+              <label class="role-option">
+                <input type="radio" name="activity_license" value="<?= casting_e($key) ?>" <?= $activity_license === $key ? 'checked' : '' ?> required>
+                <span><?= casting_e($label) ?></span>
+              </label>
+            <?php endforeach; ?>
+          </div>
+        </fieldset>
         <div class="field">
-          <label for="experience">تعداد سال سابقه</label>
+          <label for="experience">سابقه فعالیت (سال)</label>
           <input id="experience" name="experience" type="number" min="0" max="60" required value="<?= casting_e($experience !== '' ? $experience : '0') ?>">
         </div>
       </div>
@@ -239,12 +315,18 @@ if ($error !== '') {
         <textarea id="education" name="education" rows="2" placeholder="رشته یا توضیح بیشتر…"><?= casting_e($education) ?></textarea>
       </div>
 
+      <?php casting_render_activity_fields($activities, true); ?>
+
+      <?php casting_render_language_fields($language_items); ?>
+
+      <?php casting_render_skill_fields($skill_items); ?>
+
       <fieldset class="field">
-        <legend>نقش شما</legend>
+        <legend>وضعیت آمادگی برای همکاری</legend>
         <div class="role-grid">
-          <?php foreach (CASTING_ROLES as $key => $label) : ?>
+          <?php foreach (casting_availability_labels() as $key => $label) : ?>
             <label class="role-option">
-              <input type="radio" name="role" value="<?= casting_e($key) ?>" <?= $role === $key ? 'checked' : '' ?>>
+              <input type="radio" name="availability" value="<?= casting_e($key) ?>" <?= $availability === $key ? 'checked' : '' ?> required>
               <span><?= casting_e($label) ?></span>
             </label>
           <?php endforeach; ?>
@@ -255,10 +337,7 @@ if ($error !== '') {
     </form>
 
     <p class="form-foot">
-      قبلاً ثبت‌نام کرده‌اید؟
-      <a href="login-talent.php">ورود هنرجو</a>
-      ·
-      <a href="login-employer.php">ورود کارفرما</a>
+      قبلاً ثبت‌نام کرده‌اید؟ <a href="login.php">ورود</a>
     </p>
   </section>
 </main>

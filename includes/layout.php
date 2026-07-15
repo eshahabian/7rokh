@@ -16,7 +16,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=14">
+  <link rel="stylesheet" href="<?= $css ?>?v=30">
 </head>
 <body class="<?= casting_e($body_class) ?>">
   <div class="bg-atmosphere" aria-hidden="true"></div>
@@ -32,22 +32,16 @@ function casting_render_header(?string $active = null): void
   <header class="site-header">
     <a class="brand" href="index.php"><?= $brand ?></a>
     <nav class="nav" aria-label="منوی اصلی">
-      <?php if ($role === 'talent') : ?>
-        <a href="dashboard-talent.php" class="<?= $active === 'dash' ? 'is-active' : '' ?>">پنل من</a>
-        <a href="profile-talent.php" class="<?= $active === 'profile' ? 'is-active' : '' ?>">پروفایل</a>
-        <a href="chat.php" class="<?= $active === 'chat' ? 'is-active' : '' ?>">تالار گفتگو</a>
-        <a href="logout.php">خروج</a>
-      <?php elseif (casting_is_employer_role($role)) : ?>
-        <a href="dashboard-employer.php" class="<?= $active === 'dash' ? 'is-active' : '' ?>">پنل من</a>
-        <a href="talents.php" class="<?= $active === 'talents' ? 'is-active' : '' ?>">هنرجویان</a>
-        <a href="chat.php" class="<?= $active === 'chat' ? 'is-active' : '' ?>">تالار گفتگو</a>
+      <?php if ($role !== '') : ?>
+        <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
+        <a href="panel.php" class="<?= $active === 'panel' ? 'is-active' : '' ?>">پنل کاربری</a>
         <a href="logout.php">خروج</a>
       <?php else : ?>
-        <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">خانه</a>
-        <a href="chat.php" class="<?= $active === 'chat' ? 'is-active' : '' ?>">تالار گفتگو</a>
-        <a href="register.php" class="<?= $active === 'register' ? 'is-active' : '' ?>">ثبت‌نام</a>
-        <a href="login-talent.php" class="<?= $active === 'talent' ? 'is-active' : '' ?>">ورود هنرجو</a>
-        <a href="login-employer.php" class="<?= $active === 'employer' ? 'is-active' : '' ?>">ورود کارفرما</a>
+        <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
+        <a href="register.php" class="<?= $active === 'register' ? 'is-active' : '' ?>">عضویت</a>
+        <a href="login.php" class="<?= $active === 'login' ? 'is-active' : '' ?>">ورود</a>
+        <a href="contact.php" class="<?= $active === 'contact' ? 'is-active' : '' ?>">تماس با ما</a>
+        <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>
       <?php endif; ?>
     </nav>
   </header>
@@ -72,7 +66,7 @@ function casting_render_footer(): void
   <footer class="site-footer">
     <p><?= casting_e(casting_brand()) ?> — پورتال استعداد و بازیگری</p>
   </footer>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=14" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=30" defer></script>
 </body>
 </html>
 <?php

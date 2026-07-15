@@ -2,4 +2,4 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
-casting_redirect('panel.php');
+casting_redirect('premium.php#admin-receipts');

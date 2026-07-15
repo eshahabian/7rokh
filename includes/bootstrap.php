@@ -27,6 +27,13 @@ if (!function_exists('str_starts_with')) {
     }
 }
 
+if (!function_exists('str_contains')) {
+    function str_contains(string $haystack, string $needle): bool
+    {
+        return $needle === '' || strpos($haystack, $needle) !== false;
+    }
+}
+
 function casting_strlen(string $value): int
 {
     if (function_exists('mb_strlen')) {
@@ -119,17 +126,17 @@ function casting_require_login(string $portal): WP_User
     $user = casting_current_user();
     if (!$user) {
         casting_set_flash('error', 'لطفاً ابتدا وارد شوید.');
-        casting_redirect($portal === 'employer' ? 'login-employer.php' : 'login-talent.php');
+        casting_redirect('login.php');
     }
 
     $role = casting_get_user_role((int) $user->ID);
     if ($portal === 'talent' && $role !== 'talent') {
-        casting_set_flash('error', 'این بخش فقط برای هنرجویان است.');
-        casting_redirect('login-talent.php');
+        casting_set_flash('error', 'این بخش فقط برای هنرمندان است.');
+        casting_redirect(casting_is_employer_role($role) ? 'panel.php' : 'login.php');
     }
     if ($portal === 'employer' && !casting_is_employer_role($role)) {
         casting_set_flash('error', 'این بخش فقط برای کارگردان و تهیه‌کننده است.');
-        casting_redirect('login-employer.php');
+        casting_redirect($role === 'talent' ? 'panel.php' : 'login.php');
     }
 
     return $user;

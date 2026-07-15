@@ -17,10 +17,14 @@ define('CASTING_BRAND', 'هفت رخ');
 
 /** نقش‌های مجاز */
 define('CASTING_ROLES', [
-    'talent'   => 'هنرجو',
+    'talent'   => 'هنرمند',
     'director' => 'کارگردان',
     'producer' => 'تهیه‌کننده',
 ]);
 
 /** نقش‌هایی که از درگاه کارفرما وارد می‌شوند */
 define('CASTING_EMPLOYER_ROLES', ['director', 'producer']);
+
+/** اطلاعات واریز کارت به کارت */
+define('CASTING_PAYMENT_CARD', '6037-9971-0000-0000');
+define('CASTING_PAYMENT_HOLDER', 'هفت رخ');
