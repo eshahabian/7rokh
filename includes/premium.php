@@ -63,7 +63,7 @@ function casting_user_is_premium(int $user_id): bool
     if ($until === '') {
         return false;
     }
-    return strtotime($until) >= time();
+    return strtotime($until) >= strtotime((string) current_time('mysql'));
 }
 
 function casting_premium_until_label(int $user_id): string
@@ -201,9 +201,10 @@ function casting_approve_premium_receipt(int $receipt_id): array
     $days = (int) $plans[$plan_key]['days'];
 
     $current = (string) get_user_meta($user_id, 'casting_premium_until', true);
-    $now = (int) current_time('timestamp');
-    $base = ($current !== '' && strtotime($current) > $now) ? strtotime($current) : $now;
-    $until = date('Y-m-d H:i:s', $base + ($days * DAY_IN_SECONDS));
+    $now = (string) current_time('mysql');
+    $now_ts = strtotime($now);
+    $base_ts = ($current !== '' && strtotime($current) > $now_ts) ? strtotime($current) : $now_ts;
+    $until = wp_date('Y-m-d H:i:s', $base_ts + ($days * DAY_IN_SECONDS));
     update_user_meta($user_id, 'casting_premium_until', $until);
 
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery

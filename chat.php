@@ -47,12 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$conversations = casting_dm_conversations($my_id);
+$conversations = [];
 $contacts = casting_dm_allowed_contacts($my_id);
 $peer = null;
 $thread = [];
 $peer_allow = ['ok' => false, 'error' => ''];
 $is_blocked = false;
+$peer_had_unread = false;
 
 if ($peer_id > 0) {
     $peer = get_user_by('id', $peer_id);
@@ -60,11 +61,15 @@ if ($peer_id > 0) {
         $error = $error !== '' ? $error : 'کاربر پیدا نشد.';
         $peer_id = 0;
     } else {
+        $peer_had_unread = casting_dm_unread_count($my_id, $peer_id) > 0;
+        casting_dm_mark_read($my_id, $peer_id);
         $thread = casting_dm_thread($my_id, $peer_id);
         $peer_allow = casting_can_users_chat($my_id, $peer_id);
         $is_blocked = casting_is_blocked($my_id, $peer_id);
     }
 }
+
+$conversations = casting_dm_conversations($my_id);
 
 casting_render_panel_start('پیام کاربران', 'messages');
 if ($error !== '') {
@@ -83,12 +88,20 @@ casting_render_flash();
         <p class="empty-state chat-side-empty">هنوز گفتگویی ندارید.</p>
       <?php else : ?>
         <ul class="chat-conv-list">
-          <?php foreach ($conversations as $conv) : ?>
+          <?php foreach ($conversations as $conv) :
+              $conv_unread = (int) ($conv['unread'] ?? 0);
+              ?>
             <li>
-              <a class="chat-conv-item <?= $peer_id === (int) $conv['peer_id'] ? 'is-active' : '' ?>" href="chat.php?with=<?= (int) $conv['peer_id'] ?>">
-                <strong><?= casting_e($conv['name']) ?></strong>
-                <span><?= casting_e(casting_role_label($conv['role'])) ?></span>
-                <em><?= casting_e(casting_chat_preview($conv['last_message'])) ?></em>
+              <a class="chat-conv-item<?= $peer_id === (int) $conv['peer_id'] ? ' is-active' : '' ?><?= $conv_unread > 0 ? ' has-unread' : '' ?>" href="chat.php?with=<?= (int) $conv['peer_id'] ?>">
+                <?php casting_render_chat_avatar((int) $conv['peer_id'], (string) $conv['name'], $conv_unread > 0); ?>
+                <span class="chat-conv-body">
+                  <strong><?= casting_e($conv['name']) ?></strong>
+                  <span><?= casting_e(casting_role_label($conv['role'])) ?></span>
+                  <em><?= casting_e(casting_chat_preview($conv['last_message'])) ?></em>
+                </span>
+                <?php if ($conv_unread > 0) : ?>
+                  <span class="chat-conv-badge" aria-hidden="true"><?= $conv_unread ?></span>
+                <?php endif; ?>
               </a>
             </li>
           <?php endforeach; ?>
@@ -116,9 +129,15 @@ casting_render_flash();
     <div class="chat-main">
       <?php if ($peer && $peer_id > 0) : ?>
         <header class="chat-peer-head">
-          <div>
-            <strong><?= casting_e($peer->display_name) ?></strong>
-            <span><?= casting_e(casting_role_label(casting_get_user_role($peer_id))) ?></span>
+          <div class="chat-peer-title">
+            <?php casting_render_chat_avatar($peer_id, (string) $peer->display_name, $peer_had_unread); ?>
+            <div>
+              <strong><?= casting_e($peer->display_name) ?></strong>
+              <?php if ($peer_had_unread) : ?>
+                <span class="chat-new-badge">پیام جدید</span>
+              <?php endif; ?>
+              <span><?= casting_e(casting_role_label(casting_get_user_role($peer_id))) ?></span>
+            </div>
           </div>
           <div class="cta-row">
             <a class="btn btn-ghost btn-sm" href="member.php?id=<?= $peer_id ?>">پروفایل</a>

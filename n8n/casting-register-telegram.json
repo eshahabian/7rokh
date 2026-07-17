@@ -1,0 +1,62 @@
+{
+  "name": "هفت رخ — ثبت‌نام → تلگرام",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "haftrokh-register",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-register",
+      "name": "Webhook ثبت‌نام",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "haftrokh-register"
+    },
+    {
+      "parameters": {
+        "chatId": "CHAT_ID_HERE",
+        "text": "=🆕 عضو جدید — {{ $json.name }}\n\nنقش: {{ $json.role_label }}\nشهر: {{ $json.city }}\nاستان: {{ $json.province }}\nموبایل: {{ $json.mobile }}\nایمیل: {{ $json.email }}\n\nپروفایل:\n{{ $json.profile_url }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "telegram-send",
+      "name": "تلگرام — اطلاع ثبت‌نام",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [280, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "هفت رخ Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook ثبت‌نام": {
+      "main": [
+        [
+          {
+            "node": "تلگرام — اطلاع ثبت‌نام",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

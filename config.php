@@ -28,3 +28,13 @@ define('CASTING_EMPLOYER_ROLES', ['director', 'producer']);
 /** اطلاعات واریز کارت به کارت */
 define('CASTING_PAYMENT_CARD', '6037-9971-0000-0000');
 define('CASTING_PAYMENT_HOLDER', 'هفت رخ');
+
+/**
+ * n8n — وقتی کسی ثبت‌نام کرد، JSON به این آدرس POST می‌شود.
+ * خالی بگذارید = غیرفعال
+ * مثال: https://your-n8n.com/webhook/casting-register
+ */
+define('CASTING_N8N_REGISTER_WEBHOOK', '');
+
+/** اختیاری — همان مقدار را در n8n چک کنید (Header: X-Webhook-Secret) */
+define('CASTING_N8N_WEBHOOK_SECRET', '');

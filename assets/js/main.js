@@ -233,6 +233,7 @@
     };
 
     provinceSel?.addEventListener("change", () => syncCities(""));
+    syncCities(citySel?.value || "");
   });
 
   bindRepeater(
@@ -303,6 +304,42 @@
     });
 
     list?.querySelectorAll(".skill-row").forEach((row) => syncNote(row));
+  });
+
+  document.querySelectorAll("[data-accent-field]").forEach((box) => {
+    const select = box.querySelector("[data-accent-select]");
+    const note = box.querySelector("[data-accent-other]");
+    const row = box.querySelector(".accent-other-row");
+    if (!select || !note || !row) return;
+
+    const syncAccentOther = () => {
+      const isOther = select.value === "other";
+      row.classList.toggle("is-other", isOther);
+      note.disabled = !isOther;
+      if (!isOther) note.value = "";
+    };
+
+    select.addEventListener("change", syncAccentOther);
+    syncAccentOther();
+  });
+
+  document.querySelectorAll("[data-health-field]").forEach((box) => {
+    const radios = box.querySelectorAll("[data-health-well]");
+    const wrap = box.querySelector("[data-health-detail-wrap]");
+    const detail = box.querySelector("[data-health-detail]");
+
+    const syncHealth = () => {
+      const unhealthy = box.querySelector('[data-health-well][value="unhealthy"]:checked');
+      const active = !!unhealthy;
+      wrap?.classList.toggle("is-active", active);
+      if (detail) {
+        detail.disabled = !active;
+        if (!active) detail.value = "";
+      }
+    };
+
+    radios.forEach((radio) => radio.addEventListener("change", syncHealth));
+    syncHealth();
   });
 
   document.querySelectorAll("[data-artistic-membership]").forEach((box) => {
@@ -380,7 +417,7 @@
         specSel.disabled = true;
         const opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = "اول بخش را انتخاب کنید";
+        opt.textContent = "اول تخصص هنری را انتخاب کنید";
         specSel.appendChild(opt);
         return;
       }
@@ -441,9 +478,61 @@
         const any = [...box.querySelectorAll("[data-activity-specialty]")].some((sel) => sel.value);
         if (!any) {
           e.preventDefault();
-          window.alert("حداقل یک تخصص از بخش نوع فعالیت انتخاب کنید.");
+          window.alert("حداقل یک تخصص از نوع فعالیت انتخاب کنید.");
         }
       });
     }
   });
+
+  document.querySelectorAll("[data-activity-search]").forEach((box) => {
+    let map = {};
+    try {
+      map = JSON.parse(box.getAttribute("data-activity-map") || "{}");
+    } catch (err) {
+      map = {};
+    }
+    const catSel = box.querySelector("[data-activity-category]");
+    const specSel = box.querySelector("[data-activity-specialty]");
+    if (!catSel || !specSel) return;
+
+    const fillSpecialty = (keepValue) => {
+      const cat = catSel.value;
+      const prev = keepValue ? specSel.value : "";
+      specSel.innerHTML = "";
+      if (!cat || !map[cat]) {
+        specSel.disabled = true;
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "اول تخصص هنری";
+        specSel.appendChild(opt);
+        return;
+      }
+      specSel.disabled = false;
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "همه";
+      specSel.appendChild(placeholder);
+      Object.keys(map[cat]).forEach((key) => {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = map[cat][key];
+        if (prev === key) opt.selected = true;
+        specSel.appendChild(opt);
+      });
+    };
+
+    catSel.addEventListener("change", () => fillSpecialty(false));
+    fillSpecialty(true);
+  });
+
+  const openPanelHashTarget = () => {
+    if (window.location.hash !== "#edit-profile") return;
+    const details = document.getElementById("edit-profile");
+    if (details instanceof HTMLDetailsElement) {
+      details.open = true;
+    }
+  };
+
+  openPanelHashTarget();
+  window.addEventListener("hashchange", openPanelHashTarget);
 })();

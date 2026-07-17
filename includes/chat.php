@@ -15,6 +15,159 @@ function casting_chat_preview(string $message, int $max = 48): string
     return rtrim(substr($message, 0, $max)) . '…';
 }
 
+function casting_dm_read_meta_key(): string
+{
+    return 'casting_dm_read';
+}
+
+/**
+ * @return array<int, int> peer_id => last_read_message_id
+ */
+function casting_dm_read_map(int $user_id): array
+{
+    $raw = get_user_meta($user_id, casting_dm_read_meta_key(), true);
+    if (!is_array($raw)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($raw as $peer => $message_id) {
+        $peer_id = (int) $peer;
+        if ($peer_id > 0) {
+            $out[$peer_id] = (int) $message_id;
+        }
+    }
+    return $out;
+}
+
+function casting_dm_mark_read(int $user_id, int $peer_id): void
+{
+    if ($user_id <= 0 || $peer_id <= 0) {
+        return;
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $last_id = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT MAX(id) FROM {$table} WHERE sender_id = %d AND recipient_id = %d",
+        $peer_id,
+        $user_id
+    ));
+    if ($last_id <= 0) {
+        return;
+    }
+
+    $map = casting_dm_read_map($user_id);
+    $map[$peer_id] = $last_id;
+    update_user_meta($user_id, casting_dm_read_meta_key(), $map);
+}
+
+function casting_dm_unread_count(int $user_id, int $peer_id): int
+{
+    if ($user_id <= 0 || $peer_id <= 0) {
+        return 0;
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    $read_map = casting_dm_read_map($user_id);
+    $last_read = (int) ($read_map[$peer_id] ?? 0);
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    return (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$table} WHERE sender_id = %d AND recipient_id = %d AND id > %d",
+        $peer_id,
+        $user_id,
+        $last_read
+    ));
+}
+
+/**
+ * @return array<int, int> peer_id => unread_count
+ */
+function casting_dm_unread_by_peer(int $user_id): array
+{
+    if ($user_id <= 0) {
+        return [];
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    $read_map = casting_dm_read_map($user_id);
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $rows = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT DISTINCT sender_id FROM {$table} WHERE recipient_id = %d",
+            $user_id
+        ),
+        ARRAY_A
+    );
+
+    if (!is_array($rows)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $row) {
+        $peer_id = (int) ($row['sender_id'] ?? 0);
+        if ($peer_id <= 0) {
+            continue;
+        }
+        $last_read = (int) ($read_map[$peer_id] ?? 0);
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $count = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table} WHERE sender_id = %d AND recipient_id = %d AND id > %d",
+            $peer_id,
+            $user_id,
+            $last_read
+        ));
+        if ($count > 0) {
+            $out[$peer_id] = $count;
+        }
+    }
+
+    return $out;
+}
+
+function casting_dm_unread_peer_count(int $user_id): int
+{
+    return count(casting_dm_unread_by_peer($user_id));
+}
+
+function casting_chat_peer_avatar_url(int $user_id): string
+{
+    $portraits = casting_load_all_portraits($user_id);
+    $primary = casting_primary_portrait($portraits);
+    if (($primary['full'] ?? '') !== '') {
+        return (string) $primary['full'];
+    }
+    return (string) ($primary['url'] ?? '');
+}
+
+function casting_render_chat_avatar(int $user_id, string $name, bool $has_unread = false): void
+{
+    $avatar = casting_chat_peer_avatar_url($user_id);
+    $initial = '؟';
+    $trimmed = trim($name);
+    if ($trimmed !== '') {
+        $initial = function_exists('mb_substr')
+            ? casting_e((string) mb_substr($trimmed, 0, 1, 'UTF-8'))
+            : casting_e(substr($trimmed, 0, 1));
+    }
+    ?>
+<span class="chat-avatar<?= $has_unread ? ' has-unread' : '' ?>">
+  <?php if ($avatar !== '') : ?>
+    <img src="<?= casting_e($avatar) ?>" alt="">
+  <?php else : ?>
+    <span class="chat-avatar-fallback" aria-hidden="true"><?= $initial ?></span>
+  <?php endif; ?>
+</span>
+    <?php
+}
+
 function casting_chat_table(): string
 {
     global $wpdb;
@@ -188,6 +341,10 @@ function casting_dm_thread(int $user_id, int $peer_id, int $limit = 200): array
         return [];
     }
 
+    if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($user_id, $peer_id)) {
+        return [];
+    }
+
     casting_chat_ensure_table();
     global $wpdb;
     $table = casting_dm_table();
@@ -229,13 +386,14 @@ function casting_dm_thread(int $user_id, int $peer_id, int $limit = 200): array
 }
 
 /**
- * @return array<int, array{peer_id:int,name:string,role:string,last_message:string,last_at:string}>
+ * @return array<int, array{peer_id:int,name:string,role:string,last_message:string,last_at:string,unread:int,avatar:string}>
  */
 function casting_dm_conversations(int $user_id): array
 {
     casting_chat_ensure_table();
     global $wpdb;
     $table = casting_dm_table();
+    $unread_map = casting_dm_unread_by_peer($user_id);
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $rows = $wpdb->get_results(
         $wpdb->prepare(
@@ -274,6 +432,8 @@ function casting_dm_conversations(int $user_id): array
             'role'         => casting_get_user_role($peer),
             'last_message' => (string) $row['message'],
             'last_at'      => (string) $row['created_at'],
+            'unread'       => (int) ($unread_map[$peer] ?? 0),
+            'avatar'       => casting_chat_peer_avatar_url($peer),
         ];
     }
     return $out;

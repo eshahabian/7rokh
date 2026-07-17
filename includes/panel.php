@@ -20,9 +20,6 @@ function casting_panel_nav_items(): array
         ['key' => 'newest',     'label' => 'جدیدترین کاربران',        'href' => 'newest-users.php'],
         ['key' => 'visitors',   'label' => 'بازدیدکنندگان پروفایل من', 'href' => 'profile-visitors.php'],
         ['key' => 'blocked',    'label' => 'بلاک‌شده‌های من',         'href' => 'blocked-by-me.php'],
-        ['key' => 'blockers',   'label' => 'بلاک‌کنندگان من',         'href' => 'blocked-me.php'],
-        ['key' => 'profile',    'label' => 'ویرایش پروفایل',          'href' => 'profile-talent.php'],
-        ['key' => 'myprofile',  'label' => 'مشاهده پروفایل خودم',     'href' => 'my-profile.php'],
         ['key' => 'photo',      'label' => 'ویرایش تصویر',            'href' => 'profile-photo.php'],
         ['key' => 'password',   'label' => 'تغییر رمز عبور',          'href' => 'change-password.php'],
         ['key' => 'transactions','label' => 'تراکنش‌های مالی',        'href' => 'transactions.php'],
@@ -44,13 +41,24 @@ function casting_panel_profile_url(int $user_id): string
 
 function casting_render_panel_sidebar(string $active): void
 {
+    $unread_peers = 0;
+    $user = casting_current_user();
+    if ($user) {
+        if (!function_exists('casting_dm_unread_peer_count')) {
+            require_once __DIR__ . '/chat.php';
+        }
+        $unread_peers = casting_dm_unread_peer_count((int) $user->ID);
+    }
     ?>
     <aside class="panel-sidebar" aria-label="منوی پنل کاربری">
       <p class="panel-sidebar-title">پنل کاربری</p>
       <nav class="panel-nav">
         <?php foreach (casting_panel_nav_items() as $item) : ?>
           <a class="panel-nav-link <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?>">
-            <?= casting_e($item['label']) ?>
+            <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
+            <?php if ($item['key'] === 'messages' && $unread_peers > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
+            <?php endif; ?>
           </a>
         <?php endforeach; ?>
       </nav>
@@ -74,47 +82,788 @@ function casting_render_panel_end(): void
 }
 
 /**
+ * @return array<string, array{label:string,min:int,max:int}>
+ */
+function casting_search_height_range_options(): array
+{
+    $out = [];
+    for ($min = 160; $min < 190; $min += 5) {
+        $max = $min + 5;
+        $key = $min . '_' . $max;
+        $out[$key] = [
+            'label' => $min . '-' . $max,
+            'min'   => $min,
+            'max'   => $max,
+        ];
+    }
+    return $out;
+}
+
+/**
+ * @return array<string, array{label:string,min:int,max:int}>
+ */
+function casting_search_weight_range_options(): array
+{
+    $out = [];
+    for ($min = 50; $min < 110; $min += 10) {
+        $max = $min + 10;
+        $key = $min . '_' . $max;
+        $out[$key] = [
+            'label' => $min . '-' . $max,
+            'min'   => $min,
+            'max'   => $max,
+        ];
+    }
+    return $out;
+}
+
+/**
+ * @param array<string, array{label:string,min:int,max:int}> $options
+ */
+function casting_render_search_band_select(string $id, string $name, string $label, array $options, string $value): void
+{
+    ?>
+    <div class="field">
+      <label for="<?= casting_e($id) ?>"><?= casting_e($label) ?></label>
+      <select id="<?= casting_e($id) ?>" name="<?= casting_e($name) ?>">
+        <option value="">همه</option>
+        <?php foreach ($options as $key => $range) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $value === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <?php
+}
+
+/**
+ * تبدیل اعداد فارسی/عربی به لاتین برای فیلتر محدوده
+ */
+function casting_normalize_search_digits(string $value): string
+{
+    $persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    $arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    $latin = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    $value = str_replace($persian, $latin, $value);
+    $value = str_replace($arabic, $latin, $value);
+    $value = preg_replace('/[\x{2013}\x{2014}\x{2212}]/u', '-', $value) ?? $value;
+
+    return trim($value);
+}
+
+/**
+ * @return array{min:?int,max:?int}
+ */
+function casting_parse_search_metric_range(string $raw, int $floor, int $ceil): array
+{
+    $raw = casting_normalize_search_digits($raw);
+    if ($raw === '') {
+        return ['min' => null, 'max' => null];
+    }
+
+    $min = null;
+    $max = null;
+    if (preg_match('/^(\d+)\s*-\s*(\d+)$/', $raw, $matches) === 1) {
+        $min = (int) $matches[1];
+        $max = (int) $matches[2];
+        if ($min > $max) {
+            [$min, $max] = [$max, $min];
+        }
+    } elseif (preg_match('/^\d+$/', $raw) === 1) {
+        $min = (int) $raw;
+    } else {
+        return ['min' => null, 'max' => null];
+    }
+
+    if ($min !== null && ($min < $floor || $min > $ceil)) {
+        $min = null;
+    }
+    if ($max !== null && ($max < $floor || $max > $ceil)) {
+        $max = null;
+    }
+
+    return ['min' => $min, 'max' => $max];
+}
+
+function casting_search_metric_range_from_input(array $input, string $range_key, string $min_key, string $max_key): string
+{
+    $value = casting_normalize_search_digits((string) ($input[$range_key] ?? ''));
+    if ($value !== '') {
+        return $value;
+    }
+
+    $min = casting_normalize_search_digits((string) ($input[$min_key] ?? ''));
+    $max = casting_normalize_search_digits((string) ($input[$max_key] ?? ''));
+    if ($min === '' && $max === '') {
+        return '';
+    }
+    if ($min !== '' && $max !== '') {
+        return $min . '-' . $max;
+    }
+
+    return $min !== '' ? $min : $max;
+}
+
+/**
+ * سن، قد و وزن — یک فیلد با فرمت 22-35
+ *
+ * @param array<string, string> $filters
+ */
+function casting_render_body_metric_search_fields(array $filters): void
+{
+    $fields = [
+        ['name' => 'age_range', 'label' => 'سن', 'placeholder' => '22-35', 'hint' => 'سال'],
+        ['name' => 'height_range', 'label' => 'قد', 'placeholder' => '165-180', 'hint' => 'سانتی‌متر'],
+        ['name' => 'weight_range', 'label' => 'وزن', 'placeholder' => '55-70', 'hint' => 'کیلو'],
+    ];
+    ?>
+    <div class="filter-body-metrics" aria-label="فیلتر سن، قد و وزن">
+      <?php foreach ($fields as $field) : ?>
+        <div class="field">
+          <label for="<?= casting_e($field['name']) ?>"><?= casting_e($field['label']) ?></label>
+          <input
+            id="<?= casting_e($field['name']) ?>"
+            name="<?= casting_e($field['name']) ?>"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            value="<?= casting_e($filters[$field['name']] ?? '') ?>"
+            placeholder="<?= casting_e($field['placeholder']) ?>"
+            title="محدوده را با خط تیره بنویسید، مثلاً <?= casting_e($field['placeholder']) ?> (<?= casting_e($field['hint']) ?>)"
+          >
+        </div>
+      <?php endforeach; ?>
+    </div>
+    <?php
+}
+
+/**
+ * @param list<array<string, mixed>> $meta_query
+ */
+function casting_apply_search_metric_range_filter(
+    array &$meta_query,
+    string $meta_key,
+    string $filter_value,
+    int $floor,
+    int $ceil
+): void {
+    $parsed = casting_parse_search_metric_range($filter_value, $floor, $ceil);
+    if ($parsed['min'] !== null) {
+        $meta_query[] = [
+            'key'     => $meta_key,
+            'value'   => $parsed['min'],
+            'type'    => 'NUMERIC',
+            'compare' => '>=',
+        ];
+    }
+    if ($parsed['max'] !== null) {
+        $meta_query[] = [
+            'key'     => $meta_key,
+            'value'   => $parsed['max'],
+            'type'    => 'NUMERIC',
+            'compare' => '<=',
+        ];
+    }
+}
+
+/**
+ * @param list<array<string, mixed>> $meta_query
+ */
+function casting_apply_body_metric_search_filters(array &$meta_query, array $filters): void
+{
+    casting_apply_search_metric_range_filter($meta_query, 'casting_age', (string) ($filters['age_range'] ?? ''), 5, 100);
+    casting_apply_search_metric_range_filter($meta_query, 'casting_height', (string) ($filters['height_range'] ?? ''), 80, 230);
+    casting_apply_search_metric_range_filter($meta_query, 'casting_weight', (string) ($filters['weight_range'] ?? ''), 20, 250);
+}
+
+/**
+ * @param list<array<string, mixed>> $meta_query
+ */
+function casting_apply_member_experience_filters(array &$meta_query, array $filters): void
+{
+    $exp_min = (int) ($filters['experience_min'] ?? 0);
+    $exp_max = (int) ($filters['experience_max'] ?? 0);
+    if ($exp_min >= 0 && $exp_min <= 60 && ($filters['experience_min'] ?? '') !== '') {
+        $meta_query[] = [
+            'key'     => 'casting_experience',
+            'value'   => $exp_min,
+            'type'    => 'NUMERIC',
+            'compare' => '>=',
+        ];
+    }
+    if ($exp_max >= 0 && $exp_max <= 60 && ($filters['experience_max'] ?? '') !== '') {
+        $meta_query[] = [
+            'key'     => 'casting_experience',
+            'value'   => $exp_max,
+            'type'    => 'NUMERIC',
+            'compare' => '<=',
+        ];
+    }
+}
+
+/**
+ * @param list<array<string, mixed>> $meta_query
+ */
+function casting_apply_member_language_filters(array &$meta_query, array $filters): void
+{
+    $language = sanitize_text_field((string) ($filters['language'] ?? ''));
+    if ($language !== '') {
+        $meta_query[] = [
+            'key'     => 'casting_language_items',
+            'value'   => $language,
+            'compare' => 'LIKE',
+        ];
+    }
+
+    $language_level = sanitize_key((string) ($filters['language_level'] ?? ''));
+    if ($language_level !== '' && array_key_exists($language_level, casting_language_level_labels())) {
+        $meta_query[] = [
+            'key'     => 'casting_language_items',
+            'value'   => '"' . $language_level . '"',
+            'compare' => 'LIKE',
+        ];
+    }
+}
+
+/**
+ * @param list<array<string, mixed>> $meta_query
+ */
+function casting_apply_member_education_filters(array &$meta_query, array $filters): void
+{
+    $degree = sanitize_key((string) ($filters['education_degree'] ?? ''));
+    if ($degree !== '' && array_key_exists($degree, casting_education_degree_labels())) {
+        $meta_query[] = [
+            'key'     => 'casting_education_items',
+            'value'   => '"' . $degree . '"',
+            'compare' => 'LIKE',
+        ];
+    }
+}
+
+/**
+ * @param list<array<string, mixed>> $meta_query
+ */
+function casting_apply_member_has_video_filter(array &$meta_query, string $value): void
+{
+    $value = sanitize_key($value);
+    if ($value === '' || !array_key_exists($value, casting_yes_no_labels())) {
+        return;
+    }
+
+    if ($value === 'yes') {
+        $meta_query[] = [
+            'relation' => 'OR',
+            [
+                'key'     => 'casting_video_id',
+                'value'   => 0,
+                'compare' => '>',
+                'type'    => 'NUMERIC',
+            ],
+            [
+                'key'     => 'casting_video_url',
+                'value'   => '',
+                'compare' => '!=',
+            ],
+        ];
+        return;
+    }
+
+    $meta_query[] = [
+        'relation' => 'AND',
+        [
+            'relation' => 'OR',
+            ['key' => 'casting_video_id', 'compare' => 'NOT EXISTS'],
+            ['key' => 'casting_video_id', 'value' => 0, 'compare' => '=', 'type' => 'NUMERIC'],
+            ['key' => 'casting_video_id', 'value' => '', 'compare' => '='],
+        ],
+        [
+            'relation' => 'OR',
+            ['key' => 'casting_video_url', 'compare' => 'NOT EXISTS'],
+            ['key' => 'casting_video_url', 'value' => '', 'compare' => '='],
+        ],
+    ];
+}
+
+/**
+ * @param list<array<string, mixed>> $meta_query
+ */
+function casting_apply_member_has_portfolio_filter(array &$meta_query, string $value): void
+{
+    $value = sanitize_key($value);
+    if ($value === '' || !array_key_exists($value, casting_yes_no_labels())) {
+        return;
+    }
+
+    $has_portfolio = [
+        'relation' => 'OR',
+        [
+            'relation' => 'AND',
+            ['key' => 'casting_work_credits', 'compare' => 'EXISTS'],
+            ['key' => 'casting_work_credits', 'value' => 'a:0:{}', 'compare' => '!='],
+        ],
+        ['key' => 'casting_photo_closeup_id', 'value' => 0, 'compare' => '>', 'type' => 'NUMERIC'],
+        ['key' => 'casting_photo_medium_id', 'value' => 0, 'compare' => '>', 'type' => 'NUMERIC'],
+        ['key' => 'casting_photo_long_id', 'value' => 0, 'compare' => '>', 'type' => 'NUMERIC'],
+        ['key' => 'casting_photo_id', 'value' => 0, 'compare' => '>', 'type' => 'NUMERIC'],
+        [
+            'key'     => 'casting_video_id',
+            'value'   => 0,
+            'compare' => '>',
+            'type'    => 'NUMERIC',
+        ],
+        [
+            'key'     => 'casting_video_url',
+            'value'   => '',
+            'compare' => '!=',
+        ],
+    ];
+
+    if ($value === 'yes') {
+        $meta_query[] = $has_portfolio;
+        return;
+    }
+
+    $meta_query[] = [
+        'relation' => 'AND',
+        [
+            'relation' => 'OR',
+            ['key' => 'casting_work_credits', 'compare' => 'NOT EXISTS'],
+            ['key' => 'casting_work_credits', 'value' => 'a:0:{}', 'compare' => '='],
+        ],
+        [
+            'relation' => 'OR',
+            ['key' => 'casting_photo_closeup_id', 'compare' => 'NOT EXISTS'],
+            ['key' => 'casting_photo_closeup_id', 'value' => 0, 'compare' => '=', 'type' => 'NUMERIC'],
+            ['key' => 'casting_photo_closeup_id', 'value' => '', 'compare' => '='],
+        ],
+        [
+            'relation' => 'OR',
+            ['key' => 'casting_photo_medium_id', 'compare' => 'NOT EXISTS'],
+            ['key' => 'casting_photo_medium_id', 'value' => 0, 'compare' => '=', 'type' => 'NUMERIC'],
+            ['key' => 'casting_photo_medium_id', 'value' => '', 'compare' => '='],
+        ],
+        [
+            'relation' => 'OR',
+            ['key' => 'casting_photo_long_id', 'compare' => 'NOT EXISTS'],
+            ['key' => 'casting_photo_long_id', 'value' => 0, 'compare' => '=', 'type' => 'NUMERIC'],
+            ['key' => 'casting_photo_long_id', 'value' => '', 'compare' => '='],
+        ],
+        [
+            'relation' => 'OR',
+            ['key' => 'casting_photo_id', 'compare' => 'NOT EXISTS'],
+            ['key' => 'casting_photo_id', 'value' => 0, 'compare' => '=', 'type' => 'NUMERIC'],
+            ['key' => 'casting_photo_id', 'value' => '', 'compare' => '='],
+        ],
+        [
+            'relation' => 'OR',
+            ['key' => 'casting_video_id', 'compare' => 'NOT EXISTS'],
+            ['key' => 'casting_video_id', 'value' => 0, 'compare' => '=', 'type' => 'NUMERIC'],
+            ['key' => 'casting_video_id', 'value' => '', 'compare' => '='],
+        ],
+        [
+            'relation' => 'OR',
+            ['key' => 'casting_video_url', 'compare' => 'NOT EXISTS'],
+            ['key' => 'casting_video_url', 'value' => '', 'compare' => '='],
+        ],
+    ];
+}
+
+/**
+ * @param array<string, string> $filters
+ */
+function casting_render_member_search_phase1_fields(array $filters): void
+{
+    $yes_no = casting_yes_no_labels();
+    $language_levels = casting_language_level_labels();
+    $education_degrees = casting_education_degree_labels();
+    $languages = casting_common_languages();
+    ?>
+    <div class="field">
+      <label for="experience_min">سابقه از</label>
+      <input id="experience_min" name="experience_min" type="number" min="0" max="60" value="<?= casting_e($filters['experience_min']) ?>" placeholder="سال">
+    </div>
+    <div class="field">
+      <label for="experience_max">سابقه تا</label>
+      <input id="experience_max" name="experience_max" type="number" min="0" max="60" value="<?= casting_e($filters['experience_max']) ?>" placeholder="سال">
+    </div>
+    <div class="field">
+      <label for="language">زبان</label>
+      <input id="language" name="language" type="search" list="casting-search-languages" value="<?= casting_e($filters['language']) ?>" placeholder="مثلاً انگلیسی">
+      <datalist id="casting-search-languages">
+        <?php foreach ($languages as $lang) : ?>
+          <option value="<?= casting_e($lang) ?>"></option>
+        <?php endforeach; ?>
+      </datalist>
+    </div>
+    <div class="field">
+      <label for="language_level">سطح زبان</label>
+      <select id="language_level" name="language_level">
+        <option value="">همه</option>
+        <?php foreach ($language_levels as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['language_level'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="field">
+      <label for="education_degree">تحصیلات</label>
+      <select id="education_degree" name="education_degree">
+        <option value="">همه</option>
+        <?php foreach ($education_degrees as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['education_degree'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="field">
+      <label for="has_video">ویدئو معرفی</label>
+      <select id="has_video" name="has_video">
+        <option value="">همه</option>
+        <?php foreach ($yes_no as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['has_video'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="field">
+      <label for="has_portfolio">نمونه‌کار</label>
+      <select id="has_portfolio" name="has_portfolio">
+        <option value="">همه</option>
+        <?php foreach ($yes_no as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['has_portfolio'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <?php
+}
+
+/**
+ * @param list<array<string, mixed>> $meta_query
+ */
+function casting_apply_member_phase2_filters(array &$meta_query, array $filters): void
+{
+    $eye = sanitize_key((string) ($filters['eye_color'] ?? ''));
+    if ($eye !== '' && array_key_exists($eye, casting_eye_color_labels())) {
+        $meta_query[] = [
+            'key'   => 'casting_eye_color',
+            'value' => $eye,
+        ];
+    }
+
+    $hair = sanitize_key((string) ($filters['hair_color'] ?? ''));
+    if ($hair !== '' && array_key_exists($hair, casting_hair_color_labels())) {
+        $meta_query[] = [
+            'key'   => 'casting_hair_color',
+            'value' => $hair,
+        ];
+    }
+
+    $accent = sanitize_key((string) ($filters['accent'] ?? ''));
+    if ($accent !== '' && array_key_exists($accent, casting_accent_labels())) {
+        $meta_query[] = [
+            'key'   => 'casting_accent',
+            'value' => $accent,
+        ];
+    }
+
+    $apparent = sanitize_key((string) ($filters['apparent_age_range'] ?? ''));
+    if ($apparent !== '' && array_key_exists($apparent, casting_age_range_options())) {
+        $meta_query[] = [
+            'key'   => 'casting_apparent_age_range',
+            'value' => $apparent,
+        ];
+    }
+
+    $motor = sanitize_key((string) ($filters['motor_skill'] ?? ''));
+    if ($motor !== '' && isset(casting_motor_skill_labels()[$motor])) {
+        $meta_query[] = [
+            'key'     => 'casting_skill_items',
+            'value'   => '"' . $motor . '"',
+            'compare' => 'LIKE',
+        ];
+    }
+
+    $art_skill = sanitize_key((string) ($filters['artistic_skill'] ?? ''));
+    if ($art_skill !== '' && isset(casting_artistic_skill_labels()[$art_skill])) {
+        $meta_query[] = [
+            'key'     => 'casting_skill_items',
+            'value'   => '"' . $art_skill . '"',
+            'compare' => 'LIKE',
+        ];
+    }
+}
+
+/**
+ * @param array<string, string> $filters
+ */
+function casting_render_member_search_phase2_fields(array $filters): void
+{
+    $eyes = casting_eye_color_labels();
+    $hairs = casting_hair_color_labels();
+    $accents = casting_accent_labels();
+    $age_ranges = casting_age_range_options();
+    ?>
+    <div class="field">
+      <label for="apparent_age_range">سن ظاهری</label>
+      <select id="apparent_age_range" name="apparent_age_range">
+        <option value="">همه</option>
+        <?php foreach ($age_ranges as $key => $range) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['apparent_age_range'] === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="field">
+      <label for="eye_color">رنگ چشم</label>
+      <select id="eye_color" name="eye_color">
+        <option value="">همه</option>
+        <?php foreach ($eyes as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['eye_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="field">
+      <label for="hair_color">رنگ مو</label>
+      <select id="hair_color" name="hair_color">
+        <option value="">همه</option>
+        <?php foreach ($hairs as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['hair_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="field">
+      <label for="accent">لهجه</label>
+      <select id="accent" name="accent">
+        <option value="">همه</option>
+        <?php foreach ($accents as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['accent'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <?php
+}
+
+/**
+ * تخصص هنری، تخصص، مهارت هنری، تشکل، مهارت حرکتی — یک ردیف کنار هم
+ *
+ * @param array<string, string> $filters
+ */
+function casting_render_member_search_talent_cluster(array $filters): void
+{
+    $categories = casting_activity_categories();
+    $category = (string) ($filters['activity_category'] ?? '');
+    $specialty = (string) ($filters['activity_specialty'] ?? '');
+    $subs = ($category !== '' && isset($categories[$category])) ? $categories[$category]['items'] : [];
+    $map = [];
+    foreach ($categories as $cat_key => $cat) {
+        $map[$cat_key] = $cat['items'];
+    }
+    $map_json = wp_json_encode($map, JSON_UNESCAPED_UNICODE);
+    if (!is_string($map_json)) {
+        $map_json = '{}';
+    }
+
+    $artistic_orgs = casting_artistic_org_labels();
+    $motor_skills = casting_motor_skill_labels();
+    $artistic_skills = casting_artistic_skill_labels();
+    ?>
+    <div class="filter-talent-cluster" data-activity-search data-activity-map="<?= casting_e($map_json) ?>">
+      <div class="field">
+        <label for="activity_category">تخصص هنری</label>
+        <select id="activity_category" name="activity_category" data-activity-category>
+          <option value="">همه</option>
+          <?php foreach ($categories as $key => $cat) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $category === $key ? 'selected' : '' ?>><?= casting_e($cat['label']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="activity_specialty">تخصص</label>
+        <select id="activity_specialty" name="activity_specialty" data-activity-specialty <?= $category === '' ? 'disabled' : '' ?>>
+          <option value=""><?= $category === '' ? 'اول تخصص هنری' : 'همه' ?></option>
+          <?php foreach ($subs as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $specialty === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="artistic_skill">مهارت هنری</label>
+        <select id="artistic_skill" name="artistic_skill">
+          <option value="">همه</option>
+          <?php foreach ($artistic_skills as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['artistic_skill'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="artistic_org">تشکل</label>
+        <select id="artistic_org" name="artistic_org">
+          <option value="">همه</option>
+          <?php foreach ($artistic_orgs as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['artistic_org'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="motor_skill">مهارت حرکتی</label>
+        <select id="motor_skill" name="motor_skill">
+          <option value="">همه</option>
+          <?php foreach ($motor_skills as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['motor_skill'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+    </div>
+    <?php
+}
+
+/**
+ * @return array<string, string>
+ */
+function casting_parse_member_search_filters(array $input): array
+{
+    return [
+        'activity_category'  => (string) ($input['activity_category'] ?? ''),
+        'activity_specialty' => (string) ($input['activity_specialty'] ?? ''),
+        'gender'             => (string) ($input['gender'] ?? ''),
+        'look'               => (string) ($input['look'] ?? ''),
+        'age_range'          => casting_search_metric_range_from_input($input, 'age_range', 'age_min', 'age_max'),
+        'height_range'       => casting_search_metric_range_from_input($input, 'height_range', 'height_min', 'height_max'),
+        'weight_range'       => casting_search_metric_range_from_input($input, 'weight_range', 'weight_min', 'weight_max'),
+        'health_status'      => (string) ($input['health_status'] ?? ''),
+        'province'           => (string) ($input['province'] ?? ''),
+        'city'               => (string) ($input['city'] ?? ''),
+        'artistic_org'       => (string) ($input['artistic_org'] ?? ''),
+        'availability'       => (string) ($input['availability'] ?? ''),
+        'experience_min'     => (string) ($input['experience_min'] ?? ''),
+        'experience_max'     => (string) ($input['experience_max'] ?? ''),
+        'language'           => (string) ($input['language'] ?? ''),
+        'language_level'     => (string) ($input['language_level'] ?? ''),
+        'education_degree'   => (string) ($input['education_degree'] ?? ''),
+        'has_video'          => (string) ($input['has_video'] ?? ''),
+        'has_portfolio'      => (string) ($input['has_portfolio'] ?? ''),
+        'eye_color'          => (string) ($input['eye_color'] ?? ''),
+        'hair_color'         => (string) ($input['hair_color'] ?? ''),
+        'accent'             => (string) ($input['accent'] ?? ''),
+        'apparent_age_range' => (string) ($input['apparent_age_range'] ?? ''),
+        'motor_skill'        => (string) ($input['motor_skill'] ?? ''),
+        'artistic_skill'     => (string) ($input['artistic_skill'] ?? ''),
+    ];
+}
+
+/**
  * @return array{users: WP_User[], total: int}
  */
 function casting_query_members(int $exclude_id, array $filters = [], int $page = 1, int $per_page = 20): array
 {
     $meta_query = [
+        'relation' => 'AND',
         [
             'key'     => 'casting_role',
             'compare' => 'EXISTS',
         ],
     ];
 
-    if (!empty($filters['role']) && casting_valid_role((string) $filters['role'])) {
+    if (!empty($filters['activity_specialty'])) {
+        $activity_specialty = sanitize_key((string) $filters['activity_specialty']);
+        $activity_labels = casting_activity_labels();
+        if (isset($activity_labels[$activity_specialty])) {
+            $meta_query[] = [
+                'key'     => 'casting_activities',
+                'value'   => '"' . $activity_specialty . '"',
+                'compare' => 'LIKE',
+            ];
+        }
+    } elseif (!empty($filters['activity_category'])) {
+        $activity_category = sanitize_key((string) $filters['activity_category']);
+        $activity_categories = casting_activity_categories();
+        if (isset($activity_categories[$activity_category])) {
+            $activity_or = ['relation' => 'OR'];
+            foreach (array_keys($activity_categories[$activity_category]['items']) as $spec_key) {
+                $activity_or[] = [
+                    'key'     => 'casting_activities',
+                    'value'   => '"' . $spec_key . '"',
+                    'compare' => 'LIKE',
+                ];
+            }
+            if (count($activity_or) > 1) {
+                $meta_query[] = $activity_or;
+            }
+        }
+    }
+
+    if (!empty($filters['gender']) && array_key_exists($filters['gender'], casting_gender_labels())) {
         $meta_query[] = [
-            'key'   => 'casting_role',
-            'value' => sanitize_key((string) $filters['role']),
+            'key'   => 'casting_gender',
+            'value' => sanitize_key((string) $filters['gender']),
         ];
     }
 
-    if (!empty($filters['city'])) {
+    if (!empty($filters['look']) && array_key_exists($filters['look'], casting_look_labels())) {
         $meta_query[] = [
-            'key'     => 'casting_city',
-            'value'   => sanitize_text_field((string) $filters['city']),
+            'key'   => 'casting_look',
+            'value' => sanitize_key((string) $filters['look']),
+        ];
+    }
+
+    casting_apply_body_metric_search_filters($meta_query, $filters);
+
+    $health = sanitize_text_field((string) ($filters['health_status'] ?? ''));
+    if ($health !== '') {
+        $meta_query[] = [
+            'key'     => 'casting_health_status',
+            'value'   => $health,
             'compare' => 'LIKE',
         ];
     }
 
+    $province = sanitize_key((string) ($filters['province'] ?? ''));
+    if ($province !== '' && array_key_exists($province, casting_province_labels())) {
+        $meta_query[] = [
+            'key'   => 'casting_province',
+            'value' => $province,
+        ];
+    }
+
+    $city = casting_normalize_city_name((string) ($filters['city'] ?? ''));
+    if ($city !== '') {
+        $meta_query[] = [
+            'key'     => 'casting_city',
+            'value'   => $city,
+            'compare' => 'LIKE',
+        ];
+    }
+
+    $artistic_org = sanitize_key((string) ($filters['artistic_org'] ?? ''));
+    $org_labels = casting_artistic_org_labels();
+    if ($artistic_org !== '' && isset($org_labels[$artistic_org])) {
+        $meta_query[] = [
+            'key'     => 'casting_artistic_orgs',
+            'value'   => '"' . $artistic_org . '"',
+            'compare' => 'LIKE',
+        ];
+    }
+
+    if (!empty($filters['availability']) && array_key_exists($filters['availability'], casting_availability_labels())) {
+        $meta_query[] = [
+            'key'   => 'casting_availability',
+            'value' => sanitize_key((string) $filters['availability']),
+        ];
+    }
+
+    casting_apply_member_experience_filters($meta_query, $filters);
+    casting_apply_member_language_filters($meta_query, $filters);
+    casting_apply_member_education_filters($meta_query, $filters);
+    casting_apply_member_has_video_filter($meta_query, (string) ($filters['has_video'] ?? ''));
+    casting_apply_member_has_portfolio_filter($meta_query, (string) ($filters['has_portfolio'] ?? ''));
+    casting_apply_member_phase2_filters($meta_query, $filters);
+
     $page = max(1, $page);
+    $per_page = max(1, $per_page);
     $args = [
         'number'      => $per_page,
-        'paged'       => $page,
+        'offset'      => ($page - 1) * $per_page,
         'orderby'     => 'registered',
         'order'       => 'DESC',
         'meta_query'  => $meta_query,
         'count_total' => true,
         'exclude'     => [$exclude_id],
     ];
-
-    if (!empty($filters['q'])) {
-        $args['search'] = '*' . esc_attr(sanitize_text_field((string) $filters['q'])) . '*';
-        $args['search_columns'] = ['display_name', 'user_login'];
-    }
 
     $query = new WP_User_Query($args);
     $users = $query->get_results();

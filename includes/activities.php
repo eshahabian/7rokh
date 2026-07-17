@@ -271,7 +271,7 @@ function casting_render_activity_fields(array $selected = [], bool $required = t
     ?>
   <div class="field work-credits activity-fields" data-activity-items<?= $required ? ' data-activities-required' : '' ?> data-activity-map="<?= casting_e((string) $map_json) ?>">
     <span class="jalali-label">نوع فعالیت<?= $required ? ' <span class="req-mark">*</span>' : '' ?></span>
-    <p class="field-hint">اول بخش را انتخاب کنید (مثلاً کارگردانی)، بعد تخصص همان بخش را انتخاب کنید. با + مورد بعدی را اضافه کنید.</p>
+    <p class="field-hint">اول تخصص هنری را انتخاب کنید (مثلاً کارگردانی)، بعد تخصص همان رشته را انتخاب کنید. با + مورد بعدی را اضافه کنید.</p>
     <div class="work-credits-list" data-activity-list>
       <?php foreach ($rows as $i => $row) :
           $cat_key = (string) ($row['category'] ?? '');
@@ -279,14 +279,14 @@ function casting_render_activity_fields(array $selected = [], bool $required = t
           $subs = ($cat_key !== '' && isset($categories[$cat_key])) ? $categories[$cat_key]['items'] : [];
           ?>
         <div class="work-credit-row activity-row">
-          <select name="activity_items[<?= (int) $i ?>][category]" aria-label="بخش فعالیت" data-activity-category>
-            <option value="">انتخاب بخش…</option>
+          <select name="activity_items[<?= (int) $i ?>][category]" aria-label="تخصص هنری" data-activity-category>
+            <option value="">انتخاب تخصص هنری…</option>
             <?php foreach ($categories as $key => $cat) : ?>
               <option value="<?= casting_e($key) ?>" <?= $cat_key === $key ? 'selected' : '' ?>><?= casting_e($cat['label']) ?></option>
             <?php endforeach; ?>
           </select>
           <select name="activity_items[<?= (int) $i ?>][specialty]" aria-label="تخصص" data-activity-specialty <?= $cat_key === '' ? 'disabled' : '' ?>>
-            <option value=""><?= $cat_key === '' ? 'اول بخش را انتخاب کنید' : 'انتخاب تخصص…' ?></option>
+            <option value=""><?= $cat_key === '' ? 'اول تخصص هنری را انتخاب کنید' : 'انتخاب تخصص…' ?></option>
             <?php foreach ($subs as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $specialty === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -298,14 +298,14 @@ function casting_render_activity_fields(array $selected = [], bool $required = t
     <button type="button" class="btn btn-ghost btn-add-credit" data-add-activity>+ افزودن تخصص بعدی</button>
     <template data-activity-template>
       <div class="work-credit-row activity-row">
-        <select name="activity_items[__i__][category]" aria-label="بخش فعالیت" data-activity-category>
-          <option value="">انتخاب بخش…</option>
+        <select name="activity_items[__i__][category]" aria-label="تخصص هنری" data-activity-category>
+          <option value="">انتخاب تخصص هنری…</option>
           <?php foreach ($categories as $key => $cat) : ?>
             <option value="<?= casting_e($key) ?>"><?= casting_e($cat['label']) ?></option>
           <?php endforeach; ?>
         </select>
         <select name="activity_items[__i__][specialty]" aria-label="تخصص" data-activity-specialty disabled>
-          <option value="">اول بخش را انتخاب کنید</option>
+          <option value="">اول تخصص هنری را انتخاب کنید</option>
         </select>
         <button type="button" class="btn-icon" data-remove-activity aria-label="حذف">−</button>
       </div>

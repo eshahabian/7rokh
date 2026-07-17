@@ -9,21 +9,33 @@ $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $profile = casting_get_profile($user_id);
 $error = '';
-$success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_photo')) {
         $error = 'درخواست نامعتبر است.';
     } else {
-        $photo = casting_handle_photo_upload($user_id);
-        if (!$photo['ok']) {
-            $error = $photo['error'];
+        $has_file = false;
+        foreach (array_keys(casting_portrait_slots()) as $slot) {
+            if (!empty($_FILES['photo_' . $slot]['name'])) {
+                $has_file = true;
+                break;
+            }
+        }
+        if (!$has_file) {
+            $error = 'حداقل یک عکس جدید انتخاب کنید.';
         } else {
-            casting_set_flash('success', 'تصویر پروفایل به‌روز شد.');
-            casting_redirect('profile-photo.php');
+            $result = casting_handle_portrait_uploads($user_id, false);
+            if (!$result['ok']) {
+                $error = $result['error'];
+            } else {
+                casting_set_flash('success', 'عکس‌های پروفایل به‌روز شد.');
+                casting_redirect('profile-photo.php');
+            }
         }
     }
 }
+
+$profile = casting_get_profile($user_id);
 
 casting_render_panel_start('ویرایش تصویر', 'photo');
 if ($error !== '') {
@@ -31,24 +43,14 @@ if ($error !== '') {
 }
 casting_render_flash();
 ?>
-<section class="dash-card">
+<section class="dash-card panel-wide">
   <h1>ویرایش تصویر</h1>
-  <div class="photo-row">
-    <div class="profile-photo">
-      <?php if ($profile['photo_url'] !== '') : ?>
-        <img src="<?= casting_e($profile['photo_url']) ?>" alt="">
-      <?php else : ?>
-        <div class="photo-placeholder tall">بدون عکس</div>
-      <?php endif; ?>
-    </div>
-    <form class="form" method="post" action="profile-photo.php" enctype="multipart/form-data">
-      <?php wp_nonce_field('casting_photo'); ?>
-      <div class="field">
-        <label for="photo">انتخاب عکس جدید</label>
-        <input id="photo" name="photo" type="file" accept="image/*" required>
-      </div>
-      <button class="btn btn-primary" type="submit">ذخیره تصویر</button>
-    </form>
-  </div>
+  <p class="lede">سه عکس پروفایل را بارگذاری کنید: کلوزاپ (صورت)، مدیوم (نیم‌تنه)، لانگ (تمام‌قد).</p>
+
+  <form class="form" method="post" action="profile-photo.php" enctype="multipart/form-data">
+    <?php wp_nonce_field('casting_photo'); ?>
+    <?php casting_render_portrait_upload_fields($profile['portraits'] ?? [], false); ?>
+    <button class="btn btn-primary" type="submit">ذخیره عکس‌ها</button>
+  </form>
 </section>
 <?php casting_render_panel_end(); ?>

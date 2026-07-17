@@ -42,6 +42,126 @@ function casting_look_labels(): array
 }
 
 /**
+ * @return array<string, string>
+ */
+function casting_health_well_labels(): array
+{
+    return [
+        'healthy'   => 'سالم',
+        'unhealthy' => 'ناسالم',
+    ];
+}
+
+function casting_resolve_health_well(string $well, string $detail): string
+{
+    $labels = casting_health_well_labels();
+    if ($well !== '' && isset($labels[$well])) {
+        return $well;
+    }
+
+    return $detail !== '' ? 'unhealthy' : 'healthy';
+}
+
+/**
+ * @return array{well:string,detail:string}
+ */
+function casting_parse_health_post(array $post): array
+{
+    return [
+        'well'   => sanitize_key((string) ($post['health_well'] ?? '')),
+        'detail' => sanitize_textarea_field((string) ($post['health_status'] ?? '')),
+    ];
+}
+
+function casting_validate_health_fields(array $health, bool $required = true): ?string
+{
+    $labels = casting_health_well_labels();
+    $well = (string) ($health['well'] ?? '');
+    $detail = (string) ($health['detail'] ?? '');
+
+    if ($required && ($well === '' || !isset($labels[$well]))) {
+        return 'وضعیت سلامت را انتخاب کنید (سالم یا ناسالم).';
+    }
+    if ($well !== '' && !isset($labels[$well])) {
+        return 'وضعیت سلامت را درست انتخاب کنید.';
+    }
+    if ($well === 'unhealthy' && trim($detail) === '') {
+        return 'برای وضعیت ناسالم، توضیح بنویسید.';
+    }
+    if (casting_strlen($detail) > 500) {
+        return 'توضیح وضعیت سلامت حداکثر ۵۰۰ کاراکتر باشد.';
+    }
+
+    return null;
+}
+
+/**
+ * @param array{well:string,detail:string} $health
+ */
+function casting_save_health_meta(int $user_id, array $health): void
+{
+    $labels = casting_health_well_labels();
+    $well = sanitize_key((string) ($health['well'] ?? 'healthy'));
+    if (!isset($labels[$well])) {
+        $well = 'healthy';
+    }
+
+    update_user_meta($user_id, 'casting_health_well', $well);
+    if ($well === 'healthy') {
+        update_user_meta($user_id, 'casting_health_status', '');
+        return;
+    }
+
+    update_user_meta($user_id, 'casting_health_status', sanitize_textarea_field((string) ($health['detail'] ?? '')));
+}
+
+function casting_format_health_display(string $well, string $detail = ''): string
+{
+    if ($well === 'healthy') {
+        return casting_health_well_labels()['healthy'];
+    }
+    if ($well === 'unhealthy') {
+        return $detail !== '' ? 'ناسالم — ' . $detail : casting_health_well_labels()['unhealthy'];
+    }
+
+    return $detail !== '' ? $detail : '—';
+}
+
+/**
+ * @param string $well healthy|unhealthy|''
+ */
+function casting_render_health_fields(string $well = '', string $detail = '', bool $required = true): void
+{
+    $labels = casting_health_well_labels();
+    $is_unhealthy = $well === 'unhealthy';
+    ?>
+  <fieldset class="field health-field-wrap" data-health-field>
+    <legend>وضعیت سلامت<?= $required ? ' <span class="req-mark">*</span>' : '' ?></legend>
+    <div class="role-grid role-grid-2">
+      <?php foreach ($labels as $key => $label) : ?>
+        <label class="role-option">
+          <input type="radio" name="health_well" value="<?= casting_e($key) ?>" <?= $well === $key ? 'checked' : '' ?> <?= $required ? 'required' : '' ?> data-health-well>
+          <span><?= casting_e($label) ?></span>
+        </label>
+      <?php endforeach; ?>
+    </div>
+    <div class="health-detail-wrap<?= $is_unhealthy ? ' is-active' : '' ?>" data-health-detail-wrap>
+      <label for="health_status">توضیح وضعیت سلامت</label>
+      <textarea
+        id="health_status"
+        name="health_status"
+        rows="2"
+        maxlength="500"
+        placeholder="نوع محدودیت یا بیماری را بنویسید…"
+        data-health-detail
+        <?= $is_unhealthy ? '' : 'disabled' ?>
+      ><?= casting_e($is_unhealthy ? $detail : '') ?></textarea>
+    </div>
+  </fieldset>
+    <?php
+}
+
+/**
  * استان‌های ایران
  *
  * @return array<string, string>
@@ -342,6 +462,217 @@ function casting_skill_labels(): array
         'martial_arts'  => 'ورزش‌های رزمی',
         'other'         => 'سایر',
     ];
+}
+
+/**
+ * @return array<string, string>
+ */
+function casting_motor_skill_labels(): array
+{
+    $keys = ['horse_riding', 'fencing', 'pro_driving', 'swimming', 'martial_arts'];
+    return array_intersect_key(casting_skill_labels(), array_flip($keys));
+}
+
+/**
+ * @return array<string, string>
+ */
+function casting_artistic_skill_labels(): array
+{
+    $keys = ['music', 'dance'];
+    return array_intersect_key(casting_skill_labels(), array_flip($keys));
+}
+
+/**
+ * @return array<string, string>
+ */
+function casting_eye_color_labels(): array
+{
+    return [
+        'black' => 'مشکی',
+        'brown' => 'قهوه‌ای',
+        'hazel' => 'عسلی',
+        'green' => 'سبز',
+        'blue'  => 'آبی',
+        'gray'  => 'خاکستری',
+    ];
+}
+
+/**
+ * @return array<string, string>
+ */
+function casting_hair_color_labels(): array
+{
+    return [
+        'black' => 'مشکی',
+        'brown' => 'قهوه‌ای',
+        'blond' => 'بلوند',
+        'red'   => 'قرمز',
+        'gray'  => 'خاکستری / سفید',
+        'other' => 'سایر',
+    ];
+}
+
+/**
+ * @return array<string, string>
+ */
+function casting_accent_labels(): array
+{
+    return [
+        'tehrani'  => 'تهرانی',
+        'shirazi'  => 'شیرازی',
+        'esfahani' => 'اصفهانی',
+        'mashhadi' => 'مشهدی',
+        'azeri'    => 'آذربایجانی',
+        'kurdish'  => 'کردی',
+        'lori'     => 'لری',
+        'bandari'  => 'بندری',
+        'other'    => 'سایر',
+    ];
+}
+
+/**
+ * @return array{ok:bool,error?:string}
+ */
+function casting_save_talent_trait_meta(int $user_id, array $data): array
+{
+    if (array_key_exists('eye_color', $data)) {
+        $eye = sanitize_key((string) $data['eye_color']);
+        if ($eye !== '' && !array_key_exists($eye, casting_eye_color_labels())) {
+            return ['ok' => false, 'error' => 'رنگ چشم را درست انتخاب کنید.'];
+        }
+        if ($eye === '') {
+            delete_user_meta($user_id, 'casting_eye_color');
+        } else {
+            update_user_meta($user_id, 'casting_eye_color', $eye);
+        }
+    }
+
+    if (array_key_exists('hair_color', $data)) {
+        $hair = sanitize_key((string) $data['hair_color']);
+        if ($hair !== '' && !array_key_exists($hair, casting_hair_color_labels())) {
+            return ['ok' => false, 'error' => 'رنگ مو را درست انتخاب کنید.'];
+        }
+        if ($hair === '') {
+            delete_user_meta($user_id, 'casting_hair_color');
+        } else {
+            update_user_meta($user_id, 'casting_hair_color', $hair);
+        }
+    }
+
+    if (array_key_exists('accent', $data)) {
+        $accent = sanitize_key((string) $data['accent']);
+        $accent_other = sanitize_text_field((string) ($data['accent_other'] ?? ''));
+        if ($accent !== '' && !array_key_exists($accent, casting_accent_labels())) {
+            return ['ok' => false, 'error' => 'لهجه را درست انتخاب کنید.'];
+        }
+        if ($accent === 'other') {
+            if ($accent_other === '') {
+                return ['ok' => false, 'error' => 'برای لهجه «سایر» بنویسید لهجه شما چیست.'];
+            }
+            if (casting_strlen($accent_other) > 80) {
+                return ['ok' => false, 'error' => 'توضیح لهجه حداکثر ۸۰ کاراکتر باشد.'];
+            }
+            update_user_meta($user_id, 'casting_accent', 'other');
+            update_user_meta($user_id, 'casting_accent_other', $accent_other);
+        } elseif ($accent === '') {
+            delete_user_meta($user_id, 'casting_accent');
+            delete_user_meta($user_id, 'casting_accent_other');
+        } else {
+            update_user_meta($user_id, 'casting_accent', $accent);
+            delete_user_meta($user_id, 'casting_accent_other');
+        }
+    }
+
+    if (array_key_exists('apparent_age_range', $data)) {
+        $apparent = sanitize_key((string) $data['apparent_age_range']);
+        if ($apparent !== '' && !array_key_exists($apparent, casting_age_range_options())) {
+            return ['ok' => false, 'error' => 'رده سنی ظاهری را درست انتخاب کنید.'];
+        }
+        if ($apparent === '') {
+            delete_user_meta($user_id, 'casting_apparent_age_range');
+        } else {
+            update_user_meta($user_id, 'casting_apparent_age_range', $apparent);
+        }
+    }
+
+    return ['ok' => true];
+}
+
+function casting_format_accent_display(string $accent, string $accent_other = ''): string
+{
+    if ($accent === '') {
+        return '';
+    }
+    if ($accent === 'other') {
+        return $accent_other !== '' ? $accent_other : (casting_accent_labels()['other'] ?? 'سایر');
+    }
+
+    return casting_accent_labels()[$accent] ?? '';
+}
+
+/**
+ * @param array<string, string> $values
+ */
+function casting_render_talent_trait_fields(array $values = []): void
+{
+    $eye_color = (string) ($values['eye_color'] ?? '');
+    $hair_color = (string) ($values['hair_color'] ?? '');
+    $accent = (string) ($values['accent'] ?? '');
+    $accent_other = (string) ($values['accent_other'] ?? '');
+    $apparent_age_range = (string) ($values['apparent_age_range'] ?? '');
+    $is_accent_other = $accent === 'other';
+    ?>
+  <div class="form-grid">
+    <div class="field">
+      <label for="eye_color">رنگ چشم</label>
+      <select id="eye_color" name="eye_color">
+        <option value="">انتخاب کنید</option>
+        <?php foreach (casting_eye_color_labels() as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $eye_color === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="field">
+      <label for="hair_color">رنگ مو</label>
+      <select id="hair_color" name="hair_color">
+        <option value="">انتخاب کنید</option>
+        <?php foreach (casting_hair_color_labels() as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $hair_color === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="field accent-field-wrap" data-accent-field>
+      <label for="accent">لهجه</label>
+      <div class="trait-other-row accent-other-row<?= $is_accent_other ? ' is-other' : '' ?>">
+        <select id="accent" name="accent" data-accent-select>
+          <option value="">انتخاب کنید</option>
+          <?php foreach (casting_accent_labels() as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $accent === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <input
+          type="text"
+          id="accent_other"
+          name="accent_other"
+          value="<?= casting_e($is_accent_other ? $accent_other : '') ?>"
+          placeholder="لهجه خود را بنویسید…"
+          aria-label="توضیح لهجه سایر"
+          data-accent-other
+          <?= $is_accent_other ? '' : 'disabled' ?>
+        >
+      </div>
+    </div>
+    <div class="field">
+      <label for="apparent_age_range">رده سنی ظاهری</label>
+      <select id="apparent_age_range" name="apparent_age_range">
+        <option value="">انتخاب کنید</option>
+        <?php foreach (casting_age_range_options() as $key => $range) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $apparent_age_range === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+  </div>
+    <?php
 }
 
 /**
@@ -837,10 +1168,12 @@ function casting_render_work_credits_fields(array $credits = []): void
 function casting_education_degree_labels(): array
 {
     return [
-        'associate' => 'فوق‌دیپلم',
-        'bachelor'  => 'لیسانس',
-        'master'    => 'فوق‌لیسانس',
-        'doctorate' => 'دکترا',
+        'below_diploma' => 'زیر دیپلم',
+        'diploma'       => 'دیپلم',
+        'associate'     => 'فوق‌دیپلم',
+        'bachelor'      => 'لیسانس',
+        'master'        => 'فوق‌لیسانس',
+        'doctorate'     => 'دکترا',
     ];
 }
 
@@ -937,12 +1270,142 @@ function casting_age_from_birthdate(string $birthdate): ?int
     return (int) $birth->diff($today)->y;
 }
 
+/**
+ * @return array<string, string>
+ */
+function casting_portrait_slots(): array
+{
+    return [
+        'closeup' => 'کلوزاپ',
+        'medium'  => 'مدیوم',
+        'long'    => 'لانگ',
+    ];
+}
+
+/**
+ * @return array<string, string>
+ */
+function casting_portrait_slot_hints(): array
+{
+    return [
+        'closeup' => 'نمای نزدیک صورت',
+        'medium'  => 'نیم‌تنه یا تا کمر',
+        'long'    => 'تمام‌قد',
+    ];
+}
+
+function casting_portrait_meta_key(string $slot): string
+{
+    return array_key_exists($slot, casting_portrait_slots()) ? 'casting_photo_' . $slot . '_id' : '';
+}
+
+/**
+ * @return array{id:int,url:string,full:string}
+ */
+function casting_load_portrait(int $user_id, string $slot): array
+{
+    $empty = ['id' => 0, 'url' => '', 'full' => ''];
+    $meta_key = casting_portrait_meta_key($slot);
+    if ($meta_key === '') {
+        return $empty;
+    }
+
+    $id = (int) get_user_meta($user_id, $meta_key, true);
+    if ($id <= 0 && $slot === 'medium') {
+        $id = (int) get_user_meta($user_id, 'casting_photo_id', true);
+    }
+
+    if ($id <= 0) {
+        return $empty;
+    }
+
+    $url = wp_get_attachment_image_url($id, 'medium');
+    $full = wp_get_attachment_image_url($id, 'large');
+
+    return [
+        'id'   => $id,
+        'url'  => is_string($url) ? $url : '',
+        'full' => is_string($full) ? $full : '',
+    ];
+}
+
+/**
+ * @return array<string, array{id:int,url:string,full:string}>
+ */
+function casting_load_all_portraits(int $user_id): array
+{
+    $out = [];
+    foreach (casting_portrait_slots() as $slot => $label) {
+        unset($label);
+        $out[$slot] = casting_load_portrait($user_id, $slot);
+    }
+    return $out;
+}
+
+function casting_primary_portrait(array $portraits): array
+{
+    foreach (['medium', 'closeup', 'long'] as $slot) {
+        if (!empty($portraits[$slot]['id'])) {
+            return $portraits[$slot];
+        }
+    }
+    return ['id' => 0, 'url' => '', 'full' => ''];
+}
+
+/**
+ * @param array<string, array{id:int,url:string,full:string}> $portraits
+ */
+function casting_portraits_complete(array $portraits): bool
+{
+    foreach (casting_portrait_slots() as $slot => $label) {
+        unset($label);
+        if (empty($portraits[$slot]['id'])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * @param array<string, array{id:int,url:string,full:string}> $portraits
+ */
+function casting_render_portrait_upload_fields(array $portraits = [], bool $required = false): void
+{
+    $req = $required ? ' required' : '';
+    $hints = casting_portrait_slot_hints();
+    ?>
+  <div class="portrait-upload-grid">
+    <?php foreach (casting_portrait_slots() as $slot => $label) :
+        $field = 'photo_' . $slot;
+        $preview = $portraits[$slot]['url'] ?? '';
+        ?>
+      <div class="portrait-upload-card">
+        <div class="portrait-preview">
+          <?php if ($preview !== '') : ?>
+            <img src="<?= casting_e($preview) ?>" alt="<?= casting_e($label) ?>">
+          <?php else : ?>
+            <div class="photo-placeholder">بدون عکس</div>
+          <?php endif; ?>
+        </div>
+        <div class="field">
+          <label for="<?= casting_e($field) ?>"><?= casting_e($label) ?></label>
+          <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp"<?= $req ?>>
+          <p class="field-hint"><?= casting_e($hints[$slot] ?? '') ?> · JPG / PNG / WebP — حداکثر ۵ مگابایت</p>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+    <?php
+}
+
 function casting_get_profile(int $user_id): array
 {
-    $photo_id = (int) get_user_meta($user_id, 'casting_photo_id', true);
+    $portraits = casting_load_all_portraits($user_id);
+    $primary = casting_primary_portrait($portraits);
+    $photo_id = (int) $primary['id'];
     $video_id = (int) get_user_meta($user_id, 'casting_video_id', true);
-    $photo_url = $photo_id > 0 ? wp_get_attachment_image_url($photo_id, 'medium') : '';
-    $photo_full = $photo_id > 0 ? wp_get_attachment_image_url($photo_id, 'large') : '';
+    $photo_url = $primary['url'];
+    $photo_full = $primary['full'];
     $video_url_file = $video_id > 0 ? wp_get_attachment_url($video_id) : '';
     $video_url_meta = (string) get_user_meta($user_id, 'casting_video_url', true);
     $look_meta = (string) get_user_meta($user_id, 'casting_look', true);
@@ -961,6 +1424,10 @@ function casting_get_profile(int $user_id): array
         'residence'         => (string) get_user_meta($user_id, 'casting_residence', true),
         'height'            => (string) get_user_meta($user_id, 'casting_height', true),
         'weight'            => (string) get_user_meta($user_id, 'casting_weight', true),
+        'health_well'       => casting_resolve_health_well(
+            (string) get_user_meta($user_id, 'casting_health_well', true),
+            (string) get_user_meta($user_id, 'casting_health_status', true)
+        ),
         'health_status'     => (string) get_user_meta($user_id, 'casting_health_status', true),
         'experience'        => (string) get_user_meta($user_id, 'casting_experience', true),
         'artistic_membership' => casting_load_artistic_membership($user_id),
@@ -971,6 +1438,11 @@ function casting_get_profile(int $user_id): array
         'education_items'   => casting_normalize_education_items(get_user_meta($user_id, 'casting_education_items', true)),
         'activities'        => casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true)),
         'look'              => $look_meta,
+        'eye_color'         => (string) get_user_meta($user_id, 'casting_eye_color', true),
+        'hair_color'        => (string) get_user_meta($user_id, 'casting_hair_color', true),
+        'accent'            => (string) get_user_meta($user_id, 'casting_accent', true),
+        'accent_other'      => (string) get_user_meta($user_id, 'casting_accent_other', true),
+        'apparent_age_range'=> (string) get_user_meta($user_id, 'casting_apparent_age_range', true),
         'skills'            => (string) get_user_meta($user_id, 'casting_skills', true),
         'skill_items'       => casting_normalize_skill_items(get_user_meta($user_id, 'casting_skill_items', true)),
         'skills_other'      => (string) get_user_meta($user_id, 'casting_skills_other', true),
@@ -978,6 +1450,7 @@ function casting_get_profile(int $user_id): array
         'availability'      => (string) get_user_meta($user_id, 'casting_availability', true),
         'bio'               => (string) get_user_meta($user_id, 'casting_bio', true),
         'video_url'         => $video_url_meta,
+        'portraits'         => $portraits,
         'photo_id'          => $photo_id,
         'video_id'          => $video_id,
         'photo_url'         => is_string($photo_url) ? $photo_url : '',
@@ -1042,7 +1515,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
         return ['ok' => false, 'error' => 'شهر را از فهرست همان استان انتخاب کنید.'];
     }
 
-    $residence = '';
+    $residence = sanitize_text_field((string) ($data['residence'] ?? ''));
 
     $experience = (int) ($data['experience'] ?? -1);
     if ($experience < 0 || $experience > 60) {
@@ -1067,7 +1540,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
     $edu_items = casting_normalize_education_items($data['education_items'] ?? []);
     $activities = casting_normalize_activities($data['activities'] ?? []);
     if ($activities === []) {
-        return ['ok' => false, 'error' => 'حداقل یک تخصص از بخش نوع فعالیت انتخاب کنید.'];
+        return ['ok' => false, 'error' => 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.'];
     }
 
     $height_raw = trim((string) ($data['height'] ?? ''));
@@ -1091,9 +1564,10 @@ function casting_save_registration_profile(int $user_id, array $data): array
         }
     }
 
-    $health_status = sanitize_textarea_field((string) ($data['health_status'] ?? ''));
-    if (casting_strlen($health_status) > 500) {
-        return ['ok' => false, 'error' => 'وضعیت سلامت حداکثر ۵۰۰ کاراکتر باشد.'];
+    $health = casting_parse_health_post($data);
+    $health_err = casting_validate_health_fields($health, true);
+    if ($health_err !== null) {
+        return ['ok' => false, 'error' => $health_err];
     }
 
     update_user_meta($user_id, 'casting_birthdate', $birthdate);
@@ -1115,7 +1589,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
     if ($weight > 0) {
         update_user_meta($user_id, 'casting_weight', (string) $weight);
     }
-    update_user_meta($user_id, 'casting_health_status', $health_status);
+    casting_save_health_meta($user_id, $health);
     update_user_meta($user_id, 'casting_work_history', $work);
     update_user_meta($user_id, 'casting_work_credits', $credits);
     update_user_meta($user_id, 'casting_education', $education);
@@ -1140,6 +1614,11 @@ function casting_save_registration_profile(int $user_id, array $data): array
     update_user_meta($user_id, 'casting_language_items', $language_items);
     update_user_meta($user_id, 'casting_availability', $availability);
     update_user_meta($user_id, 'casting_visible', '1');
+
+    $traits = casting_save_talent_trait_meta($user_id, $data);
+    if (!$traits['ok']) {
+        return $traits;
+    }
 
     return ['ok' => true, 'age' => $age];
 }
@@ -1223,12 +1702,15 @@ function casting_save_profile(int $user_id, array $data): array
         update_user_meta($user_id, 'casting_weight', (string) $weight);
     }
 
-    if (array_key_exists('health_status', $data)) {
-        $health_status = sanitize_textarea_field((string) $data['health_status']);
-        if (casting_strlen($health_status) > 500) {
-            return ['ok' => false, 'error' => 'وضعیت سلامت حداکثر ۵۰۰ کاراکتر باشد.'];
+    if (array_key_exists('health_well', $data) || array_key_exists('health_status', $data)) {
+        $health = casting_parse_health_post($data);
+        $health_err = casting_validate_health_fields($health, false);
+        if ($health_err !== null) {
+            return ['ok' => false, 'error' => $health_err];
         }
-        update_user_meta($user_id, 'casting_health_status', $health_status);
+        if (($health['well'] ?? '') !== '') {
+            casting_save_health_meta($user_id, $health);
+        }
     }
 
     if (isset($data['experience']) && $data['experience'] !== '') {
@@ -1263,6 +1745,12 @@ function casting_save_profile(int $user_id, array $data): array
     if ($look !== '') {
         update_user_meta($user_id, 'casting_look', $look);
     }
+
+    $traits = casting_save_talent_trait_meta($user_id, $data);
+    if (!$traits['ok']) {
+        return $traits;
+    }
+
     if (array_key_exists('skill_items', $data)) {
         $skill_items = casting_normalize_skill_items($data['skill_items']);
         foreach ($skill_items as $row) {
@@ -1300,7 +1788,7 @@ function casting_save_profile(int $user_id, array $data): array
     if (array_key_exists('activities', $data)) {
         $activities = casting_normalize_activities($data['activities']);
         if ($activities === []) {
-            return ['ok' => false, 'error' => 'حداقل یک تخصص از بخش نوع فعالیت انتخاب کنید.'];
+            return ['ok' => false, 'error' => 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.'];
         }
         if (casting_activities_need_body_metrics($activities)) {
             $h = (string) get_user_meta($user_id, 'casting_height', true);
@@ -1316,6 +1804,10 @@ function casting_save_profile(int $user_id, array $data): array
             }
         }
         update_user_meta($user_id, 'casting_activities', $activities);
+        $new_role = casting_infer_role_from_activities($activities);
+        if (casting_valid_role($new_role)) {
+            update_user_meta($user_id, 'casting_role', $new_role);
+        }
     }
 
     $video_url = esc_url_raw((string) ($data['video_url'] ?? ''));
@@ -1388,15 +1880,21 @@ function casting_filter_upload_dir(array $uploads): array
     return $uploads;
 }
 
-function casting_handle_photo_upload(int $user_id): array
+function casting_handle_portrait_upload(int $user_id, string $slot): array
 {
-    if (empty($_FILES['photo']['name'])) {
+    $meta_key = casting_portrait_meta_key($slot);
+    if ($meta_key === '') {
+        return ['ok' => false, 'error' => 'نوع عکس نامعتبر است.'];
+    }
+
+    $field = 'photo_' . $slot;
+    if (empty($_FILES[$field]['name'])) {
         return ['ok' => true, 'skipped' => true];
     }
 
     casting_require_media_includes();
 
-    $file = $_FILES['photo'];
+    $file = $_FILES[$field];
     $allowed = ['image/jpeg', 'image/png', 'image/webp'];
     $ftype = (string) ($file['type'] ?? '');
     if (!in_array($ftype, $allowed, true)) {
@@ -1407,20 +1905,62 @@ function casting_handle_photo_upload(int $user_id): array
     }
 
     casting_enable_user_upload_dir($user_id);
-    $attachment_id = media_handle_upload('photo', 0);
+    $attachment_id = media_handle_upload($field, 0);
     casting_disable_user_upload_dir();
 
     if (is_wp_error($attachment_id)) {
         return ['ok' => false, 'error' => 'آپلود عکس ناموفق بود: ' . $attachment_id->get_error_message()];
     }
 
-    $old = (int) get_user_meta($user_id, 'casting_photo_id', true);
-    update_user_meta($user_id, 'casting_photo_id', (int) $attachment_id);
+    $old = (int) get_user_meta($user_id, $meta_key, true);
+    update_user_meta($user_id, $meta_key, (int) $attachment_id);
+    if ($slot === 'medium') {
+        update_user_meta($user_id, 'casting_photo_id', (int) $attachment_id);
+    }
     if ($old > 0 && $old !== (int) $attachment_id) {
         wp_delete_attachment($old, true);
     }
 
     return ['ok' => true, 'attachment_id' => (int) $attachment_id];
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_handle_portrait_uploads(int $user_id, bool $require_all = false): array
+{
+    $labels = casting_portrait_slots();
+
+    if ($require_all) {
+        foreach ($labels as $slot => $label) {
+            $field = 'photo_' . $slot;
+            if (empty($_FILES[$field]['name'])) {
+                $existing = casting_load_portrait($user_id, $slot);
+                if ($existing['id'] <= 0) {
+                    return ['ok' => false, 'error' => 'عکس «' . $label . '» را آپلود کنید.'];
+                }
+            }
+        }
+    }
+
+    foreach ($labels as $slot => $label) {
+        unset($label);
+        $result = casting_handle_portrait_upload($user_id, $slot);
+        if (!$result['ok']) {
+            return ['ok' => false, 'error' => $result['error']];
+        }
+    }
+
+    if ($require_all && !casting_portraits_complete(casting_load_all_portraits($user_id))) {
+        return ['ok' => false, 'error' => 'هر سه عکس (کلوزاپ، مدیوم، لانگ) الزامی است.'];
+    }
+
+    return ['ok' => true, 'error' => ''];
+}
+
+function casting_handle_photo_upload(int $user_id): array
+{
+    return casting_handle_portrait_upload($user_id, 'medium');
 }
 
 function casting_handle_video_upload(int $user_id): array
@@ -1542,9 +2082,10 @@ function casting_query_talents(array $filters = [], int $page = 1, int $per_page
     }
 
     $page = max(1, $page);
+    $per_page = max(1, $per_page);
     $args = [
         'number'      => $per_page,
-        'paged'       => $page,
+        'offset'      => ($page - 1) * $per_page,
         'orderby'     => 'registered',
         'order'       => 'DESC',
         'meta_query'  => $meta_query,
@@ -1584,7 +2125,7 @@ function casting_profile_complete(array $profile): bool
 {
     return $profile['age'] !== ''
         && $profile['gender'] !== ''
-        && $profile['photo_id'] > 0;
+        && casting_portraits_complete($profile['portraits'] ?? []);
 }
 
 /**

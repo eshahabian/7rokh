@@ -54,6 +54,15 @@ function casting_register_user(string $name, string $username, string $email, st
     return ['ok' => true, 'user_id' => (int) $user_id, 'role' => $role];
 }
 
+function casting_delete_registered_user(int $user_id): void
+{
+    if ($user_id <= 0) {
+        return;
+    }
+    require_once ABSPATH . 'wp-admin/includes/user.php';
+    wp_delete_user($user_id);
+}
+
 /**
  * آدرس پنل بر اساس نقش
  */

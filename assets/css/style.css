@@ -46,7 +46,8 @@ body {
   background-color: #0c0e12;
   background-image:
     linear-gradient(180deg, rgba(8, 10, 14, 0.55) 0%, rgba(8, 10, 14, 0.35) 40%, rgba(8, 10, 14, 0.72) 100%),
-    url("../img/background.png");
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(40, 48, 62, 0.45) 0%, transparent 55%),
+    url("../img/BackGround.png");
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;
@@ -728,6 +729,64 @@ fieldset.field legend {
   min-height: 280px;
 }
 
+.portrait-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.portrait-upload-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.portrait-preview {
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+}
+
+.portrait-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-portraits {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.profile-portrait-item {
+  margin: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.profile-portrait-item img,
+.profile-portrait-item .photo-placeholder {
+  aspect-ratio: 3 / 4;
+  min-height: 0;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.profile-portrait-item figcaption {
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
 .check-row {
   display: flex;
   align-items: flex-start;
@@ -775,6 +834,73 @@ fieldset.field legend {
   margin-bottom: 1.75rem;
   padding-bottom: 1.25rem;
   border-bottom: 1px solid var(--line);
+}
+
+.filter-bar-wide {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.filter-bar .jalali-birth {
+  grid-column: span 2;
+}
+
+.filter-bar .filter-location-fields {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.filter-bar .field label {
+  font-size: 0.82rem;
+  line-height: 1.25;
+  min-height: 2.5em;
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 0.35rem;
+}
+
+.filter-activity-fields {
+  display: contents;
+}
+
+.filter-body-metrics {
+  display: contents;
+}
+
+.filter-talent-cluster {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.filter-talent-cluster .field label {
+  min-height: 2.2em;
+}
+
+.filter-location-inline {
+  display: contents;
+}
+
+.filter-location-fields .field label {
+  font-size: 0.82rem;
+  line-height: 1.25;
+  min-height: 2.5em;
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 0.35rem;
+}
+
+.field-hint {
+  margin: 0.35rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 .filter-actions {
@@ -870,8 +996,8 @@ fieldset.field legend {
 
 .profile-hero {
   display: grid;
-  grid-template-columns: minmax(200px, 280px) 1fr;
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
   align-items: start;
 }
 
@@ -971,18 +1097,55 @@ fieldset.field legend {
   align-items: center;
 }
 
-/* مهارت: سلکت تا وسط فاصله تا دکمه − ؛ نصف دوم برای «سایر» */
+/* مهارت: با «سایر» فیلد توضیح باز می‌شود */
 .work-credit-row.skill-row {
+  grid-template-columns: minmax(0, 1fr) 44px;
+}
+
+.work-credit-row.skill-row.is-other {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
 }
 
 .work-credit-row.skill-row input[data-skill-note] {
   min-height: 48px;
+  display: none;
 }
 
-.work-credit-row.skill-row:not(.is-other) input[data-skill-note] {
-  visibility: hidden;
-  pointer-events: none;
+.work-credit-row.skill-row.is-other input[data-skill-note] {
+  display: block;
+}
+
+.trait-other-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.65rem;
+}
+
+.trait-other-row.is-other {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.trait-other-row input[data-accent-other] {
+  display: none;
+  min-height: 48px;
+}
+
+.trait-other-row.is-other input[data-accent-other] {
+  display: block;
+}
+
+.health-detail-wrap {
+  display: none;
+  margin-top: 0.75rem;
+}
+
+.health-detail-wrap.is-active {
+  display: block;
+}
+
+.health-field-wrap .health-detail-wrap label {
+  min-height: auto;
+  margin-bottom: 0.35rem;
 }
 
 .work-credit-row select,
@@ -1100,8 +1263,8 @@ fieldset.field legend {
 
 .chat-conv-item {
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  align-items: center;
+  gap: 0.65rem;
   padding: 0.65rem 0.75rem;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -1110,9 +1273,63 @@ fieldset.field legend {
   background: rgba(255, 255, 255, 0.03);
 }
 
-.chat-conv-item:hover,
-.chat-conv-item.is-active {
-  border-color: rgba(212, 165, 116, 0.35);
+.chat-conv-item.has-unread {
+  background: rgba(224, 122, 106, 0.08);
+}
+
+.chat-conv-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.chat-conv-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.chat-avatar {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.chat-avatar.has-unread {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 2px rgba(224, 122, 106, 0.25);
+}
+
+.chat-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.chat-avatar-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-weight: 700;
+  color: var(--accent-strong);
   background: var(--accent-dim);
 }
 
@@ -1125,6 +1342,27 @@ fieldset.field legend {
   font-size: 0.8rem;
   color: var(--ink-muted);
   font-style: normal;
+}
+
+.chat-conv-item.has-unread strong {
+  color: var(--ink);
+}
+
+.chat-conv-item.has-unread em {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.chat-conv-item:hover,
+.chat-conv-item.is-active {
+  border-color: rgba(212, 165, 116, 0.35);
+  background: var(--accent-dim);
+}
+
+.chat-conv-item.has-unread:hover,
+.chat-conv-item.has-unread.is-active {
+  background: rgba(224, 122, 106, 0.14);
+  border-color: rgba(224, 122, 106, 0.45);
 }
 
 .chat-start-form .btn {
@@ -1142,7 +1380,33 @@ fieldset.field legend {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 0.85rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-peer-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.chat-peer-title > div {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
+  gap: 0.35rem 0.65rem;
+}
+
+.chat-new-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .chat-peer-head strong {
@@ -1262,8 +1526,14 @@ fieldset.field legend {
 
   .form-grid,
   .filter-bar,
+  .filter-bar .filter-location-fields,
+  .filter-talent-cluster,
   .profile-hero {
     grid-template-columns: 1fr;
+  }
+
+  .filter-bar .jalali-birth {
+    grid-column: auto;
   }
 
   .work-credit-row {
@@ -1283,6 +1553,21 @@ fieldset.field legend {
   .photo-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .portrait-upload-grid,
+  .profile-portraits:not(.profile-portraits--compact) {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-photo-slots {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: none;
+  }
+
+  .panel-photo-slot img,
+  .panel-photo-slot-empty {
+    max-height: 5.5rem;
   }
 
   .chat-layout {
@@ -1328,13 +1613,36 @@ fieldset.field legend {
 }
 
 .panel-nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   padding: 0.5rem 0.65rem;
   border-radius: 8px;
   color: var(--ink-muted);
   text-decoration: none;
   font-size: 0.88rem;
   line-height: 1.4;
+}
+
+.panel-nav-label {
+  min-width: 0;
+}
+
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .panel-nav-link:hover,
@@ -1350,6 +1658,215 @@ fieldset.field legend {
 .panel-section-title {
   margin: 0 0 0.75rem;
   font-size: 1.15rem;
+}
+
+.panel-profile-stack {
+  margin-top: 1rem;
+}
+
+.panel-stack-heading {
+  margin-bottom: 0.5rem;
+}
+
+.panel-profile-stack .profile-view {
+  margin-top: 0;
+}
+
+.panel-profile-edit {
+  margin-top: 1rem;
+}
+
+.panel-welcome + .panel-profile-stack {
+  margin-top: 1rem;
+}
+
+.panel-completion {
+  margin-top: 1rem;
+}
+
+.panel-completion-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.panel-completion-meta {
+  margin: 0;
+}
+
+.panel-completion-meter {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 120px;
+}
+
+.panel-completion-value {
+  font-weight: 700;
+  color: var(--accent-strong);
+  font-size: 0.95rem;
+}
+
+.panel-completion-bar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-completion-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--progress, 0) * 1%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+}
+
+.panel-photo-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 7.5rem));
+  gap: 0.75rem;
+  max-width: 26rem;
+}
+
+.panel-photo-slot {
+  display: grid;
+  gap: 0.35rem;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.55rem;
+  background: rgba(0, 0, 0, 0.14);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.panel-photo-slot:hover {
+  border-color: var(--accent);
+  background: rgba(212, 165, 116, 0.08);
+}
+
+.panel-photo-slot img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: 6.5rem;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.panel-photo-slot.is-empty {
+  border-style: dashed;
+  border-color: rgba(212, 165, 116, 0.45);
+}
+
+.panel-photo-slot-empty {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 4;
+  max-height: 6.5rem;
+  border-radius: 8px;
+  background: var(--accent-dim);
+  color: var(--accent-strong);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.panel-photo-slot-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.panel-photo-slot-hint {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+
+.panel-missing-list {
+  list-style: none;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.panel-missing-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.12);
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
+.panel-missing-list a {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.info-missing {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.profile-hero--panel {
+  grid-template-columns: 1fr;
+}
+
+.profile-panel-actions {
+  margin: 0.75rem 0 1rem;
+}
+
+.panel-edit-details {
+  margin-top: 1rem;
+}
+
+.panel-edit-details > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel-edit-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.panel-edit-summary .panel-section-title {
+  margin: 0;
+}
+
+.panel-edit-toggle {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+}
+
+.panel-edit-body {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.panel-edit-body .lede {
+  margin-top: 0;
+}
+
+.activity-display--missing,
+.bio-block--missing {
+  color: var(--ink-muted);
 }
 
 .panel-narrow {

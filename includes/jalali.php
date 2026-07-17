@@ -179,9 +179,18 @@ function casting_jalali_parts_from_gregorian(string $ymd): array
     return ['jy' => 0, 'jm' => 0, 'jd' => 0];
 }
 
-function casting_render_jalali_birthday_fields(string $gregorian = '', bool $required = true): void
+function casting_render_jalali_birthday_fields(string $gregorian = '', bool $required = true, array $selected = []): void
 {
     $parts = casting_jalali_parts_from_gregorian($gregorian);
+    if (!empty($selected['jy'])) {
+        $parts['jy'] = (int) $selected['jy'];
+    }
+    if (!empty($selected['jm'])) {
+        $parts['jm'] = (int) $selected['jm'];
+    }
+    if (!empty($selected['jd'])) {
+        $parts['jd'] = (int) $selected['jd'];
+    }
     $today = casting_jalali_today();
     $maxYear = $today[0] - 5;
     $minYear = $today[0] - 90;

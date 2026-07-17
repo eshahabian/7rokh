@@ -59,7 +59,8 @@ function casting_render_location_fields(
     string $province = '',
     string $city = '',
     string $residence = '',
-    bool $required = true
+    bool $required = true,
+    string $wrapper_class = 'form-grid'
 ): void {
     unset($residence);
     $provinces = casting_province_labels();
@@ -67,12 +68,16 @@ function casting_render_location_fields(
     $map = ['cities' => casting_province_cities_map()];
     $json = wp_json_encode($map, JSON_UNESCAPED_UNICODE);
     $req = $required ? ' required' : '';
+    $province_empty = $required ? 'انتخاب استان…' : 'همه';
+    $city_empty = $required
+        ? ($province === '' ? 'اول استان را انتخاب کنید' : 'انتخاب شهر…')
+        : ($province === '' ? 'اول استان' : 'همه');
     ?>
-  <div class="form-grid" data-location-fields data-location-map="<?= casting_e((string) $json) ?>">
+  <div class="<?= casting_e($wrapper_class) ?>" data-location-fields data-location-map="<?= casting_e((string) $json) ?>">
     <div class="field">
       <label for="province">استان</label>
       <select id="province" name="province" data-location-province<?= $req ?>>
-        <option value="">انتخاب استان…</option>
+        <option value=""><?= casting_e($province_empty) ?></option>
         <?php foreach ($provinces as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $province === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
@@ -81,7 +86,7 @@ function casting_render_location_fields(
     <div class="field">
       <label for="city">شهر</label>
       <select id="city" name="city" data-location-city<?= $req ?> <?= $province === '' ? 'disabled' : '' ?>>
-        <option value=""><?= $province === '' ? 'اول استان را انتخاب کنید' : 'انتخاب شهر…' ?></option>
+        <option value=""><?= casting_e($city_empty) ?></option>
         <?php foreach ($cities as $name) : ?>
           <option value="<?= casting_e($name) ?>" <?= $city === $name ? 'selected' : '' ?>><?= casting_e($name) ?></option>
         <?php endforeach; ?>

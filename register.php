@@ -4,6 +4,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/profile.php';
+if (is_file(__DIR__ . '/includes/webhook.php')) {
+    require_once __DIR__ . '/includes/webhook.php';
+}
 require_once __DIR__ . '/includes/layout.php';
 
 casting_nocache();
@@ -22,6 +25,7 @@ $residence = '';
 $experience = '';
 $height = '';
 $weight = '';
+$health_well = '';
 $health_status = '';
 $artistic_has = '';
 $artistic_orgs = [];
@@ -36,6 +40,11 @@ $activities = [];
 $skill_items = [];
 $language_items = [];
 $availability = '';
+$eye_color = '';
+$hair_color = '';
+$accent = '';
+$accent_other = '';
+$apparent_age_range = '';
 $age_preview = '';
 
 $current = casting_current_user();
@@ -50,6 +59,12 @@ if ($current) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($current && casting_get_user_role((int) $current->ID) === '') {
+        $error = 'با یک حساب وردپرس وارد هستید که نقش هفت رخ ندارد. اول خارج شوید، بعد ثبت‌نام کنید.';
+    }
+}
+
+if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $nonce = (string) ($_POST['_wpnonce'] ?? '');
     if ($nonce === '' || !wp_verify_nonce($nonce, 'casting_register')) {
         $error = 'نشست منقضی شده. یک‌بار صفحه را رفرش کنید و دوباره فرم را بفرستید.';
@@ -69,7 +84,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $experience = (string) ($_POST['experience'] ?? '');
         $height = (string) ($_POST['height'] ?? '');
         $weight = (string) ($_POST['weight'] ?? '');
-        $health_status = (string) ($_POST['health_status'] ?? '');
+        $health_parsed = casting_parse_health_post($_POST);
+        $health_well = $health_parsed['well'];
+        $health_status = $health_parsed['detail'];
         $artistic_parsed = casting_parse_artistic_membership_post($_POST);
         $artistic_has = $artistic_parsed['has'];
         $artistic_orgs = $artistic_parsed['orgs'];
@@ -84,6 +101,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $skill_items = casting_parse_skill_items_post($_POST);
         $language_items = casting_parse_language_items_post($_POST);
         $availability = (string) ($_POST['availability'] ?? '');
+        $eye_color = (string) ($_POST['eye_color'] ?? '');
+        $hair_color = (string) ($_POST['hair_color'] ?? '');
+        $accent = (string) ($_POST['accent'] ?? '');
+        $accent_other = (string) ($_POST['accent_other'] ?? '');
+        $apparent_age_range = (string) ($_POST['apparent_age_range'] ?? '');
         $age_calc = $birthdate !== '' ? casting_age_from_birthdate($birthdate) : null;
         $age_preview = $age_calc !== null ? (string) $age_calc : '';
 
@@ -94,7 +116,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!array_key_exists($gender, casting_gender_labels())) {
             $error = 'جنسیت را انتخاب کنید.';
         } elseif ($activities === []) {
-            $error = 'حداقل یک تخصص از بخش نوع فعالیت انتخاب کنید.';
+            $error = 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.';
+        } elseif (($health_err = casting_validate_health_fields($health_parsed, true)) !== null) {
+            $error = $health_err;
         } elseif (!array_key_exists($availability, casting_availability_labels())) {
             $error = 'وضعیت آمادگی برای همکاری را انتخاب کنید.';
         } else {
@@ -117,6 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'experience'       => $experience,
                         'height'           => $height,
                         'weight'           => $weight,
+                        'health_well'      => $health_well,
                         'health_status'    => $health_status,
                         'artistic_membership' => $artistic_has,
                         'artistic_orgs'       => $artistic_orgs,
@@ -130,22 +155,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'skill_items'      => $skill_items,
                         'language_items'   => $language_items,
                         'availability'     => $availability,
+                        'eye_color'        => $eye_color,
+                        'hair_color'       => $hair_color,
+                        'accent'           => $accent,
+                        'accent_other'     => $accent_other,
+                        'apparent_age_range' => $apparent_age_range,
                     ]);
                     if (!$profile_save['ok']) {
+                        casting_delete_registered_user($user_id);
                         $error = $profile_save['error'];
                     } else {
-                        $photo = casting_handle_photo_upload($user_id);
+                        $photo = casting_handle_portrait_uploads($user_id, true);
                         if (!$photo['ok']) {
+                            casting_delete_registered_user($user_id);
                             $error = $photo['error'];
                         } else {
                             $video = casting_handle_video_upload($user_id);
                             if (!$video['ok']) {
+                                casting_delete_registered_user($user_id);
                                 $error = $video['error'];
                             }
                         }
                     }
 
                     if ($error === '') {
+                        if (function_exists('casting_notify_n8n_registration')) {
+                            casting_notify_n8n_registration($user_id);
+                        }
                         $login = casting_login($email, $password);
                         if ($login['ok']) {
                             casting_redirect(casting_dashboard_for_role((string) $result['role'], 'welcome=1'));
@@ -248,6 +284,14 @@ if ($error !== '') {
         </div>
       </fieldset>
 
+      <?php casting_render_talent_trait_fields([
+          'eye_color' => $eye_color,
+          'hair_color' => $hair_color,
+          'accent' => $accent,
+          'accent_other' => $accent_other,
+          'apparent_age_range' => $apparent_age_range,
+      ]); ?>
+
       <div class="form-grid">
         <div class="field">
           <label for="height">قد (سانتی‌متر)</label>
@@ -261,10 +305,7 @@ if ($error !== '') {
         </div>
       </div>
 
-      <div class="field">
-        <label for="health_status">وضعیت سلامت</label>
-        <textarea id="health_status" name="health_status" rows="2" maxlength="500" placeholder="مثلاً سالم، بدون محدودیت خاص…"><?= casting_e($health_status) ?></textarea>
-      </div>
+      <?php casting_render_health_fields($health_well, $health_status, true); ?>
 
       <?php casting_render_location_fields($province, $city, '', true); ?>
 
@@ -288,17 +329,16 @@ if ($error !== '') {
         </div>
       </div>
 
-      <div class="form-grid">
-        <div class="field">
-          <label for="photo">عکس پروفایل</label>
-          <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
-          <p class="field-hint">JPG / PNG / WebP — حداکثر ۵ مگابایت</p>
-        </div>
-        <div class="field">
-          <label for="video">ویدیو معرفی</label>
-          <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime">
-          <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت</p>
-        </div>
+      <fieldset class="field">
+        <legend>عکس‌های پروفایل <span class="req-mark">*</span></legend>
+        <p class="field-hint">هر سه عکس الزامی است: کلوزاپ، مدیوم و لانگ.</p>
+        <?php casting_render_portrait_upload_fields([], true); ?>
+      </fieldset>
+
+      <div class="field">
+        <label for="video">ویدیو معرفی</label>
+        <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime">
+        <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت (اختیاری)</p>
       </div>
 
       <?php casting_render_work_credits_fields($work_credits); ?>

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/blocks.php';
+
 /**
  * ارسال درخواست همکاری کارفرما به هنرمند + ایمیل
  */
@@ -17,6 +19,9 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
     }
     if (casting_get_user_role($talent_id) !== 'talent') {
         return ['ok' => false, 'error' => 'گیرنده هنرمند نیست.'];
+    }
+    if (casting_users_block_each_other($employer_id, $talent_id)) {
+        return ['ok' => false, 'error' => 'به‌دلیل بلاک، ارسال درخواست ممکن نیست.'];
     }
 
     $message = sanitize_textarea_field($message);
