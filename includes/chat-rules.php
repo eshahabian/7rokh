@@ -13,6 +13,13 @@ function casting_producer_chat_allow_specialties(): array
 {
     return [
         'director',
+        'director_theater',
+        'director_short_film',
+        'director_tv',
+        'director_cinema',
+        'first_ad',
+        'second_ad',
+        'third_ad',
         'executive',
         'production_manager',
         'logistics_manager',

@@ -5,16 +5,19 @@ function casting_premium_plans(): array
 {
     return [
         'featured_30' => [
-            'label'       => 'آگهی ویژه ۳۰ روزه',
-            'days'        => 30,
-            'price'       => 500000,
-            'description' => 'نمایش در اولین نتایج جستجو و برچسب ویژه روی پروفایل',
+            'label'        => 'حساب کاربری ویژه',
+            'days'         => 30,
+            'period_label' => '۱ ماه',
+            'price'        => 150000,
+            'description'  => '۱۵۰,۰۰۰ تومان برای ۱ ماه — اولویت در جستجو، برچسب ویژه روی پروفایل و دیده‌شدن بیشتر',
         ],
+        // پلن قدیمی — فقط برای فیش‌های قبلی
         'featured_90' => [
-            'label'       => 'آگهی ویژه ۹۰ روزه',
-            'days'        => 90,
-            'price'       => 1200000,
-            'description' => '۳ ماه اولویت در جستجو و دیده‌شدن بیشتر',
+            'label'        => 'حساب کاربری ویژه',
+            'days'         => 30,
+            'period_label' => '۱ ماه',
+            'price'        => 150000,
+            'description'  => '۱۵۰,۰۰۰ تومان برای ۱ ماه — اولویت در جستجو، برچسب ویژه روی پروفایل و دیده‌شدن بیشتر',
         ],
     ];
 }
@@ -57,8 +60,35 @@ function casting_premium_ensure_table(): void
     }
 }
 
+function casting_premium_sync_expiry(int $user_id): void
+{
+    if ($user_id <= 0) {
+        return;
+    }
+    $until = (string) get_user_meta($user_id, 'casting_premium_until', true);
+    if ($until === '') {
+        return;
+    }
+    $until_ts = strtotime($until);
+    if ($until_ts === false || $until_ts < strtotime((string) current_time('mysql'))) {
+        delete_user_meta($user_id, 'casting_premium_until');
+    }
+}
+
+function casting_premium_expire_timestamp(int $user_id): ?int
+{
+    casting_premium_sync_expiry($user_id);
+    $until = (string) get_user_meta($user_id, 'casting_premium_until', true);
+    if ($until === '') {
+        return null;
+    }
+    $until_ts = strtotime($until);
+    return $until_ts !== false ? $until_ts : null;
+}
+
 function casting_user_is_premium(int $user_id): bool
 {
+    casting_premium_sync_expiry($user_id);
     $until = (string) get_user_meta($user_id, 'casting_premium_until', true);
     if ($until === '') {
         return false;
@@ -71,8 +101,64 @@ function casting_premium_until_label(int $user_id): string
     if (!casting_user_is_premium($user_id)) {
         return '';
     }
-    $until = (string) get_user_meta($user_id, 'casting_premium_until', true);
-    return $until;
+    return (string) get_user_meta($user_id, 'casting_premium_until', true);
+}
+
+function casting_premium_countdown_summary(int $user_id): string
+{
+    $until_ts = casting_premium_expire_timestamp($user_id);
+    if ($until_ts === null) {
+        return '';
+    }
+    $diff = max(0, $until_ts - time());
+    $days = (int) floor($diff / DAY_IN_SECONDS);
+    $hours = (int) floor(($diff % DAY_IN_SECONDS) / HOUR_IN_SECONDS);
+    $minutes = (int) floor(($diff % HOUR_IN_SECONDS) / MINUTE_IN_SECONDS);
+    if ($days > 0) {
+        return $days . ' روز و ' . $hours . ' ساعت';
+    }
+    if ($hours > 0) {
+        return $hours . ' ساعت و ' . $minutes . ' دقیقه';
+    }
+    return $minutes . ' دقیقه';
+}
+
+function casting_premium_countdown_nav_label(int $user_id): string
+{
+    $until_ts = casting_premium_expire_timestamp($user_id);
+    if ($until_ts === null) {
+        return '';
+    }
+    $diff = max(0, $until_ts - time());
+    $days = (int) floor($diff / DAY_IN_SECONDS);
+    $hours = (int) floor(($diff % DAY_IN_SECONDS) / HOUR_IN_SECONDS);
+    $minutes = (int) floor(($diff % HOUR_IN_SECONDS) / MINUTE_IN_SECONDS);
+    if ($days > 0) {
+        return $days . ' روز';
+    }
+    if ($hours > 0) {
+        return $hours . ' ساعت';
+    }
+    return $minutes . ' دقیقه';
+}
+
+function casting_render_premium_countdown(int $user_id): void
+{
+    if (!casting_user_is_premium($user_id)) {
+        return;
+    }
+    $until = casting_premium_until_label($user_id);
+    $until_ts = casting_premium_expire_timestamp($user_id);
+    if ($until === '' || $until_ts === null) {
+        return;
+    }
+    ?>
+<div class="premium-countdown" data-premium-until-ts="<?= (int) $until_ts ?>">
+  <p class="premium-countdown-title">زمان باقی‌مانده حساب ویژه</p>
+  <p class="premium-countdown-value" data-premium-countdown><?= casting_e(casting_premium_countdown_summary($user_id)) ?></p>
+  <p class="premium-countdown-meta">تا <?= casting_e($until) ?> · پس از پایان، به‌صورت خودکار از ویژه خارج می‌شوید.</p>
+</div>
+    <?php
 }
 
 /**
@@ -89,6 +175,9 @@ function casting_submit_premium_receipt(int $user_id, string $plan_key, string $
         return ['ok' => false, 'error' => 'شماره پیگیری یا مرجع واریز را وارد کنید.'];
     }
     $note = sanitize_textarea_field(trim($note));
+    if ($attachment_id <= 0) {
+        return ['ok' => false, 'error' => 'تصویر فیش الزامی است.'];
+    }
 
     casting_premium_ensure_table();
     global $wpdb;
@@ -300,25 +389,15 @@ function casting_admin_list_receipts(string $status = 'pending', int $limit = 10
     return is_array($rows) ? $rows : [];
 }
 
-function casting_user_is_portal_admin(): bool
+function casting_admin_pending_receipt_count(): int
 {
-    return is_user_logged_in() && current_user_can('manage_options');
-}
-
-function casting_require_portal_admin(): void
-{
-    if (!is_user_logged_in()) {
-        auth_redirect();
-    }
-    if (!current_user_can('manage_options')) {
-        wp_die('فقط مدیر سایت به این بخش دسترسی دارد.', 'دسترسی غیرمجاز', ['response' => 403]);
-    }
+    return count(casting_admin_list_receipts('pending', 200));
 }
 
 function casting_handle_receipt_upload(int $user_id): array
 {
     if (empty($_FILES['receipt']['name'])) {
-        return ['ok' => true, 'attachment_id' => 0];
+        return ['ok' => false, 'error' => 'تصویر فیش را انتخاب کنید.', 'attachment_id' => 0];
     }
     require_once ABSPATH . 'wp-admin/includes/file.php';
     require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -330,4 +409,26 @@ function casting_handle_receipt_upload(int $user_id): array
         return ['ok' => false, 'error' => 'بارگذاری تصویر فیش ناموفق بود.', 'attachment_id' => 0];
     }
     return ['ok' => true, 'attachment_id' => (int) $attachment_id];
+}
+
+function casting_render_receipt_thumbnail(int $attachment_id, string $alt = 'فیش'): void
+{
+    if ($attachment_id <= 0) {
+        return;
+    }
+    $full_url = wp_get_attachment_image_url($attachment_id, 'large');
+    $thumb_url = wp_get_attachment_image_url($attachment_id, 'medium');
+    if (!is_string($full_url) || $full_url === '' || !is_string($thumb_url) || $thumb_url === '') {
+        return;
+    }
+    ?>
+<div class="receipt-thumb-wrap">
+  <a class="receipt-thumb-link" href="<?= casting_e($full_url) ?>" target="_blank" rel="noopener">
+    <span class="receipt-thumb-frame">
+      <img class="receipt-thumb-img" src="<?= casting_e($thumb_url) ?>" alt="<?= casting_e($alt) ?>">
+    </span>
+    <span class="receipt-thumb-hint">کلیک برای بزرگ‌نمایی</span>
+  </a>
+</div>
+    <?php
 }

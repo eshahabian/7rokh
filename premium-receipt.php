@@ -63,8 +63,9 @@ casting_render_flash();
       <textarea id="note" name="note" rows="3" maxlength="500"></textarea>
     </div>
     <div class="field">
-      <label for="receipt">تصویر فیش (اختیاری)</label>
-      <input id="receipt" name="receipt" type="file" accept="image/*">
+      <label for="receipt">تصویر فیش <span class="req-mark">*</span></label>
+      <input id="receipt" name="receipt" type="file" accept="image/*" required>
+      <p class="field-hint">بارگذاری تصویر فیش پرداخت الزامی است.</p>
     </div>
     <button class="btn btn-primary" type="submit">ثبت فیش</button>
   </form>

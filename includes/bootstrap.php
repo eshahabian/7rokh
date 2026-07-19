@@ -16,6 +16,8 @@ if (!file_exists(CASTING_WP_LOAD)) {
 
 require_once CASTING_WP_LOAD;
 
+require_once __DIR__ . '/mail.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

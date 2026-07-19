@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/profile.php';
 require_once __DIR__ . '/premium.php';
+require_once __DIR__ . '/admin-access.php';
 require_once __DIR__ . '/chat-rules.php';
 require_once __DIR__ . '/layout.php';
 
@@ -25,6 +26,7 @@ function casting_panel_nav_items(): array
         ['key' => 'transactions','label' => 'تراکنش‌های مالی',        'href' => 'transactions.php'],
         ['key' => 'cancel',     'label' => 'انصراف از عضویت',         'href' => 'cancel-membership.php'],
         ['key' => 'contact',    'label' => 'تماس با ما',              'href' => 'contact.php'],
+        ['key' => 'faq',        'label' => 'سوالات متداول',           'href' => 'faq.php'],
         ['key' => 'rules',      'label' => 'قوانین',                  'href' => 'rules.php'],
         ['key' => 'logout',     'label' => 'خروج',                    'href' => 'logout.php'],
     ];
@@ -42,26 +44,58 @@ function casting_panel_profile_url(int $user_id): string
 function casting_render_panel_sidebar(string $active): void
 {
     $unread_peers = 0;
+    $pending_receipts = 0;
+    $panel_premium_until = null;
     $user = casting_current_user();
     if ($user) {
+        $user_id = (int) $user->ID;
         if (!function_exists('casting_dm_unread_peer_count')) {
             require_once __DIR__ . '/chat.php';
         }
-        $unread_peers = casting_dm_unread_peer_count((int) $user->ID);
+        $unread_peers = casting_dm_unread_peer_count($user_id);
+        if (!function_exists('casting_user_has_admin_permission')) {
+            require_once __DIR__ . '/admin-access.php';
+        }
+        if (casting_user_has_admin_permission($user_id, 'approve_receipts')) {
+            $pending_receipts = casting_admin_pending_receipt_count();
+        }
+        if (casting_user_is_premium($user_id)) {
+            $panel_premium_until = casting_premium_expire_timestamp($user_id);
+        }
     }
+    $admin_nav = $user ? casting_panel_admin_nav_items((int) $user->ID) : [];
     ?>
     <aside class="panel-sidebar" aria-label="منوی پنل کاربری">
       <p class="panel-sidebar-title">پنل کاربری</p>
       <nav class="panel-nav">
         <?php foreach (casting_panel_nav_items() as $item) : ?>
-          <a class="panel-nav-link <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?>">
+          <a class="panel-nav-link <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?><?= $item['key'] === 'premium' && $unread_peers === 0 && $pending_receipts > 0 ? '#admin-receipts' : '' ?>">
             <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
             <?php if ($item['key'] === 'messages' && $unread_peers > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
+            <?php elseif ($item['key'] === 'panel' && $panel_premium_until !== null && $user) : ?>
+              <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
+                <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
+              </span>
+            <?php elseif ($item['key'] === 'premium' && $pending_receipts > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
             <?php endif; ?>
           </a>
         <?php endforeach; ?>
       </nav>
+      <?php if ($admin_nav) : ?>
+        <p class="panel-sidebar-title panel-sidebar-title-admin">مدیریت</p>
+        <nav class="panel-nav panel-nav-admin">
+          <?php foreach ($admin_nav as $item) : ?>
+            <a class="panel-nav-link panel-nav-link-admin <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?>">
+              <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
+              <?php if ($item['key'] === 'admin-receipts' && $pending_receipts > 0) : ?>
+                <span class="nav-badge"><?= (int) $pending_receipts ?></span>
+              <?php endif; ?>
+            </a>
+          <?php endforeach; ?>
+        </nav>
+      <?php endif; ?>
     </aside>
     <?php
 }
@@ -126,7 +160,7 @@ function casting_render_search_band_select(string $id, string $name, string $lab
     <div class="field">
       <label for="<?= casting_e($id) ?>"><?= casting_e($label) ?></label>
       <select id="<?= casting_e($id) ?>" name="<?= casting_e($name) ?>">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($options as $key => $range) : ?>
           <option value="<?= casting_e($key) ?>" <?= $value === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
         <?php endforeach; ?>
@@ -204,34 +238,84 @@ function casting_search_metric_range_from_input(array $input, string $range_key,
 }
 
 /**
- * سن، قد و وزن — یک فیلد با فرمت 22-35
+ * سن، قد و وزن — هر کدام دو فیلد «از» و «تا»
  *
  * @param array<string, string> $filters
  */
 function casting_render_body_metric_search_fields(array $filters): void
 {
-    $fields = [
-        ['name' => 'age_range', 'label' => 'سن', 'placeholder' => '22-35', 'hint' => 'سال'],
-        ['name' => 'height_range', 'label' => 'قد', 'placeholder' => '165-180', 'hint' => 'سانتی‌متر'],
-        ['name' => 'weight_range', 'label' => 'وزن', 'placeholder' => '55-70', 'hint' => 'کیلو'],
+    $metrics = [
+        ['prefix' => 'age', 'label' => 'سن', 'unit' => 'سال', 'floor' => 5, 'ceil' => 100, 'range_key' => 'age_range'],
+        ['prefix' => 'height', 'label' => 'قد', 'unit' => 'سانتی‌متر', 'floor' => 80, 'ceil' => 230, 'range_key' => 'height_range'],
+        ['prefix' => 'weight', 'label' => 'وزن', 'unit' => 'کیلو', 'floor' => 20, 'ceil' => 250, 'range_key' => 'weight_range'],
     ];
     ?>
     <div class="filter-body-metrics" aria-label="فیلتر سن، قد و وزن">
-      <?php foreach ($fields as $field) : ?>
-        <div class="field">
-          <label for="<?= casting_e($field['name']) ?>"><?= casting_e($field['label']) ?></label>
-          <input
-            id="<?= casting_e($field['name']) ?>"
-            name="<?= casting_e($field['name']) ?>"
-            type="text"
-            inputmode="numeric"
-            autocomplete="off"
-            value="<?= casting_e($filters[$field['name']] ?? '') ?>"
-            placeholder="<?= casting_e($field['placeholder']) ?>"
-            title="محدوده را با خط تیره بنویسید، مثلاً <?= casting_e($field['placeholder']) ?> (<?= casting_e($field['hint']) ?>)"
-          >
+      <?php foreach ($metrics as $metric) :
+          $parts = casting_parse_search_metric_range(
+              (string) ($filters[$metric['range_key']] ?? ''),
+              $metric['floor'],
+              $metric['ceil']
+          );
+          $min_val = $parts['min'] !== null ? (string) $parts['min'] : '';
+          $max_val = $parts['max'] !== null ? (string) $parts['max'] : '';
+          ?>
+        <div class="filter-metric-group">
+          <div class="filter-metric-head">
+            <span class="filter-metric-label"><?= casting_e($metric['label']) ?></span>
+            <span class="filter-metric-unit"><?= casting_e($metric['unit']) ?></span>
+          </div>
+          <div class="filter-metric-range">
+            <div class="field">
+              <input
+                id="<?= casting_e($metric['prefix']) ?>_min"
+                name="<?= casting_e($metric['prefix']) ?>_min"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                value="<?= casting_e($min_val) ?>"
+                placeholder="از"
+                aria-label="<?= casting_e($metric['label']) ?> از"
+              >
+            </div>
+            <div class="field">
+              <input
+                id="<?= casting_e($metric['prefix']) ?>_max"
+                name="<?= casting_e($metric['prefix']) ?>_max"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                value="<?= casting_e($max_val) ?>"
+                placeholder="تا"
+                aria-label="<?= casting_e($metric['label']) ?> تا"
+              >
+            </div>
+          </div>
         </div>
       <?php endforeach; ?>
+    </div>
+    <?php
+}
+
+/**
+ * @param array<string, string> $filters
+ */
+function casting_render_health_search_field(array $filters): void
+{
+    $value = (string) ($filters['health_well'] ?? '');
+    $options = [
+        'healthy'   => 'بله',
+        'unhealthy' => 'خیر',
+    ];
+    ?>
+    <div class="field">
+      <label for="health_well">سلامت</label>
+      <select id="health_well" name="health_well">
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+        <?php foreach ($options as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $value === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
     </div>
     <?php
 }
@@ -497,7 +581,7 @@ function casting_render_member_search_phase1_fields(array $filters): void
     <div class="field">
       <label for="language_level">سطح زبان</label>
       <select id="language_level" name="language_level">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($language_levels as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['language_level'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
@@ -506,7 +590,7 @@ function casting_render_member_search_phase1_fields(array $filters): void
     <div class="field">
       <label for="education_degree">تحصیلات</label>
       <select id="education_degree" name="education_degree">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($education_degrees as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['education_degree'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
@@ -515,7 +599,7 @@ function casting_render_member_search_phase1_fields(array $filters): void
     <div class="field">
       <label for="has_video">ویدئو معرفی</label>
       <select id="has_video" name="has_video">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($yes_no as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['has_video'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
@@ -524,7 +608,7 @@ function casting_render_member_search_phase1_fields(array $filters): void
     <div class="field">
       <label for="has_portfolio">نمونه‌کار</label>
       <select id="has_portfolio" name="has_portfolio">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($yes_no as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['has_portfolio'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
@@ -571,7 +655,7 @@ function casting_apply_member_phase2_filters(array &$meta_query, array $filters)
     }
 
     $motor = sanitize_key((string) ($filters['motor_skill'] ?? ''));
-    if ($motor !== '' && isset(casting_motor_skill_labels()[$motor])) {
+    if ($motor !== '' && isset(casting_motor_skill_filter_labels()[$motor])) {
         $meta_query[] = [
             'key'     => 'casting_skill_items',
             'value'   => '"' . $motor . '"',
@@ -580,7 +664,7 @@ function casting_apply_member_phase2_filters(array &$meta_query, array $filters)
     }
 
     $art_skill = sanitize_key((string) ($filters['artistic_skill'] ?? ''));
-    if ($art_skill !== '' && isset(casting_artistic_skill_labels()[$art_skill])) {
+    if ($art_skill !== '' && isset(casting_artistic_skill_filter_labels()[$art_skill])) {
         $meta_query[] = [
             'key'     => 'casting_skill_items',
             'value'   => '"' . $art_skill . '"',
@@ -602,7 +686,7 @@ function casting_render_member_search_phase2_fields(array $filters): void
     <div class="field">
       <label for="apparent_age_range">سن ظاهری</label>
       <select id="apparent_age_range" name="apparent_age_range">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($age_ranges as $key => $range) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['apparent_age_range'] === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
         <?php endforeach; ?>
@@ -611,7 +695,7 @@ function casting_render_member_search_phase2_fields(array $filters): void
     <div class="field">
       <label for="eye_color">رنگ چشم</label>
       <select id="eye_color" name="eye_color">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($eyes as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['eye_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
@@ -620,7 +704,7 @@ function casting_render_member_search_phase2_fields(array $filters): void
     <div class="field">
       <label for="hair_color">رنگ مو</label>
       <select id="hair_color" name="hair_color">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($hairs as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['hair_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
@@ -629,7 +713,7 @@ function casting_render_member_search_phase2_fields(array $filters): void
     <div class="field">
       <label for="accent">لهجه</label>
       <select id="accent" name="accent">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($accents as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['accent'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
@@ -659,14 +743,13 @@ function casting_render_member_search_talent_cluster(array $filters): void
     }
 
     $artistic_orgs = casting_artistic_org_labels();
-    $motor_skills = casting_motor_skill_labels();
-    $artistic_skills = casting_artistic_skill_labels();
+    $motor_skills = casting_motor_skill_filter_labels();
     ?>
     <div class="filter-talent-cluster" data-activity-search data-activity-map="<?= casting_e($map_json) ?>">
       <div class="field">
         <label for="activity_category">تخصص هنری</label>
         <select id="activity_category" name="activity_category" data-activity-category>
-          <option value="">همه</option>
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
           <?php foreach ($categories as $key => $cat) : ?>
             <option value="<?= casting_e($key) ?>" <?= $category === $key ? 'selected' : '' ?>><?= casting_e($cat['label']) ?></option>
           <?php endforeach; ?>
@@ -675,7 +758,7 @@ function casting_render_member_search_talent_cluster(array $filters): void
       <div class="field">
         <label for="activity_specialty">تخصص</label>
         <select id="activity_specialty" name="activity_specialty" data-activity-specialty <?= $category === '' ? 'disabled' : '' ?>>
-          <option value=""><?= $category === '' ? 'اول تخصص هنری' : 'همه' ?></option>
+          <option value=""><?= casting_e(casting_search_specialty_empty_label($category !== '')) ?></option>
           <?php foreach ($subs as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= $specialty === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
           <?php endforeach; ?>
@@ -684,8 +767,8 @@ function casting_render_member_search_talent_cluster(array $filters): void
       <div class="field">
         <label for="artistic_skill">مهارت هنری</label>
         <select id="artistic_skill" name="artistic_skill">
-          <option value="">همه</option>
-          <?php foreach ($artistic_skills as $key => $label) : ?>
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <?php foreach (casting_artistic_skill_filter_labels() as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= $filters['artistic_skill'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
           <?php endforeach; ?>
         </select>
@@ -693,7 +776,7 @@ function casting_render_member_search_talent_cluster(array $filters): void
       <div class="field">
         <label for="artistic_org">تشکل</label>
         <select id="artistic_org" name="artistic_org">
-          <option value="">همه</option>
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
           <?php foreach ($artistic_orgs as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= $filters['artistic_org'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
           <?php endforeach; ?>
@@ -702,7 +785,7 @@ function casting_render_member_search_talent_cluster(array $filters): void
       <div class="field">
         <label for="motor_skill">مهارت حرکتی</label>
         <select id="motor_skill" name="motor_skill">
-          <option value="">همه</option>
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
           <?php foreach ($motor_skills as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= $filters['motor_skill'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
           <?php endforeach; ?>
@@ -725,7 +808,7 @@ function casting_parse_member_search_filters(array $input): array
         'age_range'          => casting_search_metric_range_from_input($input, 'age_range', 'age_min', 'age_max'),
         'height_range'       => casting_search_metric_range_from_input($input, 'height_range', 'height_min', 'height_max'),
         'weight_range'       => casting_search_metric_range_from_input($input, 'weight_range', 'weight_min', 'weight_max'),
-        'health_status'      => (string) ($input['health_status'] ?? ''),
+        'health_well'        => sanitize_key((string) ($input['health_well'] ?? '')),
         'province'           => (string) ($input['province'] ?? ''),
         'city'               => (string) ($input['city'] ?? ''),
         'artistic_org'       => (string) ($input['artistic_org'] ?? ''),
@@ -803,12 +886,11 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
 
     casting_apply_body_metric_search_filters($meta_query, $filters);
 
-    $health = sanitize_text_field((string) ($filters['health_status'] ?? ''));
-    if ($health !== '') {
+    $health_well = sanitize_key((string) ($filters['health_well'] ?? ''));
+    if ($health_well === 'healthy' || $health_well === 'unhealthy') {
         $meta_query[] = [
-            'key'     => 'casting_health_status',
-            'value'   => $health,
-            'compare' => 'LIKE',
+            'key'   => 'casting_health_well',
+            'value' => $health_well,
         ];
     }
 

@@ -38,3 +38,34 @@ define('CASTING_N8N_REGISTER_WEBHOOK', '');
 
 /** اختیاری — همان مقدار را در n8n چک کنید (Header: X-Webhook-Secret) */
 define('CASTING_N8N_WEBHOOK_SECRET', '');
+
+/**
+ * مدیران پورتال — تأیید فیش و ارتقا به حساب ویژه (علاوه بر manage_options وردپرس)
+ * نام کاربری وردپرس را بنویسید.
+ */
+define('CASTING_PORTAL_ADMINS', [
+    'eshahabian',
+]);
+
+/** ایمیل‌های دریافت پیام «تماس با ما» */
+define('CASTING_CONTACT_NOTIFY_EMAILS', [
+    'info@7rokh.ir',
+    'eshahabian@gmail.com',
+]);
+
+/**
+ * SMTP — برای ارسال ایمیل (تماس با ما، بازیابی رمز، …)
+ * رمز را در config.local.php بگذارید (نمونه: config.local.php.example)
+ */
+define('CASTING_SMTP_HOST', 'mail.7rokh.ir');
+define('CASTING_SMTP_PORT', 587);
+define('CASTING_SMTP_USER', 'info@7rokh.ir');
+define('CASTING_SMTP_PASS', '');
+define('CASTING_SMTP_SECURE', 'tls');
+define('CASTING_MAIL_FROM', 'info@7rokh.ir');
+define('CASTING_MAIL_FROM_NAME', 'هفت رخ');
+
+/** تنظیمات محلی (رمز SMTP و …) — در git نیست */
+if (file_exists(__DIR__ . '/config.local.php')) {
+    require_once __DIR__ . '/config.local.php';
+}

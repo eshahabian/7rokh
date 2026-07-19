@@ -298,7 +298,7 @@ function casting_apply_member_search_meta_query(array &$meta_query, array $filte
     }
 
     $motor = sanitize_key((string) ($filters['motor_skill'] ?? ''));
-    if ($motor !== '' && isset(casting_motor_skill_labels()[$motor])) {
+    if ($motor !== '' && isset(casting_motor_skill_filter_labels()[$motor])) {
         $meta_query[] = [
             'key'     => 'casting_skill_items',
             'value'   => '"' . $motor . '"',
@@ -307,7 +307,7 @@ function casting_apply_member_search_meta_query(array &$meta_query, array $filte
     }
 
     $art_skill = sanitize_key((string) ($filters['artistic_skill'] ?? ''));
-    if ($art_skill !== '' && isset(casting_artistic_skill_labels()[$art_skill])) {
+    if ($art_skill !== '' && isset(casting_artistic_skill_filter_labels()[$art_skill])) {
         $meta_query[] = [
             'key'     => 'casting_skill_items',
             'value'   => '"' . $art_skill . '"',
@@ -482,8 +482,8 @@ function casting_render_member_search_advanced(array $filters, string $page = 's
     $age_ranges = casting_age_range_options();
     $artistic_orgs = casting_artistic_org_labels();
     $skills = casting_skill_labels();
-    $motor_skills = casting_motor_skill_labels();
-    $artistic_skills = casting_artistic_skill_labels();
+    $motor_skills = casting_motor_skill_filter_labels();
+    $artistic_skills = casting_artistic_skill_filter_labels();
     $availability_labels = casting_availability_labels();
     $language_levels = casting_language_level_labels();
     $education_degrees = casting_education_degree_labels();
@@ -556,7 +556,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="identity_verified">احراز هویت</label>
           <select id="identity_verified" name="identity_verified">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($yes_no as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['identity_verified'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -565,7 +565,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="activity_license">پروانه فعالیت</label>
           <select id="activity_license" name="activity_license">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($yes_no as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['activity_license'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -574,7 +574,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="has_portfolio">دارای نمونه‌کار</label>
           <select id="has_portfolio" name="has_portfolio">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($yes_no as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['has_portfolio'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -583,7 +583,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="has_video">دارای ویدئوی معرفی</label>
           <select id="has_video" name="has_video">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($yes_no as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['has_video'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -592,7 +592,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="resume_verified">رزومه تأییدشده</label>
           <select id="resume_verified" name="resume_verified">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($yes_no as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['resume_verified'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -601,7 +601,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="availability">نوع همکاری</label>
           <select id="availability" name="availability">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($availability_labels as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['availability'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -610,7 +610,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="last_active">آخرین فعالیت</label>
           <select id="last_active" name="last_active">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($last_active_opts as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['last_active'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -619,7 +619,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="cooperation_score_min">امتیاز همکاری</label>
           <select id="cooperation_score_min" name="cooperation_score_min">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php for ($s = 5; $s >= 1; $s--) : ?>
               <option value="<?= $s ?>" <?= $filters['cooperation_score_min'] === (string) $s ? 'selected' : '' ?>><?= $s ?>+</option>
             <?php endfor; ?>
@@ -628,7 +628,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="premium">عضویت ویژه</label>
           <select id="premium" name="premium">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <option value="yes" <?= $filters['premium'] === 'yes' ? 'selected' : '' ?>>فقط ویژه</option>
           </select>
         </div>
@@ -644,7 +644,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="language_level">سطح زبان</label>
           <select id="language_level" name="language_level">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($language_levels as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['language_level'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -653,7 +653,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="accent">لهجه</label>
           <select id="accent" name="accent">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($accents as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['accent'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -662,7 +662,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="skill">مهارت</label>
           <select id="skill" name="skill">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($skills as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['skill'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -671,7 +671,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="education_degree">تحصیلات</label>
           <select id="education_degree" name="education_degree">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($education_degrees as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['education_degree'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -680,7 +680,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="artistic_has">عضویت صنفی</label>
           <select id="artistic_has" name="artistic_has">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($yes_no as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['artistic_has'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -689,7 +689,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="artistic_org">نام تشکل</label>
           <select id="artistic_org" name="artistic_org">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($artistic_orgs as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['artistic_org'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -702,7 +702,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="gender">جنسیت</label>
           <select id="gender" name="gender">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($genders as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['gender'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -711,7 +711,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="apparent_age_range">رده سنی ظاهری</label>
           <select id="apparent_age_range" name="apparent_age_range">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($age_ranges as $key => $range) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['apparent_age_range'] === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
             <?php endforeach; ?>
@@ -720,7 +720,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="age_range">بازه سنی</label>
           <select id="age_range" name="age_range">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($age_ranges as $key => $range) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['age_range'] === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
             <?php endforeach; ?>
@@ -749,7 +749,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="eye_color">رنگ چشم</label>
           <select id="eye_color" name="eye_color">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($eyes as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['eye_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -758,7 +758,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="hair_color">رنگ مو</label>
           <select id="hair_color" name="hair_color">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($hairs as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['hair_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -767,7 +767,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="look">رنگ پوست</label>
           <select id="look" name="look">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($looks as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['look'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -776,7 +776,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="motor_skill">مهارت حرکتی</label>
           <select id="motor_skill" name="motor_skill">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($motor_skills as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['motor_skill'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>
@@ -785,7 +785,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         <div class="field">
           <label for="artistic_skill">مهارت هنری</label>
           <select id="artistic_skill" name="artistic_skill">
-            <option value="">همه</option>
+            <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
             <?php foreach ($artistic_skills as $key => $label) : ?>
               <option value="<?= casting_e($key) ?>" <?= $filters['artistic_skill'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
             <?php endforeach; ?>

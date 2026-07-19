@@ -16,7 +16,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=42">
+  <link rel="stylesheet" href="<?= $css ?>?v=51">
 </head>
 <body class="<?= casting_e($body_class) ?>">
   <div class="bg-atmosphere" aria-hidden="true"></div>
@@ -41,6 +41,7 @@ function casting_render_header(?string $active = null): void
         <a href="register.php" class="<?= $active === 'register' ? 'is-active' : '' ?>">عضویت</a>
         <a href="login.php" class="<?= $active === 'login' ? 'is-active' : '' ?>">ورود</a>
         <a href="contact.php" class="<?= $active === 'contact' ? 'is-active' : '' ?>">تماس با ما</a>
+        <a href="faq.php" class="<?= $active === 'faq' ? 'is-active' : '' ?>">سوالات متداول</a>
         <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>
       <?php endif; ?>
     </nav>
@@ -66,7 +67,7 @@ function casting_render_footer(): void
   <footer class="site-footer">
     <p><?= casting_e(casting_brand()) ?> — پورتال استعداد و بازیگری</p>
   </footer>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=35" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=41" defer></script>
 </body>
 </html>
 <?php

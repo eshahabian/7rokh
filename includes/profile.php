@@ -285,31 +285,78 @@ function casting_load_artistic_membership(int $user_id): array
 }
 
 /**
+ * @return array<int, array{org:string,other:string}>
+ */
+function casting_artistic_org_form_rows(array $orgs, array $other_items): array
+{
+    $rows = [];
+    $other_i = 0;
+    foreach ($orgs as $org) {
+        if ($org === 'other') {
+            $rows[] = ['org' => 'other', 'other' => $other_items[$other_i++] ?? ''];
+            continue;
+        }
+        $rows[] = ['org' => $org, 'other' => ''];
+    }
+    if ($rows === []) {
+        $rows[] = ['org' => '', 'other' => ''];
+    }
+    return $rows;
+}
+
+/**
  * @return array{has:string,orgs:list<string>,other_items:list<string>}
  */
 function casting_parse_artistic_membership_post(array $post): array
 {
     $has = sanitize_key((string) ($post['artistic_membership'] ?? ''));
-    $orgs_raw = $post['artistic_orgs'] ?? [];
-    if (!is_array($orgs_raw)) {
-        $orgs_raw = [];
-    }
     $labels = casting_artistic_org_labels();
     $orgs = [];
-    foreach ($orgs_raw as $key) {
-        $key = sanitize_key((string) $key);
-        if (isset($labels[$key])) {
-            $orgs[] = $key;
-        }
-    }
-
     $other_items = [];
-    $raw_other = $post['artistic_other_items'] ?? [];
-    if (is_array($raw_other)) {
-        foreach ($raw_other as $item) {
-            $item = sanitize_text_field(trim((string) $item));
-            if ($item !== '') {
-                $other_items[] = $item;
+
+    $items_raw = $post['artistic_org_items'] ?? null;
+    if (is_array($items_raw)) {
+        foreach ($items_raw as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $org = sanitize_key((string) ($item['org'] ?? ''));
+            if ($org === '' || !isset($labels[$org])) {
+                continue;
+            }
+            if ($org === 'other') {
+                $text = sanitize_text_field(trim((string) ($item['other'] ?? '')));
+                if ($text === '') {
+                    continue;
+                }
+                if (!in_array('other', $orgs, true)) {
+                    $orgs[] = 'other';
+                }
+                $other_items[] = $text;
+                continue;
+            }
+            if (!in_array($org, $orgs, true)) {
+                $orgs[] = $org;
+            }
+        }
+    } else {
+        $orgs_raw = $post['artistic_orgs'] ?? [];
+        if (!is_array($orgs_raw)) {
+            $orgs_raw = [];
+        }
+        foreach ($orgs_raw as $key) {
+            $key = sanitize_key((string) $key);
+            if (isset($labels[$key]) && !in_array($key, $orgs, true)) {
+                $orgs[] = $key;
+            }
+        }
+        $raw_other = $post['artistic_other_items'] ?? [];
+        if (is_array($raw_other)) {
+            foreach ($raw_other as $item) {
+                $item = sanitize_text_field(trim((string) $item));
+                if ($item !== '') {
+                    $other_items[] = $item;
+                }
             }
         }
     }
@@ -381,11 +428,8 @@ function casting_format_artistic_membership(array $data): string
 function casting_render_artistic_membership_fields(string $has = '', array $orgs = [], array $other_items = []): void
 {
     $labels = casting_artistic_org_labels();
-    if ($other_items === [] && in_array('other', $orgs, true)) {
-        $other_items = [''];
-    }
+    $rows = casting_artistic_org_form_rows($orgs, $other_items);
     $show_orgs = $has === 'yes';
-    $show_other = $show_orgs && in_array('other', $orgs, true);
     ?>
   <fieldset class="field" data-artistic-membership>
     <legend>سابقه عضویت در تشکل‌های هنری</legend>
@@ -399,35 +443,38 @@ function casting_render_artistic_membership_fields(string $has = '', array $orgs
     </div>
 
     <div class="artistic-orgs-panel" data-artistic-orgs-panel <?= $show_orgs ? '' : 'hidden' ?>>
-      <p class="field-hint">تشکل‌هایی که عضو بوده‌اید را انتخاب کنید:</p>
-      <div class="artistic-org-checks">
-        <?php foreach ($labels as $key => $label) : ?>
-          <label class="check-inline">
-            <input type="checkbox" name="artistic_orgs[]" value="<?= casting_e($key) ?>" <?= in_array($key, $orgs, true) ? 'checked' : '' ?> <?= $key === 'other' ? 'data-artistic-other-toggle' : '' ?>>
-            <span><?= casting_e($label) ?></span>
-          </label>
+      <p class="field-hint">تشکل‌هایی که عضو بوده‌اید را از فهرست انتخاب کنید. با + تشکل بعدی را اضافه کنید.</p>
+      <div class="work-credits-list" data-artistic-org-list>
+        <?php foreach ($rows as $i => $row) :
+            $org = (string) ($row['org'] ?? '');
+            $other = (string) ($row['other'] ?? '');
+            $is_other = $org === 'other';
+            ?>
+          <div class="work-credit-row artistic-org-row<?= $is_other ? ' is-other' : '' ?>">
+            <select name="artistic_org_items[<?= (int) $i ?>][org]" aria-label="تشکل هنری" data-artistic-org-select>
+              <option value="">انتخاب تشکل…</option>
+              <?php foreach ($labels as $key => $label) : ?>
+                <option value="<?= casting_e($key) ?>" <?= $org === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <input type="text" name="artistic_org_items[<?= (int) $i ?>][other]" value="<?= casting_e($is_other ? $other : '') ?>" placeholder="نام تشکل…" aria-label="نام تشکل دیگر" data-artistic-org-other<?= $is_other ? '' : ' disabled' ?>>
+            <button type="button" class="btn-icon" data-remove-artistic-org aria-label="حذف">−</button>
+          </div>
         <?php endforeach; ?>
       </div>
-
-      <div class="field artistic-other-panel" data-artistic-other-panel <?= $show_other ? '' : 'hidden' ?>>
-        <span class="jalali-label">نام تشکل‌های دیگر</span>
-        <p class="field-hint">برای «سایر» نام تشکل را بنویسید. با + مورد بعدی را اضافه کنید.</p>
-        <div class="work-credits-list" data-artistic-other-list>
-          <?php foreach ($other_items as $i => $item) : ?>
-            <div class="work-credit-row artistic-other-row">
-              <input type="text" name="artistic_other_items[<?= (int) $i ?>]" value="<?= casting_e($item) ?>" placeholder="نام تشکل…" aria-label="تشکل دیگر">
-              <button type="button" class="btn-icon" data-remove-artistic-other aria-label="حذف">−</button>
-            </div>
-          <?php endforeach; ?>
+      <button type="button" class="btn btn-ghost btn-add-credit" data-add-artistic-org>+ افزودن تشکل بعدی</button>
+      <template data-artistic-org-template>
+        <div class="work-credit-row artistic-org-row">
+          <select name="artistic_org_items[__i__][org]" aria-label="تشکل هنری" data-artistic-org-select>
+            <option value="">انتخاب تشکل…</option>
+            <?php foreach ($labels as $key => $label) : ?>
+              <option value="<?= casting_e($key) ?>"><?= casting_e($label) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <input type="text" name="artistic_org_items[__i__][other]" value="" placeholder="نام تشکل…" aria-label="نام تشکل دیگر" data-artistic-org-other disabled>
+          <button type="button" class="btn-icon" data-remove-artistic-org aria-label="حذف">−</button>
         </div>
-        <button type="button" class="btn btn-ghost btn-add-credit" data-add-artistic-other>+ افزودن مورد دیگر</button>
-        <template data-artistic-other-template>
-          <div class="work-credit-row artistic-other-row">
-            <input type="text" name="artistic_other_items[__i__]" value="" placeholder="نام تشکل…" aria-label="تشکل دیگر">
-            <button type="button" class="btn-icon" data-remove-artistic-other aria-label="حذف">−</button>
-          </div>
-        </template>
-      </div>
+      </template>
     </div>
   </fieldset>
     <?php
@@ -476,10 +523,44 @@ function casting_motor_skill_labels(): array
 /**
  * @return array<string, string>
  */
+function casting_motor_skill_filter_labels(): array
+{
+    $labels = casting_motor_skill_labels();
+    $labels['other'] = 'سایر';
+    return $labels;
+}
+
+/**
+ * @return array<string, string>
+ */
 function casting_artistic_skill_labels(): array
 {
     $keys = ['music', 'dance'];
     return array_intersect_key(casting_skill_labels(), array_flip($keys));
+}
+
+/**
+ * گزینه‌های فیلتر جستجو — «سایر» در انتهای لیست
+ *
+ * @return array<string, string>
+ */
+function casting_artistic_skill_filter_labels(): array
+{
+    return [
+        'music' => 'موسیقی',
+        'dance' => 'رقص',
+        'other' => 'سایر',
+    ];
+}
+
+function casting_search_filter_empty_label(): string
+{
+    return 'انتخاب کنید';
+}
+
+function casting_search_specialty_empty_label(bool $category_selected): string
+{
+    return $category_selected ? casting_search_filter_empty_label() : 'اول تخصص هنری را انتخاب کنید';
 }
 
 /**
@@ -943,10 +1024,16 @@ function casting_format_skill_labels($items, string $other = ''): string
 function casting_infer_role_from_activities(array $activities): string
 {
     $activities = casting_normalize_activities($activities);
-    if (array_intersect($activities, ['producer', 'executive', 'production_manager', 'logistics_manager']) !== []) {
+    if (array_intersect($activities, [
+        'producer', 'executive', 'production_manager', 'logistics_manager',
+        'production_assistant', 'logistics_assistant', 'logistics_driver',
+    ]) !== []) {
         return 'producer';
     }
-    if (array_intersect($activities, ['director', 'first_ad', 'scheduler', 'script_supervisor']) !== []) {
+    if (array_intersect($activities, [
+        'director', 'director_theater', 'director_short_film', 'director_tv', 'director_cinema',
+        'first_ad', 'second_ad', 'third_ad', 'scheduler', 'script_supervisor',
+    ]) !== []) {
         return 'director';
     }
     return 'talent';
@@ -2175,6 +2262,13 @@ function casting_require_casting_user(): WP_User
     if ($role === '') {
         casting_set_flash('error', 'فقط اعضای هفت رخ می‌توانند گفتگو کنند.');
         casting_redirect('index.php');
+    }
+    if (!function_exists('casting_user_is_suspended')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if (casting_user_is_suspended((int) $user->ID)) {
+        casting_set_flash('error', 'حساب شما معلق شده است. برای پیگیری با پشتیبانی تماس بگیرید.');
+        casting_redirect('logout.php');
     }
     return $user;
 }

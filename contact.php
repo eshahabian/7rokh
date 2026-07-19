@@ -40,14 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (casting_strlen($message) > 3000) {
             $error = 'متن پیام خیلی بلند است.';
         } else {
-            $to = (string) get_option('admin_email');
-            $brand = casting_brand();
-            $mail_subject = sprintf('[%s] تماس: %s', $brand, $subject);
-            $body = "نام: {$name}\nایمیل: {$email}\nموضوع: {$subject}\n\n{$message}\n";
-            $headers = ['Reply-To: ' . $name . ' <' . $email . '>'];
-            $sent = wp_mail($to, $mail_subject, $body, $headers);
-            if (!$sent) {
-                $error = 'ارسال پیام ناموفق بود. کمی بعد دوباره تلاش کنید.';
+            $result = casting_send_contact_message($name, $email, $subject, $message);
+            if (!$result['ok']) {
+                $error = 'ارسال پیام ناموفق بود.' . casting_mail_setup_hint();
+                if ($result['error'] !== '' && casting_mail_is_smtp_ready()) {
+                    $error .= ' (' . $result['error'] . ')';
+                }
             } else {
                 $success = 'پیام شما ارسال شد. به‌زودی پاسخ می‌دهیم.';
                 $name = $email = $subject = $message = '';

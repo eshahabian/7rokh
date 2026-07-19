@@ -24,10 +24,11 @@ casting_render_flash();
       <h2 class="panel-section-title">فیش‌های ثبت‌شده</h2>
       <ul class="panel-list">
         <?php foreach ($receipts as $row) : ?>
-          <li class="panel-list-item">
+          <li class="panel-list-item panel-list-item-receipt">
             <div>
               <strong><?= casting_e($plans[$row['plan_key']]['label'] ?? $row['plan_key']) ?></strong>
               <span class="meta"><?= casting_e(number_format((int) $row['amount'])) ?> تومان · <?= casting_e((string) $row['reference_code']) ?></span>
+              <?php casting_render_receipt_thumbnail((int) ($row['attachment_id'] ?? 0)); ?>
             </div>
             <span class="chip"><?= casting_e(casting_premium_status_label((string) $row['status'])) ?></span>
           </li>

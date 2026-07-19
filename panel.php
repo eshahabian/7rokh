@@ -70,7 +70,7 @@ casting_render_flash();
     <p class="meta">پروفایل آماده است<?= $profile['visible'] ? ' و قابل مشاهده است' : '؛ فعلاً مخفی است' ?>.</p>
   <?php endif; ?>
   <?php if ($premium) : ?>
-    <p class="meta">اشتراک ویژه تا <?= casting_e(casting_premium_until_label($user_id)) ?> فعال است.</p>
+    <?php casting_render_premium_countdown($user_id); ?>
   <?php endif; ?>
   <div class="cta-row">
     <a class="btn btn-ghost" href="#completion">تکمیل پروفایل</a>

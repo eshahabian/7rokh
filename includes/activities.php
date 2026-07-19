@@ -24,7 +24,13 @@ function casting_activity_categories(): array
             'label' => 'کارگردانی',
             'items' => [
                 'director'            => 'کارگردان',
+                'director_theater'    => 'کارگردان تئاتر',
+                'director_short_film' => 'کارگردان فیلم کوتاه',
+                'director_tv'         => 'کارگردان تلویزیونی',
+                'director_cinema'     => 'کارگردان سینما',
                 'first_ad'            => 'دستیار اول کارگردان',
+                'second_ad'           => 'دستیار دوم کارگردان',
+                'third_ad'            => 'دستیار سوم کارگردان',
                 'scheduler'           => 'برنامه‌ریز',
                 'script_supervisor'   => 'منشی صحنه',
             ],
@@ -32,10 +38,13 @@ function casting_activity_categories(): array
         'production' => [
             'label' => 'تهیه و تولید',
             'items' => [
-                'producer'           => 'تهیه‌کننده',
-                'production_manager' => 'مدیر تولید',
-                'executive'          => 'مجری طرح',
-                'logistics_manager'  => 'مدیر تدارکات',
+                'producer'             => 'تهیه‌کننده',
+                'production_manager'   => 'مدیر تولید',
+                'production_assistant' => 'دستیار تولید',
+                'executive'            => 'مجری طرح',
+                'logistics_manager'    => 'مدیر تدارکات',
+                'logistics_assistant'  => 'دستیار تدارکات',
+                'logistics_driver'     => 'راننده تدارکات',
             ],
         ],
         'writing' => [
@@ -51,14 +60,18 @@ function casting_activity_categories(): array
         'camera' => [
             'label' => 'فیلمبرداری و تصویر',
             'items' => [
-                'dop'              => 'مدیر فیلمبرداری',
-                'cameraman'        => 'فیلمبردار',
-                'camera_assistant' => 'دستیار فیلمبردار',
-                'videographer'     => 'تصویربردار',
-                'crane_op'         => 'اپراتور کرین',
-                'steadicam_op'     => 'اپراتور استدی‌کم',
-                'gimbal_op'        => 'اپراتور گیمبال',
-                'drone_op'         => 'اپراتور پهپاد',
+                'dop'                   => 'مدیر فیلمبرداری',
+                'cameraman'             => 'فیلمبردار',
+                'camera_assistant'      => 'دستیار فیلمبردار',
+                'camera_first_assistant'  => 'دستیار یک',
+                'camera_second_assistant' => 'دستیار دو',
+                'camera_third_assistant'  => 'دستیار سه',
+                'camera_technical_crew'   => 'نیروی فنی',
+                'videographer'          => 'تصویربردار',
+                'crane_op'              => 'اپراتور کرین',
+                'steadicam_op'          => 'اپراتور استدی‌کم',
+                'gimbal_op'             => 'اپراتور گیمبال',
+                'drone_op'              => 'اپراتور پهپاد',
             ],
         ],
         'sound' => [
@@ -84,7 +97,7 @@ function casting_activity_categories(): array
             ],
         ],
         'art' => [
-            'label' => 'طراحی هنری',
+            'label' => 'طراح هنری',
             'items' => [
                 'set_designer'     => 'طراح صحنه',
                 'decor_designer'   => 'طراح دکور',

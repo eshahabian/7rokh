@@ -345,53 +345,70 @@
   document.querySelectorAll("[data-artistic-membership]").forEach((box) => {
     const hasRadios = box.querySelectorAll("[data-artistic-has]");
     const orgsPanel = box.querySelector("[data-artistic-orgs-panel]");
-    const otherPanel = box.querySelector("[data-artistic-other-panel]");
-    const otherToggle = box.querySelector("[data-artistic-other-toggle]");
-    const otherList = box.querySelector("[data-artistic-other-list]");
-    const otherTemplate = box.querySelector("[data-artistic-other-template]");
-    const addOtherBtn = box.querySelector("[data-add-artistic-other]");
+    const list = box.querySelector("[data-artistic-org-list]");
+    const template = box.querySelector("[data-artistic-org-template]");
+    const addBtn = box.querySelector("[data-add-artistic-org]");
 
     const syncPanels = () => {
       const hasYes = box.querySelector('[data-artistic-has][value="yes"]:checked');
       if (orgsPanel) orgsPanel.hidden = !hasYes;
-      if (!hasYes && otherPanel) otherPanel.hidden = true;
-      const otherOn = hasYes && otherToggle?.checked;
-      if (otherPanel) otherPanel.hidden = !otherOn;
-      otherList?.querySelectorAll('input[type="text"]').forEach((input) => {
-        input.disabled = !otherOn;
+      list?.querySelectorAll("select, input, button").forEach((el) => {
+        el.disabled = !hasYes;
       });
     };
 
-    hasRadios.forEach((radio) => radio.addEventListener("change", syncPanels));
-    otherToggle?.addEventListener("change", syncPanels);
+    const syncOther = (row) => {
+      const select = row.querySelector("[data-artistic-org-select]");
+      const other = row.querySelector("[data-artistic-org-other]");
+      if (!select || !other) return;
+      const isOther = select.value === "other";
+      row.classList.toggle("is-other", isOther);
+      const hasYes = box.querySelector('[data-artistic-has][value="yes"]:checked');
+      other.disabled = !isOther || !hasYes;
+      if (!isOther) other.value = "";
+    };
 
-    const reindexOther = () => {
-      otherList?.querySelectorAll(".artistic-other-row").forEach((row, i) => {
-        const input = row.querySelector('input[type="text"]');
-        if (input) input.name = `artistic_other_items[${i}]`;
+    const reindex = () => {
+      [...(list?.querySelectorAll(".artistic-org-row") || [])].forEach((row, i) => {
+        const select = row.querySelector("[data-artistic-org-select]");
+        const other = row.querySelector("[data-artistic-org-other]");
+        if (select) select.name = `artistic_org_items[${i}][org]`;
+        if (other) other.name = `artistic_org_items[${i}][other]`;
       });
     };
 
-    addOtherBtn?.addEventListener("click", () => {
-      if (!otherTemplate || !otherList) return;
-      const html = otherTemplate.innerHTML.split("__i__").join(String(otherList.children.length));
-      otherList.insertAdjacentHTML("beforeend", html);
-      reindexOther();
+    list?.addEventListener("change", (e) => {
+      const select = e.target.closest("[data-artistic-org-select]");
+      if (!select) return;
+      syncOther(select.closest(".artistic-org-row"));
     });
 
-    otherList?.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-remove-artistic-other]");
+    addBtn?.addEventListener("click", () => {
+      if (!template || !list) return;
+      const html = template.innerHTML.split("__i__").join(String(list.children.length));
+      list.insertAdjacentHTML("beforeend", html);
+      reindex();
+      const last = list.lastElementChild;
+      if (last) syncOther(last);
+    });
+
+    list?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-remove-artistic-org]");
       if (!btn) return;
-      const rows = otherList.querySelectorAll(".artistic-other-row");
+      const rows = list.querySelectorAll(".artistic-org-row");
       if (rows.length <= 1) {
-        const input = rows[0]?.querySelector('input[type="text"]');
-        if (input) input.value = "";
+        const row = rows[0];
+        const select = row?.querySelector("[data-artistic-org-select]");
+        if (select) select.value = "";
+        if (row) syncOther(row);
         return;
       }
-      btn.closest(".artistic-other-row")?.remove();
-      reindexOther();
+      btn.closest(".artistic-org-row")?.remove();
+      reindex();
     });
 
+    hasRadios.forEach((radio) => radio.addEventListener("change", syncPanels));
+    list?.querySelectorAll(".artistic-org-row").forEach(syncOther);
     syncPanels();
   });
 
@@ -503,14 +520,14 @@
         specSel.disabled = true;
         const opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = "اول تخصص هنری";
+        opt.textContent = "اول تخصص هنری را انتخاب کنید";
         specSel.appendChild(opt);
         return;
       }
       specSel.disabled = false;
       const placeholder = document.createElement("option");
       placeholder.value = "";
-      placeholder.textContent = "همه";
+      placeholder.textContent = "انتخاب کنید";
       specSel.appendChild(placeholder);
       Object.keys(map[cat]).forEach((key) => {
         const opt = document.createElement("option");
@@ -535,4 +552,45 @@
 
   openPanelHashTarget();
   window.addEventListener("hashchange", openPanelHashTarget);
+
+  const formatPremiumRemaining = (seconds, short = false) => {
+    if (seconds <= 0) return short ? "تمام" : "اعتبار ویژه تمام شد";
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (short) {
+      if (days > 0) return `${days} روز`;
+      if (hours > 0) return `${hours} ساعت`;
+      return `${minutes} دقیقه`;
+    }
+    if (days > 0) return `${days} روز و ${hours} ساعت`;
+    if (hours > 0) return `${hours} ساعت و ${minutes} دقیقه`;
+    return `${minutes} دقیقه`;
+  };
+
+  const tickPremiumCountdowns = () => {
+    const now = Math.floor(Date.now() / 1000);
+    document.querySelectorAll("[data-premium-until-ts]").forEach((box) => {
+      const until = Number.parseInt(box.getAttribute("data-premium-until-ts") || "0", 10);
+      const out = box.querySelector("[data-premium-countdown]");
+      if (!until || !out) return;
+      const short = box.classList.contains("nav-premium-countdown");
+      out.textContent = formatPremiumRemaining(until - now, short);
+    });
+  };
+
+  tickPremiumCountdowns();
+  window.setInterval(tickPremiumCountdowns, 60000);
+
+  document.querySelectorAll("[data-faq-accordion]").forEach((box) => {
+    const items = box.querySelectorAll(".faq-item");
+    items.forEach((item) => {
+      item.addEventListener("toggle", () => {
+        if (!item.open) return;
+        items.forEach((other) => {
+          if (other !== item) other.open = false;
+        });
+      });
+    });
+  });
 })();

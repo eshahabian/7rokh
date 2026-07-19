@@ -1,0 +1,11 @@
+<?php
+/**
+ * کپی کنید به config.local.php و رمز ایمیل info@7rokh.ir را بگذارید.
+ * این فایل در git ذخیره نمی‌شود.
+ */
+define('CASTING_SMTP_PASS', 'رمز-ایمیل-info-7rokh-اینجا');
+
+// اگر mail.7rokh.ir کار نکرد، این‌ها را امتحان کنید:
+// define('CASTING_SMTP_HOST', 'smtp.7rokh.ir');
+// define('CASTING_SMTP_PORT', 465);
+// define('CASTING_SMTP_SECURE', 'ssl');

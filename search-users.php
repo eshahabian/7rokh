@@ -27,10 +27,12 @@ casting_render_flash();
   <p class="meta"><?= (int) $total ?> کاربر · اعضای ویژه در اولویت نمایش</p>
 
   <form class="filter-bar filter-bar-wide" method="get" action="search-users.php">
+    <?php casting_render_member_search_talent_cluster($filters); ?>
+
     <div class="field">
       <label for="gender">جنسیت</label>
       <select id="gender" name="gender">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($genders as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['gender'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
@@ -39,22 +41,17 @@ casting_render_flash();
     <div class="field">
       <label for="look">پوست</label>
       <select id="look" name="look">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($looks as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['look'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
       </select>
     </div>
-    <div class="field">
-      <label for="health_status">سلامت</label>
-      <input id="health_status" name="health_status" type="search" value="<?= casting_e($filters['health_status']) ?>" placeholder="کلمه…">
-    </div>
+    <?php casting_render_health_search_field($filters); ?>
 
     <?php casting_render_body_metric_search_fields($filters); ?>
 
     <?php casting_render_location_fields($filters['province'], $filters['city'], '', false, 'filter-location-inline'); ?>
-
-    <?php casting_render_member_search_talent_cluster($filters); ?>
 
     <?php casting_render_member_search_phase1_fields($filters); ?>
 
@@ -63,7 +60,7 @@ casting_render_flash();
     <div class="field">
       <label for="availability">همکاری</label>
       <select id="availability" name="availability">
-        <option value="">همه</option>
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($availability_labels as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['availability'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
