@@ -31,10 +31,13 @@ casting_render_flash();
   <?php else : ?>
     <ul class="panel-list">
       <?php foreach ($blocked as $row) : ?>
-        <li class="panel-list-item">
+        <li class="panel-list-item panel-list-item-block">
           <div>
             <strong><?= casting_e($row['name']) ?></strong>
             <span class="meta"><?= casting_e(casting_role_label($row['role'])) ?></span>
+            <?php if (($row['reason'] ?? '') !== '') : ?>
+              <p class="meta block-reason-user">علت: <?= casting_e($row['reason']) ?></p>
+            <?php endif; ?>
           </div>
           <form method="post" action="blocked-by-me.php">
             <?php wp_nonce_field('casting_unblock'); ?>

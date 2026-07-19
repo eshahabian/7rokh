@@ -13,6 +13,7 @@ function casting_admin_permission_definitions(): array
         'approve_receipts'   => 'تأیید فیش واریزی',
         'view_transactions'  => 'مشاهده تراکنش‌های مالی کاربران',
         'unblock_users'      => 'رفع بلاک کاربران',
+        'view_user_blocks'   => 'مشاهده بلاک‌های کاربران',
         'suspend_users'      => 'تعلیق / رفع تعلیق کاربر',
         'view_premium_users' => 'مشاهده مشترکین ویژه',
         'manage_staff'       => 'مدیریت دسترسی مدیران',
@@ -291,13 +292,17 @@ function casting_admin_search_casting_users(string $query, int $limit = 40): arr
 }
 
 /**
- * @return array<int, array{blocker_id:int,blocker_name:string,target_id:int,target_name:string}>
+ * @return array<int, array{blocker_id:int,blocker_name:string,target_id:int,target_name:string,blocked_at:string,reason:string}>
  */
 function casting_admin_user_blocks(int $user_id): array
 {
     $out = [];
     $self = get_user_by('id', $user_id);
     $self_name = $self ? (string) $self->display_name : 'کاربر';
+    $times = get_user_meta($user_id, 'casting_blocked_at', true);
+    if (!is_array($times)) {
+        $times = [];
+    }
 
     foreach (casting_get_blocked_ids($user_id) as $target_id) {
         $target = get_user_by('id', $target_id);
@@ -309,6 +314,8 @@ function casting_admin_user_blocks(int $user_id): array
             'blocker_name' => $self_name,
             'target_id'    => $target_id,
             'target_name'  => (string) $target->display_name,
+            'blocked_at'   => (string) ($times[(string) $target_id] ?? ''),
+            'reason'       => casting_block_reason($user_id, $target_id),
         ];
     }
 
@@ -323,11 +330,15 @@ function casting_admin_user_blocks(int $user_id): array
             if (!$blocker) {
                 continue;
             }
+            $blocker_times = get_user_meta($blocker_id, 'casting_blocked_at', true);
+            $blocked_at = is_array($blocker_times) ? (string) ($blocker_times[(string) $user_id] ?? '') : '';
             $out[] = [
                 'blocker_id'   => $blocker_id,
                 'blocker_name' => (string) $blocker->display_name,
                 'target_id'    => $user_id,
                 'target_name'  => $self_name,
+                'blocked_at'   => $blocked_at,
+                'reason'       => casting_block_reason($blocker_id, $user_id),
             ];
         }
     }
@@ -349,6 +360,9 @@ function casting_panel_admin_nav_items(int $user_id): array
     }
     if (casting_user_has_admin_permission($user_id, 'view_transactions')) {
         $items[] = ['key' => 'admin-transactions', 'label' => 'تراکنش کاربران', 'href' => 'admin-transactions.php', 'perm' => 'view_transactions'];
+    }
+    if (casting_user_has_admin_permission($user_id, 'view_user_blocks')) {
+        $items[] = ['key' => 'admin-blocks', 'label' => 'بلاک‌های کاربران', 'href' => 'admin-blocks.php', 'perm' => 'view_user_blocks'];
     }
     if (casting_user_has_admin_permission($user_id, 'suspend_users') || casting_user_has_admin_permission($user_id, 'unblock_users')) {
         $items[] = ['key' => 'admin-users', 'label' => 'کاربران و تعلیق', 'href' => 'admin-users.php', 'perm' => 'suspend_users'];

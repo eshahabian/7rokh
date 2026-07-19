@@ -48,7 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $target = (int) $_POST['block_id'];
             if ((string) $_POST['block_action'] === 'block') {
-                $res = casting_block_user($viewer_id, $target);
+                $reason = (string) ($_POST['block_reason'] ?? '');
+                $res = casting_block_user($viewer_id, $target, $reason);
             } else {
                 $res = casting_unblock_user($viewer_id, $target);
             }

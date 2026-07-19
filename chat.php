@@ -21,9 +21,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = (string) ($_POST['action'] ?? 'send');
         if ($action === 'block' || $action === 'unblock') {
             $target = (int) ($_POST['peer_id'] ?? 0);
-            $res = $action === 'block'
-                ? casting_block_user($my_id, $target)
-                : casting_unblock_user($my_id, $target);
+            if ($action === 'block') {
+                $reason = (string) ($_POST['block_reason'] ?? '');
+                $res = casting_block_user($my_id, $target, $reason);
+            } else {
+                $res = casting_unblock_user($my_id, $target);
+            }
             casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'انجام شد.' : $res['error']);
             casting_redirect('chat.php?with=' . $target);
         } elseif ($action === 'start') {
@@ -149,12 +152,9 @@ casting_render_flash();
                 <button class="btn btn-ghost btn-sm" type="submit">رفع بلاک</button>
               </form>
             <?php else : ?>
-              <form method="post" action="chat.php?with=<?= $peer_id ?>">
-                <?php wp_nonce_field('casting_dm'); ?>
-                <input type="hidden" name="action" value="block">
-                <input type="hidden" name="peer_id" value="<?= $peer_id ?>">
-                <button class="btn btn-reject btn-sm" type="submit">بلاک</button>
-              </form>
+              <div class="block-user-wrap">
+                <?php casting_render_block_user_form('chat.php?with=' . $peer_id, $peer_id, 'casting_dm', 'chat'); ?>
+              </div>
             <?php endif; ?>
           </div>
         </header>

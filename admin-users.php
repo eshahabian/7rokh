@@ -120,8 +120,16 @@ casting_render_flash();
         <h3 class="panel-section-title">بلاک‌های مرتبط</h3>
         <ul class="panel-list">
           <?php foreach ($blocks as $block) : ?>
-            <li class="panel-list-item">
-              <span><?= casting_e($block['blocker_name']) ?> → <?= casting_e($block['target_name']) ?></span>
+            <li class="panel-list-item panel-list-item-block">
+              <div>
+                <strong><?= casting_e($block['blocker_name']) ?> → <?= casting_e($block['target_name']) ?></strong>
+                <?php if (($block['blocked_at'] ?? '') !== '') : ?>
+                  <span class="meta"><?= casting_e($block['blocked_at']) ?></span>
+                <?php endif; ?>
+                <?php if (($block['reason'] ?? '') !== '') : ?>
+                  <p class="meta block-reason-admin">علت: <?= casting_e($block['reason']) ?></p>
+                <?php endif; ?>
+              </div>
               <form method="post" action="admin-users.php?user=<?= $target_id ?>">
                 <?php wp_nonce_field('casting_admin_users'); ?>
                 <input type="hidden" name="target_id" value="<?= $target_id ?>">

@@ -2267,6 +2267,37 @@ fieldset.field legend {
   margin-top: 0.15rem;
 }
 
+.block-user-wrap {
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.block-user-form {
+  margin: 0;
+}
+
+.block-user-form .field {
+  margin-bottom: 0.5rem;
+}
+
+.block-user-form textarea {
+  min-height: 56px;
+  font-size: 0.88rem;
+}
+
+.block-reason-user,
+.block-reason-admin {
+  margin: 0.35rem 0 0;
+}
+
+.panel-list-item-block {
+  align-items: flex-start;
+}
+
+.admin-blocks-table td {
+  vertical-align: top;
+}
+
 .admin-table-countdown {
   font-size: 0.85rem;
 }

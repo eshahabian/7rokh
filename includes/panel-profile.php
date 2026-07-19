@@ -228,11 +228,9 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
               <button class="btn btn-ghost" type="submit" name="block_action" value="unblock">رفع بلاک</button>
             </form>
           <?php else : ?>
-            <form method="post" action="member.php?id=<?= $member_id ?>" style="display:inline">
-              <?php wp_nonce_field('casting_block'); ?>
-              <input type="hidden" name="block_id" value="<?= $member_id ?>">
-              <button class="btn btn-reject" type="submit" name="block_action" value="block">بلاک</button>
-            </form>
+            <div class="block-user-wrap">
+              <?php casting_render_block_user_form('member.php?id=' . $member_id, $member_id); ?>
+            </div>
           <?php endif; ?>
         </div>
       <?php elseif ($embedded) : ?>
