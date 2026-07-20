@@ -66,6 +66,7 @@ function casting_contact_list_messages(int $limit = 200, bool $unread_only = fal
             'user_id'   => (int) ($row['user_id'] ?? 0),
             'at'        => (string) ($row['at'] ?? ''),
             'mail_sent' => !empty($row['mail_sent']),
+            'mail_error'  => (string) ($row['mail_error'] ?? ''),
             'read'      => !empty($row['read']),
         ];
         if (count($out) >= max(1, $limit)) {
@@ -123,6 +124,34 @@ function casting_contact_mark_mail_sent(string $id): bool
             continue;
         }
         $row['mail_sent'] = true;
+        $found = true;
+        break;
+    }
+    unset($row);
+    if (!$found) {
+        return false;
+    }
+    update_option('casting_contact_inbox', $inbox, false);
+    return true;
+}
+
+function casting_contact_set_mail_error(string $id, string $error): bool
+{
+    $id = trim($id);
+    $error = sanitize_text_field($error);
+    if ($id === '' || $error === '') {
+        return false;
+    }
+    $inbox = get_option('casting_contact_inbox', []);
+    if (!is_array($inbox)) {
+        return false;
+    }
+    $found = false;
+    foreach ($inbox as &$row) {
+        if (!is_array($row) || (string) ($row['id'] ?? '') !== $id) {
+            continue;
+        }
+        $row['mail_error'] = $error;
         $found = true;
         break;
     }

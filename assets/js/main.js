@@ -641,6 +641,7 @@
       if (!nameSearchSuggest) return;
       nameSearchSuggest.hidden = true;
       nameSearchSuggest.innerHTML = "";
+      nameSearchBox?.classList.remove("is-suggest-open");
     };
 
     const renderSuggest = (items) => {
@@ -661,6 +662,7 @@
         nameSearchSuggest.appendChild(li);
       });
       nameSearchSuggest.hidden = false;
+      nameSearchBox?.classList.add("is-suggest-open");
     };
 
     const fetchSuggest = () => {

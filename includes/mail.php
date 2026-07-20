@@ -73,6 +73,22 @@ function casting_contact_notify_emails(): array
     return is_email($admin) ? [$admin] : [];
 }
 
+/**
+ * @return array{smtp_ready:bool,local_config:bool,host:string,port:int,user:string,from:string,secure:string}
+ */
+function casting_mail_status(): array
+{
+    return [
+        'smtp_ready'   => casting_mail_is_smtp_ready(),
+        'local_config' => file_exists(dirname(__DIR__) . '/config.local.php'),
+        'host'         => defined('CASTING_SMTP_HOST') ? (string) CASTING_SMTP_HOST : '',
+        'port'         => defined('CASTING_SMTP_PORT') ? (int) CASTING_SMTP_PORT : 0,
+        'user'         => defined('CASTING_SMTP_USER') ? (string) CASTING_SMTP_USER : '',
+        'from'         => casting_mail_from_address(),
+        'secure'       => defined('CASTING_SMTP_SECURE') ? (string) CASTING_SMTP_SECURE : '',
+    ];
+}
+
 function casting_init_phpmailer($phpmailer): void
 {
     if (!casting_mail_is_smtp_ready()) {
@@ -152,6 +168,13 @@ function casting_send_mail(string $to, string $subject, string $body, array $hea
 
     remove_action('wp_mail_failed', $capture);
 
+    if (!$sent) {
+        global $phpmailer;
+        if (isset($phpmailer) && is_object($phpmailer) && !empty($phpmailer->ErrorInfo)) {
+            $last_error = (string) $phpmailer->ErrorInfo;
+        }
+    }
+
     if ($sent) {
         return ['ok' => true, 'error' => ''];
     }
@@ -198,6 +221,8 @@ function casting_send_contact_message(string $name, string $email, string $subje
 
         if ($mail_sent) {
             casting_contact_mark_mail_sent((string) $saved['id']);
+        } elseif ($last_error !== '') {
+            casting_contact_set_mail_error((string) $saved['id'], $last_error);
         }
     } elseif (!casting_mail_is_smtp_ready()) {
         $last_error = trim(casting_mail_setup_hint()) ?: 'SMTP آماده نیست.';
