@@ -935,6 +935,86 @@ fieldset.field legend {
   grid-column: 1 / -1;
 }
 
+.name-search-field {
+  position: relative;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.name-search-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.name-search-ruler {
+  position: absolute;
+  visibility: hidden;
+  white-space: pre;
+  font: inherit;
+  font-size: 1rem;
+  padding: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.name-search-type {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0.7rem 0.95rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.name-search-ghost {
+  position: absolute;
+  inset: 0.7rem 0.95rem;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.name-search-ghost:empty {
+  display: none;
+}
+
+.name-hit-muted {
+  color: var(--ink-muted);
+  opacity: 0.42;
+  font-weight: 400;
+}
+
+.name-hit-strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.field-name-search .name-search-type input {
+  position: relative;
+  z-index: 1;
+  width: auto;
+  min-width: 2ch;
+  max-width: calc(100% - 0.5rem);
+  min-height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bg-elevated);
+  box-shadow: none;
+  flex: 0 0 auto;
+}
+
+.field-name-search .name-search-type input:focus {
+  box-shadow: none;
+}
+
 [data-member-search-results].is-loading {
   opacity: 0.55;
   pointer-events: none;

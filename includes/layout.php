@@ -16,7 +16,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=55">
+  <link rel="stylesheet" href="<?= $css ?>?v=56">
 </head>
 <body class="<?= casting_e($body_class) ?>">
   <div class="bg-atmosphere" aria-hidden="true"></div>
@@ -67,7 +67,7 @@ function casting_render_footer(): void
   <footer class="site-footer">
     <p><?= casting_e(casting_brand()) ?> — پورتال استعداد و بازیگری</p>
   </footer>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=44" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=45" defer></script>
 </body>
 </html>
 <?php

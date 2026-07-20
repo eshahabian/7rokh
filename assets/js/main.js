@@ -597,10 +597,63 @@
   const memberSearchForm = document.querySelector("[data-member-search-form]");
   const memberSearchResults = document.querySelector("[data-member-search-results]");
   const nameSearchInput = document.querySelector("[data-name-search-input]");
+  const nameSearchGhost = document.querySelector("[data-name-search-ghost]");
+  const nameSearchRuler = document.querySelector("[data-name-search-ruler]");
 
   if (memberSearchForm && memberSearchResults && nameSearchInput) {
     let resultsTimer = 0;
+    let suggestTimer = 0;
     let resultsAbort = null;
+    let suggestAbort = null;
+    let predictedFull = "";
+
+    const escapeHtml = (value) =>
+      String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+    const highlightMatch = (text, query) => {
+      const source = String(text || "");
+      const needle = String(query || "").trim();
+      if (needle === "") return "";
+      const lowerSource = source.toLocaleLowerCase("fa");
+      const lowerNeedle = needle.toLocaleLowerCase("fa");
+      const index = lowerSource.indexOf(lowerNeedle);
+      if (index === -1) {
+        return `<span class="name-hit-muted">${escapeHtml(source)}</span>`;
+      }
+      const before = source.slice(0, index);
+      const match = source.slice(index, index + needle.length);
+      const after = source.slice(index + needle.length);
+      return [
+        before ? `<span class="name-hit-muted">${escapeHtml(before)}</span>` : "",
+        `<strong class="name-hit-strong">${escapeHtml(match)}</strong>`,
+        after ? `<span class="name-hit-muted">${escapeHtml(after)}</span>` : "",
+      ].join("");
+    };
+
+    const syncInputWidth = () => {
+      if (!nameSearchRuler || !nameSearchInput) return;
+      nameSearchRuler.textContent = nameSearchInput.value || " ";
+      nameSearchInput.style.width = `${Math.max(nameSearchRuler.offsetWidth + 3, 20)}px`;
+    };
+
+    const clearPrediction = () => {
+      predictedFull = "";
+      if (nameSearchGhost) nameSearchGhost.innerHTML = "";
+      syncInputWidth();
+    };
+
+    const applyPrediction = (query) => {
+      if (!nameSearchGhost || !predictedFull || query.length < 2) {
+        clearPrediction();
+        return;
+      }
+      nameSearchGhost.innerHTML = highlightMatch(predictedFull, query);
+      syncInputWidth();
+    };
 
     const buildFormQuery = () => {
       const params = new URLSearchParams(new FormData(memberSearchForm));
@@ -625,7 +678,7 @@
           memberSearchResults.innerHTML = await res.text();
         } catch (err) {
           if (err?.name !== "AbortError") {
-            /* ignore network errors during live typing */
+            /* ignore */
           }
         } finally {
           memberSearchResults.classList.remove("is-loading");
@@ -633,7 +686,76 @@
       }, 400);
     };
 
-    nameSearchInput.addEventListener("input", refreshResults);
+    const pickPrediction = (items, query) => {
+      const q = query.trim().toLocaleLowerCase("fa");
+      if (!q) return "";
+      for (const item of items) {
+        for (const candidate of [item.name, item.login]) {
+          const text = String(candidate || "");
+          if (text.toLocaleLowerCase("fa").includes(q)) return text;
+        }
+      }
+      return "";
+    };
+
+    const fetchPrediction = () => {
+      window.clearTimeout(suggestTimer);
+      suggestAbort?.abort();
+      const query = (nameSearchInput.value || "").trim();
+      if (query.length < 2) {
+        clearPrediction();
+        return;
+      }
+      suggestTimer = window.setTimeout(async () => {
+        const controller = new AbortController();
+        suggestAbort = controller;
+        try {
+          const params = new URLSearchParams({ q: query });
+          const res = await fetch(`search-members-suggest.php?${params.toString()}`, {
+            signal: controller.signal,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          const items = Array.isArray(data.items) ? data.items : [];
+          predictedFull = pickPrediction(items, query);
+          applyPrediction(query);
+        } catch (err) {
+          if (err?.name !== "AbortError") clearPrediction();
+        }
+      }, 200);
+    };
+
+    const acceptPrediction = () => {
+      if (!predictedFull) return false;
+      nameSearchInput.value = predictedFull;
+      clearPrediction();
+      refreshResults();
+      return true;
+    };
+
+    nameSearchInput.addEventListener("input", () => {
+      syncInputWidth();
+      fetchPrediction();
+      refreshResults();
+    });
+
+    nameSearchInput.addEventListener("keydown", (e) => {
+      if (!predictedFull) return;
+      if (e.key === "Tab" || e.key === "ArrowRight") {
+        const atEnd = nameSearchInput.selectionStart === nameSearchInput.value.length
+          && nameSearchInput.selectionEnd === nameSearchInput.value.length;
+        if (e.key === "Tab" || atEnd) {
+          e.preventDefault();
+          acceptPrediction();
+        }
+      }
+    });
+
     memberSearchForm.addEventListener("change", refreshResults);
+    syncInputWidth();
+    if ((nameSearchInput.value || "").trim().length >= 2) {
+      fetchPrediction();
+    }
   }
 })();
