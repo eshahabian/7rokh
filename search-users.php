@@ -17,8 +17,6 @@ $pages = max(1, (int) ceil($total / 20));
 
 $genders = casting_gender_labels();
 $looks = casting_look_labels();
-$availability_labels = casting_availability_labels();
-
 if (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1') {
     casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters);
     exit;
@@ -75,23 +73,13 @@ casting_render_flash();
     </div>
     <?php casting_render_health_search_field($filters); ?>
 
-    <?php casting_render_body_metric_search_fields($filters); ?>
+    <?php casting_render_member_search_after_health_fields($filters); ?>
+
+    <?php casting_render_body_metric_search_fields($filters, ['height', 'weight']); ?>
 
     <?php casting_render_location_fields($filters['province'], $filters['city'], '', false, 'filter-location-inline'); ?>
 
     <?php casting_render_member_search_phase1_fields($filters); ?>
-
-    <?php casting_render_member_search_phase2_fields($filters); ?>
-
-    <div class="field">
-      <label for="availability">همکاری</label>
-      <select id="availability" name="availability">
-        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-        <?php foreach ($availability_labels as $key => $label) : ?>
-          <option value="<?= casting_e($key) ?>" <?= $filters['availability'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
 
     <div class="filter-actions">
       <button class="btn btn-primary" type="submit">جستجو</button>

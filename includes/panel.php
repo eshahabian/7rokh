@@ -251,13 +251,20 @@ function casting_search_metric_range_from_input(array $input, string $range_key,
  *
  * @param array<string, string> $filters
  */
-function casting_render_body_metric_search_fields(array $filters): void
+function casting_render_body_metric_search_fields(array $filters, ?array $include = null): void
 {
     $metrics = [
         ['prefix' => 'age', 'label' => 'سن', 'unit' => 'سال', 'floor' => 5, 'ceil' => 100, 'range_key' => 'age_range'],
         ['prefix' => 'height', 'label' => 'قد', 'unit' => 'سانتی‌متر', 'floor' => 80, 'ceil' => 230, 'range_key' => 'height_range'],
         ['prefix' => 'weight', 'label' => 'وزن', 'unit' => 'کیلو', 'floor' => 20, 'ceil' => 250, 'range_key' => 'weight_range'],
     ];
+    if ($include !== null) {
+        $allowed = array_flip($include);
+        $metrics = array_values(array_filter($metrics, static fn(array $metric): bool => isset($allowed[$metric['prefix']])));
+    }
+    if ($metrics === []) {
+        return;
+    }
     ?>
     <div class="filter-body-metrics" aria-label="فیلتر سن، قد و وزن">
       <?php foreach ($metrics as $metric) :
@@ -683,24 +690,18 @@ function casting_apply_member_phase2_filters(array &$meta_query, array $filters)
 }
 
 /**
+ * رنگ چشم، رنگ مو، سن، سن ظاهری، لهجه، همکاری — بلافاصله بعد از سلامت
+ *
  * @param array<string, string> $filters
  */
-function casting_render_member_search_phase2_fields(array $filters): void
+function casting_render_member_search_after_health_fields(array $filters): void
 {
     $eyes = casting_eye_color_labels();
     $hairs = casting_hair_color_labels();
     $accents = casting_accent_labels();
     $age_ranges = casting_age_range_options();
+    $availability_labels = casting_availability_labels();
     ?>
-    <div class="field">
-      <label for="apparent_age_range">سن ظاهری</label>
-      <select id="apparent_age_range" name="apparent_age_range">
-        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-        <?php foreach ($age_ranges as $key => $range) : ?>
-          <option value="<?= casting_e($key) ?>" <?= $filters['apparent_age_range'] === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
     <div class="field">
       <label for="eye_color">رنگ چشم</label>
       <select id="eye_color" name="eye_color">
@@ -719,6 +720,16 @@ function casting_render_member_search_phase2_fields(array $filters): void
         <?php endforeach; ?>
       </select>
     </div>
+    <?php casting_render_body_metric_search_fields($filters, ['age']); ?>
+    <div class="field">
+      <label for="apparent_age_range">سن ظاهری</label>
+      <select id="apparent_age_range" name="apparent_age_range">
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+        <?php foreach ($age_ranges as $key => $range) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['apparent_age_range'] === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
     <div class="field">
       <label for="accent">لهجه</label>
       <select id="accent" name="accent">
@@ -728,7 +739,23 @@ function casting_render_member_search_phase2_fields(array $filters): void
         <?php endforeach; ?>
       </select>
     </div>
+    <div class="field">
+      <label for="availability">همکاری</label>
+      <select id="availability" name="availability">
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+        <?php foreach ($availability_labels as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['availability'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
     <?php
+}
+
+/**
+ * @param array<string, string> $filters
+ */
+function casting_render_member_search_phase2_fields(array $filters): void
+{
 }
 
 /**
