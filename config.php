@@ -58,11 +58,11 @@ define('CASTING_CONTACT_NOTIFY_EMAILS', [
  * رمز را در config.local.php بگذارید (نمونه: config.local.php.example)
  */
 define('CASTING_SMTP_HOST', 'mail.7rokh.ir');
-define('CASTING_SMTP_PORT', 587);
-define('CASTING_SMTP_USER', 'info@7rokh.ir');
+define('CASTING_SMTP_PORT', 465);
+define('CASTING_SMTP_USER', 'contact.us@7rokh.ir');
 define('CASTING_SMTP_PASS', '');
-define('CASTING_SMTP_SECURE', 'tls');
-define('CASTING_MAIL_FROM', 'info@7rokh.ir');
+define('CASTING_SMTP_SECURE', 'ssl');
+define('CASTING_MAIL_FROM', 'contact.us@7rokh.ir');
 define('CASTING_MAIL_FROM_NAME', 'هفت رخ');
 
 /** تنظیمات محلی (رمز SMTP و …) — در git نیست */

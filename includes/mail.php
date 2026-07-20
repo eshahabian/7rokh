@@ -28,7 +28,7 @@ function casting_mail_setup_hint(): string
         return ' SMTP را در config.php تنظیم کنید.';
     }
     if (!casting_mail_is_smtp_ready()) {
-        return ' فایل config.local.php بسازید (از config.local.php.example) و CASTING_SMTP_PASS را با رمز info@7rokh.ir پر کنید.';
+        return ' فایل config.local.php بسازید (از config.local.php.example) و CASTING_SMTP_PASS را با رمز contact.us@7rokh.ir پر کنید.';
     }
     return '';
 }
@@ -79,20 +79,31 @@ function casting_init_phpmailer($phpmailer): void
         return;
     }
 
+    $port = defined('CASTING_SMTP_PORT') ? (int) CASTING_SMTP_PORT : 465;
+    $secure = defined('CASTING_SMTP_SECURE') ? strtolower((string) CASTING_SMTP_SECURE) : 'ssl';
+
     $phpmailer->isSMTP();
     $phpmailer->Host = CASTING_SMTP_HOST;
-    $phpmailer->Port = defined('CASTING_SMTP_PORT') ? (int) CASTING_SMTP_PORT : 587;
+    $phpmailer->Port = $port;
     $phpmailer->SMTPAuth = true;
     $phpmailer->Username = CASTING_SMTP_USER;
     $phpmailer->Password = defined('CASTING_SMTP_PASS') ? (string) CASTING_SMTP_PASS : '';
 
-    $secure = defined('CASTING_SMTP_SECURE') ? strtolower((string) CASTING_SMTP_SECURE) : 'tls';
     if ($secure === 'ssl' || $secure === 'tls') {
         $phpmailer->SMTPSecure = $secure;
     } else {
         $phpmailer->SMTPSecure = '';
+    }
+    if ($secure === 'ssl' || $port === 465) {
         $phpmailer->SMTPAutoTLS = false;
     }
+    $phpmailer->SMTPOptions = [
+        'ssl' => [
+            'verify_peer'       => false,
+            'verify_peer_name'  => false,
+            'allow_self_signed' => true,
+        ],
+    ];
 
     $phpmailer->CharSet = 'UTF-8';
     $phpmailer->setFrom(casting_mail_from_address(), casting_mail_from_name(), false);
@@ -129,6 +140,10 @@ function casting_send_mail(string $to, string $subject, string $body, array $hea
     $capture = static function ($wp_error) use (&$last_error): void {
         if ($wp_error instanceof WP_Error) {
             $last_error = $wp_error->get_error_message();
+            $data = $wp_error->get_error_data('wp_mail_failed');
+            if (is_string($data) && $data !== '') {
+                $last_error = $data;
+            }
         }
     };
     add_action('wp_mail_failed', $capture);
@@ -168,7 +183,7 @@ function casting_send_contact_message(string $name, string $email, string $subje
         $brand = casting_brand();
         $mail_subject = sprintf('[%s] تماس: %s', $brand, $subject);
         $body = "نام: {$name}\nایمیل: {$email}\nموضوع: {$subject}\n\n{$message}\n";
-        $headers = ['Reply-To: ' . $email];
+        $headers = ['Reply-To: ' . sanitize_email($email)];
 
         $sent_count = 0;
         foreach ($recipients as $to) {

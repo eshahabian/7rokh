@@ -45,6 +45,7 @@ function casting_render_panel_sidebar(string $active): void
 {
     $unread_peers = 0;
     $pending_receipts = 0;
+    $unread_contacts = 0;
     $panel_premium_until = null;
     $user = casting_current_user();
     if ($user) {
@@ -58,6 +59,12 @@ function casting_render_panel_sidebar(string $active): void
         }
         if (casting_user_has_admin_permission($user_id, 'approve_receipts')) {
             $pending_receipts = casting_admin_pending_receipt_count();
+        }
+        if (casting_user_has_admin_permission($user_id, 'view_contact_messages')) {
+            if (!function_exists('casting_contact_unread_count')) {
+                require_once __DIR__ . '/contact-messages.php';
+            }
+            $unread_contacts = casting_contact_unread_count();
         }
         if (casting_user_is_premium($user_id)) {
             $panel_premium_until = casting_premium_expire_timestamp($user_id);
@@ -90,7 +97,9 @@ function casting_render_panel_sidebar(string $active): void
             <a class="panel-nav-link panel-nav-link-admin <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?>">
               <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
               <?php if ($item['key'] === 'admin-receipts' && $pending_receipts > 0) : ?>
-                <span class="nav-badge"><?= (int) $pending_receipts ?></span>
+                <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
+              <?php elseif ($item['key'] === 'admin-contact' && $unread_contacts > 0) : ?>
+                <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
               <?php endif; ?>
             </a>
           <?php endforeach; ?>
