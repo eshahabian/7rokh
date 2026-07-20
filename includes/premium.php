@@ -389,6 +389,63 @@ function casting_admin_list_receipts(string $status = 'pending', int $limit = 10
     return is_array($rows) ? $rows : [];
 }
 
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function casting_admin_list_all_receipts_with_users(int $limit = 200): array
+{
+    $rows = casting_admin_list_receipts('', $limit);
+    $out = [];
+    foreach ($rows as $row) {
+        $user_id = (int) ($row['user_id'] ?? 0);
+        $user = get_user_by('id', $user_id);
+        if (!$user || casting_get_user_role($user_id) === '') {
+            continue;
+        }
+        $out[] = array_merge($row, [
+            'user_name'  => (string) $user->display_name,
+            'user_login' => (string) $user->user_login,
+        ]);
+    }
+    return $out;
+}
+
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function casting_admin_list_all_account_transactions(int $limit = 200): array
+{
+    $users = get_users([
+        'meta_key'     => 'casting_transactions',
+        'meta_compare' => 'EXISTS',
+        'number'       => 400,
+    ]);
+
+    $out = [];
+    foreach ($users as $user) {
+        $user_id = (int) $user->ID;
+        if (casting_get_user_role($user_id) === '') {
+            continue;
+        }
+        foreach (casting_user_transactions($user_id) as $tx) {
+            if (!is_array($tx)) {
+                continue;
+            }
+            $out[] = array_merge($tx, [
+                'user_id'    => $user_id,
+                'user_name'  => (string) $user->display_name,
+                'user_login' => (string) $user->user_login,
+            ]);
+        }
+    }
+
+    usort($out, static function (array $a, array $b): int {
+        return strcmp((string) ($b['at'] ?? ''), (string) ($a['at'] ?? ''));
+    });
+
+    return array_slice($out, 0, max(1, min(500, $limit)));
+}
+
 function casting_admin_pending_receipt_count(): int
 {
     return count(casting_admin_list_receipts('pending', 200));

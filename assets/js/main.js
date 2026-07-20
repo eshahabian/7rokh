@@ -593,4 +593,120 @@
       });
     });
   });
+
+  const memberSearchForm = document.querySelector("[data-member-search-form]");
+  const memberSearchResults = document.querySelector("[data-member-search-results]");
+  const nameSearchBox = document.querySelector("[data-name-search]");
+  const nameSearchInput = document.querySelector("[data-name-search-input]");
+  const nameSearchSuggest = document.querySelector("[data-name-search-suggest]");
+
+  if (memberSearchForm && memberSearchResults && nameSearchInput) {
+    let suggestTimer = 0;
+    let resultsTimer = 0;
+    let suggestAbort = null;
+    let resultsAbort = null;
+
+    const buildFormQuery = () => {
+      const params = new URLSearchParams(new FormData(memberSearchForm));
+      params.set("ajax", "1");
+      params.delete("page");
+      return params.toString();
+    };
+
+    const refreshResults = () => {
+      window.clearTimeout(resultsTimer);
+      resultsAbort?.abort();
+      resultsTimer = window.setTimeout(async () => {
+        const controller = new AbortController();
+        resultsAbort = controller;
+        memberSearchResults.classList.add("is-loading");
+        try {
+          const res = await fetch(`${memberSearchForm.getAttribute("action") || "search-users.php"}?${buildFormQuery()}`, {
+            signal: controller.signal,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          });
+          if (!res.ok) return;
+          memberSearchResults.innerHTML = await res.text();
+        } catch (err) {
+          if (err?.name !== "AbortError") {
+            /* ignore network errors during live typing */
+          }
+        } finally {
+          memberSearchResults.classList.remove("is-loading");
+        }
+      }, 400);
+    };
+
+    const hideSuggest = () => {
+      if (!nameSearchSuggest) return;
+      nameSearchSuggest.hidden = true;
+      nameSearchSuggest.innerHTML = "";
+    };
+
+    const renderSuggest = (items) => {
+      if (!nameSearchSuggest) return;
+      nameSearchSuggest.innerHTML = "";
+      if (!items.length) {
+        hideSuggest();
+        return;
+      }
+      items.forEach((item) => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "name-search-suggest-item";
+        btn.dataset.name = item.name || "";
+        btn.innerHTML = `<strong>${item.name || ""}</strong><span class="meta">${item.login || ""}</span>`;
+        li.appendChild(btn);
+        nameSearchSuggest.appendChild(li);
+      });
+      nameSearchSuggest.hidden = false;
+    };
+
+    const fetchSuggest = () => {
+      window.clearTimeout(suggestTimer);
+      suggestAbort?.abort();
+      const q = (nameSearchInput.value || "").trim();
+      if (q.length < 2) {
+        hideSuggest();
+        return;
+      }
+      suggestTimer = window.setTimeout(async () => {
+        const controller = new AbortController();
+        suggestAbort = controller;
+        try {
+          const params = new URLSearchParams({ q });
+          const res = await fetch(`search-members-suggest.php?${params.toString()}`, {
+            signal: controller.signal,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          renderSuggest(Array.isArray(data.items) ? data.items : []);
+        } catch (err) {
+          if (err?.name !== "AbortError") hideSuggest();
+        }
+      }, 250);
+    };
+
+    nameSearchInput.addEventListener("input", () => {
+      fetchSuggest();
+      refreshResults();
+    });
+
+    nameSearchSuggest?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".name-search-suggest-item");
+      if (!btn) return;
+      nameSearchInput.value = btn.dataset.name || nameSearchInput.value;
+      hideSuggest();
+      refreshResults();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!nameSearchBox?.contains(e.target)) hideSuggest();
+    });
+
+    memberSearchForm.addEventListener("change", refreshResults);
+    memberSearchForm.addEventListener("submit", () => hideSuggest());
+  }
 })();

@@ -801,6 +801,7 @@ function casting_render_member_search_talent_cluster(array $filters): void
 function casting_parse_member_search_filters(array $input): array
 {
     return [
+        'q'                  => (string) ($input['q'] ?? ''),
         'activity_category'  => (string) ($input['activity_category'] ?? ''),
         'activity_specialty' => (string) ($input['activity_specialty'] ?? ''),
         'gender'             => (string) ($input['gender'] ?? ''),
@@ -947,6 +948,12 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
         'exclude'     => [$exclude_id],
     ];
 
+    $name_q = trim(sanitize_text_field((string) ($filters['q'] ?? '')));
+    if ($name_q !== '') {
+        $args['search'] = '*' . esc_attr($name_q) . '*';
+        $args['search_columns'] = ['display_name', 'user_login'];
+    }
+
     $query = new WP_User_Query($args);
     $users = $query->get_results();
     if (!is_array($users)) {
@@ -1020,5 +1027,84 @@ function casting_render_member_card(WP_User $member, int $viewer_id): void
         <?php endif; ?>
       </div>
     </article>
+    <?php
+}
+
+/**
+ * @return array<int, array{id:int,name:string,login:string,role:string,photo_url:string,href:string}>
+ */
+function casting_search_members_by_name(string $q, int $exclude_id, int $limit = 12): array
+{
+    $q = trim(sanitize_text_field($q));
+    if ($q === '' || casting_strlen($q) < 2) {
+        return [];
+    }
+
+    $args = [
+        'number'         => max(1, min(20, $limit)),
+        'search'         => '*' . esc_attr($q) . '*',
+        'search_columns' => ['display_name', 'user_login'],
+        'orderby'        => 'display_name',
+        'order'          => 'ASC',
+        'meta_query'     => [
+            [
+                'key'     => 'casting_role',
+                'compare' => 'EXISTS',
+            ],
+        ],
+    ];
+    if ($exclude_id > 0) {
+        $args['exclude'] = [$exclude_id];
+    }
+
+    $query = new WP_User_Query($args);
+    $users = $query->get_results();
+    if (!is_array($users)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($users as $user) {
+        $id = (int) $user->ID;
+        $role = casting_get_user_role($id);
+        if ($role === '') {
+            continue;
+        }
+        $profile = casting_get_profile($id);
+        $out[] = [
+            'id'        => $id,
+            'name'      => (string) $user->display_name,
+            'login'     => (string) $user->user_login,
+            'role'      => $role,
+            'photo_url' => (string) ($profile['photo_url'] ?? ''),
+            'href'      => casting_panel_profile_url($id),
+        ];
+    }
+    return $out;
+}
+
+/**
+ * @param list<WP_User> $members
+ */
+function casting_render_member_search_results(array $members, int $viewer_id, int $total, int $page, int $pages, array $filters): void
+{
+    ?>
+  <p class="meta member-search-count"><?= (int) $total ?> کاربر · اعضای ویژه در اولویت نمایش</p>
+  <?php if (!$members) : ?>
+    <p class="empty-state">کاربری پیدا نشد.</p>
+  <?php else : ?>
+    <div class="member-grid">
+      <?php foreach ($members as $member) : ?>
+        <?php casting_render_member_card($member, $viewer_id); ?>
+      <?php endforeach; ?>
+    </div>
+    <?php if ($pages > 1) : ?>
+      <nav class="pager" aria-label="صفحه‌بندی">
+        <?php for ($p = 1; $p <= $pages; $p++) : ?>
+          <a class="pager-link <?= $p === $page ? 'is-active' : '' ?>" href="search-users.php?<?= casting_e(http_build_query(array_merge($filters, ['page' => $p]))) ?>"><?= $p ?></a>
+        <?php endfor; ?>
+      </nav>
+    <?php endif; ?>
+  <?php endif; ?>
     <?php
 }
