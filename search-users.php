@@ -31,6 +31,8 @@ casting_render_flash();
   <h1>جستجوی کاربران</h1>
 
   <form class="filter-bar filter-bar-wide" method="get" action="search-users.php" data-member-search-form>
+    <?php casting_render_member_search_talent_cluster($filters); ?>
+
     <div class="field field-name-search" data-name-search>
       <label for="member-name-q">نام</label>
       <input
@@ -44,8 +46,6 @@ casting_render_flash();
       >
       <ul class="name-search-suggest" data-name-search-suggest hidden></ul>
     </div>
-
-    <?php casting_render_member_search_talent_cluster($filters); ?>
 
     <div class="field">
       <label for="gender">جنسیت</label>
