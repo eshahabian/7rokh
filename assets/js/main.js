@@ -599,6 +599,9 @@
   const nameSearchInput = document.querySelector("[data-name-search-input]");
   const nameSearchGhost = document.querySelector("[data-name-search-ghost]");
   const nameSearchRuler = document.querySelector("[data-name-search-ruler]");
+  const nameSearchField = document.querySelector("[data-name-search-field]");
+  const nameSearchType = document.querySelector(".name-search-type");
+  const nameSearchClear = document.querySelector("[data-name-search-clear]");
 
   if (memberSearchForm && memberSearchResults && nameSearchInput) {
     let resultsTimer = 0;
@@ -614,45 +617,58 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
 
-    const highlightMatch = (text, query) => {
-      const source = String(text || "");
-      const needle = String(query || "").trim();
-      if (needle === "") return "";
-      const lowerSource = source.toLocaleLowerCase("fa");
-      const lowerNeedle = needle.toLocaleLowerCase("fa");
-      const index = lowerSource.indexOf(lowerNeedle);
-      if (index === -1) {
-        return `<span class="name-hit-muted">${escapeHtml(source)}</span>`;
-      }
-      const before = source.slice(0, index);
-      const match = source.slice(index, index + needle.length);
-      const after = source.slice(index + needle.length);
-      return [
-        before ? `<span class="name-hit-muted">${escapeHtml(before)}</span>` : "",
-        `<strong class="name-hit-strong">${escapeHtml(match)}</strong>`,
-        after ? `<span class="name-hit-muted">${escapeHtml(after)}</span>` : "",
-      ].join("");
-    };
-
     const syncInputWidth = () => {
-      if (!nameSearchRuler || !nameSearchInput) return;
-      nameSearchRuler.textContent = nameSearchInput.value || " ";
-      nameSearchInput.style.width = `${Math.max(nameSearchRuler.offsetWidth + 3, 20)}px`;
+      if (!nameSearchRuler || !nameSearchInput || !nameSearchType) return;
+      const val = nameSearchInput.value || "";
+
+      if (val === "") {
+        nameSearchType.classList.remove("is-typing");
+        nameSearchInput.style.width = "";
+        return;
+      }
+
+      nameSearchType.classList.add("is-typing");
+      nameSearchRuler.textContent = val;
+      const textWidth = nameSearchRuler.offsetWidth;
+      const maxWidth = Math.max(nameSearchType.clientWidth - 24, 48);
+      nameSearchInput.style.width = `${Math.min(textWidth + 2, maxWidth)}px`;
     };
 
     const clearPrediction = () => {
       predictedFull = "";
-      if (nameSearchGhost) nameSearchGhost.innerHTML = "";
+      if (nameSearchGhost) nameSearchGhost.textContent = "";
       syncInputWidth();
     };
 
     const applyPrediction = (query) => {
-      if (!nameSearchGhost || !predictedFull || query.length < 2) {
-        clearPrediction();
+      if (!nameSearchGhost) {
+        syncInputWidth();
         return;
       }
-      nameSearchGhost.innerHTML = highlightMatch(predictedFull, query);
+      if (!predictedFull || query.length < 2) {
+        nameSearchGhost.textContent = "";
+        syncInputWidth();
+        return;
+      }
+      const q = query.trim();
+      const lowerFull = predictedFull.toLocaleLowerCase("fa");
+      const lowerQ = q.toLocaleLowerCase("fa");
+      let suffix = "";
+      if (lowerFull.startsWith(lowerQ)) {
+        suffix = predictedFull.slice(q.length);
+      } else {
+        const index = lowerFull.indexOf(lowerQ);
+        if (index >= 0) {
+          suffix = predictedFull.slice(index + q.length);
+        }
+      }
+      nameSearchGhost.textContent = suffix;
       syncInputWidth();
+    };
+
+    const syncClearButton = () => {
+      if (!nameSearchClear) return;
+      nameSearchClear.hidden = (nameSearchInput.value || "") === "";
     };
 
     const buildFormQuery = () => {
@@ -730,11 +746,28 @@
       if (!predictedFull) return false;
       nameSearchInput.value = predictedFull;
       clearPrediction();
+      syncClearButton();
       refreshResults();
       return true;
     };
 
+    nameSearchField?.addEventListener("click", (e) => {
+      if (e.target.closest("[data-name-search-clear]")) return;
+      nameSearchInput.focus();
+    });
+
+    nameSearchClear?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      nameSearchInput.value = "";
+      clearPrediction();
+      syncClearButton();
+      refreshResults();
+      nameSearchInput.focus();
+    });
+
     nameSearchInput.addEventListener("input", () => {
+      syncClearButton();
       syncInputWidth();
       fetchPrediction();
       refreshResults();
@@ -753,6 +786,7 @@
     });
 
     memberSearchForm.addEventListener("change", refreshResults);
+    syncClearButton();
     syncInputWidth();
     if ((nameSearchInput.value || "").trim().length >= 2) {
       fetchPrediction();

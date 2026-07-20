@@ -38,17 +38,20 @@ casting_render_flash();
       <div class="name-search-field" data-name-search-field>
         <span class="name-search-ruler" data-name-search-ruler aria-hidden="true"></span>
         <div class="name-search-type">
-          <span class="name-search-ghost" data-name-search-ghost aria-hidden="true"></span>
           <input
             id="member-name-q"
             name="q"
-            type="search"
+            type="text"
+            inputmode="search"
             value="<?= casting_e($filters['q']) ?>"
             placeholder="نام یا نام کاربری…"
             autocomplete="off"
+            spellcheck="false"
             data-name-search-input
           >
+          <span class="name-search-suffix" data-name-search-ghost aria-hidden="true"></span>
         </div>
+        <button type="button" class="name-search-clear" data-name-search-clear hidden aria-label="پاک کردن">×</button>
       </div>
     </div>
 
