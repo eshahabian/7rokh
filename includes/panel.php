@@ -60,12 +60,10 @@ function casting_render_panel_sidebar(string $active): void
         if (casting_user_has_admin_permission($user_id, 'approve_receipts')) {
             $pending_receipts = casting_admin_pending_receipt_count();
         }
-        if (casting_user_has_admin_permission($user_id, 'view_contact_messages')) {
-            if (!function_exists('casting_contact_unread_count')) {
-                require_once __DIR__ . '/contact-messages.php';
-            }
-            $unread_contacts = casting_contact_unread_count();
+        if (!function_exists('casting_contact_unread_count_for_user')) {
+            require_once __DIR__ . '/contact-messages.php';
         }
+        $unread_contacts = casting_contact_unread_count_for_user($user_id);
         if (casting_user_is_premium($user_id)) {
             $panel_premium_until = casting_premium_expire_timestamp($user_id);
         }
@@ -86,6 +84,8 @@ function casting_render_panel_sidebar(string $active): void
               </span>
             <?php elseif ($item['key'] === 'premium' && $pending_receipts > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
+            <?php elseif ($item['key'] === 'contact' && $unread_contacts > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
             <?php endif; ?>
           </a>
         <?php endforeach; ?>
@@ -98,8 +98,6 @@ function casting_render_panel_sidebar(string $active): void
               <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
               <?php if ($item['key'] === 'admin-receipts' && $pending_receipts > 0) : ?>
                 <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
-              <?php elseif ($item['key'] === 'admin-contact' && $unread_contacts > 0) : ?>
-                <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
               <?php endif; ?>
             </a>
           <?php endforeach; ?>
@@ -313,6 +311,10 @@ function casting_render_body_metric_search_fields(array $filters, ?array $includ
     if ($include !== null) {
         $allowed = array_flip($include);
         $metrics = array_values(array_filter($metrics, static fn(array $metric): bool => isset($allowed[$metric['prefix']])));
+        usort(
+            $metrics,
+            static fn(array $a, array $b): int => ((int) array_search($a['prefix'], $include, true)) <=> ((int) array_search($b['prefix'], $include, true))
+        );
     }
     if ($metrics === []) {
         return;
@@ -703,7 +705,7 @@ function casting_apply_member_phase2_filters(array &$meta_query, array $filters)
 }
 
 /**
- * رنگ چشم، رنگ مو، سن، سن ظاهری، لهجه، همکاری — بلافاصله بعد از سلامت
+ * رنگ چشم، رنگ مو، سن ظاهری، لهجه، همکاری — بلافاصله بعد از سلامت
  *
  * @param array<string, string> $filters
  */
@@ -714,14 +716,6 @@ function casting_render_member_search_after_health_fields(array $filters): void
     $accents = casting_accent_labels();
     $age_ranges = casting_age_range_options();
     $availability_labels = casting_availability_labels();
-    $age_metric = [
-        'prefix'    => 'age',
-        'label'     => 'سن',
-        'unit'      => 'سال',
-        'floor'     => 5,
-        'ceil'      => 100,
-        'range_key' => 'age_range',
-    ];
     ?>
     <div class="filter-appearance-cluster" aria-label="فیلتر ظاهری">
     <div class="field">
@@ -742,7 +736,6 @@ function casting_render_member_search_after_health_fields(array $filters): void
         <?php endforeach; ?>
       </select>
     </div>
-    <?php casting_render_body_metric_group($filters, $age_metric); ?>
     <div class="field">
       <label for="apparent_age_range">سن ظاهری</label>
       <select id="apparent_age_range" name="apparent_age_range">

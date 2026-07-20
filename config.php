@@ -47,7 +47,13 @@ define('CASTING_PORTAL_ADMINS', [
     'eshahabian',
 ]);
 
-/** ایمیل‌های دریافت پیام «تماس با ما» */
+/** گیرنده پیام «تماس با مدیر سایت» — نام کاربری وردپرس */
+define('CASTING_CONTACT_SITE_ADMIN', 'eshahabian');
+
+/** گیرنده پیام «تماس با مدیر هفت رخ» — نام کاربری وردپرس */
+define('CASTING_CONTACT_BRAND_ADMIN', 'Ardavan');
+
+/** @deprecated دیگر برای تماس با ما استفاده نمی‌شود */
 define('CASTING_CONTACT_NOTIFY_EMAILS', [
     'info@7rokh.ir',
     'eshahabian@gmail.com',

@@ -365,9 +365,6 @@ function casting_panel_admin_nav_items(int $user_id): array
     if (casting_user_has_admin_permission($user_id, 'view_user_blocks')) {
         $items[] = ['key' => 'admin-blocks', 'label' => 'بلاک‌های کاربران', 'href' => 'admin-blocks.php', 'perm' => 'view_user_blocks'];
     }
-    if (casting_user_has_admin_permission($user_id, 'view_contact_messages')) {
-        $items[] = ['key' => 'admin-contact', 'label' => 'پیام‌های تماس', 'href' => 'admin-contact.php', 'perm' => 'view_contact_messages'];
-    }
     if (casting_user_has_admin_permission($user_id, 'suspend_users') || casting_user_has_admin_permission($user_id, 'unblock_users')) {
         $items[] = ['key' => 'admin-users', 'label' => 'کاربران و تعلیق', 'href' => 'admin-users.php', 'perm' => 'suspend_users'];
     }

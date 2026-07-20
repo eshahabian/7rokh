@@ -191,60 +191,25 @@ function casting_send_mail(string $to, string $subject, string $body, array $hea
 }
 
 /**
- * @return array{ok:bool,error:string,sent_count:int,saved:bool,mail_sent:bool}
+ * @return array{ok:bool,error:string,saved:bool}
  */
 function casting_send_contact_message(string $name, string $email, string $subject, string $message, int $user_id = 0): array
 {
     $user_id = max(0, $user_id);
-    $saved = casting_contact_save_message($name, $email, $subject, $message, $user_id, false);
-
-    $recipients = casting_contact_notify_emails();
-    $mail_sent = false;
-    $last_error = '';
-
-    if ($recipients !== []) {
-        $brand = casting_brand();
-        $mail_subject = sprintf('[%s] تماس: %s', $brand, $subject);
-        $body = "نام: {$name}\nایمیل: {$email}\nموضوع: {$subject}\n\n{$message}\n";
-        $headers = ['Reply-To: ' . sanitize_email($email)];
-
-        $sent_count = 0;
-        foreach ($recipients as $to) {
-            $result = casting_send_mail($to, $mail_subject, $body, $headers);
-            if ($result['ok']) {
-                $sent_count++;
-                continue;
-            }
-            $last_error = $result['error'];
-        }
-        $mail_sent = $sent_count > 0;
-
-        if ($mail_sent) {
-            casting_contact_mark_mail_sent((string) $saved['id']);
-        } elseif ($last_error !== '') {
-            casting_contact_set_mail_error((string) $saved['id'], $last_error);
-        }
-    } elseif (!casting_mail_is_smtp_ready()) {
-        $last_error = trim(casting_mail_setup_hint()) ?: 'SMTP آماده نیست.';
-    } else {
-        $last_error = 'هیچ ایمیل گیرنده‌ای تعریف نشده است.';
-    }
-
-    if ($saved['id'] !== '') {
+    if ($user_id > 0) {
+        $result = casting_contact_send_panel_message($user_id, 'site_admin', $subject, $message);
         return [
-            'ok'         => true,
-            'error'      => '',
-            'sent_count' => $mail_sent ? count($recipients) : 0,
-            'saved'      => true,
-            'mail_sent'  => $mail_sent,
+            'ok'    => $result['ok'],
+            'error' => $result['error'],
+            'saved' => $result['ok'],
         ];
     }
 
-    return [
-        'ok'         => false,
-        'error'      => $last_error !== '' ? $last_error : 'ثبت پیام ناموفق بود.',
-        'sent_count' => 0,
-        'saved'      => false,
-        'mail_sent'  => false,
-    ];
+    $recipient_id = casting_contact_recipient_id('site_admin');
+    $saved = casting_contact_save_message($name, $email, $subject, $message, 0, $recipient_id, 'site_admin');
+    if ($saved['id'] === '') {
+        return ['ok' => false, 'error' => 'ثبت پیام ناموفق بود.', 'saved' => false];
+    }
+
+    return ['ok' => true, 'error' => '', 'saved' => true];
 }
