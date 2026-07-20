@@ -24,7 +24,6 @@ $email = '';
 $subject = '';
 $message = '';
 $channel = sanitize_key((string) ($_GET['to'] ?? $_POST['channel'] ?? 'site_admin'));
-$return_to = (string) ($_POST['return_to'] ?? '');
 
 if ($logged_in && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     $name = (string) $user->display_name;
@@ -53,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = sanitize_textarea_field((string) ($_POST['message'] ?? ''));
             $name = sanitize_text_field((string) ($_POST['name'] ?? ''));
             $email = sanitize_email((string) ($_POST['email'] ?? ''));
-            $return_to = sanitize_key((string) ($_POST['return_to'] ?? ''));
 
             $result = casting_contact_send_message($channel, $subject, $message, $user_id, $name, $email);
 
@@ -61,9 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = $result['error'];
             } else {
                 casting_set_flash('success', 'پیام شما ثبت شد. به‌زودی پاسخ می‌دهیم.');
-                if ($return_to === 'home') {
-                    casting_redirect('index.php#contact');
-                }
                 casting_redirect('contact.php');
             }
         }
@@ -85,7 +80,6 @@ $form_state = [
     'user_id'   => $user_id,
     'action'    => 'contact.php',
     'form_id'   => 'contact-form',
-    'return_to' => '',
 ];
 
 if ($logged_in) {
