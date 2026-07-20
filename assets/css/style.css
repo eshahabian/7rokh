@@ -872,6 +872,22 @@ fieldset.field legend {
   gap: 0.75rem;
 }
 
+.filter-appearance-cluster {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.filter-appearance-cluster .field label {
+  min-height: 2.5em;
+}
+
+.filter-appearance-cluster .filter-metric-group {
+  align-self: stretch;
+}
+
 .filter-metric-group {
   display: grid;
   gap: 0.55rem;
@@ -1704,6 +1720,7 @@ fieldset.field legend {
   .filter-bar,
   .filter-bar .filter-location-fields,
   .filter-talent-cluster,
+  .filter-appearance-cluster,
   .filter-body-metrics,
   .profile-hero {
     grid-template-columns: 1fr;

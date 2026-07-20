@@ -247,9 +247,61 @@ function casting_search_metric_range_from_input(array $input, string $range_key,
 }
 
 /**
+ * یک گروه متریک (سن / قد / وزن) — بدون wrapper کل عرض
+ *
+ * @param array<string, string> $filters
+ * @param array{prefix: string, label: string, unit: string, floor: int, ceil: int, range_key: string} $metric
+ */
+function casting_render_body_metric_group(array $filters, array $metric): void
+{
+    $parts = casting_parse_search_metric_range(
+        (string) ($filters[$metric['range_key']] ?? ''),
+        $metric['floor'],
+        $metric['ceil']
+    );
+    $min_val = $parts['min'] !== null ? (string) $parts['min'] : '';
+    $max_val = $parts['max'] !== null ? (string) $parts['max'] : '';
+    ?>
+    <div class="filter-metric-group">
+      <div class="filter-metric-head">
+        <span class="filter-metric-label"><?= casting_e($metric['label']) ?></span>
+        <span class="filter-metric-unit"><?= casting_e($metric['unit']) ?></span>
+      </div>
+      <div class="filter-metric-range">
+        <div class="field">
+          <input
+            id="<?= casting_e($metric['prefix']) ?>_min"
+            name="<?= casting_e($metric['prefix']) ?>_min"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            value="<?= casting_e($min_val) ?>"
+            placeholder="از"
+            aria-label="<?= casting_e($metric['label']) ?> از"
+          >
+        </div>
+        <div class="field">
+          <input
+            id="<?= casting_e($metric['prefix']) ?>_max"
+            name="<?= casting_e($metric['prefix']) ?>_max"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            value="<?= casting_e($max_val) ?>"
+            placeholder="تا"
+            aria-label="<?= casting_e($metric['label']) ?> تا"
+          >
+        </div>
+      </div>
+    </div>
+    <?php
+}
+
+/**
  * سن، قد و وزن — هر کدام دو فیلد «از» و «تا»
  *
  * @param array<string, string> $filters
+ * @param list<string>|null $include
  */
 function casting_render_body_metric_search_fields(array $filters, ?array $include = null): void
 {
@@ -267,48 +319,9 @@ function casting_render_body_metric_search_fields(array $filters, ?array $includ
     }
     ?>
     <div class="filter-body-metrics" aria-label="فیلتر سن، قد و وزن">
-      <?php foreach ($metrics as $metric) :
-          $parts = casting_parse_search_metric_range(
-              (string) ($filters[$metric['range_key']] ?? ''),
-              $metric['floor'],
-              $metric['ceil']
-          );
-          $min_val = $parts['min'] !== null ? (string) $parts['min'] : '';
-          $max_val = $parts['max'] !== null ? (string) $parts['max'] : '';
-          ?>
-        <div class="filter-metric-group">
-          <div class="filter-metric-head">
-            <span class="filter-metric-label"><?= casting_e($metric['label']) ?></span>
-            <span class="filter-metric-unit"><?= casting_e($metric['unit']) ?></span>
-          </div>
-          <div class="filter-metric-range">
-            <div class="field">
-              <input
-                id="<?= casting_e($metric['prefix']) ?>_min"
-                name="<?= casting_e($metric['prefix']) ?>_min"
-                type="text"
-                inputmode="numeric"
-                autocomplete="off"
-                value="<?= casting_e($min_val) ?>"
-                placeholder="از"
-                aria-label="<?= casting_e($metric['label']) ?> از"
-              >
-            </div>
-            <div class="field">
-              <input
-                id="<?= casting_e($metric['prefix']) ?>_max"
-                name="<?= casting_e($metric['prefix']) ?>_max"
-                type="text"
-                inputmode="numeric"
-                autocomplete="off"
-                value="<?= casting_e($max_val) ?>"
-                placeholder="تا"
-                aria-label="<?= casting_e($metric['label']) ?> تا"
-              >
-            </div>
-          </div>
-        </div>
-      <?php endforeach; ?>
+      <?php foreach ($metrics as $metric) {
+          casting_render_body_metric_group($filters, $metric);
+      } ?>
     </div>
     <?php
 }
@@ -701,7 +714,16 @@ function casting_render_member_search_after_health_fields(array $filters): void
     $accents = casting_accent_labels();
     $age_ranges = casting_age_range_options();
     $availability_labels = casting_availability_labels();
+    $age_metric = [
+        'prefix'    => 'age',
+        'label'     => 'سن',
+        'unit'      => 'سال',
+        'floor'     => 5,
+        'ceil'      => 100,
+        'range_key' => 'age_range',
+    ];
     ?>
+    <div class="filter-appearance-cluster" aria-label="فیلتر ظاهری">
     <div class="field">
       <label for="eye_color">رنگ چشم</label>
       <select id="eye_color" name="eye_color">
@@ -720,7 +742,7 @@ function casting_render_member_search_after_health_fields(array $filters): void
         <?php endforeach; ?>
       </select>
     </div>
-    <?php casting_render_body_metric_search_fields($filters, ['age']); ?>
+    <?php casting_render_body_metric_group($filters, $age_metric); ?>
     <div class="field">
       <label for="apparent_age_range">سن ظاهری</label>
       <select id="apparent_age_range" name="apparent_age_range">
@@ -747,6 +769,7 @@ function casting_render_member_search_after_health_fields(array $filters): void
           <option value="<?= casting_e($key) ?>" <?= $filters['availability'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
       </select>
+    </div>
     </div>
     <?php
 }
