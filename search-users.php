@@ -33,21 +33,17 @@ casting_render_flash();
   <form class="filter-bar filter-bar-wide" method="get" action="search-users.php" data-member-search-form>
     <?php casting_render_member_search_talent_cluster($filters); ?>
 
-    <div class="field field-name-search" data-name-search>
+    <div class="field field-name-search">
       <label for="member-name-q">نام</label>
-      <div class="name-search-box" data-name-search-box>
-        <input
-          id="member-name-q"
-          name="q"
-          type="search"
-          class="name-search-input"
-          value="<?= casting_e($filters['q']) ?>"
-          placeholder="نام یا نام کاربری…"
-          autocomplete="off"
-          data-name-search-input
-        >
-        <ul class="name-search-suggest" data-name-search-suggest hidden></ul>
-      </div>
+      <input
+        id="member-name-q"
+        name="q"
+        type="search"
+        value="<?= casting_e($filters['q']) ?>"
+        placeholder="نام یا نام کاربری…"
+        autocomplete="off"
+        data-name-search-input
+      >
     </div>
 
     <div class="field">

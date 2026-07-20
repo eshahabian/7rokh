@@ -596,44 +596,11 @@
 
   const memberSearchForm = document.querySelector("[data-member-search-form]");
   const memberSearchResults = document.querySelector("[data-member-search-results]");
-  const nameSearchBox = document.querySelector("[data-name-search]");
   const nameSearchInput = document.querySelector("[data-name-search-input]");
-  const nameSearchSuggest = document.querySelector("[data-name-search-suggest]");
 
   if (memberSearchForm && memberSearchResults && nameSearchInput) {
-    let suggestTimer = 0;
     let resultsTimer = 0;
-    let suggestAbort = null;
     let resultsAbort = null;
-
-    const escapeHtml = (value) =>
-      String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-
-    const highlightMatch = (text, query) => {
-      const source = String(text || "");
-      const needle = String(query || "").trim();
-      if (needle === "") {
-        return `<span class="name-hit-muted">${escapeHtml(source)}</span>`;
-      }
-      const lowerSource = source.toLocaleLowerCase("fa");
-      const lowerNeedle = needle.toLocaleLowerCase("fa");
-      const index = lowerSource.indexOf(lowerNeedle);
-      if (index === -1) {
-        return `<span class="name-hit-muted">${escapeHtml(source)}</span>`;
-      }
-      const before = source.slice(0, index);
-      const match = source.slice(index, index + needle.length);
-      const after = source.slice(index + needle.length);
-      return [
-        before ? `<span class="name-hit-muted">${escapeHtml(before)}</span>` : "",
-        `<strong class="name-hit-strong">${escapeHtml(match)}</strong>`,
-        after ? `<span class="name-hit-muted">${escapeHtml(after)}</span>` : "",
-      ].join("");
-    };
 
     const buildFormQuery = () => {
       const params = new URLSearchParams(new FormData(memberSearchForm));
@@ -666,77 +633,7 @@
       }, 400);
     };
 
-    const hideSuggest = () => {
-      if (!nameSearchSuggest) return;
-      nameSearchSuggest.hidden = true;
-      nameSearchSuggest.innerHTML = "";
-    };
-
-    const renderSuggest = (items) => {
-      if (!nameSearchSuggest) return;
-      const query = (nameSearchInput.value || "").trim();
-      nameSearchSuggest.innerHTML = "";
-      if (!items.length || query.length < 2) {
-        hideSuggest();
-        return;
-      }
-      items.forEach((item) => {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "name-search-suggest-item";
-        btn.dataset.name = item.name || "";
-        btn.innerHTML = `<span>${highlightMatch(item.name || "", query)}</span><span class="name-hit-login name-hit-muted">${highlightMatch(item.login || "", query)}</span>`;
-        li.appendChild(btn);
-        nameSearchSuggest.appendChild(li);
-      });
-      nameSearchSuggest.hidden = false;
-    };
-
-    const fetchSuggest = () => {
-      window.clearTimeout(suggestTimer);
-      suggestAbort?.abort();
-      const q = (nameSearchInput.value || "").trim();
-      if (q.length < 2) {
-        hideSuggest();
-        return;
-      }
-      suggestTimer = window.setTimeout(async () => {
-        const controller = new AbortController();
-        suggestAbort = controller;
-        try {
-          const params = new URLSearchParams({ q });
-          const res = await fetch(`search-members-suggest.php?${params.toString()}`, {
-            signal: controller.signal,
-            headers: { "X-Requested-With": "XMLHttpRequest" },
-          });
-          if (!res.ok) return;
-          const data = await res.json();
-          renderSuggest(Array.isArray(data.items) ? data.items : []);
-        } catch (err) {
-          if (err?.name !== "AbortError") hideSuggest();
-        }
-      }, 250);
-    };
-
-    nameSearchInput.addEventListener("input", () => {
-      fetchSuggest();
-      refreshResults();
-    });
-
-    nameSearchSuggest?.addEventListener("click", (e) => {
-      const btn = e.target.closest(".name-search-suggest-item");
-      if (!btn) return;
-      nameSearchInput.value = btn.dataset.name || nameSearchInput.value;
-      hideSuggest();
-      refreshResults();
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!nameSearchBox?.contains(e.target)) hideSuggest();
-    });
-
+    nameSearchInput.addEventListener("input", refreshResults);
     memberSearchForm.addEventListener("change", refreshResults);
-    memberSearchForm.addEventListener("submit", () => hideSuggest());
   }
 })();
