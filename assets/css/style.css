@@ -872,20 +872,29 @@ fieldset.field legend {
   gap: 0.75rem;
 }
 
-.filter-appearance-cluster {
+.filter-appearance-cluster,
+.filter-profile-cluster {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.85rem;
   align-items: end;
 }
 
+.filter-profile-cluster .field,
+.filter-appearance-cluster .field {
+  min-width: 0;
+}
+
+.filter-profile-cluster .field label,
 .filter-appearance-cluster .field label {
   min-height: 2.5em;
 }
 
-.filter-appearance-cluster .filter-metric-group {
-  align-self: stretch;
+.filter-profile-cluster .field select,
+.filter-appearance-cluster .field select {
+  width: 100%;
+  min-height: 48px;
 }
 
 .filter-metric-group {
@@ -1721,6 +1730,7 @@ fieldset.field legend {
   .filter-bar .filter-location-fields,
   .filter-talent-cluster,
   .filter-appearance-cluster,
+  .filter-profile-cluster,
   .filter-body-metrics,
   .profile-hero {
     grid-template-columns: 1fr;
@@ -2371,14 +2381,8 @@ fieldset.field legend {
   margin: 0 0 1.75rem;
 }
 
-.contact-inbox-block + .contact-send-grid {
+.contact-inbox-block + .contact-send-card {
   margin-top: 0.5rem;
-}
-
-.contact-send-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
 }
 
 .contact-send-card {
@@ -2386,6 +2390,28 @@ fieldset.field legend {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.02);
+}
+
+.home-contact {
+  margin-top: 2.5rem;
+  padding: 1.5rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.home-contact h2 {
+  margin: 0 0 0.35rem;
+}
+
+.home-contact .lede {
+  margin: 0 0 1.25rem;
+}
+
+.contact-send-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .contact-send-card.is-active {

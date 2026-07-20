@@ -195,21 +195,17 @@ function casting_send_mail(string $to, string $subject, string $body, array $hea
  */
 function casting_send_contact_message(string $name, string $email, string $subject, string $message, int $user_id = 0): array
 {
-    $user_id = max(0, $user_id);
-    if ($user_id > 0) {
-        $result = casting_contact_send_panel_message($user_id, 'site_admin', $subject, $message);
-        return [
-            'ok'    => $result['ok'],
-            'error' => $result['error'],
-            'saved' => $result['ok'],
-        ];
-    }
-
-    $recipient_id = casting_contact_recipient_id('site_admin');
-    $saved = casting_contact_save_message($name, $email, $subject, $message, 0, $recipient_id, 'site_admin');
-    if ($saved['id'] === '') {
-        return ['ok' => false, 'error' => 'ثبت پیام ناموفق بود.', 'saved' => false];
-    }
-
-    return ['ok' => true, 'error' => '', 'saved' => true];
+    $result = casting_contact_send_message(
+        'site_admin',
+        $subject,
+        $message,
+        max(0, $user_id),
+        $name,
+        $email
+    );
+    return [
+        'ok'    => $result['ok'],
+        'error' => $result['error'],
+        'saved' => $result['ok'],
+    ];
 }

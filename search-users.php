@@ -15,8 +15,6 @@ $members = $result['users'];
 $total = $result['total'];
 $pages = max(1, (int) ceil($total / 20));
 
-$genders = casting_gender_labels();
-$looks = casting_look_labels();
 if (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1') {
     casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters);
     exit;
@@ -53,27 +51,7 @@ casting_render_flash();
       </div>
     </div>
 
-    <div class="field">
-      <label for="gender">جنسیت</label>
-      <select id="gender" name="gender">
-        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-        <?php foreach ($genders as $key => $label) : ?>
-          <option value="<?= casting_e($key) ?>" <?= $filters['gender'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="field">
-      <label for="look">پوست</label>
-      <select id="look" name="look">
-        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-        <?php foreach ($looks as $key => $label) : ?>
-          <option value="<?= casting_e($key) ?>" <?= $filters['look'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <?php casting_render_health_search_field($filters); ?>
-
-    <?php casting_render_member_search_after_health_fields($filters); ?>
+    <?php casting_render_member_search_profile_cluster($filters); ?>
 
     <?php casting_render_body_metric_search_fields($filters, ['height', 'weight', 'age']); ?>
 

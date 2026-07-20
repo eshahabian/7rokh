@@ -705,66 +705,108 @@ function casting_apply_member_phase2_filters(array &$meta_query, array $filters)
 }
 
 /**
- * رنگ چشم، رنگ مو، سن ظاهری، لهجه، همکاری — بلافاصله بعد از سلامت
+ * جنسیت، پوست، سلامت، رنگ چشم، رنگ مو، سن ظاهری، لهجه، همکاری — ۴×۲ یکسان
  *
  * @param array<string, string> $filters
  */
-function casting_render_member_search_after_health_fields(array $filters): void
+function casting_render_member_search_profile_cluster(array $filters): void
 {
+    $genders = casting_gender_labels();
+    $looks = casting_look_labels();
     $eyes = casting_eye_color_labels();
     $hairs = casting_hair_color_labels();
     $accents = casting_accent_labels();
     $age_ranges = casting_age_range_options();
     $availability_labels = casting_availability_labels();
+    $health = (string) ($filters['health_well'] ?? '');
+    $health_options = [
+        'healthy'   => 'بله',
+        'unhealthy' => 'خیر',
+    ];
     ?>
-    <div class="filter-appearance-cluster" aria-label="فیلتر ظاهری">
-    <div class="field">
-      <label for="eye_color">رنگ چشم</label>
-      <select id="eye_color" name="eye_color">
-        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-        <?php foreach ($eyes as $key => $label) : ?>
-          <option value="<?= casting_e($key) ?>" <?= $filters['eye_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="field">
-      <label for="hair_color">رنگ مو</label>
-      <select id="hair_color" name="hair_color">
-        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-        <?php foreach ($hairs as $key => $label) : ?>
-          <option value="<?= casting_e($key) ?>" <?= $filters['hair_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="field">
-      <label for="apparent_age_range">سن ظاهری</label>
-      <select id="apparent_age_range" name="apparent_age_range">
-        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-        <?php foreach ($age_ranges as $key => $range) : ?>
-          <option value="<?= casting_e($key) ?>" <?= $filters['apparent_age_range'] === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="field">
-      <label for="accent">لهجه</label>
-      <select id="accent" name="accent">
-        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-        <?php foreach ($accents as $key => $label) : ?>
-          <option value="<?= casting_e($key) ?>" <?= $filters['accent'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="field">
-      <label for="availability">همکاری</label>
-      <select id="availability" name="availability">
-        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-        <?php foreach ($availability_labels as $key => $label) : ?>
-          <option value="<?= casting_e($key) ?>" <?= $filters['availability'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
+    <div class="filter-profile-cluster" aria-label="فیلتر مشخصات ظاهری">
+      <div class="field">
+        <label for="gender">جنسیت</label>
+        <select id="gender" name="gender">
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <?php foreach ($genders as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['gender'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="look">پوست</label>
+        <select id="look" name="look">
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <?php foreach ($looks as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['look'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="health_well">سلامت</label>
+        <select id="health_well" name="health_well">
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <?php foreach ($health_options as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $health === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="eye_color">رنگ چشم</label>
+        <select id="eye_color" name="eye_color">
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <?php foreach ($eyes as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['eye_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="hair_color">رنگ مو</label>
+        <select id="hair_color" name="hair_color">
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <?php foreach ($hairs as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['hair_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="apparent_age_range">سن ظاهری</label>
+        <select id="apparent_age_range" name="apparent_age_range">
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <?php foreach ($age_ranges as $key => $range) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['apparent_age_range'] === $key ? 'selected' : '' ?>><?= casting_e($range['label']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="accent">لهجه</label>
+        <select id="accent" name="accent">
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <?php foreach ($accents as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['accent'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label for="availability">همکاری</label>
+        <select id="availability" name="availability">
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <?php foreach ($availability_labels as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['availability'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
     </div>
     <?php
+}
+
+/**
+ * @param array<string, string> $filters
+ */
+function casting_render_member_search_after_health_fields(array $filters): void
+{
+    casting_render_member_search_profile_cluster($filters);
 }
 
 /**

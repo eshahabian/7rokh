@@ -109,20 +109,44 @@ function casting_contact_save_message(
 }
 
 /**
+ * @return array<string, string>
+ */
+function casting_contact_available_channels_for_sender(int $user_id): array
+{
+    $all = casting_contact_channel_labels();
+    if ($user_id <= 0) {
+        return $all;
+    }
+    $out = [];
+    foreach ($all as $key => $label) {
+        if (casting_contact_recipient_id($key) === $user_id) {
+            continue;
+        }
+        $out[$key] = $label;
+    }
+    return $out;
+}
+
+/**
  * @return array{ok:bool,error:string,message:array<string,mixed>|null}
  */
-function casting_contact_send_panel_message(int $sender_id, string $channel, string $subject, string $message): array
-{
-    $sender_id = max(0, $sender_id);
+function casting_contact_send_message(
+    string $channel,
+    string $subject,
+    string $message,
+    int $user_id = 0,
+    string $name = '',
+    string $email = ''
+): array {
+    $user_id = max(0, $user_id);
     $channel = sanitize_key($channel);
     $subject = sanitize_text_field($subject);
     $message = sanitize_textarea_field($message);
+    $name = sanitize_text_field($name);
+    $email = sanitize_email($email);
 
-    if ($sender_id <= 0) {
-        return ['ok' => false, 'error' => 'برای ارسال پیام وارد پنل شوید.', 'message' => null];
-    }
     if (!array_key_exists($channel, casting_contact_channel_labels())) {
-        return ['ok' => false, 'error' => 'گیرنده نامعتبر است.', 'message' => null];
+        return ['ok' => false, 'error' => 'گیرنده را انتخاب کنید.', 'message' => null];
     }
     if (casting_strlen($subject) < 2) {
         return ['ok' => false, 'error' => 'موضوع را وارد کنید.', 'message' => null];
@@ -138,26 +162,104 @@ function casting_contact_send_panel_message(int $sender_id, string $channel, str
     if ($recipient_id <= 0) {
         return ['ok' => false, 'error' => 'گیرنده پیام در سامانه پیدا نشد.', 'message' => null];
     }
-    if ($recipient_id === $sender_id) {
-        return ['ok' => false, 'error' => 'نمی‌توانید به خودتان پیام بفرستید.', 'message' => null];
-    }
 
-    $sender = get_user_by('id', $sender_id);
-    if (!$sender) {
-        return ['ok' => false, 'error' => 'کاربر فرستنده پیدا نشد.', 'message' => null];
+    if ($user_id > 0) {
+        if ($recipient_id === $user_id) {
+            return ['ok' => false, 'error' => 'نمی‌توانید به خودتان پیام بفرستید.', 'message' => null];
+        }
+        $sender = get_user_by('id', $user_id);
+        if (!$sender) {
+            return ['ok' => false, 'error' => 'کاربر فرستنده پیدا نشد.', 'message' => null];
+        }
+        $name = (string) $sender->display_name;
+        $email = (string) $sender->user_email;
+    } else {
+        if (casting_strlen($name) < 2) {
+            return ['ok' => false, 'error' => 'نام را وارد کنید.', 'message' => null];
+        }
+        if (!is_email($email)) {
+            return ['ok' => false, 'error' => 'ایمیل معتبر نیست.', 'message' => null];
+        }
     }
 
     $saved = casting_contact_save_message(
-        (string) $sender->display_name,
-        (string) $sender->user_email,
+        $name,
+        $email,
         $subject,
         $message,
-        $sender_id,
+        $user_id,
         $recipient_id,
         $channel
     );
 
     return ['ok' => true, 'error' => '', 'message' => $saved];
+}
+
+/**
+ * @return array{ok:bool,error:string,message:array<string,mixed>|null}
+ */
+function casting_contact_send_panel_message(int $sender_id, string $channel, string $subject, string $message): array
+{
+    return casting_contact_send_message($channel, $subject, $message, $sender_id);
+}
+
+/**
+ * @param array{name:string,email:string,subject:string,message:string,channel:string,logged_in:bool,user_id:int,action:string,form_id:string} $state
+ */
+function casting_render_contact_send_form(array $state): void
+{
+    $channels = casting_contact_available_channels_for_sender((int) $state['user_id']);
+    if ($channels === []) {
+        return;
+    }
+
+    $form_id = (string) ($state['form_id'] ?? 'contact-form');
+    $action = (string) ($state['action'] ?? 'contact.php');
+    $channel = sanitize_key((string) ($state['channel'] ?? ''));
+    if ($channel === '' || !isset($channels[$channel])) {
+        $channel = (string) array_key_first($channels);
+    }
+    $logged_in = !empty($state['logged_in']);
+    ?>
+    <section class="contact-send-card">
+      <form id="<?= casting_e($form_id) ?>" class="form" method="post" action="<?= casting_e($action) ?>">
+        <?php wp_nonce_field('casting_contact'); ?>
+        <input type="hidden" name="action" value="send">
+        <?php if (($state['return_to'] ?? '') === 'home') : ?>
+          <input type="hidden" name="return_to" value="home">
+        <?php endif; ?>
+        <?php if (!$logged_in) : ?>
+          <div class="form-grid">
+            <div class="field">
+              <label for="<?= casting_e($form_id) ?>-name">نام</label>
+              <input id="<?= casting_e($form_id) ?>-name" name="name" type="text" required value="<?= casting_e((string) $state['name']) ?>">
+            </div>
+            <div class="field">
+              <label for="<?= casting_e($form_id) ?>-email">ایمیل</label>
+              <input id="<?= casting_e($form_id) ?>-email" name="email" type="email" required value="<?= casting_e((string) $state['email']) ?>">
+            </div>
+          </div>
+        <?php endif; ?>
+        <div class="field">
+          <label for="<?= casting_e($form_id) ?>-channel">می‌خواهم با چه کسی تماس بگیرم؟</label>
+          <select id="<?= casting_e($form_id) ?>-channel" name="channel" required>
+            <?php foreach ($channels as $key => $label) : ?>
+              <option value="<?= casting_e($key) ?>" <?= $channel === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="field">
+          <label for="<?= casting_e($form_id) ?>-subject">موضوع</label>
+          <input id="<?= casting_e($form_id) ?>-subject" name="subject" type="text" required value="<?= casting_e((string) $state['subject']) ?>">
+        </div>
+        <div class="field">
+          <label for="<?= casting_e($form_id) ?>-message">پیام</label>
+          <textarea id="<?= casting_e($form_id) ?>-message" name="message" rows="5" required maxlength="3000"><?= casting_e((string) $state['message']) ?></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">ارسال پیام</button>
+      </form>
+    </section>
+    <?php
 }
 
 /**
