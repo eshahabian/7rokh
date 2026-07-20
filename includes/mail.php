@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/contact-messages.php';
+
 function casting_mail_is_smtp_enabled(): bool
 {
     return defined('CASTING_SMTP_HOST')
@@ -73,7 +75,7 @@ function casting_contact_notify_emails(): array
 
 function casting_init_phpmailer($phpmailer): void
 {
-    if (!casting_mail_is_smtp_enabled()) {
+    if (!casting_mail_is_smtp_ready()) {
         return;
     }
 
@@ -151,34 +153,58 @@ function casting_send_mail(string $to, string $subject, string $body, array $hea
 }
 
 /**
- * @return array{ok:bool,error:string,sent_count:int}
+ * @return array{ok:bool,error:string,sent_count:int,saved:bool,mail_sent:bool}
  */
-function casting_send_contact_message(string $name, string $email, string $subject, string $message): array
+function casting_send_contact_message(string $name, string $email, string $subject, string $message, int $user_id = 0): array
 {
+    $user_id = max(0, $user_id);
+    $saved = casting_contact_save_message($name, $email, $subject, $message, $user_id, false);
+
     $recipients = casting_contact_notify_emails();
-    if ($recipients === []) {
-        return ['ok' => false, 'error' => 'هیچ ایمیل گیرنده‌ای در config.php تعریف نشده است.', 'sent_count' => 0];
-    }
-
-    $brand = casting_brand();
-    $mail_subject = sprintf('[%s] تماس: %s', $brand, $subject);
-    $body = "نام: {$name}\nایمیل: {$email}\nموضوع: {$subject}\n\n{$message}\n";
-    $headers = ['Reply-To: ' . $email];
-
-    $sent_count = 0;
+    $mail_sent = false;
     $last_error = '';
-    foreach ($recipients as $to) {
-        $result = casting_send_mail($to, $mail_subject, $body, $headers);
-        if ($result['ok']) {
-            $sent_count++;
-            continue;
+
+    if ($recipients !== []) {
+        $brand = casting_brand();
+        $mail_subject = sprintf('[%s] تماس: %s', $brand, $subject);
+        $body = "نام: {$name}\nایمیل: {$email}\nموضوع: {$subject}\n\n{$message}\n";
+        $headers = ['Reply-To: ' . $email];
+
+        $sent_count = 0;
+        foreach ($recipients as $to) {
+            $result = casting_send_mail($to, $mail_subject, $body, $headers);
+            if ($result['ok']) {
+                $sent_count++;
+                continue;
+            }
+            $last_error = $result['error'];
         }
-        $last_error = $result['error'];
+        $mail_sent = $sent_count > 0;
+
+        if ($mail_sent) {
+            casting_contact_mark_mail_sent((string) $saved['id']);
+        }
+    } elseif (!casting_mail_is_smtp_ready()) {
+        $last_error = trim(casting_mail_setup_hint()) ?: 'SMTP آماده نیست.';
+    } else {
+        $last_error = 'هیچ ایمیل گیرنده‌ای تعریف نشده است.';
     }
 
-    if ($sent_count > 0) {
-        return ['ok' => true, 'error' => '', 'sent_count' => $sent_count];
+    if ($saved['id'] !== '') {
+        return [
+            'ok'         => true,
+            'error'      => '',
+            'sent_count' => $mail_sent ? count($recipients) : 0,
+            'saved'      => true,
+            'mail_sent'  => $mail_sent,
+        ];
     }
 
-    return ['ok' => false, 'error' => $last_error !== '' ? $last_error : 'ارسال ایمیل ناموفق بود.', 'sent_count' => 0];
+    return [
+        'ok'         => false,
+        'error'      => $last_error !== '' ? $last_error : 'ثبت پیام ناموفق بود.',
+        'sent_count' => 0,
+        'saved'      => false,
+        'mail_sent'  => false,
+    ];
 }

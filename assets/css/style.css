@@ -2244,6 +2244,28 @@ fieldset.field legend {
   margin-inline-end: 0.35rem;
 }
 
+.admin-contact-item.is-unread {
+  border-color: rgba(255, 170, 60, 0.45);
+  background: rgba(255, 170, 60, 0.06);
+}
+
+.admin-contact-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.admin-contact-subject {
+  margin: 0 0 0.45rem;
+}
+
+.admin-contact-message {
+  margin: 0 0 0.45rem;
+  white-space: pre-wrap;
+}
+
 .admin-search-form {
   display: flex;
   flex-wrap: wrap;

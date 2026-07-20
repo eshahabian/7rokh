@@ -20,6 +20,11 @@ $email = '';
 $subject = '';
 $message = '';
 
+if ($logged_in && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $name = (string) $user->display_name;
+    $email = (string) $user->user_email;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_contact')) {
         $error = 'درخواست نامعتبر است. دوباره تلاش کنید.';
@@ -40,14 +45,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (casting_strlen($message) > 3000) {
             $error = 'متن پیام خیلی بلند است.';
         } else {
-            $result = casting_send_contact_message($name, $email, $subject, $message);
+            $sender_id = $logged_in ? (int) $user->ID : 0;
+            $result = casting_send_contact_message($name, $email, $subject, $message, $sender_id);
             if (!$result['ok']) {
-                $error = 'ارسال پیام ناموفق بود.' . casting_mail_setup_hint();
-                if ($result['error'] !== '' && casting_mail_is_smtp_ready()) {
+                $error = 'ثبت پیام ناموفق بود.' . casting_mail_setup_hint();
+                if ($result['error'] !== '') {
                     $error .= ' (' . $result['error'] . ')';
                 }
             } else {
-                $success = 'پیام شما ارسال شد. به‌زودی پاسخ می‌دهیم.';
+                $success = 'پیام شما ثبت شد. به‌زودی پاسخ می‌دهیم.';
+                if (!empty($result['mail_sent'])) {
+                    $success = 'پیام شما ارسال شد. به‌زودی پاسخ می‌دهیم.';
+                }
                 $name = $email = $subject = $message = '';
             }
         }
