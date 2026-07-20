@@ -210,7 +210,7 @@ function casting_admin_force_unblock(int $blocker_id, int $target_id, int $admin
     if (!casting_is_blocked($blocker_id, $target_id)) {
         return ['ok' => false, 'error' => 'این بلاک وجود ندارد.'];
     }
-    return casting_unblock_user($blocker_id, $target_id);
+    return casting_unblock_user($blocker_id, $target_id, $admin_id);
 }
 
 /**

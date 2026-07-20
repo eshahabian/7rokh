@@ -8,7 +8,9 @@ require_once __DIR__ . '/includes/panel.php';
 
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
-if (!casting_user_has_admin_permission($user_id, 'suspend_users') && !casting_user_has_admin_permission($user_id, 'unblock_users')) {
+if (!casting_user_has_admin_permission($user_id, 'suspend_users')
+    && !casting_user_has_admin_permission($user_id, 'unblock_users')
+    && !casting_user_has_admin_permission($user_id, 'view_user_blocks')) {
     casting_require_admin_permission('suspend_users');
 }
 
@@ -18,6 +20,7 @@ $target_id = (int) ($_GET['user'] ?? 0);
 $results = $search !== '' ? casting_admin_search_casting_users($search) : [];
 $can_suspend = casting_user_has_admin_permission($user_id, 'suspend_users');
 $can_unblock = casting_user_has_admin_permission($user_id, 'unblock_users');
+$can_view_blocks = casting_user_has_admin_permission($user_id, 'view_user_blocks');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_admin_users')) {
@@ -43,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $target = $target_id > 0 ? get_user_by('id', $target_id) : false;
 $blocks = ($target && $can_unblock) ? casting_admin_user_blocks($target_id) : [];
+$block_history = ($target && $can_view_blocks) ? casting_admin_user_block_history($target_id, 100) : [];
 $suspended = $target ? casting_user_is_suspended($target_id) : false;
 $suspend_reason = $target ? (string) get_user_meta($target_id, 'casting_suspended_reason', true) : '';
 
@@ -142,6 +146,60 @@ casting_render_flash();
         </ul>
       <?php elseif ($can_unblock) : ?>
         <p class="meta">بلاک فعالی برای این کاربر نیست.</p>
+      <?php endif; ?>
+
+      <?php if ($can_view_blocks && $block_history) : ?>
+        <h3 class="panel-section-title">تاریخچه بلاک</h3>
+        <p class="meta">بلاک‌هایی که این کاربر انجام داده یا دریافت کرده — شامل موارد رفع‌شده.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table admin-blocks-table admin-block-history-table">
+            <thead>
+              <tr>
+                <th>نوع</th>
+                <th>طرف مقابل</th>
+                <th>عمل</th>
+                <th>علت</th>
+                <th>تاریخ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($block_history as $entry) : ?>
+                <tr>
+                  <td>
+                    <?php if ($entry['relation'] === 'blocked_other') : ?>
+                      <span class="chip chip-danger">بلاک کرد</span>
+                    <?php else : ?>
+                      <span class="chip">بلاک شد</span>
+                    <?php endif; ?>
+                  </td>
+                  <td>
+                    <?php if ($entry['relation'] === 'blocked_other') : ?>
+                      <strong><?= casting_e($entry['target_name']) ?></strong>
+                    <?php else : ?>
+                      <strong><?= casting_e($entry['blocker_name']) ?></strong>
+                    <?php endif; ?>
+                  </td>
+                  <td>
+                    <?php if ($entry['action'] === 'block') : ?>
+                      بلاک
+                      <?php if ($entry['active']) : ?><span class="chip chip-active">فعال</span><?php endif; ?>
+                    <?php else : ?>
+                      رفع بلاک
+                      <?php if ($entry['admin_id'] > 0) : ?>
+                        <span class="meta">توسط مدیر</span>
+                      <?php endif; ?>
+                    <?php endif; ?>
+                  </td>
+                  <td><?= $entry['reason'] !== '' ? casting_e($entry['reason']) : '—' ?></td>
+                  <td><?= casting_e($entry['at'] !== '' ? $entry['at'] : '—') ?></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+        <p class="meta"><a href="admin-blocks.php?user=<?= $target_id ?>">مشاهده همه تاریخچه بلاک‌ها</a></p>
+      <?php elseif ($can_view_blocks) : ?>
+        <p class="meta">تاریخچه بلاکی برای این کاربر ثبت نشده است.</p>
       <?php endif; ?>
     </div>
   <?php endif; ?>

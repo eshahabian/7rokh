@@ -2185,6 +2185,20 @@ fieldset.field legend {
   color: #ffb4b4;
 }
 
+.chip-active {
+  background: rgba(255, 170, 60, 0.16);
+  border-color: rgba(255, 170, 60, 0.45);
+  color: #ffd28a;
+}
+
+.admin-block-history {
+  margin-top: 1.25rem;
+}
+
+.admin-block-history-table .chip {
+  margin-inline-end: 0.35rem;
+}
+
 .admin-search-form {
   display: flex;
   flex-wrap: wrap;
