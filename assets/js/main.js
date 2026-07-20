@@ -606,6 +606,35 @@
     let suggestAbort = null;
     let resultsAbort = null;
 
+    const escapeHtml = (value) =>
+      String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+    const highlightMatch = (text, query) => {
+      const source = String(text || "");
+      const needle = String(query || "").trim();
+      if (needle === "") {
+        return `<span class="name-hit-muted">${escapeHtml(source)}</span>`;
+      }
+      const lowerSource = source.toLocaleLowerCase("fa");
+      const lowerNeedle = needle.toLocaleLowerCase("fa");
+      const index = lowerSource.indexOf(lowerNeedle);
+      if (index === -1) {
+        return `<span class="name-hit-muted">${escapeHtml(source)}</span>`;
+      }
+      const before = source.slice(0, index);
+      const match = source.slice(index, index + needle.length);
+      const after = source.slice(index + needle.length);
+      return [
+        before ? `<span class="name-hit-muted">${escapeHtml(before)}</span>` : "",
+        `<strong class="name-hit-strong">${escapeHtml(match)}</strong>`,
+        after ? `<span class="name-hit-muted">${escapeHtml(after)}</span>` : "",
+      ].join("");
+    };
+
     const buildFormQuery = () => {
       const params = new URLSearchParams(new FormData(memberSearchForm));
       params.set("ajax", "1");
@@ -641,13 +670,13 @@
       if (!nameSearchSuggest) return;
       nameSearchSuggest.hidden = true;
       nameSearchSuggest.innerHTML = "";
-      nameSearchBox?.classList.remove("is-suggest-open");
     };
 
     const renderSuggest = (items) => {
       if (!nameSearchSuggest) return;
+      const query = (nameSearchInput.value || "").trim();
       nameSearchSuggest.innerHTML = "";
-      if (!items.length) {
+      if (!items.length || query.length < 2) {
         hideSuggest();
         return;
       }
@@ -657,12 +686,11 @@
         btn.type = "button";
         btn.className = "name-search-suggest-item";
         btn.dataset.name = item.name || "";
-        btn.innerHTML = `<strong>${item.name || ""}</strong><span class="meta">${item.login || ""}</span>`;
+        btn.innerHTML = `<span>${highlightMatch(item.name || "", query)}</span><span class="name-hit-login name-hit-muted">${highlightMatch(item.login || "", query)}</span>`;
         li.appendChild(btn);
         nameSearchSuggest.appendChild(li);
       });
       nameSearchSuggest.hidden = false;
-      nameSearchBox?.classList.add("is-suggest-open");
     };
 
     const fetchSuggest = () => {

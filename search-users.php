@@ -35,16 +35,19 @@ casting_render_flash();
 
     <div class="field field-name-search" data-name-search>
       <label for="member-name-q">نام</label>
-      <input
-        id="member-name-q"
-        name="q"
-        type="search"
-        value="<?= casting_e($filters['q']) ?>"
-        placeholder="نام یا نام کاربری…"
-        autocomplete="off"
-        data-name-search-input
-      >
-      <ul class="name-search-suggest" data-name-search-suggest hidden></ul>
+      <div class="name-search-box" data-name-search-box>
+        <input
+          id="member-name-q"
+          name="q"
+          type="search"
+          class="name-search-input"
+          value="<?= casting_e($filters['q']) ?>"
+          placeholder="نام یا نام کاربری…"
+          autocomplete="off"
+          data-name-search-input
+        >
+        <ul class="name-search-suggest" data-name-search-suggest hidden></ul>
+      </div>
     </div>
 
     <div class="field">

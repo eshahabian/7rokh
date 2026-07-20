@@ -932,36 +932,52 @@ fieldset.field legend {
 }
 
 .field-name-search {
-  position: relative;
   grid-column: 1 / -1;
-  z-index: 50;
 }
 
-.field-name-search.is-suggest-open {
-  margin-bottom: 11rem;
+.name-search-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+  transition: border-color 0.2s var(--ease);
+}
+
+.name-search-box:focus-within {
+  border-color: rgba(212, 165, 116, 0.55);
+}
+
+.name-search-input {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+
+.name-search-input:focus {
+  outline: none;
 }
 
 .name-search-suggest {
   list-style: none;
-  margin: 0.35rem 0 0;
-  padding: 0.35rem 0;
-  position: absolute;
-  z-index: 60;
-  inset-inline: 0;
-  top: 100%;
-  max-height: 16rem;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  margin: 0;
+  padding: 0;
+  max-height: 9rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
   background: var(--bg-elevated);
-  box-shadow: var(--shadow);
+}
+
+.name-search-suggest[hidden] {
+  display: none !important;
 }
 
 .name-search-suggest-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.65rem;
+  display: block;
   width: 100%;
   padding: 0.55rem 0.85rem;
   border: 0;
@@ -969,6 +985,25 @@ fieldset.field legend {
   color: inherit;
   text-align: start;
   cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.name-search-suggest-item .name-hit-login {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.82rem;
+}
+
+.name-hit-muted {
+  color: var(--ink-muted);
+  opacity: 0.55;
+  font-weight: 400;
+}
+
+.name-hit-strong {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .name-search-suggest-item:hover,
