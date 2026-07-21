@@ -9,3 +9,5 @@ uploads/
 # سیستم
 .DS_Store
 Thumbs.db
+.vscode/
+.continue/
