@@ -5,6 +5,7 @@ require_once __DIR__ . '/jalali.php';
 require_once __DIR__ . '/activities.php';
 require_once __DIR__ . '/membership-number.php';
 require_once __DIR__ . '/locations.php';
+require_once __DIR__ . '/works-catalog.php';
 
 function casting_gender_labels(): array
 {
@@ -1214,43 +1215,142 @@ function casting_parse_work_credits_post(array $post): array
     return casting_normalize_work_credits($raw);
 }
 
-function casting_render_work_credits_fields(array $credits = []): void
+/**
+ * @param mixed $raw
+ * @return array<int, array{type:string,title:string}>
+ */
+function casting_normalize_artistic_works($raw): array
 {
-    if (!$credits) {
-        $credits = [['type' => 'film', 'title' => '']];
+    return casting_normalize_work_credits($raw);
+}
+
+/**
+ * @return array<int, array{type:string,title:string}>
+ */
+function casting_parse_artistic_works_post(array $post): array
+{
+    $raw = $post['artistic_works'] ?? [];
+    if (!is_array($raw)) {
+        return [];
+    }
+
+    return casting_normalize_artistic_works($raw);
+}
+
+/**
+ * @param array<int, array{type:string,title:string}> $items
+ */
+function casting_render_work_list_fields(
+    array $items,
+    string $name_prefix,
+    string $label,
+    string $hint,
+    string $placeholder,
+    string $root_attr,
+    string $list_attr,
+    string $template_attr,
+    string $add_attr,
+    string $remove_attr
+): void {
+    if (!$items) {
+        $items = [['type' => 'film', 'title' => '']];
     }
     $types = casting_work_type_labels();
     ?>
-  <div class="field work-credits" data-work-credits>
-    <span class="jalali-label">فیلم‌ها و تئاترهایی که بازی کرده‌اید</span>
-    <p class="field-hint">برای هر اثر یک ردیف بنویسید؛ با + ردیف جدید اضافه کنید.</p>
-    <div class="work-credits-list" data-work-credits-list>
-      <?php foreach ($credits as $i => $credit) : ?>
+  <div class="field work-credits" <?= $root_attr ?>>
+    <span class="jalali-label"><?= casting_e($label) ?></span>
+    <p class="field-hint"><?= casting_e($hint) ?></p>
+    <div class="work-credits-list" <?= $list_attr ?>>
+      <?php foreach ($items as $i => $item) : ?>
         <div class="work-credit-row">
-          <select name="work_credits[<?= (int) $i ?>][type]" aria-label="نوع اثر">
-            <?php foreach ($types as $key => $label) : ?>
-              <option value="<?= casting_e($key) ?>" <?= ($credit['type'] ?? '') === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <select name="<?= casting_e($name_prefix) ?>[<?= (int) $i ?>][type]" aria-label="نوع اثر">
+            <?php foreach ($types as $key => $type_label) : ?>
+              <option value="<?= casting_e($key) ?>" <?= ($item['type'] ?? '') === $key ? 'selected' : '' ?>><?= casting_e($type_label) ?></option>
             <?php endforeach; ?>
           </select>
-          <input type="text" name="work_credits[<?= (int) $i ?>][title]" value="<?= casting_e((string) ($credit['title'] ?? '')) ?>" placeholder="نام فیلم یا تئاتر">
-          <button type="button" class="btn-icon btn-remove-credit" data-remove-credit aria-label="حذف">−</button>
+          <input type="text" name="<?= casting_e($name_prefix) ?>[<?= (int) $i ?>][title]" value="<?= casting_e((string) ($item['title'] ?? '')) ?>" placeholder="<?= casting_e($placeholder) ?>">
+          <button type="button" class="btn-icon btn-remove-credit" <?= $remove_attr ?> aria-label="حذف">−</button>
         </div>
       <?php endforeach; ?>
     </div>
-    <button type="button" class="btn btn-ghost btn-add-credit" data-add-credit>+ افزودن اثر بعدی</button>
-    <template data-work-credit-template>
+    <button type="button" class="btn btn-ghost btn-add-credit" <?= $add_attr ?>>+ افزودن اثر بعدی</button>
+    <template <?= $template_attr ?>>
       <div class="work-credit-row">
-        <select name="work_credits[__i__][type]" aria-label="نوع اثر">
-          <?php foreach ($types as $key => $label) : ?>
-            <option value="<?= casting_e($key) ?>"><?= casting_e($label) ?></option>
+        <select name="<?= casting_e($name_prefix) ?>[__i__][type]" aria-label="نوع اثر">
+          <?php foreach ($types as $key => $type_label) : ?>
+            <option value="<?= casting_e($key) ?>"><?= casting_e($type_label) ?></option>
           <?php endforeach; ?>
         </select>
-        <input type="text" name="work_credits[__i__][title]" value="" placeholder="نام فیلم یا تئاتر">
-        <button type="button" class="btn-icon btn-remove-credit" data-remove-credit aria-label="حذف">−</button>
+        <input type="text" name="<?= casting_e($name_prefix) ?>[__i__][title]" value="" placeholder="<?= casting_e($placeholder) ?>">
+        <button type="button" class="btn-icon btn-remove-credit" <?= $remove_attr ?> aria-label="حذف">−</button>
       </div>
     </template>
   </div>
     <?php
+}
+
+function casting_render_work_credits_fields(array $credits = []): void
+{
+    casting_render_work_list_fields(
+        $credits,
+        'work_credits',
+        'فیلم‌ها و تئاترهایی که بازی کرده‌اید',
+        'برای هر اثر یک ردیف بنویسید؛ با + ردیف جدید اضافه کنید.',
+        'نام فیلم یا تئاتر',
+        'data-work-credits',
+        'data-work-credits-list',
+        'data-work-credit-template',
+        'data-add-credit',
+        'data-remove-credit'
+    );
+}
+
+function casting_render_artistic_works_fields(array $works = []): void
+{
+    casting_render_work_list_fields(
+        $works,
+        'artistic_works',
+        'آثار هنری',
+        'فیلم‌ها یا نمایش‌هایی که کارگردانی / تهیه کرده‌اید؛ هر اثر در فهرست مشترک ذخیره می‌شود.',
+        'نام اثر هنری',
+        'data-artistic-works',
+        'data-artistic-works-list',
+        'data-artistic-work-template',
+        'data-add-artistic-work',
+        'data-remove-artistic-work'
+    );
+}
+
+function casting_render_profile_work_sections(array $profile): void
+{
+    ?>
+    <div data-talent-profile-field>
+      <?php casting_render_work_credits_fields($profile['work_credits'] ?? []); ?>
+    </div>
+    <div data-director-profile-field hidden>
+      <?php casting_render_artistic_works_fields($profile['artistic_works'] ?? []); ?>
+    </div>
+    <?php
+}
+
+/**
+ * @param array<string, mixed> $data
+ */
+function casting_save_user_work_meta(int $user_id, array $data, bool $skip_talent_profile = false): void
+{
+    $credits = casting_normalize_work_credits($data['work_credits'] ?? []);
+    $artistic = casting_normalize_artistic_works($data['artistic_works'] ?? []);
+
+    if ($skip_talent_profile) {
+        update_user_meta($user_id, 'casting_work_credits', []);
+        update_user_meta($user_id, 'casting_artistic_works', $artistic);
+        casting_work_catalog_sync_user_works($user_id, [], $artistic);
+        return;
+    }
+
+    update_user_meta($user_id, 'casting_work_credits', $credits);
+    update_user_meta($user_id, 'casting_artistic_works', $artistic);
+    casting_work_catalog_sync_user_works($user_id, $credits, $artistic);
 }
 
 function casting_education_degree_labels(): array
@@ -1522,6 +1622,7 @@ function casting_get_profile(int $user_id): array
         'activity_license'  => (string) get_user_meta($user_id, 'casting_activity_license', true),
         'work_history'      => (string) get_user_meta($user_id, 'casting_work_history', true),
         'work_credits'      => casting_normalize_work_credits(get_user_meta($user_id, 'casting_work_credits', true)),
+        'artistic_works'    => casting_normalize_artistic_works(get_user_meta($user_id, 'casting_artistic_works', true)),
         'education'         => (string) get_user_meta($user_id, 'casting_education', true),
         'education_items'   => casting_normalize_education_items(get_user_meta($user_id, 'casting_education_items', true)),
         'activities'        => casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true)),
@@ -1631,7 +1732,6 @@ function casting_save_registration_profile(int $user_id, array $data): array
 
     $work = sanitize_textarea_field((string) ($data['work_history'] ?? ''));
     $education = sanitize_textarea_field((string) ($data['education'] ?? ''));
-    $credits = casting_normalize_work_credits($data['work_credits'] ?? []);
     $edu_items = casting_normalize_education_items($data['education_items'] ?? []);
 
     $height_raw = trim((string) ($data['height'] ?? ''));
@@ -1690,7 +1790,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
         casting_save_health_meta($user_id, $health);
     }
     update_user_meta($user_id, 'casting_work_history', $work);
-    update_user_meta($user_id, 'casting_work_credits', $credits);
+    casting_save_user_work_meta($user_id, $data, $skip_talent_profile);
     update_user_meta($user_id, 'casting_education', $education);
     update_user_meta($user_id, 'casting_education_items', $edu_items);
     update_user_meta($user_id, 'casting_activities', $activities);
@@ -1886,7 +1986,13 @@ function casting_save_profile(int $user_id, array $data): array
 
     update_user_meta($user_id, 'casting_bio', sanitize_textarea_field((string) ($data['bio'] ?? '')));
     update_user_meta($user_id, 'casting_work_history', sanitize_textarea_field((string) ($data['work_history'] ?? '')));
-    update_user_meta($user_id, 'casting_work_credits', casting_normalize_work_credits($data['work_credits'] ?? []));
+    $skip_talent_profile = false;
+    if (array_key_exists('activities', $data)) {
+        $skip_talent_profile = casting_activities_are_directing_only(casting_normalize_activities($data['activities']));
+    } elseif (casting_activities_are_directing_only(casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true)))) {
+        $skip_talent_profile = true;
+    }
+    casting_save_user_work_meta($user_id, $data, $skip_talent_profile);
     update_user_meta($user_id, 'casting_education', sanitize_textarea_field((string) ($data['education'] ?? '')));
     update_user_meta($user_id, 'casting_education_items', casting_normalize_education_items($data['education_items'] ?? []));
 

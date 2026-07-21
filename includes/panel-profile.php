@@ -51,6 +51,7 @@ function casting_process_profile_post(int $user_id): array
         'bio'                 => $_POST['bio'] ?? '',
         'work_history'        => $_POST['work_history'] ?? '',
         'work_credits'        => casting_parse_work_credits_post($_POST),
+        'artistic_works'      => casting_parse_artistic_works_post($_POST),
         'education'           => $_POST['education'] ?? '',
         'education_items'     => casting_parse_education_items_post($_POST),
         'activities'          => casting_parse_activities_post($_POST),
@@ -360,7 +361,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
   <div class="panel-edit-body">
   <p class="lede">اطلاعات و ویدیو را کامل کنید. برای عکس‌ها به <a href="profile-photo.php">ویرایش تصویر</a> بروید.</p>
 
-  <form class="form" method="post" action="panel.php#edit-profile" enctype="multipart/form-data" data-loading>
+  <form class="form" method="post" action="panel.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
     <?php wp_nonce_field('casting_profile'); ?>
 
     <div class="form-grid">
@@ -471,7 +472,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <?php casting_render_activity_fields($profile['activities'] ?? [], true); ?>
     <?php casting_render_language_fields($profile['language_items'] ?? []); ?>
     <?php casting_render_skill_fields($profile['skill_items'] ?? [], (string) ($profile['skills_other'] ?? '')); ?>
-    <?php casting_render_work_credits_fields($profile['work_credits'] ?? []); ?>
+    <?php casting_render_profile_work_sections($profile); ?>
 
     <div class="field">
       <label for="work_history">توضیح بیشتر درباره سابقه کاری (اختیاری)</label>

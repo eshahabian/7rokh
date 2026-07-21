@@ -180,6 +180,20 @@
   );
 
   bindRepeater(
+    "[data-artistic-works]",
+    "[data-artistic-works-list]",
+    "[data-artistic-work-template]",
+    "[data-add-artistic-work]",
+    "[data-remove-artistic-work]",
+    (row, i) => {
+      const select = row.querySelector("select");
+      const input = row.querySelector('input[type="text"]');
+      if (select) select.name = `artistic_works[${i}][type]`;
+      if (input) input.name = `artistic_works[${i}][title]`;
+    }
+  );
+
+  bindRepeater(
     "[data-education-items]",
     "[data-education-list]",
     "[data-education-template]",
@@ -809,8 +823,18 @@
       return hasAny;
     };
 
+    const hasDirectingSpecialty = () => {
+      for (const row of activityBox.querySelectorAll(".activity-row")) {
+        const cat = row.querySelector("[data-activity-category]")?.value || "";
+        const spec = row.querySelector("[data-activity-specialty]")?.value || "";
+        if (spec && cat === "directing") return true;
+      }
+      return false;
+    };
+
     const syncTalentProfileFields = () => {
       const muted = isDirectingOnly();
+      const showDirectorWorks = hasDirectingSpecialty();
       const hint = form.querySelector("[data-talent-profile-hint]");
       if (hint) hint.hidden = !muted;
 
@@ -859,6 +883,13 @@
 
       form.querySelectorAll("[data-talent-required-mark]").forEach((mark) => {
         mark.hidden = muted;
+      });
+
+      form.querySelectorAll("[data-director-profile-field]").forEach((wrap) => {
+        wrap.hidden = !showDirectorWorks;
+        wrap.querySelectorAll("input, select, textarea, button").forEach((el) => {
+          el.disabled = !showDirectorWorks;
+        });
       });
     };
 

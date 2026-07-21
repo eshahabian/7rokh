@@ -34,6 +34,7 @@ $activity_license = '';
 $birthdate = '';
 $work_history = '';
 $work_credits = [];
+$artistic_works = [];
 $education = '';
 $education_items = [];
 $activities = [];
@@ -95,6 +96,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $birthdate = casting_birthdate_from_jalali_post($_POST) ?? '';
         $work_history = (string) ($_POST['work_history'] ?? '');
         $work_credits = casting_parse_work_credits_post($_POST);
+        $artistic_works = casting_parse_artistic_works_post($_POST);
         $education = (string) ($_POST['education'] ?? '');
         $education_items = casting_parse_education_items_post($_POST);
         $activities = casting_parse_activities_post($_POST);
@@ -150,6 +152,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         'activity_license'    => $activity_license,
                         'work_history'     => $work_history,
                         'work_credits'     => $work_credits,
+                        'artistic_works'   => $artistic_works,
                         'education'        => $education,
                         'education_items'  => $education_items,
                         'activities'       => $activities,
@@ -349,7 +352,7 @@ if ($error !== '') {
         <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت (اختیاری)</p>
       </div>
 
-      <?php casting_render_work_credits_fields($work_credits); ?>
+      <?php casting_render_profile_work_sections(['work_credits' => $work_credits, 'artistic_works' => $artistic_works]); ?>
 
       <div class="field">
         <label for="work_history">توضیح بیشتر درباره سابقه کاری (اختیاری)</label>
