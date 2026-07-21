@@ -64,6 +64,9 @@ casting_render_flash();
 <section class="dash-card panel-welcome">
   <span class="chip"><?= casting_e(casting_role_label($role)) ?><?php if ($premium) : ?> · ویژه<?php endif; ?></span>
   <h1>سلام، <?= casting_e($user->display_name) ?></h1>
+  <?php if (($profile['membership_number'] ?? '') !== '') : ?>
+    <p class="membership-number-line">شماره عضویت: <span class="membership-number"><?= casting_e((string) $profile['membership_number']) ?></span></p>
+  <?php endif; ?>
   <?php if (!$complete) : ?>
     <p class="meta">پروفایلتان کامل نیست. برای دیده‌شدن بهتر، اطلاعات و عکس را تکمیل کنید.</p>
   <?php else : ?>

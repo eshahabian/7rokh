@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/jalali.php';
 require_once __DIR__ . '/activities.php';
+require_once __DIR__ . '/membership-number.php';
 require_once __DIR__ . '/locations.php';
 
 function casting_gender_labels(): array
@@ -1544,6 +1545,7 @@ function casting_get_profile(int $user_id): array
         'photo_full'        => is_string($photo_full) ? $photo_full : '',
         'video_file_url'    => is_string($video_url_file) ? $video_url_file : '',
         'visible'           => get_user_meta($user_id, 'casting_visible', true) !== '0',
+        'membership_number' => casting_get_membership_number($user_id),
     ];
 }
 

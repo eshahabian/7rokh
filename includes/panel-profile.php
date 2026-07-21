@@ -240,6 +240,9 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         </div>
       <?php endif; ?>
       <ul class="info-list">
+        <?php if ($is_self && ($profile['membership_number'] ?? '') !== '') : ?>
+          <li><strong>شماره عضویت:</strong> <span class="membership-number"><?= casting_e((string) $profile['membership_number']) ?></span></li>
+        <?php endif; ?>
         <li><strong>سن:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($profile['age'] !== '' ? $profile['age'] . ' سال' : '')
             : casting_e($profile['age'] !== '' ? $profile['age'] . ' سال' : '—') ?></li>

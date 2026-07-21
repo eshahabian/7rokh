@@ -51,6 +51,11 @@ function casting_register_user(string $name, string $username, string $email, st
     update_user_meta((int) $user_id, 'casting_registered_at', current_time('mysql'));
     update_user_meta((int) $user_id, 'casting_visible', '1');
 
+    if (!function_exists('casting_assign_membership_number')) {
+        require_once __DIR__ . '/membership-number.php';
+    }
+    casting_assign_membership_number((int) $user_id, $role);
+
     return ['ok' => true, 'user_id' => (int) $user_id, 'role' => $role];
 }
 
