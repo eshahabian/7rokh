@@ -833,15 +833,14 @@
     };
 
     const syncTalentProfileFields = () => {
-      const muted = isDirectingOnly();
+      const hideTalentFields = isDirectingOnly();
       const enableArtisticWorks = hasDirectingSpecialty();
-      const hint = form.querySelector("[data-talent-profile-hint]");
-      if (hint) hint.hidden = !muted;
 
       form.querySelectorAll("[data-talent-profile-field]").forEach((wrap) => {
-        wrap.classList.toggle("is-talent-muted", muted);
+        wrap.hidden = hideTalentFields;
+        wrap.classList.remove("is-talent-muted");
         wrap.querySelectorAll("input, select, textarea, button").forEach((el) => {
-          if (muted) {
+          if (hideTalentFields) {
             if (el.required) {
               el.dataset.talentWasRequired = "1";
               el.required = false;
@@ -858,36 +857,39 @@
       });
 
       form.querySelectorAll("[data-health-field]").forEach((box) => {
+        if (hideTalentFields) return;
         const unhealthy = box.querySelector('[data-health-well][value="unhealthy"]')?.checked;
         const detail = box.querySelector("[data-health-detail]");
         if (detail) {
-          detail.disabled = muted || !unhealthy;
+          detail.disabled = !unhealthy;
         }
       });
 
       form.querySelectorAll("[data-accent-field]").forEach((box) => {
+        if (hideTalentFields) return;
         const isOther = box.querySelector("[data-accent-select]")?.value === "other";
         const other = box.querySelector("[data-accent-other]");
         if (other) {
-          other.disabled = muted || !isOther;
+          other.disabled = !isOther;
         }
       });
 
       form.querySelectorAll(".skill-row").forEach((row) => {
+        if (hideTalentFields) return;
         const isOther = row.querySelector("[data-skill-select]")?.value === "other";
         const note = row.querySelector("[data-skill-note]");
         if (note) {
-          note.disabled = muted || !isOther;
+          note.disabled = !isOther;
         }
       });
 
       form.querySelectorAll("[data-talent-required-mark]").forEach((mark) => {
-        mark.hidden = muted;
+        mark.hidden = hideTalentFields;
       });
 
       form.querySelectorAll("[data-director-profile-field]").forEach((wrap) => {
-        wrap.hidden = false;
-        wrap.classList.toggle("is-talent-muted", !enableArtisticWorks);
+        wrap.hidden = !enableArtisticWorks;
+        wrap.classList.remove("is-talent-muted");
         wrap.querySelectorAll("input, select, textarea, button").forEach((el) => {
           el.disabled = !enableArtisticWorks;
         });

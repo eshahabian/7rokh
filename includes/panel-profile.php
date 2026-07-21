@@ -352,6 +352,8 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
 
 function casting_render_profile_edit_form(int $user_id, array $profile, bool $open = false): void
 {
+    $hide_talent_profile = casting_activities_are_directing_only($profile['activities'] ?? []);
+    $talent_hidden = $hide_talent_profile ? ' hidden' : '';
     ?>
 <details class="dash-card panel-profile-edit panel-edit-details" id="edit-profile"<?= $open ? ' open' : '' ?>>
   <summary class="panel-edit-summary">
@@ -394,7 +396,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       </div>
     </fieldset>
 
-    <fieldset class="field">
+    <fieldset class="field" data-talent-profile-field<?= $talent_hidden ?>>
       <legend>رنگ پوست</legend>
       <div class="role-grid role-grid-3">
         <?php foreach (casting_look_labels() as $key => $label) : ?>
@@ -406,6 +408,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       </div>
     </fieldset>
 
+    <div data-talent-profile-field<?= $talent_hidden ?>>
     <?php casting_render_talent_trait_fields([
         'eye_color' => (string) ($profile['eye_color'] ?? ''),
         'hair_color' => (string) ($profile['hair_color'] ?? ''),
@@ -413,8 +416,9 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
         'accent_other' => (string) ($profile['accent_other'] ?? ''),
         'apparent_age_range' => (string) ($profile['apparent_age_range'] ?? ''),
     ]); ?>
+    </div>
 
-    <div class="form-grid">
+    <div class="form-grid" data-talent-profile-field<?= $talent_hidden ?>>
       <div class="field">
         <label for="height">قد (سانتی‌متر)</label>
         <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e($profile['height']) ?>">
@@ -427,11 +431,13 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       </div>
     </div>
 
+    <div data-talent-profile-field<?= $talent_hidden ?>>
     <?php casting_render_health_fields(
         (string) ($profile['health_well'] ?? 'healthy'),
         (string) ($profile['health_status'] ?? ''),
         false
     ); ?>
+    </div>
 
     <?php casting_render_location_fields((string) ($profile['province'] ?? ''), (string) ($profile['city'] ?? ''), '', false); ?>
 
@@ -458,7 +464,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
         <label for="experience">سابقه فعالیت (سال)</label>
         <input id="experience" name="experience" type="number" min="0" max="60" value="<?= casting_e($profile['experience'] !== '' ? $profile['experience'] : '0') ?>">
       </div>
-      <div class="field">
+      <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
         <label for="availability">وضعیت آمادگی برای همکاری</label>
         <select id="availability" name="availability">
           <option value="">انتخاب کنید</option>
@@ -470,8 +476,12 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     </div>
 
     <?php casting_render_activity_fields($profile['activities'] ?? [], true); ?>
+    <div data-talent-profile-field<?= $talent_hidden ?>>
     <?php casting_render_language_fields($profile['language_items'] ?? []); ?>
+    </div>
+    <div data-talent-profile-field<?= $talent_hidden ?>>
     <?php casting_render_skill_fields($profile['skill_items'] ?? [], (string) ($profile['skills_other'] ?? '')); ?>
+    </div>
     <?php casting_render_profile_work_sections($profile); ?>
 
     <div class="field">
@@ -491,7 +501,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       <textarea id="bio" name="bio" rows="3"><?= casting_e($profile['bio']) ?></textarea>
     </div>
 
-    <div class="field">
+    <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
       <label for="video">آپلود ویدیو معرفی</label>
       <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime">
       <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت</p>
@@ -500,7 +510,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       <?php endif; ?>
     </div>
 
-    <div class="field">
+    <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
       <label for="video_url">یا لینک ویدیو (آپارات / یوتیوب)</label>
       <input id="video_url" name="video_url" type="url" placeholder="https://" value="<?= casting_e($profile['video_url']) ?>">
     </div>

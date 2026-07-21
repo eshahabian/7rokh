@@ -200,6 +200,9 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$hide_talent_profile = casting_activities_are_directing_only($activities);
+$show_artistic_works = casting_activities_show_artistic_works($activities);
+
 casting_render_head('ثبت‌نام', 'page-register');
 casting_render_header('register');
 
@@ -220,7 +223,6 @@ if ($error !== '') {
       <?php wp_nonce_field('casting_register'); ?>
 
       <?php casting_render_activity_fields($activities, true); ?>
-      <p class="field-hint" data-talent-profile-hint hidden>برای تخصص‌های کارگردانی، بخش‌های خاکستری نیازی به تکمیل ندارند.</p>
 
       <div class="field">
         <label for="name">نام و نام خانوادگی</label>
@@ -279,7 +281,7 @@ if ($error !== '') {
         </div>
       </fieldset>
 
-      <fieldset class="field" data-talent-profile-field>
+      <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
         <legend>رنگ پوست</legend>
         <div class="role-grid role-grid-3">
           <?php foreach (casting_look_labels() as $key => $label) : ?>
@@ -291,7 +293,7 @@ if ($error !== '') {
         </div>
       </fieldset>
 
-      <div data-talent-profile-field>
+      <div data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
       <?php casting_render_talent_trait_fields([
           'eye_color' => $eye_color,
           'hair_color' => $hair_color,
@@ -301,7 +303,7 @@ if ($error !== '') {
       ]); ?>
       </div>
 
-      <div class="form-grid" data-talent-profile-field>
+      <div class="form-grid" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
         <div class="field">
           <label for="height">قد (سانتی‌متر)</label>
           <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e($height) ?>" placeholder="برای بازیگران و مدل‌ها">
@@ -314,7 +316,7 @@ if ($error !== '') {
         </div>
       </div>
 
-      <div data-talent-profile-field>
+      <div data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
       <?php casting_render_health_fields($health_well, $health_status, true); ?>
       </div>
 
@@ -340,13 +342,13 @@ if ($error !== '') {
         </div>
       </div>
 
-      <fieldset class="field" data-talent-profile-field>
+      <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
         <legend>عکس‌های پروفایل <span class="req-mark" data-talent-required-mark>*</span></legend>
         <p class="field-hint">هر سه عکس الزامی است: کلوزاپ، مدیوم و لانگ.</p>
         <?php casting_render_portrait_upload_fields([], true); ?>
       </fieldset>
 
-      <div class="field" data-talent-profile-field>
+      <div class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
         <label for="video">ویدیو معرفی</label>
         <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime">
         <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت (اختیاری)</p>
@@ -366,15 +368,15 @@ if ($error !== '') {
         <textarea id="education" name="education" rows="2" placeholder="رشته یا توضیح بیشتر…"><?= casting_e($education) ?></textarea>
       </div>
 
-      <div data-talent-profile-field>
+      <div data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
       <?php casting_render_language_fields($language_items); ?>
       </div>
 
-      <div data-talent-profile-field>
+      <div data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
       <?php casting_render_skill_fields($skill_items); ?>
       </div>
 
-      <fieldset class="field" data-talent-profile-field>
+      <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
         <legend>وضعیت آمادگی برای همکاری</legend>
         <div class="role-grid">
           <?php foreach (casting_availability_labels() as $key => $label) : ?>
