@@ -306,8 +306,7 @@ function casting_activities_show_artistic_works(array $activities): bool
 {
     $activities = casting_normalize_activities($activities);
     foreach ($activities as $activity) {
-        $category = casting_activity_category_for_specialty($activity);
-        if (in_array($category, ['directing', 'production'], true)) {
+        if (casting_activity_category_for_specialty($activity) === 'directing') {
             return true;
         }
     }

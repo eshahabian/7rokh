@@ -823,18 +823,18 @@
       return hasAny;
     };
 
-    const hasArtisticWorksSpecialty = () => {
+    const hasDirectingSpecialty = () => {
       for (const row of activityBox.querySelectorAll(".activity-row")) {
         const cat = row.querySelector("[data-activity-category]")?.value || "";
         const spec = row.querySelector("[data-activity-specialty]")?.value || "";
-        if (spec && (cat === "directing" || cat === "production")) return true;
+        if (spec && cat === "directing") return true;
       }
       return false;
     };
 
     const syncTalentProfileFields = () => {
       const muted = isDirectingOnly();
-      const showDirectorWorks = hasArtisticWorksSpecialty();
+      const enableArtisticWorks = hasDirectingSpecialty();
       const hint = form.querySelector("[data-talent-profile-hint]");
       if (hint) hint.hidden = !muted;
 
@@ -886,9 +886,10 @@
       });
 
       form.querySelectorAll("[data-director-profile-field]").forEach((wrap) => {
-        wrap.hidden = !showDirectorWorks;
+        wrap.hidden = false;
+        wrap.classList.toggle("is-talent-muted", !enableArtisticWorks);
         wrap.querySelectorAll("input, select, textarea, button").forEach((el) => {
-          el.disabled = !showDirectorWorks;
+          el.disabled = !enableArtisticWorks;
         });
       });
     };
