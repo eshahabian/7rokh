@@ -15,6 +15,9 @@ define('CASTING_WP_LOAD', __DIR__ . '/../wp-load.php');
 /** نام نمایشی برند (قابل تغییر) */
 define('CASTING_BRAND', 'هفت رخ');
 
+/** آدرس سایت اصلی */
+define('CASTING_MAIN_SITE_URL', 'https://7rokh.ir');
+
 /** نقش‌های مجاز */
 define('CASTING_ROLES', [
     'talent'   => 'هنرمند',

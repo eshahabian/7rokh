@@ -905,6 +905,20 @@
     syncTalentProfileFields();
   });
 
+  const scrollTopBtn = document.querySelector("[data-scroll-top]");
+  if (scrollTopBtn) {
+    const syncScrollTop = () => {
+      scrollTopBtn.hidden = window.scrollY < 320;
+    };
+
+    window.addEventListener("scroll", syncScrollTop, { passive: true });
+    window.addEventListener("resize", syncScrollTop);
+    syncScrollTop();
+    scrollTopBtn.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+
   if ("serviceWorker" in navigator && window.CASTING_PWA && window.CASTING_PWA.swUrl) {
     window.addEventListener("load", () => {
       navigator.serviceWorker

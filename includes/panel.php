@@ -14,6 +14,7 @@ function casting_panel_nav_items(): array
 {
     return [
         ['key' => 'panel',      'label' => 'پنل کاربری',              'href' => 'panel.php'],
+        ['key' => 'main-site',  'label' => 'سایت 7rokh.ir',           'href' => casting_main_site_url(), 'external' => true],
         ['key' => 'messages',   'label' => 'پیام کاربران',            'href' => 'chat.php'],
         ['key' => 'search',     'label' => 'جستجوی کاربران',          'href' => 'search-users.php'],
         ['key' => 'premium',    'label' => 'خرید و فعال‌سازی',        'href' => 'premium.php'],
@@ -74,7 +75,17 @@ function casting_render_panel_sidebar(string $active): void
       <p class="panel-sidebar-title">پنل کاربری</p>
       <nav class="panel-nav">
         <?php foreach (casting_panel_nav_items() as $item) : ?>
-          <a class="panel-nav-link <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?><?= $item['key'] === 'premium' && $unread_peers === 0 && $pending_receipts > 0 ? '#admin-receipts' : '' ?>">
+          <?php
+          $is_external = !empty($item['external']);
+          $href = (string) $item['href'];
+          if (!$is_external && $href !== '' && !str_starts_with($href, 'http')) {
+              $href = casting_url($href);
+          }
+          if ($item['key'] === 'premium' && $unread_peers === 0 && $pending_receipts > 0) {
+              $href .= '#admin-receipts';
+          }
+          ?>
+          <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= $is_external ? ' target="_blank" rel="noopener"' : '' ?>>
             <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
             <?php if ($item['key'] === 'messages' && $unread_peers > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
