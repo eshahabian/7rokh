@@ -709,6 +709,10 @@ fieldset.field legend {
   gap: 1rem;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .photo-row {
   display: flex;
   gap: 1rem;

@@ -200,7 +200,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$hide_talent_profile = casting_activities_are_directing_only($activities);
+$hide_talent_profile = casting_profile_hides_talent_fields($activities);
 $show_artistic_works = casting_activities_show_artistic_works($activities);
 
 casting_render_head('ثبت‌نام', 'page-register');

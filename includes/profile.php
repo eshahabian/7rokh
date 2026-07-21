@@ -1325,7 +1325,7 @@ function casting_render_profile_work_sections(array $profile): void
 {
     $activities = casting_normalize_activities($profile['activities'] ?? []);
     $enable_artistic = casting_activities_show_artistic_works($activities);
-    $hide_acting = casting_activities_are_directing_only($activities);
+    $hide_acting = casting_profile_hides_talent_fields($profile['activities'] ?? []);
     ?>
     <div data-talent-profile-field<?= $hide_acting ? ' hidden' : '' ?>>
       <?php casting_render_work_credits_fields($profile['work_credits'] ?? []); ?>

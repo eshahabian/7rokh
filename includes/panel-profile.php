@@ -75,8 +75,12 @@ function casting_profile_completion_items(array $profile): array
 {
     $items = [];
     $hints = casting_portrait_slot_hints();
+    $hide_talent = casting_profile_hides_talent_fields($profile['activities'] ?? []);
 
     foreach (casting_portrait_slots() as $slot => $label) {
+        if ($hide_talent) {
+            break;
+        }
         $shot = $profile['portraits'][$slot] ?? ['id' => 0, 'full' => '', 'url' => ''];
         $done = !empty($shot['id']) || ($shot['full'] ?? '') !== '' || ($shot['url'] ?? '') !== '';
         $items[] = [
@@ -92,10 +96,12 @@ function casting_profile_completion_items(array $profile): array
         ['label' => 'جنسیت', 'done' => ($profile['gender'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'موبایل', 'done' => ($profile['mobile'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'استان و شهر', 'done' => ($profile['province'] ?? '') !== '' && ($profile['city'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'قد و وزن', 'done' => ($profile['height'] ?? '') !== '' && ($profile['weight'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'نوع فعالیت', 'done' => !empty($profile['activities']), 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'درباره من', 'done' => ($profile['bio'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
     ];
+    if (!$hide_talent) {
+        $checks[] = ['label' => 'قد و وزن', 'done' => ($profile['height'] ?? '') !== '' && ($profile['weight'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''];
+    }
+    $checks[] = ['label' => 'نوع فعالیت', 'done' => !empty($profile['activities']), 'href' => '#edit-profile', 'hint' => ''];
+    $checks[] = ['label' => 'درباره من', 'done' => ($profile['bio'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''];
 
     return array_merge($items, $checks);
 }
@@ -179,6 +185,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
 
     $is_self = $viewer_id === $member_id;
     $profile = casting_get_profile($member_id);
+    $hide_talent_details = casting_profile_hides_talent_fields($profile['activities'] ?? [], $member_id);
     $genders = casting_gender_labels();
     $provinces = casting_province_labels();
     $availability_labels = casting_availability_labels();
@@ -278,12 +285,14 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
                   : ''
           ) ?></li>
         <?php endif; ?>
+        <?php if (!$hide_talent_details) : ?>
         <li><strong>قد:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($profile['height'] !== '' ? $profile['height'] . ' سانتی‌متر' : '')
             : casting_e($profile['height'] !== '' ? $profile['height'] . ' سانتی‌متر' : '—') ?></li>
         <li><strong>وزن:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label(($profile['weight'] ?? '') !== '' ? $profile['weight'] . ' کیلوگرم' : '')
             : casting_e(($profile['weight'] ?? '') !== '' ? $profile['weight'] . ' کیلوگرم' : '—') ?></li>
+        <?php endif; ?>
         <li><strong>وضعیت سلامت:</strong> <?= casting_e(casting_format_health_display(
             (string) ($profile['health_well'] ?? 'healthy'),
             (string) ($profile['health_status'] ?? '')
@@ -352,7 +361,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
 
 function casting_render_profile_edit_form(int $user_id, array $profile, bool $open = false): void
 {
-    $hide_talent_profile = casting_activities_are_directing_only($profile['activities'] ?? []);
+    $hide_talent_profile = casting_profile_hides_talent_fields($profile['activities'] ?? [], $user_id);
     $talent_hidden = $hide_talent_profile ? ' hidden' : '';
     ?>
 <details class="dash-card panel-profile-edit panel-edit-details" id="edit-profile"<?= $open ? ' open' : '' ?>>

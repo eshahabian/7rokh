@@ -315,6 +315,23 @@ function casting_activities_show_artistic_works(array $activities): bool
 }
 
 /**
+ * فرم و نمایش پروفایل — فیلدهای مخصوص بازیگر برای کارگردان نشان داده نشود
+ *
+ * @param list<string>|mixed $activities
+ */
+function casting_profile_hides_talent_fields($activities, int $user_id = 0): bool
+{
+    if (casting_activities_are_directing_only(is_array($activities) ? $activities : [])) {
+        return true;
+    }
+    if ($user_id > 0 && casting_get_user_role($user_id) === 'director') {
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * @param list<string> $selected
  */
 function casting_render_activity_fields(array $selected = [], bool $required = true): void
