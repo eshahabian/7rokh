@@ -14,7 +14,6 @@ function casting_panel_nav_items(): array
 {
     return [
         ['key' => 'panel',      'label' => 'پنل کاربری',              'href' => 'panel.php'],
-        ['key' => 'main-site',  'label' => 'سایت هفت رخ',             'href' => casting_main_site_url(), 'external' => true],
         ['key' => 'messages',   'label' => 'پیام کاربران',            'href' => 'chat.php'],
         ['key' => 'my-requests','label' => 'درخواست‌های من',          'href' => 'my-requests.php'],
         ['key' => 'search',     'label' => 'جستجوی کاربران',          'href' => 'search-users.php'],
