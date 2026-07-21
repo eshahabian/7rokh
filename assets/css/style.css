@@ -345,6 +345,29 @@ a:hover {
   border-top: 1px solid var(--line);
 }
 
+.request-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.65rem;
+}
+
+.request-item-actions form {
+  margin: 0;
+}
+
+.request-item.is-archived {
+  opacity: 0.92;
+}
+
+.req-archived-at {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
+.request-view-tabs {
+  margin-top: 0.75rem;
+}
+
 .btn-reject {
   background: transparent;
   border: 1px solid rgba(224, 122, 106, 0.55);

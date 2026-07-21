@@ -95,33 +95,155 @@ function casting_store_request_for_users(array $request): void
     update_user_meta($employer_id, 'casting_sent_requests', array_slice($outbox, 0, 100));
 }
 
-function casting_update_request_everywhere(array $updated): bool
+/**
+ * @return array{active:string,archive:string}|null
+ */
+function casting_user_request_storage_keys(int $user_id): ?array
 {
-    $talent_id = (int) ($updated['talent_id'] ?? 0);
-    $employer_id = (int) ($updated['employer_id'] ?? 0);
+    $role = casting_get_user_role($user_id);
+    if ($role === 'talent') {
+        return ['active' => 'casting_requests', 'archive' => 'casting_requests_archive'];
+    }
+    if (casting_is_employer_role($role)) {
+        return ['active' => 'casting_sent_requests', 'archive' => 'casting_sent_requests_archive'];
+    }
+
+    return null;
+}
+
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function casting_get_user_request_list(int $user_id, string $bucket = 'active'): array
+{
+    $keys = casting_user_request_storage_keys($user_id);
+    if ($keys === null) {
+        return [];
+    }
+    $meta_key = $bucket === 'archive' ? $keys['archive'] : $keys['active'];
+    $list = get_user_meta($user_id, $meta_key, true);
+
+    return is_array($list) ? $list : [];
+}
+
+function casting_update_request_in_user_lists(int $user_id, array $updated): bool
+{
+    $keys = casting_user_request_storage_keys($user_id);
     $req_id = (string) ($updated['id'] ?? '');
-    if ($talent_id <= 0 || $employer_id <= 0 || $req_id === '') {
+    if ($keys === null || $req_id === '') {
         return false;
     }
 
     $ok = false;
-    foreach ([$talent_id => 'casting_requests', $employer_id => 'casting_sent_requests'] as $uid => $meta_key) {
-        $list = get_user_meta($uid, $meta_key, true);
+    foreach (['active', 'archive'] as $bucket) {
+        $meta_key = $keys[$bucket];
+        $list = get_user_meta($user_id, $meta_key, true);
         if (!is_array($list)) {
             continue;
         }
+        $changed = false;
         foreach ($list as $i => $item) {
             if (!is_array($item) || (string) ($item['id'] ?? '') !== $req_id) {
                 continue;
             }
             $list[$i] = array_merge($item, $updated);
             $ok = true;
+            $changed = true;
             break;
         }
-        update_user_meta($uid, $meta_key, $list);
+        if ($changed) {
+            update_user_meta($user_id, $meta_key, $list);
+        }
     }
 
     return $ok;
+}
+
+function casting_update_request_everywhere(array $updated): bool
+{
+    $talent_id = (int) ($updated['talent_id'] ?? 0);
+    $employer_id = (int) ($updated['employer_id'] ?? 0);
+    if ($talent_id <= 0 || $employer_id <= 0 || (string) ($updated['id'] ?? '') === '') {
+        return false;
+    }
+
+    $ok_t = casting_update_request_in_user_lists($talent_id, $updated);
+    $ok_e = casting_update_request_in_user_lists($employer_id, $updated);
+
+    return $ok_t || $ok_e;
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_move_user_request(int $user_id, string $request_id, string $from_bucket, string $to_bucket): array
+{
+    $keys = casting_user_request_storage_keys($user_id);
+    $request_id = trim($request_id);
+    if ($keys === null) {
+        return ['ok' => false, 'error' => 'این بخش برای نقش شما فعال نیست.'];
+    }
+    if ($request_id === '' || !in_array($from_bucket, ['active', 'archive'], true) || !in_array($to_bucket, ['active', 'archive'], true)) {
+        return ['ok' => false, 'error' => 'درخواست نامعتبر است.'];
+    }
+    if ($from_bucket === $to_bucket) {
+        return ['ok' => false, 'error' => 'عملیات نامعتبر است.'];
+    }
+
+    $from_key = $keys[$from_bucket];
+    $to_key = $keys[$to_bucket];
+    $from_list = get_user_meta($user_id, $from_key, true);
+    if (!is_array($from_list)) {
+        $from_list = [];
+    }
+
+    $found = null;
+    $found_index = null;
+    foreach ($from_list as $i => $item) {
+        if (is_array($item) && (string) ($item['id'] ?? '') === $request_id) {
+            $found = $item;
+            $found_index = $i;
+            break;
+        }
+    }
+    if ($found === null || $found_index === null) {
+        return ['ok' => false, 'error' => 'درخواست پیدا نشد.'];
+    }
+
+    unset($from_list[$found_index]);
+    $from_list = array_values($from_list);
+    update_user_meta($user_id, $from_key, $from_list);
+
+    if ($to_bucket === 'archive') {
+        $found['archived_at'] = current_time('mysql');
+    } else {
+        unset($found['archived_at']);
+    }
+
+    $to_list = get_user_meta($user_id, $to_key, true);
+    if (!is_array($to_list)) {
+        $to_list = [];
+    }
+    array_unshift($to_list, $found);
+    update_user_meta($user_id, $to_key, array_slice($to_list, 0, 100));
+
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_archive_user_request(int $user_id, string $request_id): array
+{
+    return casting_move_user_request($user_id, $request_id, 'active', 'archive');
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_unarchive_user_request(int $user_id, string $request_id): array
+{
+    return casting_move_user_request($user_id, $request_id, 'archive', 'active');
 }
 
 /**
@@ -262,8 +384,7 @@ function casting_mail_employer_response(WP_User $employer, WP_User $talent, arra
  */
 function casting_get_talent_requests(int $talent_id): array
 {
-    $inbox = get_user_meta($talent_id, 'casting_requests', true);
-    return is_array($inbox) ? $inbox : [];
+    return casting_get_user_request_list($talent_id, 'active');
 }
 
 /**
@@ -271,8 +392,15 @@ function casting_get_talent_requests(int $talent_id): array
  */
 function casting_get_employer_sent_requests(int $employer_id): array
 {
-    $outbox = get_user_meta($employer_id, 'casting_sent_requests', true);
-    return is_array($outbox) ? $outbox : [];
+    return casting_get_user_request_list($employer_id, 'active');
+}
+
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function casting_user_archived_requests(int $user_id): array
+{
+    return casting_get_user_request_list($user_id, 'archive');
 }
 
 /**
@@ -280,15 +408,7 @@ function casting_get_employer_sent_requests(int $employer_id): array
  */
 function casting_user_requests(int $user_id): array
 {
-    $role = casting_get_user_role($user_id);
-    if ($role === 'talent') {
-        return casting_get_talent_requests($user_id);
-    }
-    if (casting_is_employer_role($role)) {
-        return casting_get_employer_sent_requests($user_id);
-    }
-
-    return [];
+    return casting_get_user_request_list($user_id, 'active');
 }
 
 function casting_user_request_count(int $user_id): int
@@ -302,7 +422,7 @@ function casting_find_user_request(int $user_id, string $request_id): ?array
     if ($request_id === '') {
         return null;
     }
-    foreach (casting_user_requests($user_id) as $req) {
+    foreach (array_merge(casting_user_requests($user_id), casting_user_archived_requests($user_id)) as $req) {
         if (is_array($req) && (string) ($req['id'] ?? '') === $request_id) {
             return $req;
         }
@@ -467,10 +587,13 @@ function casting_request_status_label(string $status): string
     return $status;
 }
 
-function casting_render_talent_requests_list(int $user_id, array $requests, string $form_action = 'my-requests.php'): void
+function casting_render_talent_requests_list(int $user_id, array $requests, string $form_action = 'my-requests.php', string $view = 'active'): void
 {
+    $is_archive = $view === 'archive';
     if ($requests === []) {
-        echo '<p class="meta">هنوز درخواستی نیامده است.</p>';
+        echo $is_archive
+            ? '<p class="meta">بایگانی خالی است.</p>'
+            : '<p class="meta">هنوز درخواستی نیامده است.</p>';
         return;
     }
     ?>
@@ -479,15 +602,23 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
           $req_id = (string) ($req['id'] ?? '');
           $status = casting_request_status_key($req);
           $pending = $status === 'pending';
-          $is_unread = casting_request_is_unread($user_id, $req);
-          $open_url = $req_id !== '' ? 'my-requests.php?open=' . rawurlencode($req_id) : 'my-requests.php';
+          $is_unread = !$is_archive && casting_request_is_unread($user_id, $req);
+          $open_url = 'my-requests.php';
+          if ($req_id !== '') {
+              $open_url .= ($is_archive ? '?view=archive&' : '?') . 'open=' . rawurlencode($req_id);
+          } elseif ($is_archive) {
+              $open_url .= '?view=archive';
+          }
           ?>
-        <article class="request-item status-<?= casting_e($status) ?><?= $is_unread ? ' is-unread' : '' ?>">
+        <article class="request-item status-<?= casting_e($status) ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_archive ? ' is-archived' : '' ?>">
           <a class="request-item-open" href="<?= casting_e($open_url) ?>">
             <header>
               <strong><?= casting_e((string) ($req['employer'] ?? 'کارفرما')) ?></strong>
               <span><?= casting_e((string) ($req['employer_role'] ?? '')) ?></span>
               <time><?= casting_e((string) ($req['created_at'] ?? '')) ?></time>
+              <?php if ($is_archive && !empty($req['archived_at'])) : ?>
+                <span class="req-archived-at">بایگانی: <?= casting_e((string) $req['archived_at']) ?></span>
+              <?php endif; ?>
               <?php if ($is_unread) : ?>
                 <span class="req-status req-status-new">جدید</span>
               <?php else : ?>
@@ -500,7 +631,23 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
             <p><?= nl2br(casting_e(casting_chat_preview((string) ($req['message'] ?? ''), 160))) ?></p>
             <span class="request-item-cta">مشاهده و گفتگو با کارفرما ←</span>
           </a>
-          <?php if ($pending && !$is_unread) : ?>
+          <div class="request-item-actions">
+            <?php if ($is_archive) : ?>
+              <form method="post" action="<?= casting_e($form_action) ?>">
+                <?php wp_nonce_field('casting_archive_request'); ?>
+                <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
+                <input type="hidden" name="view" value="archive">
+                <button class="btn btn-ghost btn-sm" type="submit" name="request_archive_action" value="unarchive">بازگردانی از بایگانی</button>
+              </form>
+            <?php else : ?>
+              <form method="post" action="<?= casting_e($form_action) ?>" onsubmit="return confirm('این درخواست به بایگانی منتقل شود؟');">
+                <?php wp_nonce_field('casting_archive_request'); ?>
+                <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
+                <button class="btn btn-ghost btn-sm" type="submit" name="request_archive_action" value="archive">بایگانی</button>
+              </form>
+            <?php endif; ?>
+          </div>
+          <?php if (!$is_archive && $pending && !$is_unread) : ?>
             <form class="form request-reply-form" method="post" action="<?= casting_e($form_action) ?>">
               <?php wp_nonce_field('casting_respond_request'); ?>
               <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
@@ -522,12 +669,17 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
     <?php
 }
 
-function casting_render_employer_sent_requests_list(int $employer_id, array $requests): void
+function casting_render_employer_sent_requests_list(int $employer_id, array $requests, string $form_action = 'my-requests.php', string $view = 'active'): void
 {
+    $is_archive = $view === 'archive';
     if ($requests === []) {
-        ?>
+        if ($is_archive) {
+            echo '<p class="meta">بایگانی خالی است.</p>';
+        } else {
+            ?>
     <p class="meta">هنوز درخواستی نفرستاده‌اید. از <a href="search-users.php">جستجوی کاربران</a> شروع کنید.</p>
-        <?php
+            <?php
+        }
         return;
     }
     ?>
@@ -535,15 +687,23 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
       <?php foreach ($requests as $req) :
           $req_id = (string) ($req['id'] ?? '');
           $status = casting_request_status_key($req);
-          $is_unread = casting_request_is_unread($employer_id, $req);
-          $open_url = $req_id !== '' ? 'my-requests.php?open=' . rawurlencode($req_id) : 'my-requests.php';
+          $is_unread = !$is_archive && casting_request_is_unread($employer_id, $req);
+          $open_url = 'my-requests.php';
+          if ($req_id !== '') {
+              $open_url .= ($is_archive ? '?view=archive&' : '?') . 'open=' . rawurlencode($req_id);
+          } elseif ($is_archive) {
+              $open_url .= '?view=archive';
+          }
           ?>
-        <article class="request-item status-<?= casting_e($status) ?><?= $is_unread ? ' is-unread' : '' ?>">
+        <article class="request-item status-<?= casting_e($status) ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_archive ? ' is-archived' : '' ?>">
           <?php if (!empty($req['talent_id'])) : ?>
           <a class="request-item-open" href="<?= casting_e($open_url) ?>">
             <header>
               <strong><?= casting_e((string) ($req['talent_name'] ?? 'کاربر')) ?></strong>
               <time><?= casting_e((string) ($req['created_at'] ?? '')) ?></time>
+              <?php if ($is_archive && !empty($req['archived_at'])) : ?>
+                <span class="req-archived-at">بایگانی: <?= casting_e((string) $req['archived_at']) ?></span>
+              <?php endif; ?>
               <?php if ($is_unread) : ?>
                 <span class="req-status req-status-new">پاسخ جدید</span>
               <?php else : ?>
@@ -559,6 +719,22 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
             <?php endif; ?>
             <span class="request-item-cta">مشاهده و گفتگو ←</span>
           </a>
+          <div class="request-item-actions">
+            <?php if ($is_archive) : ?>
+              <form method="post" action="<?= casting_e($form_action) ?>">
+                <?php wp_nonce_field('casting_archive_request'); ?>
+                <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
+                <input type="hidden" name="view" value="archive">
+                <button class="btn btn-ghost btn-sm" type="submit" name="request_archive_action" value="unarchive">بازگردانی از بایگانی</button>
+              </form>
+            <?php else : ?>
+              <form method="post" action="<?= casting_e($form_action) ?>" onsubmit="return confirm('این درخواست به بایگانی منتقل شود؟');">
+                <?php wp_nonce_field('casting_archive_request'); ?>
+                <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
+                <button class="btn btn-ghost btn-sm" type="submit" name="request_archive_action" value="archive">بایگانی</button>
+              </form>
+            <?php endif; ?>
+          </div>
           <div class="cta-row">
             <a class="btn btn-ghost" href="member.php?id=<?= (int) $req['talent_id'] ?>">مشاهده پروفایل</a>
           </div>
