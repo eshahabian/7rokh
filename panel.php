@@ -16,23 +16,7 @@ $complete = casting_profile_complete($profile);
 $premium = casting_user_is_premium($user_id);
 $profile_error = '';
 $profile_success = '';
-
-if ($role === 'talent' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_id'], $_POST['decision'])) {
-    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_respond_request')) {
-        casting_set_flash('error', 'نشست منقضی شده. دوباره تلاش کنید.');
-    } else {
-        $result = casting_respond_to_request(
-            $user_id,
-            (string) $_POST['request_id'],
-            (string) $_POST['decision'],
-            (string) ($_POST['reply'] ?? '')
-        );
-        casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok']
-            ? ($result['status'] === 'accepted' ? 'درخواست قبول شد.' : 'درخواست رد شد.')
-            : $result['error']);
-    }
-    casting_redirect('panel.php#requests');
-}
+$request_count = casting_user_request_count($user_id);
 
 $profile_post = casting_process_profile_post($user_id);
 if ($profile_post['error'] !== '') {
@@ -45,9 +29,6 @@ if ($profile_post['profile'] !== null) {
     $profile = $profile_post['profile'];
     $complete = casting_profile_complete($profile);
 }
-
-$requests = $role === 'talent' ? casting_get_talent_requests($user_id) : [];
-$sent = casting_is_employer_role($role) ? casting_get_employer_sent_requests($user_id) : [];
 
 casting_render_panel_start('پنل کاربری', 'panel');
 if (isset($_GET['welcome'])) {
@@ -79,6 +60,7 @@ casting_render_flash();
     <a class="btn btn-ghost" href="#completion">تکمیل پروفایل</a>
     <a class="btn btn-primary" href="#edit-profile">ویرایش اطلاعات</a>
     <a class="btn btn-ghost" href="chat.php">پیام‌ها</a>
+    <a class="btn btn-ghost" href="my-requests.php">درخواست‌های من<?php if ($request_count > 0) : ?> (<?= (int) $request_count ?>)<?php endif; ?></a>
   </div>
 </section>
 
@@ -91,74 +73,4 @@ casting_render_flash();
 
 <?php casting_render_profile_edit_form($user_id, $profile, $profile_error !== '' || $profile_success !== '' || !$complete || isset($_GET['edit'])); ?>
 
-<?php if ($role === 'talent') : ?>
-<section class="dash-card" id="requests">
-  <h2 class="panel-section-title">درخواست‌های همکاری</h2>
-  <?php if (!$requests) : ?>
-    <p class="meta">هنوز درخواستی نیامده است.</p>
-  <?php else : ?>
-    <div class="request-list">
-      <?php foreach ($requests as $req) :
-          $status = (string) ($req['status'] ?? 'pending');
-          if ($status === 'new') {
-              $status = 'pending';
-          }
-          $pending = $status === 'pending';
-          ?>
-        <article class="request-item status-<?= casting_e($status) ?>">
-          <header>
-            <strong><?= casting_e((string) ($req['employer'] ?? 'کارفرما')) ?></strong>
-            <span><?= casting_e((string) ($req['employer_role'] ?? '')) ?></span>
-            <time><?= casting_e((string) ($req['created_at'] ?? '')) ?></time>
-            <span class="req-status"><?= casting_e(casting_request_status_label($status)) ?></span>
-          </header>
-          <?php if (!empty($req['project'])) : ?>
-            <p><strong>پروژه:</strong> <?= casting_e((string) $req['project']) ?></p>
-          <?php endif; ?>
-          <p><?= nl2br(casting_e((string) ($req['message'] ?? ''))) ?></p>
-          <?php if ($pending) : ?>
-            <form class="form request-reply-form" method="post" action="panel.php#requests">
-              <?php wp_nonce_field('casting_respond_request'); ?>
-              <input type="hidden" name="request_id" value="<?= casting_e((string) ($req['id'] ?? '')) ?>">
-              <div class="field">
-                <label for="reply-<?= casting_e((string) ($req['id'] ?? '')) ?>">نظر شما (اختیاری)</label>
-                <textarea id="reply-<?= casting_e((string) ($req['id'] ?? '')) ?>" name="reply" rows="3" maxlength="2000"></textarea>
-              </div>
-              <div class="cta-row">
-                <button class="btn btn-primary" type="submit" name="decision" value="accepted">قبول</button>
-                <button class="btn btn-reject" type="submit" name="decision" value="rejected">رد</button>
-                <?php if (!empty($req['employer_id']) && casting_can_users_chat($user_id, (int) $req['employer_id'])['ok']) : ?>
-                  <a class="btn btn-ghost" href="chat.php?with=<?= (int) $req['employer_id'] ?>">پاسخ در پیام</a>
-                <?php endif; ?>
-              </div>
-            </form>
-          <?php endif; ?>
-        </article>
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
-</section>
-<?php endif; ?>
-
-<?php if (casting_is_employer_role($role)) : ?>
-<section class="dash-card">
-  <h2 class="panel-section-title">درخواست‌های ارسال‌شده</h2>
-  <?php if (!$sent) : ?>
-    <p class="meta">هنوز درخواستی نفرستاده‌اید. از <a href="search-users.php">جستجوی کاربران</a> شروع کنید.</p>
-  <?php else : ?>
-    <div class="request-list">
-      <?php foreach ($sent as $req) : ?>
-        <article class="request-item status-<?= casting_e((string) ($req['status'] ?? 'pending')) ?>">
-          <header>
-            <strong><?= casting_e((string) ($req['talent_name'] ?? 'کاربر')) ?></strong>
-            <time><?= casting_e((string) ($req['created_at'] ?? '')) ?></time>
-            <span class="req-status"><?= casting_e(casting_request_status_label((string) ($req['status'] ?? 'pending'))) ?></span>
-          </header>
-          <p><?= nl2br(casting_e((string) ($req['message'] ?? ''))) ?></p>
-        </article>
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
-</section>
-<?php endif; ?>
 <?php casting_render_panel_end(); ?>

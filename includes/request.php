@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/blocks.php';
+require_once __DIR__ . '/chat-rules.php';
 
 /**
  * ارسال درخواست همکاری کارفرما به هنرمند + ایمیل
@@ -174,7 +175,7 @@ function casting_mail_talent_request(WP_User $talent, WP_User $employer, array $
 
     $brand = casting_brand();
     $subject = sprintf('[%s] درخواست همکاری از %s', $brand, $employer->display_name);
-    $login_url = casting_url('login.php');
+    $login_url = casting_url('my-requests.php');
     $lines = [
         'سلام ' . $talent->display_name . '،',
         '',
@@ -261,6 +262,27 @@ function casting_get_employer_sent_requests(int $employer_id): array
     return is_array($outbox) ? $outbox : [];
 }
 
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function casting_user_requests(int $user_id): array
+{
+    $role = casting_get_user_role($user_id);
+    if ($role === 'talent') {
+        return casting_get_talent_requests($user_id);
+    }
+    if (casting_is_employer_role($role)) {
+        return casting_get_employer_sent_requests($user_id);
+    }
+
+    return [];
+}
+
+function casting_user_request_count(int $user_id): int
+{
+    return count(casting_user_requests($user_id));
+}
+
 function casting_request_status_label(string $status): string
 {
     if ($status === 'accepted') {
@@ -273,4 +295,98 @@ function casting_request_status_label(string $status): string
         return 'در انتظار پاسخ';
     }
     return $status;
+}
+
+function casting_render_talent_requests_list(int $user_id, array $requests, string $form_action = 'my-requests.php'): void
+{
+    if ($requests === []) {
+        echo '<p class="meta">هنوز درخواستی نیامده است.</p>';
+        return;
+    }
+    ?>
+    <div class="request-list">
+      <?php foreach ($requests as $req) :
+          $status = (string) ($req['status'] ?? 'pending');
+          if ($status === 'new') {
+              $status = 'pending';
+          }
+          $pending = $status === 'pending';
+          ?>
+        <article class="request-item status-<?= casting_e($status) ?>">
+          <header>
+            <strong><?= casting_e((string) ($req['employer'] ?? 'کارفرما')) ?></strong>
+            <span><?= casting_e((string) ($req['employer_role'] ?? '')) ?></span>
+            <time><?= casting_e((string) ($req['created_at'] ?? '')) ?></time>
+            <span class="req-status"><?= casting_e(casting_request_status_label($status)) ?></span>
+          </header>
+          <?php if (!empty($req['project'])) : ?>
+            <p><strong>پروژه:</strong> <?= casting_e((string) $req['project']) ?></p>
+          <?php endif; ?>
+          <p><?= nl2br(casting_e((string) ($req['message'] ?? ''))) ?></p>
+          <?php if ($pending) : ?>
+            <form class="form request-reply-form" method="post" action="<?= casting_e($form_action) ?>">
+              <?php wp_nonce_field('casting_respond_request'); ?>
+              <input type="hidden" name="request_id" value="<?= casting_e((string) ($req['id'] ?? '')) ?>">
+              <div class="field">
+                <label for="reply-<?= casting_e((string) ($req['id'] ?? '')) ?>">نظر شما (اختیاری)</label>
+                <textarea id="reply-<?= casting_e((string) ($req['id'] ?? '')) ?>" name="reply" rows="3" maxlength="2000"></textarea>
+              </div>
+              <div class="cta-row">
+                <button class="btn btn-primary" type="submit" name="decision" value="accepted">قبول</button>
+                <button class="btn btn-reject" type="submit" name="decision" value="rejected">رد</button>
+                <?php if (!empty($req['employer_id']) && casting_can_users_chat($user_id, (int) $req['employer_id'])['ok']) : ?>
+                  <a class="btn btn-ghost" href="chat.php?with=<?= (int) $req['employer_id'] ?>">پاسخ در پیام</a>
+                <?php endif; ?>
+              </div>
+            </form>
+          <?php elseif (!empty($req['reply'])) : ?>
+            <p class="request-reply"><strong>پاسخ شما:</strong> <?= nl2br(casting_e((string) $req['reply'])) ?></p>
+          <?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+    </div>
+    <?php
+}
+
+function casting_render_employer_sent_requests_list(int $employer_id, array $requests): void
+{
+    if ($requests === []) {
+        ?>
+    <p class="meta">هنوز درخواستی نفرستاده‌اید. از <a href="search-users.php">جستجوی کاربران</a> شروع کنید.</p>
+        <?php
+        return;
+    }
+    ?>
+    <div class="request-list">
+      <?php foreach ($requests as $req) :
+          $status = (string) ($req['status'] ?? 'pending');
+          if ($status === 'new') {
+              $status = 'pending';
+          }
+          ?>
+        <article class="request-item status-<?= casting_e($status) ?>">
+          <header>
+            <strong><?= casting_e((string) ($req['talent_name'] ?? 'کاربر')) ?></strong>
+            <time><?= casting_e((string) ($req['created_at'] ?? '')) ?></time>
+            <span class="req-status"><?= casting_e(casting_request_status_label($status)) ?></span>
+          </header>
+          <?php if (!empty($req['project'])) : ?>
+            <p><strong>پروژه:</strong> <?= casting_e((string) $req['project']) ?></p>
+          <?php endif; ?>
+          <p><?= nl2br(casting_e((string) ($req['message'] ?? ''))) ?></p>
+          <?php if (!empty($req['reply'])) : ?>
+            <p class="request-reply"><strong>پاسخ هنرمند:</strong> <?= nl2br(casting_e((string) $req['reply'])) ?></p>
+          <?php endif; ?>
+          <?php if (!empty($req['talent_id'])) : ?>
+            <div class="cta-row">
+              <a class="btn btn-ghost" href="member.php?id=<?= (int) $req['talent_id'] ?>">مشاهده پروفایل</a>
+              <?php if (casting_can_users_chat($employer_id, (int) $req['talent_id'])['ok']) : ?>
+                <a class="btn btn-ghost" href="chat.php?with=<?= (int) $req['talent_id'] ?>">پیام</a>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+    </div>
+    <?php
 }

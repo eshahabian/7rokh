@@ -16,6 +16,7 @@ function casting_panel_nav_items(): array
         ['key' => 'panel',      'label' => 'پنل کاربری',              'href' => 'panel.php'],
         ['key' => 'main-site',  'label' => 'سایت هفت رخ',             'href' => casting_main_site_url(), 'external' => true],
         ['key' => 'messages',   'label' => 'پیام کاربران',            'href' => 'chat.php'],
+        ['key' => 'my-requests','label' => 'درخواست‌های من',          'href' => 'my-requests.php'],
         ['key' => 'search',     'label' => 'جستجوی کاربران',          'href' => 'search-users.php'],
         ['key' => 'premium',    'label' => 'خرید و فعال‌سازی',        'href' => 'premium.php'],
         ['key' => 'receipt',    'label' => 'ثبت فیش کارت به کارت',    'href' => 'premium-receipt.php'],
@@ -47,6 +48,7 @@ function casting_render_panel_sidebar(string $active): void
     $unread_peers = 0;
     $pending_receipts = 0;
     $unread_contacts = 0;
+    $request_count = 0;
     $panel_premium_until = null;
     $user = casting_current_user();
     if ($user) {
@@ -55,6 +57,10 @@ function casting_render_panel_sidebar(string $active): void
             require_once __DIR__ . '/chat.php';
         }
         $unread_peers = casting_dm_unread_peer_count($user_id);
+        if (!function_exists('casting_user_request_count')) {
+            require_once __DIR__ . '/request.php';
+        }
+        $request_count = casting_user_request_count($user_id);
         if (!function_exists('casting_user_has_admin_permission')) {
             require_once __DIR__ . '/admin-access.php';
         }
@@ -95,6 +101,8 @@ function casting_render_panel_sidebar(string $active): void
               </span>
             <?php elseif ($item['key'] === 'premium' && $pending_receipts > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
+            <?php elseif ($item['key'] === 'my-requests' && $request_count > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $request_count) ?> درخواست"><?= (int) $request_count ?></span>
             <?php elseif ($item['key'] === 'contact' && $unread_contacts > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
             <?php endif; ?>
