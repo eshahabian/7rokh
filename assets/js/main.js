@@ -907,15 +907,20 @@
 
   const scrollTopBtn = document.querySelector("[data-scroll-top]");
   if (scrollTopBtn) {
+    const getScrollY = () =>
+      window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+
     const syncScrollTop = () => {
-      scrollTopBtn.hidden = window.scrollY < 320;
+      scrollTopBtn.classList.toggle("is-visible", getScrollY() > 180);
     };
 
     window.addEventListener("scroll", syncScrollTop, { passive: true });
+    document.addEventListener("scroll", syncScrollTop, { passive: true });
     window.addEventListener("resize", syncScrollTop);
     syncScrollTop();
     scrollTopBtn.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
+      document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
     });
   }
 

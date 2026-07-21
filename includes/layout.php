@@ -24,7 +24,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=60">
+  <link rel="stylesheet" href="<?= $css ?>?v=61">
 </head>
 <body class="<?= casting_e($body_class) ?>">
   <div class="bg-atmosphere" aria-hidden="true"></div>
@@ -40,7 +40,7 @@ function casting_render_header(?string $active = null): void
   <header class="site-header">
     <a class="brand" href="index.php"><?= $brand ?></a>
     <nav class="nav" aria-label="منوی اصلی">
-      <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت 7rokh.ir</a>
+      <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت هفت رخ</a>
       <?php if ($role !== '') : ?>
         <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <a href="panel.php" class="<?= $active === 'panel' ? 'is-active' : '' ?>">پنل کاربری</a>
@@ -76,11 +76,11 @@ function casting_render_footer(): void
   <footer class="site-footer">
     <p><?= casting_e(casting_brand()) ?> — پورتال استعداد و بازیگری</p>
   </footer>
-  <button type="button" class="scroll-top" data-scroll-top hidden aria-label="بازگشت به بالای صفحه">
+  <button type="button" class="scroll-top" data-scroll-top aria-label="بازگشت به بالای صفحه">
     <span aria-hidden="true">↑</span>
   </button>
   <?php casting_render_pwa_bootstrap(); ?>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=52" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=53" defer></script>
 </body>
 </html>
 <?php
