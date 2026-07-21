@@ -8,10 +8,10 @@
  * اگر پورتال داخل زیرپوشه وردپرس است:
  *   __DIR__ . '/../wp-load.php'
  *
- * مسیر مطلق هاست (مطمئن‌ترین):
- *   '/home/rokhir/public_html/casting-portal/wp-load.php'
+ * مسیر مطلق هاست (7rokh.ir — وردپرس در public_html، پورتال در casting-portal):
+ *   '/home/rokhir/public_html/wp-load.php'
  */
-define('CASTING_WP_LOAD', __DIR__ . '/wp-load.php');
+define('CASTING_WP_LOAD', __DIR__ . '/../wp-load.php');
 
 /** نام نمایشی برند (قابل تغییر) */
 define('CASTING_BRAND', 'هفت رخ');
