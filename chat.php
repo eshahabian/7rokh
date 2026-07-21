@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/profile.php';
 require_once __DIR__ . '/includes/blocks.php';
 require_once __DIR__ . '/includes/chat.php';
+require_once __DIR__ . '/includes/request.php';
 require_once __DIR__ . '/includes/panel.php';
 
 casting_nocache();
@@ -13,6 +14,8 @@ $user = casting_require_casting_user();
 $my_id = (int) $user->ID;
 $error = '';
 $peer_id = (int) ($_GET['with'] ?? 0);
+$request_id = sanitize_text_field((string) ($_GET['request'] ?? ''));
+$active_request = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_dm')) {
@@ -36,6 +39,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = $allow['error'];
             } else {
                 casting_redirect('chat.php?with=' . $start_id);
+            }
+        } elseif ($action === 'respond_request') {
+            $req_id = (string) ($_POST['request_id'] ?? '');
+            $result = casting_respond_to_request(
+                $my_id,
+                $req_id,
+                (string) ($_POST['decision'] ?? ''),
+                (string) ($_POST['reply'] ?? '')
+            );
+            if (!$result['ok']) {
+                $error = $result['error'];
+                $peer_id = (int) ($_POST['peer_id'] ?? $peer_id);
+            } else {
+                casting_set_flash('success', $result['status'] === 'accepted' ? 'درخواست قبول شد.' : 'درخواست رد شد.');
+                casting_redirect('chat.php?with=' . (int) ($_POST['peer_id'] ?? $peer_id) . '&request=' . rawurlencode($req_id) . '#latest');
             }
         } else {
             $to = (int) ($_POST['peer_id'] ?? 0);
@@ -66,6 +84,14 @@ if ($peer_id > 0) {
     } else {
         $peer_had_unread = casting_dm_unread_count($my_id, $peer_id) > 0;
         casting_dm_mark_read($my_id, $peer_id);
+        if ($request_id !== '') {
+            $open = casting_open_request_chat($my_id, $request_id);
+            if (!$open['ok']) {
+                $error = $error !== '' ? $error : $open['error'];
+            } else {
+                $active_request = casting_find_user_request($my_id, $request_id);
+            }
+        }
         $thread = casting_dm_thread($my_id, $peer_id);
         $peer_allow = casting_can_users_chat($my_id, $peer_id);
         $is_blocked = casting_is_blocked($my_id, $peer_id);
@@ -158,6 +184,26 @@ casting_render_flash();
             <?php endif; ?>
           </div>
         </header>
+
+        <?php if (is_array($active_request) && casting_get_user_role($my_id) === 'talent' && casting_request_status_key($active_request) === 'pending') : ?>
+          <div class="chat-request-banner">
+            <p class="meta">این گفتگو از درخواست همکاری شروع شده است. می‌توانید قبول یا رد کنید، یا مستقیم پیام بدهید.</p>
+            <form class="form request-reply-form" method="post" action="chat.php?with=<?= $peer_id ?>&amp;request=<?= casting_e($request_id) ?>">
+              <?php wp_nonce_field('casting_dm'); ?>
+              <input type="hidden" name="action" value="respond_request">
+              <input type="hidden" name="request_id" value="<?= casting_e($request_id) ?>">
+              <input type="hidden" name="peer_id" value="<?= $peer_id ?>">
+              <div class="field">
+                <label for="chat-reply">نظر (اختیاری)</label>
+                <textarea id="chat-reply" name="reply" rows="2" maxlength="2000"></textarea>
+              </div>
+              <div class="cta-row">
+                <button class="btn btn-primary" type="submit" name="decision" value="accepted">قبول درخواست</button>
+                <button class="btn btn-reject" type="submit" name="decision" value="rejected">رد درخواست</button>
+              </div>
+            </form>
+          </div>
+        <?php endif; ?>
 
         <div class="chat-thread" id="chat-thread">
           <?php if (!$thread) : ?>

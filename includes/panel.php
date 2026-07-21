@@ -57,10 +57,10 @@ function casting_render_panel_sidebar(string $active): void
             require_once __DIR__ . '/chat.php';
         }
         $unread_peers = casting_dm_unread_peer_count($user_id);
-        if (!function_exists('casting_user_request_count')) {
+        if (!function_exists('casting_user_new_request_count')) {
             require_once __DIR__ . '/request.php';
         }
-        $request_count = casting_user_request_count($user_id);
+        $request_count = casting_user_new_request_count($user_id);
         if (!function_exists('casting_user_has_admin_permission')) {
             require_once __DIR__ . '/admin-access.php';
         }

@@ -332,6 +332,36 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
     return ['ok' => true];
 }
 
+function casting_dm_insert_raw(int $sender_id, int $recipient_id, string $message, string $created_at = ''): bool
+{
+    if ($sender_id <= 0 || $recipient_id <= 0) {
+        return false;
+    }
+
+    $message = trim(sanitize_textarea_field($message));
+    if ($message === '') {
+        return false;
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    if ($created_at === '') {
+        $created_at = current_time('mysql');
+    }
+
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    return (bool) $wpdb->insert(
+        casting_dm_table(),
+        [
+            'sender_id'    => $sender_id,
+            'recipient_id' => $recipient_id,
+            'message'      => $message,
+            'created_at'   => $created_at,
+        ],
+        ['%d', '%d', '%s', '%s']
+    );
+}
+
 /**
  * @return array<int, array{id:int,sender_id:int,recipient_id:int,message:string,created_at:string,is_mine:bool}>
  */

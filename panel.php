@@ -16,7 +16,7 @@ $complete = casting_profile_complete($profile);
 $premium = casting_user_is_premium($user_id);
 $profile_error = '';
 $profile_success = '';
-$request_count = casting_user_request_count($user_id);
+$request_count = casting_user_new_request_count($user_id);
 
 $profile_post = casting_process_profile_post($user_id);
 if ($profile_post['error'] !== '') {

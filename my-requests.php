@@ -9,6 +9,19 @@ $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $role = casting_get_user_role($user_id);
 
+if (isset($_GET['open'])) {
+    $open = casting_open_request_chat($user_id, sanitize_text_field((string) $_GET['open']));
+    if ($open['ok']) {
+        casting_redirect(
+            'chat.php?with=' . (int) $open['peer_id']
+            . '&request=' . rawurlencode((string) ($open['request_id'] ?? ''))
+            . '#latest'
+        );
+    }
+    casting_set_flash('error', (string) ($open['error'] ?? 'باز کردن درخواست ممکن نبود.'));
+    casting_redirect('my-requests.php');
+}
+
 if ($role === 'talent' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_id'], $_POST['decision'])) {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_respond_request')) {
         casting_set_flash('error', 'نشست منقضی شده. دوباره تلاش کنید.');

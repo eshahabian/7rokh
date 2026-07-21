@@ -292,6 +292,48 @@ a:hover {
   color: var(--danger);
 }
 
+.request-item.is-unread {
+  border-color: rgba(212, 165, 116, 0.55);
+  box-shadow: 0 0 0 1px rgba(212, 165, 116, 0.12);
+}
+
+.req-status-new {
+  background: rgba(212, 165, 116, 0.22) !important;
+  color: var(--accent-strong) !important;
+}
+
+.request-item-open {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.request-item-open:hover {
+  color: inherit;
+}
+
+.request-item-cta {
+  display: inline-block;
+  margin-top: 0.65rem;
+  color: var(--accent-strong);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.request-reply-form {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+.chat-request-banner {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(212, 165, 116, 0.08);
+}
+
 .request-item p {
   margin: 0.35rem 0 0;
   color: var(--ink-muted);
