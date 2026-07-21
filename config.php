@@ -2,15 +2,16 @@
 /**
  * مسیر فایل wp-load.php وردپرس را تنظیم کنید.
  *
- * اگر پوشه casting-portal را داخل ریشه وردپرس بگذارید
- * (کنار wp-config.php)، مقدار پیش‌فرض درست است.
+ * اگر wp-load.php کنار config.php است (همان پوشه):
+ *   __DIR__ . '/wp-load.php'
  *
- * مثال‌ها:
- *   __DIR__ . '/../wp-load.php'          → پوشه داخل ریشه وردپرس
- *   __DIR__ . '/../../wp-load.php'       → یک سطح عمیق‌تر
- *   '/home/USER/public_html/wp-load.php' → مسیر مطلق هاست
+ * اگر پورتال داخل زیرپوشه وردپرس است:
+ *   __DIR__ . '/../wp-load.php'
+ *
+ * مسیر مطلق هاست (مطمئن‌ترین):
+ *   '/home/rokhir/public_html/casting-portal/wp-load.php'
  */
-define('CASTING_WP_LOAD', __DIR__ . '/../wp-load.php');
+define('CASTING_WP_LOAD', __DIR__ . '/wp-load.php');
 
 /** نام نمایشی برند (قابل تغییر) */
 define('CASTING_BRAND', 'هفت رخ');
