@@ -470,9 +470,9 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     </div>
 
     <?php casting_render_activity_fields($profile['activities'] ?? [], true); ?>
+    <?php casting_render_profile_work_sections($profile); ?>
     <?php casting_render_language_fields($profile['language_items'] ?? []); ?>
     <?php casting_render_skill_fields($profile['skill_items'] ?? [], (string) ($profile['skills_other'] ?? '')); ?>
-    <?php casting_render_profile_work_sections($profile); ?>
 
     <div class="field">
       <label for="work_history">توضیح بیشتر درباره سابقه کاری (اختیاری)</label>

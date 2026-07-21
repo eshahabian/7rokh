@@ -1323,11 +1323,14 @@ function casting_render_artistic_works_fields(array $works = []): void
 
 function casting_render_profile_work_sections(array $profile): void
 {
+    $activities = casting_normalize_activities($profile['activities'] ?? []);
+    $show_artistic = casting_activities_show_artistic_works($activities);
+    $mute_acting = casting_activities_are_directing_only($activities);
     ?>
-    <div data-talent-profile-field>
+    <div data-talent-profile-field<?= $mute_acting ? ' class="is-talent-muted"' : '' ?>>
       <?php casting_render_work_credits_fields($profile['work_credits'] ?? []); ?>
     </div>
-    <div data-director-profile-field hidden>
+    <div data-director-profile-field<?= $show_artistic ? '' : ' hidden' ?>>
       <?php casting_render_artistic_works_fields($profile['artistic_works'] ?? []); ?>
     </div>
     <?php

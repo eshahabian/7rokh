@@ -298,6 +298,24 @@ function casting_activities_are_directing_only(array $activities): bool
 }
 
 /**
+ * کارگردان / تهیه‌کننده — نمایش بخش «آثار هنری»
+ *
+ * @param list<string> $activities
+ */
+function casting_activities_show_artistic_works(array $activities): bool
+{
+    $activities = casting_normalize_activities($activities);
+    foreach ($activities as $activity) {
+        $category = casting_activity_category_for_specialty($activity);
+        if (in_array($category, ['directing', 'production'], true)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * @param list<string> $selected
  */
 function casting_render_activity_fields(array $selected = [], bool $required = true): void

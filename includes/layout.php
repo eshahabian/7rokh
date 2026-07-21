@@ -71,7 +71,7 @@ function casting_render_footer(): void
     <p><?= casting_e(casting_brand()) ?> — پورتال استعداد و بازیگری</p>
   </footer>
   <?php casting_render_pwa_bootstrap(); ?>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=47" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=48" defer></script>
 </body>
 </html>
 <?php

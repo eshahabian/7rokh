@@ -823,18 +823,18 @@
       return hasAny;
     };
 
-    const hasDirectingSpecialty = () => {
+    const hasArtisticWorksSpecialty = () => {
       for (const row of activityBox.querySelectorAll(".activity-row")) {
         const cat = row.querySelector("[data-activity-category]")?.value || "";
         const spec = row.querySelector("[data-activity-specialty]")?.value || "";
-        if (spec && cat === "directing") return true;
+        if (spec && (cat === "directing" || cat === "production")) return true;
       }
       return false;
     };
 
     const syncTalentProfileFields = () => {
       const muted = isDirectingOnly();
-      const showDirectorWorks = hasDirectingSpecialty();
+      const showDirectorWorks = hasArtisticWorksSpecialty();
       const hint = form.querySelector("[data-talent-profile-hint]");
       if (hint) hint.hidden = !muted;
 

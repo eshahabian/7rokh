@@ -222,6 +222,8 @@ if ($error !== '') {
       <?php casting_render_activity_fields($activities, true); ?>
       <p class="field-hint" data-talent-profile-hint hidden>برای تخصص‌های کارگردانی، بخش‌های خاکستری نیازی به تکمیل ندارند.</p>
 
+      <?php casting_render_profile_work_sections(['activities' => $activities, 'work_credits' => $work_credits, 'artistic_works' => $artistic_works]); ?>
+
       <div class="field">
         <label for="name">نام و نام خانوادگی</label>
         <input id="name" name="name" type="text" required autocomplete="name" value="<?= casting_e($name) ?>">
@@ -351,8 +353,6 @@ if ($error !== '') {
         <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime">
         <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت (اختیاری)</p>
       </div>
-
-      <?php casting_render_profile_work_sections(['work_credits' => $work_credits, 'artistic_works' => $artistic_works]); ?>
 
       <div class="field">
         <label for="work_history">توضیح بیشتر درباره سابقه کاری (اختیاری)</label>
