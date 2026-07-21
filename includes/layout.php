@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/pwa.php';
+
 function casting_render_head(string $title, string $body_class = ''): void
 {
     $brand = casting_e(casting_brand());
@@ -13,10 +15,11 @@ function casting_render_head(string $title, string $body_class = ''): void
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= $full_title ?></title>
+  <?php casting_render_pwa_head(); ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=57">
+  <link rel="stylesheet" href="<?= $css ?>?v=58">
 </head>
 <body class="<?= casting_e($body_class) ?>">
   <div class="bg-atmosphere" aria-hidden="true"></div>
@@ -67,7 +70,8 @@ function casting_render_footer(): void
   <footer class="site-footer">
     <p><?= casting_e(casting_brand()) ?> — پورتال استعداد و بازیگری</p>
   </footer>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=46" defer></script>
+  <?php casting_render_pwa_bootstrap(); ?>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=47" defer></script>
 </body>
 </html>
 <?php

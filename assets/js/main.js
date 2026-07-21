@@ -870,4 +870,12 @@
     });
     syncTalentProfileFields();
   });
+
+  if ("serviceWorker" in navigator && window.CASTING_PWA && window.CASTING_PWA.swUrl) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register(window.CASTING_PWA.swUrl, { scope: window.CASTING_PWA.scope || undefined })
+        .catch(() => {});
+    });
+  }
 })();
