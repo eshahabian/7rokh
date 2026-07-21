@@ -792,4 +792,82 @@
       fetchPrediction();
     }
   }
+
+  document.querySelectorAll("[data-talent-profile-toggle]").forEach((form) => {
+    const activityBox = form.querySelector("[data-activity-items]");
+    if (!activityBox) return;
+
+    const isDirectingOnly = () => {
+      let hasAny = false;
+      for (const row of activityBox.querySelectorAll(".activity-row")) {
+        const cat = row.querySelector("[data-activity-category]")?.value || "";
+        const spec = row.querySelector("[data-activity-specialty]")?.value || "";
+        if (!spec) continue;
+        hasAny = true;
+        if (cat !== "directing") return false;
+      }
+      return hasAny;
+    };
+
+    const syncTalentProfileFields = () => {
+      const muted = isDirectingOnly();
+      const hint = form.querySelector("[data-talent-profile-hint]");
+      if (hint) hint.hidden = !muted;
+
+      form.querySelectorAll("[data-talent-profile-field]").forEach((wrap) => {
+        wrap.classList.toggle("is-talent-muted", muted);
+        wrap.querySelectorAll("input, select, textarea, button").forEach((el) => {
+          if (muted) {
+            if (el.required) {
+              el.dataset.talentWasRequired = "1";
+              el.required = false;
+            }
+            el.disabled = true;
+            return;
+          }
+          if (el.dataset.talentWasRequired === "1") {
+            el.required = true;
+            delete el.dataset.talentWasRequired;
+          }
+          el.disabled = false;
+        });
+      });
+
+      form.querySelectorAll("[data-health-field]").forEach((box) => {
+        const unhealthy = box.querySelector('[data-health-well][value="unhealthy"]')?.checked;
+        const detail = box.querySelector("[data-health-detail]");
+        if (detail) {
+          detail.disabled = muted || !unhealthy;
+        }
+      });
+
+      form.querySelectorAll("[data-accent-field]").forEach((box) => {
+        const isOther = box.querySelector("[data-accent-select]")?.value === "other";
+        const other = box.querySelector("[data-accent-other]");
+        if (other) {
+          other.disabled = muted || !isOther;
+        }
+      });
+
+      form.querySelectorAll(".skill-row").forEach((row) => {
+        const isOther = row.querySelector("[data-skill-select]")?.value === "other";
+        const note = row.querySelector("[data-skill-note]");
+        if (note) {
+          note.disabled = muted || !isOther;
+        }
+      });
+
+      form.querySelectorAll("[data-talent-required-mark]").forEach((mark) => {
+        mark.hidden = muted;
+      });
+    };
+
+    activityBox.addEventListener("change", syncTalentProfileFields);
+    activityBox.addEventListener("click", (e) => {
+      if (e.target.closest("[data-add-activity], [data-remove-activity]")) {
+        window.setTimeout(syncTalentProfileFields, 0);
+      }
+    });
+    syncTalentProfileFields();
+  });
 })();

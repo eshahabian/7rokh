@@ -1577,8 +1577,14 @@ function casting_save_registration_profile(int $user_id, array $data): array
         return ['ok' => false, 'error' => 'جنسیت را انتخاب کنید.'];
     }
 
+    $activities = casting_normalize_activities($data['activities'] ?? []);
+    if ($activities === []) {
+        return ['ok' => false, 'error' => 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.'];
+    }
+    $skip_talent_profile = casting_activities_are_directing_only($activities);
+
     $look = sanitize_key((string) ($data['look'] ?? ''));
-    if (!array_key_exists($look, casting_look_labels())) {
+    if (!$skip_talent_profile && !array_key_exists($look, casting_look_labels())) {
         return ['ok' => false, 'error' => 'رنگ پوست را انتخاب کنید.'];
     }
 
@@ -1625,14 +1631,10 @@ function casting_save_registration_profile(int $user_id, array $data): array
     $education = sanitize_textarea_field((string) ($data['education'] ?? ''));
     $credits = casting_normalize_work_credits($data['work_credits'] ?? []);
     $edu_items = casting_normalize_education_items($data['education_items'] ?? []);
-    $activities = casting_normalize_activities($data['activities'] ?? []);
-    if ($activities === []) {
-        return ['ok' => false, 'error' => 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.'];
-    }
 
     $height_raw = trim((string) ($data['height'] ?? ''));
     $weight_raw = trim((string) ($data['weight'] ?? ''));
-    $need_body = casting_activities_need_body_metrics($activities);
+    $need_body = !$skip_talent_profile && casting_activities_need_body_metrics($activities);
     if ($need_body && ($height_raw === '' || $weight_raw === '')) {
         return ['ok' => false, 'error' => 'برای بازیگران و مدل‌ها قد و وزن الزامی است.'];
     }
@@ -1652,15 +1654,21 @@ function casting_save_registration_profile(int $user_id, array $data): array
     }
 
     $health = casting_parse_health_post($data);
-    $health_err = casting_validate_health_fields($health, true);
-    if ($health_err !== null) {
-        return ['ok' => false, 'error' => $health_err];
+    if (!$skip_talent_profile) {
+        $health_err = casting_validate_health_fields($health, true);
+        if ($health_err !== null) {
+            return ['ok' => false, 'error' => $health_err];
+        }
+    } else {
+        $health = ['well' => '', 'detail' => ''];
     }
 
     update_user_meta($user_id, 'casting_birthdate', $birthdate);
     update_user_meta($user_id, 'casting_age', (string) $age);
     update_user_meta($user_id, 'casting_gender', $gender);
-    update_user_meta($user_id, 'casting_look', $look);
+    if (!$skip_talent_profile && $look !== '') {
+        update_user_meta($user_id, 'casting_look', $look);
+    }
     update_user_meta($user_id, 'casting_mobile', $mobile);
     update_user_meta($user_id, 'casting_phone', $phone);
     update_user_meta($user_id, 'casting_province', $province);
@@ -1676,7 +1684,9 @@ function casting_save_registration_profile(int $user_id, array $data): array
     if ($weight > 0) {
         update_user_meta($user_id, 'casting_weight', (string) $weight);
     }
-    casting_save_health_meta($user_id, $health);
+    if (!$skip_talent_profile) {
+        casting_save_health_meta($user_id, $health);
+    }
     update_user_meta($user_id, 'casting_work_history', $work);
     update_user_meta($user_id, 'casting_work_credits', $credits);
     update_user_meta($user_id, 'casting_education', $education);
@@ -1684,14 +1694,16 @@ function casting_save_registration_profile(int $user_id, array $data): array
     update_user_meta($user_id, 'casting_activities', $activities);
 
     $skill_items = casting_normalize_skill_items($data['skill_items'] ?? []);
-    foreach ($skill_items as $row) {
-        if ($row['skill'] === 'other' && $row['note'] === '') {
-            return ['ok' => false, 'error' => 'برای مهارت «سایر» بنویسید چه هنری دارید.'];
+    if (!$skip_talent_profile) {
+        foreach ($skill_items as $row) {
+            if ($row['skill'] === 'other' && $row['note'] === '') {
+                return ['ok' => false, 'error' => 'برای مهارت «سایر» بنویسید چه هنری دارید.'];
+            }
         }
     }
     $language_items = casting_normalize_language_items($data['language_items'] ?? []);
     $availability = sanitize_key((string) ($data['availability'] ?? ''));
-    if (!array_key_exists($availability, casting_availability_labels())) {
+    if (!$skip_talent_profile && !array_key_exists($availability, casting_availability_labels())) {
         return ['ok' => false, 'error' => 'وضعیت آمادگی برای همکاری را انتخاب کنید.'];
     }
 
@@ -1699,12 +1711,16 @@ function casting_save_registration_profile(int $user_id, array $data): array
     update_user_meta($user_id, 'casting_skills_other', '');
     update_user_meta($user_id, 'casting_skills', casting_format_skill_labels($skill_items));
     update_user_meta($user_id, 'casting_language_items', $language_items);
-    update_user_meta($user_id, 'casting_availability', $availability);
+    if (!$skip_talent_profile && $availability !== '') {
+        update_user_meta($user_id, 'casting_availability', $availability);
+    }
     update_user_meta($user_id, 'casting_visible', '1');
 
-    $traits = casting_save_talent_trait_meta($user_id, $data);
-    if (!$traits['ok']) {
-        return $traits;
+    if (!$skip_talent_profile) {
+        $traits = casting_save_talent_trait_meta($user_id, $data);
+        if (!$traits['ok']) {
+            return $traits;
+        }
     }
 
     return ['ok' => true, 'age' => $age];

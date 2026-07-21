@@ -270,6 +270,34 @@ function casting_parse_activities_post(array $post): array
 }
 
 /**
+ * @return list<string>
+ */
+function casting_directing_activity_keys(): array
+{
+    return array_keys(casting_activity_categories()['directing']['items']);
+}
+
+/**
+ * فقط تخصص‌های کارگردانی (بدون ترکیب با بازیگری و …)
+ *
+ * @param list<string> $activities
+ */
+function casting_activities_are_directing_only(array $activities): bool
+{
+    $activities = casting_normalize_activities($activities);
+    if ($activities === []) {
+        return false;
+    }
+    $directing = casting_directing_activity_keys();
+    foreach ($activities as $activity) {
+        if (!in_array($activity, $directing, true)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
  * @param list<string> $selected
  */
 function casting_render_activity_fields(array $selected = [], bool $required = true): void

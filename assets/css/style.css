@@ -555,6 +555,17 @@ fieldset.field legend {
   font-size: 0.92rem;
 }
 
+.is-talent-muted {
+  opacity: 0.48;
+}
+
+.is-talent-muted label,
+.is-talent-muted legend,
+.is-talent-muted .field-hint,
+.is-talent-muted .jalali-label {
+  color: var(--ink-muted);
+}
+
 .form-inline-link {
   margin: -0.35rem 0 0.35rem;
   text-align: start;
