@@ -120,7 +120,7 @@ casting_render_flash();
       <ul class="info-list">
         <li><strong>نام کاربری:</strong> <?= casting_e($target->user_login) ?></li>
         <li><strong>ایمیل:</strong> <?= casting_e($target->user_email) ?></li>
-        <li><strong>نقش:</strong> <?= casting_e(casting_role_label($target_role)) ?></li>
+        <li><strong>نقش:</strong> <?= casting_e(casting_user_profile_chip_label($target_id, $user_id)) ?></li>
         <li><strong>وضعیت حساب:</strong> <?= $suspended ? 'غیرفعال (تعلیق)' : 'فعال' ?></li>
         <?php if ($suspended && $suspend_reason !== '') : ?>
           <li><strong>دلیل تعلیق:</strong> <?= casting_e($suspend_reason) ?></li>
@@ -223,7 +223,7 @@ casting_render_flash();
                 <strong><?= casting_e($row['name']) ?></strong>
                 <span class="meta"><?= casting_e($row['login']) ?></span>
               </td>
-              <td><?= casting_e(casting_role_label($row['role'])) ?></td>
+              <td><?= casting_e(casting_user_profile_chip_label((int) $row['id'], $user_id)) ?></td>
               <td>
                 <?php if ($row['suspended']) : ?>
                   <span class="chip chip-danger">غیرفعال</span>
