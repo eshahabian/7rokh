@@ -28,6 +28,11 @@ function casting_mail_setup_hint(): string
         return ' SMTP را در config.php تنظیم کنید.';
     }
     if (!casting_mail_is_smtp_ready()) {
+        $local = file_exists(dirname(__DIR__) . '/config.local.php');
+        if ($local) {
+            return ' فایل config.local.php هست ولی CASTING_SMTP_PASS خالی است — رمز noreply@7rokh.ir را در آن بگذارید.';
+        }
+
         return ' فایل config.local.php بسازید (از config.local.php.example) و CASTING_SMTP_PASS را با رمز noreply@7rokh.ir پر کنید.';
     }
     return '';

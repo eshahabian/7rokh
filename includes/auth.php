@@ -185,6 +185,14 @@ function casting_request_password_reset(string $login): array
         return ['ok' => false, 'error' => 'ارسال لینک بازیابی ممکن نشد. کمی بعد دوباره تلاش کنید.', 'message' => ''];
     }
 
+    if (!casting_mail_is_smtp_ready()) {
+        return [
+            'ok'      => false,
+            'error'   => trim(casting_mail_setup_hint()) ?: 'ارسال ایمیل در حال حاضر ممکن نیست.',
+            'message' => '',
+        ];
+    }
+
     $url = casting_url(
         'reset-password.php?key=' . rawurlencode((string) $key) . '&login=' . rawurlencode($user->user_login)
     );
@@ -199,10 +207,14 @@ function casting_request_password_reset(string $login): array
 
     $mail = casting_send_mail($user->user_email, $subject, $body);
     if (!$mail['ok']) {
-        $hint = casting_mail_setup_hint();
         $error = $mail['error'];
-        if ($hint !== '') {
-            $error .= ' —' . $hint;
+        if (stripos($error, 'authenticate') !== false || stripos($error, 'احراز') !== false) {
+            $error = 'رمز SMTP اکانت noreply@7rokh.ir اشتباه است. در cPanel رمز ایمیل را چک کنید و همان را در config.local.php بگذارید.';
+        } elseif (!casting_mail_is_smtp_ready()) {
+            $hint = casting_mail_setup_hint();
+            if ($hint !== '') {
+                $error .= ' —' . $hint;
+            }
         }
         return [
             'ok'      => false,

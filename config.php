@@ -66,19 +66,33 @@ define('CASTING_CONTACT_NOTIFY_EMAILS', [
     'eshahabian@gmail.com',
 ]);
 
+/** تنظیمات محلی (رمز SMTP و …) — در git نیست؛ باید قبل از defineهای SMTP لود شود */
+if (file_exists(__DIR__ . '/config.local.php')) {
+    require_once __DIR__ . '/config.local.php';
+}
+
 /**
  * SMTP — برای ارسال ایمیل (تماس با ما، بازیابی رمز، …)
  * رمز را در config.local.php بگذارید (نمونه: config.local.php.example)
  */
-define('CASTING_SMTP_HOST', 'mail.7rokh.ir');
-define('CASTING_SMTP_PORT', 465);
-define('CASTING_SMTP_USER', 'noreply@7rokh.ir');
-define('CASTING_SMTP_PASS', '');
-define('CASTING_SMTP_SECURE', 'ssl');
-define('CASTING_MAIL_FROM', 'noreply@7rokh.ir');
-define('CASTING_MAIL_FROM_NAME', 'هفت رخ');
-
-/** تنظیمات محلی (رمز SMTP و …) — در git نیست */
-if (file_exists(__DIR__ . '/config.local.php')) {
-    require_once __DIR__ . '/config.local.php';
+if (!defined('CASTING_SMTP_HOST')) {
+    define('CASTING_SMTP_HOST', 'mail.7rokh.ir');
+}
+if (!defined('CASTING_SMTP_PORT')) {
+    define('CASTING_SMTP_PORT', 465);
+}
+if (!defined('CASTING_SMTP_USER')) {
+    define('CASTING_SMTP_USER', 'noreply@7rokh.ir');
+}
+if (!defined('CASTING_SMTP_PASS')) {
+    define('CASTING_SMTP_PASS', '');
+}
+if (!defined('CASTING_SMTP_SECURE')) {
+    define('CASTING_SMTP_SECURE', 'ssl');
+}
+if (!defined('CASTING_MAIL_FROM')) {
+    define('CASTING_MAIL_FROM', 'noreply@7rokh.ir');
+}
+if (!defined('CASTING_MAIL_FROM_NAME')) {
+    define('CASTING_MAIL_FROM_NAME', 'هفت رخ');
 }
