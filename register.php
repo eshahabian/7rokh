@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/profile.php';
+require_once __DIR__ . '/includes/rules-content.php';
 if (is_file(__DIR__ . '/includes/webhook.php')) {
     require_once __DIR__ . '/includes/webhook.php';
 }
@@ -393,8 +394,16 @@ if ($error !== '') {
       <div class="field rules-consent-field" data-rules-consent>
         <label class="checkbox-row">
           <input type="checkbox" name="rules_accepted" value="1" data-rules-consent-checkbox<?= !empty($_POST['rules_accepted']) ? ' checked' : '' ?>>
-          <span>قوانین را مطالعه کرده‌ام و می‌پذیرم. <a href="rules.php" target="_blank" rel="noopener">مطالعه قوانین</a></span>
+          <span>قوانین را مطالعه کرده‌ام و می‌پذیرم. <button type="button" class="link-button" data-rules-lightbox-open>مطالعه قوانین</button></span>
         </label>
+      </div>
+
+      <div class="rules-lightbox" data-rules-lightbox aria-hidden="true">
+        <div class="rules-lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="rules-lightbox-title">
+          <h2 class="rules-lightbox-title" id="rules-lightbox-title">قوانین <?= casting_e(casting_brand()) ?></h2>
+          <p class="meta">با عضویت و استفاده از پورتال، این قوانین را می‌پذیرید.</p>
+          <?php casting_render_rules_list(); ?>
+        </div>
       </div>
 
       <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= !empty($_POST['rules_accepted']) ? '' : ' disabled' ?>>ایجاد حساب</button>

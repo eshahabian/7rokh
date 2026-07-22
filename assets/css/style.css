@@ -964,6 +964,64 @@ fieldset.field legend {
   pointer-events: none;
 }
 
+.rules-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.88);
+  cursor: zoom-out;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.rules-lightbox.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.rules-lightbox-panel {
+  width: min(640px, 100%);
+  max-height: min(85vh, 720px);
+  overflow: auto;
+  padding: 1.25rem 1.35rem 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  cursor: default;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rules-lightbox-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.2rem;
+}
+
+.rules-lightbox-panel .meta {
+  margin: 0 0 0.85rem;
+}
+
+.link-button {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-strong);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.link-button:hover {
+  color: var(--accent);
+}
+
 .profile-portrait-item figcaption {
   text-align: center;
   color: var(--ink-muted);
@@ -2570,7 +2628,8 @@ fieldset.field legend {
   color: var(--ink-muted);
 }
 
-.checkbox-row span a {
+.checkbox-row span a,
+.checkbox-row span .link-button {
   color: var(--accent-strong);
 }
 

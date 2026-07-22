@@ -986,6 +986,41 @@
     if (event.key === "Escape") closePortraitLightbox();
   });
 
+  const rulesLightbox = document.querySelector("[data-rules-lightbox]");
+  const rulesLightboxPanel = rulesLightbox?.querySelector(".rules-lightbox-panel");
+
+  const closeRulesLightbox = () => {
+    if (!rulesLightbox) return;
+    rulesLightbox.classList.remove("is-open");
+    rulesLightbox.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  };
+
+  const openRulesLightbox = () => {
+    if (!rulesLightbox) return;
+    rulesLightbox.classList.add("is-open");
+    rulesLightbox.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    rulesLightboxPanel?.scrollTo(0, 0);
+  };
+
+  document.addEventListener("click", (event) => {
+    const openRules = event.target.closest("[data-rules-lightbox-open]");
+    if (openRules) {
+      event.preventDefault();
+      event.stopPropagation();
+      openRulesLightbox();
+      return;
+    }
+    if (rulesLightbox?.classList.contains("is-open") && !event.target.closest(".rules-lightbox-panel")) {
+      closeRulesLightbox();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeRulesLightbox();
+  });
+
   const adminMemberPanel = document.querySelector("[data-admin-member-panel]");
   if (adminMemberPanel) {
     window.requestAnimationFrame(() => {
