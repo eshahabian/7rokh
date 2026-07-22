@@ -22,6 +22,9 @@ $test_to = (string) $user->user_email;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_mail_test')) {
         $error = 'درخواست نامعتبر است.';
+    } elseif (isset($_POST['clear_rate_limits'])) {
+        casting_rate_limit_clear_all();
+        $success = 'محدودیت درخواست برای IP فعلی (' . casting_client_ip() . ') پاک شد.';
     } else {
         $test_to = sanitize_email((string) ($_POST['test_to'] ?? ''));
         if (!is_email($test_to)) {
@@ -90,6 +93,14 @@ define('CASTING_SMTP_PASS', 'رمز-noreply-در-cPanel');</pre>
       <input id="test_to" name="test_to" type="email" required value="<?= casting_e($test_to) ?>">
     </div>
     <button class="btn btn-primary" type="submit"<?= $status['smtp_ready'] ? '' : ' disabled' ?>>ارسال تست</button>
+  </form>
+
+  <h2 class="panel-section-title">محدودیت درخواست (rate limit)</h2>
+  <p class="meta">اگر «تعداد درخواست زیاد بود» می‌بینید (مثلاً در فراموشی رمز)، این دکمه محدودیت IP فعلی را پاک می‌کند.</p>
+  <form class="form" method="post" action="admin-mail-test.php">
+    <?php wp_nonce_field('casting_mail_test'); ?>
+    <input type="hidden" name="clear_rate_limits" value="1">
+    <button class="btn btn-secondary" type="submit">ریست محدودیت IP من</button>
   </form>
 
   <p class="meta">رمز باید همان رمز اکانت <code>noreply@7rokh.ir</code> در cPanel باشد (نه رمز ایمیل قدیمی contact.us).</p>

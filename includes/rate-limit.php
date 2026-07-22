@@ -80,3 +80,10 @@ function casting_rate_limit_clear(string $action): void
 {
     delete_transient(casting_rate_limit_transient_key($action));
 }
+
+function casting_rate_limit_clear_all(): void
+{
+    foreach (['login', 'register', 'forgot_password', 'contact_send'] as $action) {
+        casting_rate_limit_clear($action);
+    }
+}

@@ -24,11 +24,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'درخواست نامعتبر است. دوباره تلاش کنید.';
     } else {
         $login = (string) ($_POST['login'] ?? '');
-        casting_rate_limit_hit('forgot_password');
         $result = casting_request_password_reset($login);
         if (!$result['ok']) {
+            casting_rate_limit_hit('forgot_password');
             $error = $result['error'];
         } else {
+            casting_rate_limit_clear('forgot_password');
             $success = $result['message'];
             $login = '';
         }
