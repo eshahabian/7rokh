@@ -107,7 +107,7 @@ function casting_render_panel_sidebar(string $active): void
           }
           if ($item['key'] === 'search' && !$can_member_search) {
               ?>
-          <span class="panel-nav-link is-disabled" aria-disabled="true" title="فعلاً فقط برای کارگردان‌ها فعال است">
+          <span class="panel-nav-link is-disabled" aria-disabled="true" title="برای دسترسی به جستجو، کارگردان باشید یا اشتراک ویژه فعال کنید">
             <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
           </span>
               <?php

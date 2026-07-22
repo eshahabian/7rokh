@@ -237,6 +237,13 @@ function casting_can_start_chat(int $from_id, int $to_id): array
         return ['ok' => false, 'error' => 'فقط اعضای هفت رخ می‌توانند چت کنند.'];
     }
 
+    if (!function_exists('casting_user_is_premium')) {
+        require_once __DIR__ . '/premium.php';
+    }
+    if (casting_user_is_premium($from_id)) {
+        return ['ok' => true, 'error' => ''];
+    }
+
     $to_is_actor = casting_user_is_actor($to_id);
     $producer_targets = casting_producer_message_target_keys();
 

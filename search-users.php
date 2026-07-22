@@ -12,10 +12,10 @@ if (!casting_user_can_member_search($user_id)) {
     if (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1') {
         http_response_code(403);
         header('Content-Type: text/plain; charset=utf-8');
-        echo 'جستجو فعلاً فقط برای کارگردان‌ها فعال است.';
+        echo 'جستجو برای کارگردان‌ها یا اعضای دارای اشتراک ویژه فعال است.';
         exit;
     }
-    casting_set_flash('error', 'جستجوی کاربران فعلاً فقط برای کارگردان‌ها فعال است.');
+    casting_set_flash('error', 'جستجوی کاربران برای کارگردان‌ها یا اعضای دارای اشتراک ویژه فعال است.');
     casting_redirect('panel.php');
 }
 

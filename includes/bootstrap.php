@@ -120,7 +120,15 @@ function casting_user_can_member_search(int $user_id): bool
         return true;
     }
 
-    return casting_get_user_role($user_id) === 'director';
+    if (casting_get_user_role($user_id) === 'director') {
+        return true;
+    }
+
+    if (!function_exists('casting_user_is_premium')) {
+        require_once __DIR__ . '/premium.php';
+    }
+
+    return casting_user_is_premium($user_id);
 }
 
 function casting_get_user_role(int $user_id): string
