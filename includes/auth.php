@@ -117,18 +117,16 @@ function casting_login(string $login, string $password, string $portal = ''): ar
         return ['ok' => false, 'error' => 'این بخش فقط برای کارفرماست.'];
     }
 
-    $creds = [
-        'user_login'    => $user->user_login,
-        'user_password' => $password,
-        'remember'      => true,
-    ];
-
-    $signed = wp_signon($creds, is_ssl());
-    if (is_wp_error($signed)) {
+    if (!wp_check_password($password, $user->user_pass, (int) $user->ID)) {
         return ['ok' => false, 'error' => 'نام کاربری/ایمیل یا رمز عبور اشتباه است.'];
     }
 
-    return ['ok' => true, 'user' => $signed, 'role' => $role];
+    if (!function_exists('casting_portal_login_user')) {
+        require_once __DIR__ . '/portal-auth.php';
+    }
+    casting_portal_login_user($user, true);
+
+    return ['ok' => true, 'user' => $user, 'role' => $role];
 }
 
 /**
@@ -239,7 +237,14 @@ function casting_change_password(int $user_id, string $current, string $new, str
     }
 
     wp_set_password($new, $user_id);
-    wp_set_auth_cookie($user_id, true);
+    if (!function_exists('casting_portal_login_user')) {
+        require_once __DIR__ . '/portal-auth.php';
+    }
+    $user = get_user_by('id', $user_id);
+    if ($user instanceof WP_User) {
+        casting_portal_login_user($user, true);
+    }
+
     return ['ok' => true, 'error' => ''];
 }
 
@@ -259,6 +264,10 @@ function casting_cancel_membership(int $user_id, string $password): array
     update_user_meta($user_id, 'casting_visible', '0');
     update_user_meta($user_id, 'casting_cancelled_at', current_time('mysql'));
     delete_user_meta($user_id, 'casting_role');
-    wp_logout();
+    if (!function_exists('casting_portal_logout_user')) {
+        require_once __DIR__ . '/portal-auth.php';
+    }
+    casting_portal_logout_user();
+
     return ['ok' => true, 'error' => ''];
 }

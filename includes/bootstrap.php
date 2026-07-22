@@ -20,12 +20,6 @@ add_action('init', static function (): void {
     add_image_size('casting_portrait', 360, 480, true);
 });
 
-require_once __DIR__ . '/mail.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 if (!function_exists('str_starts_with')) {
     function str_starts_with(string $haystack, string $needle): bool
     {
@@ -39,6 +33,24 @@ if (!function_exists('str_contains')) {
         return $needle === '' || strpos($haystack, $needle) !== false;
     }
 }
+
+require_once __DIR__ . '/portal-auth.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => casting_portal_cookie_path(),
+        'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    session_name('casting_portal_sid');
+    session_start();
+}
+
+casting_bootstrap_portal_auth();
+
+require_once __DIR__ . '/mail.php';
 
 function casting_strlen(string $value): int
 {
@@ -150,15 +162,6 @@ function casting_redirect(string $path): void
 {
     wp_safe_redirect(casting_url($path));
     exit;
-}
-
-function casting_current_user(): ?WP_User
-{
-    $user = wp_get_current_user();
-    if (!$user || !$user->ID) {
-        return null;
-    }
-    return $user;
 }
 
 function casting_require_login(string $portal): WP_User
