@@ -133,7 +133,7 @@ function casting_profile_completion_items(array $profile): array
             break;
         }
         $shot = casting_portrait_shot($profile['portraits'] ?? [], $slot);
-        $done = $shot['id'] > 0 || $shot['full'] !== '' || $shot['url'] !== '';
+        $done = (bool) ($shot['id'] > 0 || $shot['full'] !== '' || $shot['url'] !== '');
         $items[] = [
             'label' => 'عکس ' . $label,
             'done'  => $done,
@@ -143,17 +143,17 @@ function casting_profile_completion_items(array $profile): array
     }
 
     $checks = [
-        ['label' => 'تاریخ تولد', 'done' => ($profile['birthdate'] ?? '') !== '' || ($profile['age'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'جنسیت', 'done' => ($profile['gender'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'ایمیل', 'done' => is_email((string) ($profile['email'] ?? '')), 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'موبایل', 'done' => ($profile['mobile'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'استان و شهر', 'done' => ($profile['province'] ?? '') !== '' && ($profile['city'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
+        ['label' => 'تاریخ تولد', 'done' => (bool) (($profile['birthdate'] ?? '') !== '' || ($profile['age'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
+        ['label' => 'جنسیت', 'done' => (bool) (($profile['gender'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
+        ['label' => 'ایمیل', 'done' => (bool) is_email((string) ($profile['email'] ?? '')), 'href' => '#edit-profile', 'hint' => ''],
+        ['label' => 'موبایل', 'done' => (bool) (($profile['mobile'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
+        ['label' => 'استان و شهر', 'done' => (bool) (($profile['province'] ?? '') !== '' && ($profile['city'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
     ];
     if (!$hide_talent) {
-        $checks[] = ['label' => 'قد و وزن', 'done' => ($profile['height'] ?? '') !== '' && ($profile['weight'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''];
+        $checks[] = ['label' => 'قد و وزن', 'done' => (bool) (($profile['height'] ?? '') !== '' && ($profile['weight'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''];
     }
-    $checks[] = ['label' => 'نوع فعالیت', 'done' => !empty($profile['activities']), 'href' => '#edit-profile', 'hint' => ''];
-    $checks[] = ['label' => 'درباره من', 'done' => ($profile['bio'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''];
+    $checks[] = ['label' => 'نوع فعالیت', 'done' => (bool) !empty($profile['activities']), 'href' => '#edit-profile', 'hint' => ''];
+    $checks[] = ['label' => 'درباره من', 'done' => (bool) (($profile['bio'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''];
 
     return array_merge($items, $checks);
 }
@@ -170,10 +170,10 @@ function casting_panel_missing_label(string $value, string $edit_href = '#edit-p
 function casting_render_panel_completion_card(array $profile): void
 {
     $items = casting_profile_completion_items($profile);
-    $done_count = count(array_filter($items, static fn(array $item): bool => $item['done']));
+    $done_count = count(array_filter($items, static fn(array $item): bool => !empty($item['done'])));
     $total = count($items);
     $percent = $total > 0 ? (int) round(($done_count / $total) * 100) : 0;
-    $missing = array_values(array_filter($items, static fn(array $item): bool => !$item['done']));
+    $missing = array_values(array_filter($items, static fn(array $item): bool => empty($item['done'])));
     ?>
 <section class="dash-card panel-completion" id="completion">
   <div class="panel-completion-head">
