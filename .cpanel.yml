@@ -2,7 +2,4 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/rokhir/public_html/casting-portal/
-    - export MUPATH=/home/rokhir/public_html/wp-content/mu-plugins/
     - /bin/cp -R * $DEPLOYPATH
-    - /bin/mkdir -p $MUPATH
-    - /bin/cp $DEPLOYPATH/mu-plugin/casting-wp-admin-guard.php $MUPATH/casting-wp-admin-guard.php
