@@ -891,7 +891,23 @@
           el.disabled = !enableArtisticWorks;
         });
       });
+
+      const submitBtn = form.querySelector("[data-register-submit]");
+      const rulesConsent = form.querySelector("[data-rules-consent]");
+      const rulesCheckbox = form.querySelector("[data-rules-consent-checkbox]");
+      const isActor = hasActingSpecialty();
+      if (rulesConsent) {
+        rulesConsent.hidden = hideTalentFields;
+      }
+      if (submitBtn) {
+        submitBtn.disabled = isActor && !(rulesCheckbox && rulesCheckbox.checked);
+      }
     };
+
+    const rulesCheckbox = form.querySelector("[data-rules-consent-checkbox]");
+    if (rulesCheckbox) {
+      rulesCheckbox.addEventListener("change", syncTalentProfileFields);
+    }
 
     activityBox.addEventListener("change", syncTalentProfileFields);
     activityBox.addEventListener("click", (e) => {
