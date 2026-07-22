@@ -3,6 +3,26 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/profile.php';
 
+function casting_profile_email_is_valid(array $profile): bool
+{
+    return is_email(casting_get_user_email_from_profile($profile));
+}
+
+function casting_get_user_email_from_profile(array $profile): string
+{
+    return sanitize_email((string) ($profile['email'] ?? ''));
+}
+
+function casting_render_panel_profile_email(array $profile, bool $embedded): string
+{
+    $email = casting_get_user_email_from_profile($profile);
+    if (!is_email($email)) {
+        return $embedded ? casting_panel_missing_label('') : casting_e('-');
+    }
+
+    return casting_e($email);
+}
+
 function casting_render_profile_portraits(array $portraits): void
 {
     $dims = casting_portrait_display_dimensions();
@@ -132,7 +152,7 @@ function casting_profile_completion_items(array $profile): array
     $checks = [
         ['label' => 'تاریخ تولد', 'done' => ($profile['birthdate'] ?? '') !== '' || ($profile['age'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'جنسیت', 'done' => ($profile['gender'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'ایمیل', 'done' => is_email((string) ($profile['email'] ?? '')), 'href' => '#edit-profile', 'hint' => ''],
+        ['label' => 'ایمیل', 'done' => casting_profile_email_is_valid($profile), 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'موبایل', 'done' => ($profile['mobile'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'استان و شهر', 'done' => ($profile['province'] ?? '') !== '' && ($profile['city'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
     ];
@@ -286,9 +306,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           <li><strong>شماره عضویت:</strong> <span class="membership-number"><?= casting_e((string) $profile['membership_number']) ?></span></li>
         <?php endif; ?>
         <?php if ($is_self) : ?>
-          <li><strong>ایمیل:</strong> <?= $embedded
-              ? casting_panel_missing_label(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '')
-              : casting_e(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '—') ?></li>
+          <li><strong>ایمیل:</strong> <?= casting_render_panel_profile_email($profile, $embedded) ?></li>
         <?php endif; ?>
         <li><strong>سن:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($profile['age'] !== '' ? $profile['age'] . ' سال' : '')
@@ -416,7 +434,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 
     <div class="field">
       <label for="email">ایمیل</label>
-      <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($profile['email'] ?? '') ?>">
+      <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e(casting_get_user_email_from_profile($profile)) ?>">
       <p class="field-hint">برای ورود، بازیابی رمز و اعلان‌ها. برای دیگر اعضا نمایش داده نمی‌شود.</p>
     </div>
 
