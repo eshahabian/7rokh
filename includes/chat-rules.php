@@ -224,6 +224,13 @@ function casting_can_start_chat(int $from_id, int $to_id): array
         return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
     }
 
+    if (casting_user_is_portal_owner($from_id)) {
+        $to_role = casting_get_user_role($to_id);
+        if ($to_role !== '') {
+            return ['ok' => true, 'error' => ''];
+        }
+    }
+
     $from_role = casting_get_user_role($from_id);
     $to_role = casting_get_user_role($to_id);
     if ($from_role === '' || $to_role === '') {
@@ -285,6 +292,18 @@ function casting_can_users_chat(int $from_id, int $to_id): array
 {
     if (!function_exists('casting_dm_has_conversation')) {
         require_once __DIR__ . '/chat.php';
+    }
+
+    if (casting_user_is_portal_owner($from_id)) {
+        if (casting_users_block_each_other($from_id, $to_id)) {
+            return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
+        }
+        if ($from_id <= 0 || $to_id <= 0 || $from_id === $to_id) {
+            return ['ok' => false, 'error' => 'کاربر معتبر نیست.'];
+        }
+        if (casting_get_user_role($to_id) !== '') {
+            return ['ok' => true, 'error' => ''];
+        }
     }
 
     if (casting_dm_has_conversation($from_id, $to_id)) {

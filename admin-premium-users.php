@@ -14,8 +14,10 @@ $error = '';
 $search = trim((string) ($_GET['q'] ?? ''));
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $target_id = (int) ($_GET['user'] ?? 0);
-$can_suspend = casting_user_has_admin_permission($user_id, 'suspend_users');
-$can_manage_password = true;
+$can_suspend = casting_user_has_admin_permission($user_id, 'suspend_users')
+    || casting_user_is_portal_owner($user_id);
+$can_manage_password = casting_user_is_portal_owner($user_id)
+    || casting_user_has_admin_permission($user_id, 'view_premium_users');
 $can_view_blocks = casting_user_has_admin_permission($user_id, 'view_user_blocks')
     || casting_user_has_admin_permission($user_id, 'unblock_users');
 

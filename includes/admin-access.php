@@ -44,18 +44,7 @@ function casting_portal_admin_usernames(): array
 
 function casting_user_is_super_admin(int $user_id): bool
 {
-    if ($user_id <= 0) {
-        return false;
-    }
-    if (user_can($user_id, 'manage_options')) {
-        return true;
-    }
-    $user = get_user_by('id', $user_id);
-    if (!$user) {
-        return false;
-    }
-    $login = strtolower((string) $user->user_login);
-    return $login !== '' && in_array($login, casting_portal_admin_usernames(), true);
+    return casting_user_is_portal_owner($user_id);
 }
 
 /**

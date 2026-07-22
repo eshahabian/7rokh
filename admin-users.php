@@ -18,7 +18,8 @@ $error = '';
 $search = trim((string) ($_GET['q'] ?? ''));
 $target_id = (int) ($_GET['user'] ?? 0);
 $results = $search !== '' ? casting_admin_search_casting_users($search) : [];
-$can_suspend = casting_user_has_admin_permission($user_id, 'suspend_users');
+$can_suspend = casting_user_has_admin_permission($user_id, 'suspend_users')
+    || casting_user_is_portal_owner($user_id);
 $can_unblock = casting_user_has_admin_permission($user_id, 'unblock_users');
 $can_view_blocks = casting_user_has_admin_permission($user_id, 'view_user_blocks');
 $can_manage_members = casting_user_has_admin_permission($user_id, 'view_premium_users');

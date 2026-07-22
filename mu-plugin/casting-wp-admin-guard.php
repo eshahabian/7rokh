@@ -24,6 +24,17 @@ function casting_guard_user_may_use_wp_admin(int $user_id): bool
     if (user_can($user_id, 'manage_options')) {
         return true;
     }
+    if (defined('CASTING_PORTAL_ADMINS') && is_array(CASTING_PORTAL_ADMINS)) {
+        $user = get_user_by('id', $user_id);
+        if ($user) {
+            $login = strtolower((string) $user->user_login);
+            foreach (CASTING_PORTAL_ADMINS as $admin_login) {
+                if (is_string($admin_login) && strtolower(trim($admin_login)) === $login) {
+                    return true;
+                }
+            }
+        }
+    }
 
     return !casting_guard_portal_member_user_id($user_id);
 }
