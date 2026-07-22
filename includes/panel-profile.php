@@ -3,15 +3,17 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/profile.php';
 
-function casting_panel_render_section(int $user_id, callable $render): void
+function casting_panel_render_section(int $user_id, callable $render, string $section = ''): void
 {
     try {
         $render();
     } catch (Throwable $e) {
-        error_log('[casting-portal] panel section: ' . $e->getMessage());
+        $label = $section !== '' ? $section : 'پنل';
+        error_log('[casting-portal] panel section (' . $label . '): ' . $e->getMessage());
         if (function_exists('casting_user_is_super_admin') && casting_user_is_super_admin($user_id)) {
-            echo '<div class="flash flash-error" role="alert"><strong>خطا در بارگذاری بخش:</strong> '
-                . casting_e($e->getMessage()) . '</div>';
+            echo '<div class="flash flash-error" role="alert"><strong>خطا در بارگذاری بخش'
+                . ($section !== '' ? ' «' . casting_e($section) . '»' : '')
+                . ':</strong> ' . casting_e($e->getMessage()) . '</div>';
         }
     }
 }
@@ -170,10 +172,17 @@ function casting_panel_missing_label(string $value, string $edit_href = '#edit-p
 function casting_render_panel_completion_card(array $profile): void
 {
     $items = casting_profile_completion_items($profile);
-    $done_count = count(array_filter($items, static fn(array $item): bool => !empty($item['done'])));
+    $done_count = 0;
+    $missing = [];
+    foreach ($items as $item) {
+        if (!empty($item['done'])) {
+            $done_count++;
+        } else {
+            $missing[] = $item;
+        }
+    }
     $total = count($items);
     $percent = $total > 0 ? (int) round(($done_count / $total) * 100) : 0;
-    $missing = array_values(array_filter($items, static fn(array $item): bool => empty($item['done'])));
     ?>
 <section class="dash-card panel-completion" id="completion">
   <div class="panel-completion-head">

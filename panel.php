@@ -67,7 +67,7 @@ casting_render_flash();
 <?php
 casting_panel_render_section($user_id, static function () use ($profile): void {
     casting_render_panel_completion_card($profile);
-});
+}, 'تکمیل پروفایل');
 ?>
 
 <div class="panel-profile-stack" id="profile">
@@ -75,7 +75,7 @@ casting_panel_render_section($user_id, static function () use ($profile): void {
   <?php
   casting_panel_render_section($user_id, static function () use ($user_id): void {
       casting_render_member_profile_view($user_id, $user_id, true);
-  });
+  }, 'نمایش پروفایل');
   ?>
 </div>
 
@@ -86,7 +86,7 @@ casting_panel_render_section($user_id, static function () use ($user_id, $profil
         $profile,
         $profile_error !== '' || $profile_success !== '' || !$complete || isset($_GET['edit'])
     );
-});
+}, 'ویرایش پروفایل');
 ?>
 
 <?php casting_render_panel_end(); ?>
