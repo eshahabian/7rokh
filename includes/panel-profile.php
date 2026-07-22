@@ -431,12 +431,12 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       <div class="field">
         <label for="height">قد (سانتی‌متر)</label>
         <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e($profile['height']) ?>">
-        <p class="field-hint">برای بازیگران و مدل‌ها الزامی است</p>
+        <p class="field-hint">برای بازیگران الزامی است</p>
       </div>
       <div class="field">
         <label for="weight">وزن (کیلوگرم)</label>
         <input id="weight" name="weight" type="number" min="20" max="250" value="<?= casting_e($profile['weight'] ?? '') ?>">
-        <p class="field-hint">برای بازیگران و مدل‌ها الزامی است</p>
+        <p class="field-hint">برای بازیگران الزامی است</p>
       </div>
     </div>
 

@@ -73,6 +73,11 @@ function casting_is_employer_role(string $role): bool
     return in_array($role, CASTING_EMPLOYER_ROLES, true);
 }
 
+function casting_user_can_member_search(int $user_id): bool
+{
+    return casting_get_user_role($user_id) === 'director';
+}
+
 function casting_get_user_role(int $user_id): string
 {
     $role = get_user_meta($user_id, 'casting_role', true);

@@ -74,6 +74,7 @@ function casting_render_panel_sidebar(string $active): void
             $panel_premium_until = casting_premium_expire_timestamp($user_id);
         }
     }
+    $can_member_search = $user && casting_user_can_member_search((int) $user->ID);
     $admin_nav = $user ? casting_panel_admin_nav_items((int) $user->ID) : [];
     ?>
     <aside class="panel-sidebar" aria-label="منوی پنل کاربری">
@@ -88,6 +89,14 @@ function casting_render_panel_sidebar(string $active): void
           }
           if ($item['key'] === 'premium' && $unread_peers === 0 && $pending_receipts > 0) {
               $href .= '#admin-receipts';
+          }
+          if ($item['key'] === 'search' && !$can_member_search) {
+              ?>
+          <span class="panel-nav-link is-disabled" aria-disabled="true" title="فعلاً فقط برای کارگردان‌ها فعال است">
+            <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
+          </span>
+              <?php
+              continue;
           }
           ?>
           <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= $is_external ? ' target="_blank" rel="noopener"' : '' ?>>

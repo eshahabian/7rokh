@@ -1741,7 +1741,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
     $weight_raw = trim((string) ($data['weight'] ?? ''));
     $need_body = !$skip_talent_profile && casting_activities_need_body_metrics($activities);
     if ($need_body && ($height_raw === '' || $weight_raw === '')) {
-        return ['ok' => false, 'error' => 'برای بازیگران و مدل‌ها قد و وزن الزامی است.'];
+        return ['ok' => false, 'error' => 'برای بازیگران قد و وزن الزامی است.'];
     }
     $height = 0;
     $weight = 0;
@@ -2014,7 +2014,7 @@ function casting_save_profile(int $user_id, array $data): array
                 $w = (string) $data['weight'];
             }
             if ($h === '' || $w === '') {
-                return ['ok' => false, 'error' => 'برای بازیگران و مدل‌ها قد و وزن الزامی است.'];
+                return ['ok' => false, 'error' => 'برای بازیگران قد و وزن الزامی است.'];
             }
         }
         update_user_meta($user_id, 'casting_activities', $activities);

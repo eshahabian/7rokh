@@ -10,6 +10,12 @@ casting_nocache();
 
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
+
+if (!casting_user_can_member_search($user_id)) {
+    echo wp_json_encode(['ok' => false, 'items' => [], 'error' => 'disabled'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $q = trim((string) ($_GET['q'] ?? ''));
 
 if ($q === '' || casting_strlen($q) < 2) {

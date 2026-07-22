@@ -8,6 +8,17 @@ require_once __DIR__ . '/includes/panel.php';
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 
+if (!casting_user_can_member_search($user_id)) {
+    if (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1') {
+        http_response_code(403);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'جستجو فعلاً فقط برای کارگردان‌ها فعال است.';
+        exit;
+    }
+    casting_set_flash('error', 'جستجوی کاربران فعلاً فقط برای کارگردان‌ها فعال است.');
+    casting_redirect('panel.php');
+}
+
 $filters = casting_parse_member_search_filters($_GET);
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $result = casting_query_members($user_id, $filters, $page, 20);

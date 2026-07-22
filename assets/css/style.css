@@ -1973,6 +1973,11 @@ fieldset.field legend {
   flex-shrink: 0;
 }
 
+.panel-nav-link.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .panel-nav-link:hover,
 .panel-nav-link.is-active {
   background: var(--accent-dim);
