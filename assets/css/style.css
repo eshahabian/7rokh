@@ -3251,3 +3251,76 @@ fieldset.field legend {
 .panel-nav-link-external .panel-nav-label {
   color: var(--accent-strong);
 }
+
+/* کارگردان — دیده‌شده، هایلایت، یادداشت */
+.member-card-photo,
+.profile-portraits-wrap {
+  position: relative;
+}
+
+.director-viewed-badge {
+  position: absolute;
+  top: 0.5rem;
+  inset-inline-start: 0.5rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: rgba(12, 14, 18, 0.82);
+  color: var(--accent-strong);
+  border: 1px solid rgba(232, 184, 122, 0.45);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.director-viewed-badge--profile {
+  top: 0.65rem;
+  inset-inline-start: 0.65rem;
+}
+
+.member-card--highlight {
+  border-color: rgba(232, 184, 122, 0.55);
+  box-shadow: 0 0 0 1px rgba(232, 184, 122, 0.2);
+}
+
+.director-section-highlight {
+  outline: 1px solid rgba(232, 184, 122, 0.45);
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
+.info-list.director-section-highlight {
+  padding: 0.65rem;
+  background: rgba(232, 184, 122, 0.06);
+}
+
+.info-list li.director-section-highlight {
+  list-style: none;
+  margin-inline: -0.35rem;
+  padding: 0.35rem 0.5rem;
+  background: rgba(232, 184, 122, 0.08);
+}
+
+.director-workspace {
+  margin-top: 1rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+
+.director-workspace h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.director-section-picks {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.director-assignment {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--line);
+}

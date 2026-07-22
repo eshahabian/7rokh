@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/profile.php';
 require_once __DIR__ . '/premium.php';
+require_once __DIR__ . '/director-workspace.php';
 require_once __DIR__ . '/admin-access.php';
 require_once __DIR__ . '/chat-rules.php';
 require_once __DIR__ . '/layout.php';
@@ -1222,20 +1223,25 @@ function casting_newest_members(int $limit = 30, int $exclude_id = 0): array
     return is_array($users) ? $users : [];
 }
 
-function casting_render_member_card(WP_User $member, int $viewer_id): void
+function casting_render_member_card(WP_User $member, int $viewer_id, ?array $director_flags = null): void
 {
     $id = (int) $member->ID;
     $role = casting_get_user_role($id);
     $profile = casting_get_profile($id);
     $premium = casting_user_is_premium($id);
     $photo = $profile['photo_url'] !== '' ? $profile['photo_url'] : '';
+    $viewed = !empty($director_flags['viewed']);
+    $highlight = !empty($director_flags['is_highlight']);
     ?>
-    <article class="member-card">
+    <article class="member-card<?= $highlight ? ' member-card--highlight' : '' ?>">
       <a class="member-card-photo" href="<?= casting_e(casting_panel_profile_url($id)) ?>">
         <?php if ($photo !== '') : ?>
           <img src="<?= casting_e($photo) ?>" alt="">
         <?php else : ?>
           <span class="photo-placeholder">بدون عکس</span>
+        <?php endif; ?>
+        <?php if ($viewed) : ?>
+          <?php casting_render_director_viewed_badge(true); ?>
         <?php endif; ?>
       </a>
       <div class="member-card-body">
@@ -1316,6 +1322,19 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
  */
 function casting_render_member_search_results(array $members, int $viewer_id, int $total, int $page, int $pages, array $filters): void
 {
+    $director_flags = [];
+    if (function_exists('casting_user_is_director') && casting_user_is_director($viewer_id)) {
+        if (!function_exists('casting_director_workspace_flags_for_talents')) {
+            require_once __DIR__ . '/director-workspace.php';
+        }
+        $talent_ids = [];
+        foreach ($members as $member) {
+            if ($member instanceof WP_User && casting_get_user_role((int) $member->ID) === 'talent') {
+                $talent_ids[] = (int) $member->ID;
+            }
+        }
+        $director_flags = casting_director_workspace_flags_for_talents($viewer_id, $talent_ids);
+    }
     ?>
   <p class="meta member-search-count"><?= (int) $total ?> کاربر · اعضای ویژه در اولویت نمایش</p>
   <?php if (!$members) : ?>
@@ -1323,7 +1342,10 @@ function casting_render_member_search_results(array $members, int $viewer_id, in
   <?php else : ?>
     <div class="member-grid">
       <?php foreach ($members as $member) : ?>
-        <?php casting_render_member_card($member, $viewer_id); ?>
+        <?php
+        $member_id = (int) $member->ID;
+        casting_render_member_card($member, $viewer_id, $director_flags[$member_id] ?? null);
+        ?>
       <?php endforeach; ?>
     </div>
     <?php if ($pages > 1) : ?>

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/profile.php';
+require_once __DIR__ . '/director-workspace.php';
 
 function casting_panel_render_section(int $user_id, callable $render, string $section = ''): void
 {
@@ -267,6 +268,19 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     $viewer_role = casting_get_user_role($viewer_id);
     $chat_allow = !$is_self ? casting_can_users_chat($viewer_id, $member_id) : ['ok' => false];
     $is_blocked = !$is_self ? casting_is_blocked($viewer_id, $member_id) : false;
+    $director_workspace = null;
+    $show_director_tools = !$is_self
+        && casting_user_is_director($viewer_id)
+        && $member_role === 'talent';
+    if ($show_director_tools) {
+        $director_workspace = casting_director_get_workspace($viewer_id, $member_id);
+    }
+    $director_section_class = static function (string $key) use ($director_workspace): string {
+        if (!is_array($director_workspace)) {
+            return '';
+        }
+        return casting_director_section_class($director_workspace, $key);
+    };
     ?>
 <section class="dash-card profile-view">
   <?php if (!$embedded) : ?>
@@ -275,7 +289,12 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
 
   <div class="profile-hero<?= $embedded ? ' profile-hero--panel' : '' ?>">
     <?php if (!$embedded) : ?>
-    <?php casting_render_profile_portraits($profile['portraits']); ?>
+    <div class="profile-portraits-wrap<?= $director_section_class('portraits') ?>">
+      <?php if ($show_director_tools && !empty($director_workspace['viewed'])) : ?>
+        <?php casting_render_director_viewed_badge(true, 'director-viewed-badge--profile'); ?>
+      <?php endif; ?>
+      <?php casting_render_profile_portraits($profile['portraits']); ?>
+    </div>
     <?php endif; ?>
     <div class="profile-info">
       <span class="chip"><?= casting_e(casting_user_profile_chip_label($member_id, $viewer_id)) ?><?php if ($premium) : ?> · ویژه<?php endif; ?></span>
@@ -303,7 +322,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           <a class="btn btn-ghost" href="#edit-profile">ویرایش اطلاعات</a>
         </div>
       <?php endif; ?>
-      <ul class="info-list">
+      <ul class="info-list<?= $director_section_class('info') ?>">
         <?php if ($is_self && ($profile['membership_number'] ?? '') !== '') : ?>
           <li><strong>شماره عضویت:</strong> <span class="membership-number"><?= casting_e((string) $profile['membership_number']) ?></span></li>
         <?php endif; ?>
@@ -370,7 +389,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         <li><strong>تشکل‌های هنری:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label(casting_format_artistic_membership($profile['artistic_membership'] ?? []))
             : casting_e(casting_format_artistic_membership($profile['artistic_membership'] ?? [])) ?></li>
-        <li><strong>مهارت‌ها:</strong> <?= $embedded && $is_self
+        <li class="<?= $director_section_class('skills') ?>"><strong>مهارت‌ها:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($skills_text !== '' ? $skills_text : '')
             : casting_e($skills_text !== '' ? $skills_text : '—') ?></li>
       </ul>
@@ -378,7 +397,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
       $activity_groups = casting_group_activities_for_display($profile['activities'] ?? [], $member_id, $viewer_id);
       if ($activity_groups) :
           ?>
-        <div class="activity-display">
+        <div class="activity-display<?= $director_section_class('activities') ?>">
           <h3>نوع فعالیت</h3>
           <?php foreach ($activity_groups as $group) : ?>
             <p><strong><?= casting_e($group['category']) ?>:</strong> <?= casting_e(implode('، ', $group['items'])) ?></p>
@@ -394,9 +413,13 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
   </div>
 
   <?php if ($profile['bio'] !== '') : ?>
-    <div class="bio-block"><h3>درباره</h3><p><?= nl2br(casting_e($profile['bio'])) ?></p></div>
+    <div class="bio-block<?= $director_section_class('bio') ?>"><h3>درباره</h3><p><?= nl2br(casting_e($profile['bio'])) ?></p></div>
   <?php elseif ($embedded && $is_self) : ?>
     <div class="bio-block bio-block--missing"><h3>درباره</h3><p><?= casting_panel_missing_label('') ?> — <a href="#edit-profile">نوشتن معرفی</a></p></div>
+  <?php endif; ?>
+
+  <?php if ($show_director_tools && is_array($director_workspace)) : ?>
+    <?php casting_render_director_talent_workspace_panel($viewer_id, $member_id, $director_workspace); ?>
   <?php endif; ?>
 
   <?php if (!$is_self && casting_is_employer_role($viewer_role) && $member_role === 'talent') : ?>
