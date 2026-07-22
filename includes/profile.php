@@ -1609,51 +1609,6 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
     <?php
 }
 
-function casting_get_user_email(int $user_id): string
-{
-    if ($user_id <= 0) {
-        return '';
-    }
-
-    $user = get_userdata($user_id);
-    if (!$user || !isset($user->user_email)) {
-        return '';
-    }
-
-    return sanitize_email((string) $user->user_email);
-}
-
-/**
- * @return array{ok:bool,error?:string}
- */
-function casting_update_user_email(int $user_id, string $email): array
-{
-    $email = sanitize_email($email);
-    if (!is_email($email)) {
-        return ['ok' => false, 'error' => 'ایمیل معتبر نیست.'];
-    }
-
-    $existing = email_exists($email);
-    if ($existing && (int) $existing !== $user_id) {
-        return ['ok' => false, 'error' => 'این ایمیل قبلاً ثبت شده است.'];
-    }
-
-    $current = casting_get_user_email($user_id);
-    if ($current === $email) {
-        return ['ok' => true];
-    }
-
-    $result = wp_update_user([
-        'ID'         => $user_id,
-        'user_email' => $email,
-    ]);
-    if (is_wp_error($result)) {
-        return ['ok' => false, 'error' => 'ذخیره ایمیل ناموفق: ' . $result->get_error_message()];
-    }
-
-    return ['ok' => true];
-}
-
 function casting_get_profile(int $user_id): array
 {
     $portraits = casting_load_all_portraits($user_id);
@@ -1675,7 +1630,6 @@ function casting_get_profile(int $user_id): array
     $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
 
     return [
-        'email'             => casting_get_user_email($user_id),
         'birthdate'         => (string) get_user_meta($user_id, 'casting_birthdate', true),
         'age'               => (string) get_user_meta($user_id, 'casting_age', true),
         'gender'            => (string) get_user_meta($user_id, 'casting_gender', true),
@@ -1926,13 +1880,6 @@ function casting_save_profile(int $user_id, array $data): array
     }
     if ($gender !== '') {
         update_user_meta($user_id, 'casting_gender', $gender);
-    }
-
-    if (array_key_exists('email', $data)) {
-        $email_result = casting_update_user_email($user_id, (string) $data['email']);
-        if (!$email_result['ok']) {
-            return $email_result;
-        }
     }
 
     if (array_key_exists('mobile', $data)) {
