@@ -265,6 +265,21 @@ function casting_sync_portal_owner_activities(int $user_id): void
     update_user_meta($user_id, 'casting_activities', $activities);
 }
 
+function casting_user_profile_chip_label(int $user_id, int $viewer_id = 0): string
+{
+    if ($viewer_id <= 0) {
+        $viewer_id = $user_id;
+    }
+    if (casting_user_is_portal_owner($user_id) && casting_user_is_portal_owner($viewer_id)) {
+        $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+        if (in_array('it', $activities, true)) {
+            return casting_hidden_activity_labels()['it'] ?? 'IT';
+        }
+    }
+
+    return casting_role_label(casting_get_user_role($user_id));
+}
+
 /**
  * @param mixed $raw
  * @return list<string>

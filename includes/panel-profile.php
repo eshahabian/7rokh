@@ -254,7 +254,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     <?php casting_render_profile_portraits($profile['portraits']); ?>
     <?php endif; ?>
     <div class="profile-info">
-      <span class="chip"><?= casting_e(casting_role_label($member_role)) ?><?php if ($premium) : ?> · ویژه<?php endif; ?></span>
+      <span class="chip"><?= casting_e(casting_user_profile_chip_label($member_id, $viewer_id)) ?><?php if ($premium) : ?> · ویژه<?php endif; ?></span>
       <h2 class="panel-section-title"><?= casting_e($member->display_name) ?><?php if ($is_self) : ?> <span class="meta">(پروفایل شما)</span><?php endif; ?></h2>
       <?php if (!$is_self) : ?>
         <div class="cta-row" style="margin:0.75rem 0 1rem">
