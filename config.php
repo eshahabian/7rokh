@@ -72,10 +72,10 @@ define('CASTING_CONTACT_NOTIFY_EMAILS', [
  */
 define('CASTING_SMTP_HOST', 'mail.7rokh.ir');
 define('CASTING_SMTP_PORT', 465);
-define('CASTING_SMTP_USER', 'contact.us@7rokh.ir');
+define('CASTING_SMTP_USER', 'noreply@7rokh.ir');
 define('CASTING_SMTP_PASS', '');
 define('CASTING_SMTP_SECURE', 'ssl');
-define('CASTING_MAIL_FROM', 'contact.us@7rokh.ir');
+define('CASTING_MAIL_FROM', 'noreply@7rokh.ir');
 define('CASTING_MAIL_FROM_NAME', 'هفت رخ');
 
 /** تنظیمات محلی (رمز SMTP و …) — در git نیست */
