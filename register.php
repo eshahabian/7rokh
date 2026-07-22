@@ -247,6 +247,7 @@ if ($error !== '') {
         <div class="field">
           <label for="email">ایمیل</label>
           <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($email) ?>">
+          <p class="field-hint">برای بازیابی رمز عبور، لینک بازنشانی به همین ایمیل ارسال می‌شود.</p>
         </div>
       </div>
 
@@ -316,12 +317,10 @@ if ($error !== '') {
         <div class="field">
           <label for="height">قد (سانتی‌متر)</label>
           <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e($height) ?>" placeholder="برای بازیگران">
-          <p class="field-hint">برای بازیگران الزامی است</p>
         </div>
         <div class="field">
           <label for="weight">وزن (کیلوگرم)</label>
           <input id="weight" name="weight" type="number" min="20" max="250" value="<?= casting_e($weight) ?>" placeholder="برای بازیگران">
-          <p class="field-hint">برای بازیگران الزامی است</p>
         </div>
       </div>
 
