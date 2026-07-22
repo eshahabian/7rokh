@@ -91,7 +91,7 @@ function casting_process_profile_post(int $user_id): array
         'artistic_works'      => casting_parse_artistic_works_post($_POST),
         'education'           => $_POST['education'] ?? '',
         'education_items'     => casting_parse_education_items_post($_POST),
-        'activities'          => casting_parse_activities_post($_POST),
+        'activities'          => casting_parse_activities_post($_POST, $user_id),
         'video_url'           => $_POST['video_url'] ?? '',
         'visible'             => !empty($_POST['visible']),
     ]);
@@ -346,7 +346,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
             : casting_e($skills_text !== '' ? $skills_text : '—') ?></li>
       </ul>
       <?php
-      $activity_groups = casting_group_activities_for_display($profile['activities'] ?? []);
+      $activity_groups = casting_group_activities_for_display($profile['activities'] ?? [], $member_id, $viewer_id);
       if ($activity_groups) :
           ?>
         <div class="activity-display">
@@ -516,7 +516,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       </div>
     </div>
 
-    <?php casting_render_activity_fields($profile['activities'] ?? [], true); ?>
+    <?php casting_render_activity_fields($profile['activities'] ?? [], true, $user_id); ?>
     <div data-talent-profile-field<?= $talent_hidden ?>>
     <?php casting_render_language_fields($profile['language_items'] ?? []); ?>
     </div>

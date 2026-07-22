@@ -77,32 +77,29 @@ function casting_is_employer_role(string $role): bool
     return in_array($role, CASTING_EMPLOYER_ROLES, true);
 }
 
+function casting_portal_owner_login(): string
+{
+    if (defined('CASTING_PORTAL_OWNER')) {
+        $login = strtolower(trim((string) CASTING_PORTAL_OWNER));
+        if ($login !== '') {
+            return $login;
+        }
+    }
+
+    return 'eshahabian';
+}
+
 function casting_user_is_portal_owner(int $user_id): bool
 {
     if ($user_id <= 0) {
-        return false;
-    }
-    if (user_can($user_id, 'manage_options')) {
-        return true;
-    }
-    if (!defined('CASTING_PORTAL_ADMINS') || !is_array(CASTING_PORTAL_ADMINS)) {
         return false;
     }
     $user = get_user_by('id', $user_id);
     if (!$user) {
         return false;
     }
-    $login = strtolower((string) $user->user_login);
-    foreach (CASTING_PORTAL_ADMINS as $admin_login) {
-        if (!is_string($admin_login)) {
-            continue;
-        }
-        if (strtolower(trim($admin_login)) === $login) {
-            return true;
-        }
-    }
 
-    return false;
+    return strtolower((string) $user->user_login) === casting_portal_owner_login();
 }
 
 function casting_user_can_member_search(int $user_id): bool

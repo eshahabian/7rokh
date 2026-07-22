@@ -1624,6 +1624,11 @@ function casting_get_profile(int $user_id): array
         $look_meta = 'olive';
     }
 
+    if (function_exists('casting_sync_portal_owner_activities')) {
+        casting_sync_portal_owner_activities($user_id);
+    }
+    $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+
     return [
         'birthdate'         => (string) get_user_meta($user_id, 'casting_birthdate', true),
         'age'               => (string) get_user_meta($user_id, 'casting_age', true),
@@ -1648,7 +1653,7 @@ function casting_get_profile(int $user_id): array
         'artistic_works'    => casting_normalize_artistic_works(get_user_meta($user_id, 'casting_artistic_works', true)),
         'education'         => (string) get_user_meta($user_id, 'casting_education', true),
         'education_items'   => casting_normalize_education_items(get_user_meta($user_id, 'casting_education_items', true)),
-        'activities'        => casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true)),
+        'activities'        => $activities,
         'look'              => $look_meta,
         'eye_color'         => (string) get_user_meta($user_id, 'casting_eye_color', true),
         'hair_color'        => (string) get_user_meta($user_id, 'casting_hair_color', true),
@@ -2011,8 +2016,8 @@ function casting_save_profile(int $user_id, array $data): array
     update_user_meta($user_id, 'casting_work_history', sanitize_textarea_field((string) ($data['work_history'] ?? '')));
     $skip_talent_profile = false;
     if (array_key_exists('activities', $data)) {
-        $skip_talent_profile = !casting_activities_has_acting(casting_normalize_activities($data['activities']));
-    } elseif (!casting_activities_has_acting(casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true)))) {
+        $skip_talent_profile = !casting_activities_has_acting(casting_normalize_activities($data['activities'], $user_id));
+    } elseif (!casting_activities_has_acting(casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id))) {
         $skip_talent_profile = true;
     }
     casting_save_user_work_meta($user_id, $data, $skip_talent_profile);
@@ -2020,7 +2025,10 @@ function casting_save_profile(int $user_id, array $data): array
     update_user_meta($user_id, 'casting_education_items', casting_normalize_education_items($data['education_items'] ?? []));
 
     if (array_key_exists('activities', $data)) {
-        $activities = casting_normalize_activities($data['activities']);
+        $activities = casting_normalize_activities($data['activities'], $user_id);
+        if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id) && !in_array('it', $activities, true)) {
+            $activities[] = 'it';
+        }
         if ($activities === []) {
             return ['ok' => false, 'error' => 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.'];
         }

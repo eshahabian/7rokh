@@ -1985,10 +1985,35 @@ fieldset.field legend {
 }
 
 .panel-sidebar-title {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.35rem;
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--accent-strong);
+}
+
+.panel-sidebar-head {
+  margin-bottom: 0.75rem;
+}
+
+.panel-sidebar-user-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.65rem;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+
+.panel-sidebar-login {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.panel-sidebar-membership {
+  font-size: 0.78rem;
 }
 
 .panel-nav {

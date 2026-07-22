@@ -51,6 +51,9 @@ define('CASTING_PORTAL_ADMINS', [
     'eshahabian',
 ]);
 
+/** مدیر اصلی بدون محدودیت — فقط این کاربر */
+define('CASTING_PORTAL_OWNER', 'eshahabian');
+
 /** گیرنده پیام «تماس با مدیر سایت» — نام کاربری وردپرس */
 define('CASTING_CONTACT_SITE_ADMIN', 'eshahabian');
 

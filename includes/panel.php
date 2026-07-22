@@ -49,9 +49,14 @@ function casting_render_panel_sidebar(string $active): void
     $unread_contacts = 0;
     $request_count = 0;
     $panel_premium_until = null;
+    $panel_membership_number = '';
     $user = casting_current_user();
     if ($user) {
         $user_id = (int) $user->ID;
+        if (!function_exists('casting_get_membership_number')) {
+            require_once __DIR__ . '/membership-number.php';
+        }
+        $panel_membership_number = casting_get_membership_number($user_id);
         if (!function_exists('casting_dm_unread_peer_count')) {
             require_once __DIR__ . '/chat.php';
         }
@@ -78,7 +83,17 @@ function casting_render_panel_sidebar(string $active): void
     $admin_nav = $user ? casting_panel_admin_nav_items((int) $user->ID) : [];
     ?>
     <aside class="panel-sidebar" aria-label="منوی پنل کاربری">
-      <p class="panel-sidebar-title">پنل کاربری</p>
+      <div class="panel-sidebar-head">
+        <p class="panel-sidebar-title">پنل کاربری</p>
+        <?php if ($user) : ?>
+          <p class="panel-sidebar-user-meta">
+            <span class="panel-sidebar-login">@<?= casting_e((string) $user->user_login) ?></span>
+            <?php if ($panel_membership_number !== '') : ?>
+              <span class="panel-sidebar-membership membership-number"><?= casting_e($panel_membership_number) ?></span>
+            <?php endif; ?>
+          </p>
+        <?php endif; ?>
+      </div>
       <nav class="panel-nav">
         <?php foreach (casting_panel_nav_items() as $item) : ?>
           <?php

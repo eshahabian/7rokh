@@ -151,6 +151,42 @@ function casting_activity_categories(): array
 }
 
 /**
+ * تخصص‌های مخفی — فقط برای مدیر اصلی (eshahabian)
+ *
+ * @return array<string, string>
+ */
+function casting_hidden_activity_labels(): array
+{
+    return [
+        'it' => 'IT',
+    ];
+}
+
+/**
+ * @return list<string>
+ */
+function casting_hidden_activity_keys(): array
+{
+    return array_keys(casting_hidden_activity_labels());
+}
+
+/**
+ * @return array<string, array{label:string, items:array<string,string>}>
+ */
+function casting_activity_categories_for_user(?int $user_id = null): array
+{
+    $categories = casting_activity_categories();
+    if ($user_id !== null && $user_id > 0 && casting_user_is_portal_owner($user_id)) {
+        $categories['it_internal'] = [
+            'label' => 'فناوری',
+            'items' => casting_hidden_activity_labels(),
+        ];
+    }
+
+    return $categories;
+}
+
+/**
  * @return array<string, string> key => label برای همه تخصص‌ها
  */
 function casting_activity_labels(): array
@@ -165,10 +201,26 @@ function casting_activity_labels(): array
 }
 
 /**
+ * @return array<string, string>
+ */
+function casting_activity_labels_for_user(int $user_id): array
+{
+    $all = casting_activity_labels();
+    if (casting_user_is_portal_owner($user_id)) {
+        return array_merge($all, casting_hidden_activity_labels());
+    }
+
+    return $all;
+}
+
+/**
  * کلید تخصص → کلید دسته
  */
 function casting_activity_category_for_specialty(string $specialty): string
 {
+    if (isset(casting_hidden_activity_labels()[$specialty])) {
+        return 'it_internal';
+    }
     foreach (casting_activity_categories() as $cat_key => $cat) {
         if (isset($cat['items'][$specialty])) {
             return $cat_key;
@@ -178,15 +230,51 @@ function casting_activity_category_for_specialty(string $specialty): string
 }
 
 /**
+ * @param list<string> $keys
+ * @param int $profile_user_id
+ * @param int $viewer_id
+ * @return list<string>
+ */
+function casting_filter_activities_for_viewer(array $keys, int $profile_user_id, int $viewer_id): array
+{
+    $hidden = casting_hidden_activity_keys();
+    if ($hidden === []) {
+        return $keys;
+    }
+    $show_hidden = casting_user_is_portal_owner($profile_user_id) && casting_user_is_portal_owner($viewer_id);
+    if ($show_hidden) {
+        return $keys;
+    }
+
+    return array_values(array_filter($keys, static function (string $key) use ($hidden): bool {
+        return !in_array($key, $hidden, true);
+    }));
+}
+
+function casting_sync_portal_owner_activities(int $user_id): void
+{
+    if (!casting_user_is_portal_owner($user_id)) {
+        return;
+    }
+    $raw = get_user_meta($user_id, 'casting_activities', true);
+    $activities = casting_normalize_activities($raw, $user_id);
+    if (in_array('it', $activities, true)) {
+        return;
+    }
+    $activities[] = 'it';
+    update_user_meta($user_id, 'casting_activities', $activities);
+}
+
+/**
  * @param mixed $raw
  * @return list<string>
  */
-function casting_normalize_activities($raw): array
+function casting_normalize_activities($raw, int $user_id = 0): array
 {
     if (!is_array($raw)) {
         return [];
     }
-    $labels = casting_activity_labels();
+    $labels = $user_id > 0 ? casting_activity_labels_for_user($user_id) : casting_activity_labels();
     $out = [];
     foreach ($raw as $item) {
         if (is_array($item)) {
@@ -205,9 +293,9 @@ function casting_normalize_activities($raw): array
  * @param list<string> $keys
  * @return array<int, array{category:string,specialty:string}>
  */
-function casting_activities_to_rows(array $keys): array
+function casting_activities_to_rows(array $keys, int $user_id = 0): array
 {
-    $keys = casting_normalize_activities($keys);
+    $keys = casting_normalize_activities($keys, $user_id);
     $rows = [];
     foreach ($keys as $key) {
         $cat = casting_activity_category_for_specialty($key);
@@ -224,18 +312,21 @@ function casting_activities_to_rows(array $keys): array
 /**
  * @return list<string>
  */
-function casting_parse_activities_post(array $post): array
+function casting_parse_activities_post(array $post, int $user_id = 0): array
 {
     $raw = $post['activity_items'] ?? $post['activities'] ?? [];
     if (!is_array($raw)) {
         return [];
     }
-    $categories = casting_activity_categories();
+    $categories = $user_id > 0
+        ? casting_activity_categories_for_user($user_id)
+        : casting_activity_categories();
+    $labels = $user_id > 0 ? casting_activity_labels_for_user($user_id) : casting_activity_labels();
     $out = [];
     foreach ($raw as $item) {
         if (!is_array($item)) {
             $key = sanitize_key((string) $item);
-            if ($key !== '' && isset(casting_activity_labels()[$key]) && !in_array($key, $out, true)) {
+            if ($key !== '' && isset($labels[$key]) && !in_array($key, $out, true)) {
                 $out[] = $key;
             }
             continue;
@@ -329,10 +420,12 @@ function casting_profile_hides_talent_fields($activities, int $user_id = 0): boo
 /**
  * @param list<string> $selected
  */
-function casting_render_activity_fields(array $selected = [], bool $required = true): void
+function casting_render_activity_fields(array $selected = [], bool $required = true, int $user_id = 0): void
 {
-    $rows = casting_activities_to_rows($selected);
-    $categories = casting_activity_categories();
+    $rows = casting_activities_to_rows($selected, $user_id);
+    $categories = $user_id > 0
+        ? casting_activity_categories_for_user($user_id)
+        : casting_activity_categories();
     $map = [];
     foreach ($categories as $cat_key => $cat) {
         $map[$cat_key] = $cat['items'];
@@ -388,14 +481,26 @@ function casting_render_activity_fields(array $selected = [], bool $required = t
  * @param list<string> $keys
  * @return list<array{category:string, items:list<string>}>
  */
-function casting_group_activities_for_display(array $keys): array
+function casting_group_activities_for_display(array $keys, int $profile_user_id = 0, int $viewer_id = 0): array
 {
-    $keys = casting_normalize_activities($keys);
+    $keys = casting_normalize_activities($keys, $profile_user_id);
+    if ($profile_user_id > 0 && $viewer_id > 0) {
+        $keys = casting_filter_activities_for_viewer($keys, $profile_user_id, $viewer_id);
+    } elseif ($profile_user_id > 0) {
+        $keys = casting_filter_activities_for_viewer($keys, $profile_user_id, 0);
+    }
     if ($keys === []) {
         return [];
     }
     $grouped = [];
-    foreach (casting_activity_categories() as $cat_key => $cat) {
+    $categories = casting_activity_categories();
+    if ($profile_user_id > 0 && casting_user_is_portal_owner($profile_user_id) && casting_user_is_portal_owner($viewer_id)) {
+        $categories['it_internal'] = [
+            'label' => 'فناوری',
+            'items' => casting_hidden_activity_labels(),
+        ];
+    }
+    foreach ($categories as $cat_key => $cat) {
         $labels = [];
         foreach ($cat['items'] as $key => $label) {
             if (in_array($key, $keys, true)) {
