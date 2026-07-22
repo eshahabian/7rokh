@@ -1470,6 +1470,14 @@ function casting_portrait_slots(): array
 }
 
 /**
+ * @return array{width:int,height:int}
+ */
+function casting_portrait_display_dimensions(): array
+{
+    return ['width' => 360, 'height' => 480];
+}
+
+/**
  * @return array<string, string>
  */
 function casting_portrait_slot_hints(): array
@@ -1569,6 +1577,7 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
 {
     $req = $required ? ' required' : '';
     $hints = casting_portrait_slot_hints();
+    $dims = casting_portrait_display_dimensions();
     ?>
   <div class="portrait-upload-grid">
     <?php foreach (casting_portrait_slots() as $slot => $label) :
@@ -1576,11 +1585,17 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
         $preview = $portraits[$slot]['url'] ?? '';
         ?>
       <div class="portrait-upload-card">
-        <div class="portrait-preview">
+        <div class="portrait-frame portrait-preview">
           <?php if ($preview !== '') : ?>
-            <img src="<?= casting_e($preview) ?>" alt="<?= casting_e($label) ?>">
+            <img
+              src="<?= casting_e($preview) ?>"
+              alt="<?= casting_e($label) ?>"
+              width="<?= (int) $dims['width'] ?>"
+              height="<?= (int) $dims['height'] ?>"
+              decoding="async"
+            >
           <?php else : ?>
-            <div class="photo-placeholder">بدون عکس</div>
+            <div class="photo-placeholder portrait-frame-empty">بدون عکس</div>
           <?php endif; ?>
         </div>
         <div class="field">

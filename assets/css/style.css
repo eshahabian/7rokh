@@ -838,6 +838,7 @@ fieldset.field legend {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
+  max-width: 28rem;
 }
 
 .portrait-upload-card {
@@ -847,21 +848,47 @@ fieldset.field legend {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(0, 0, 0, 0.12);
+  min-width: 0;
 }
 
+.portrait-frame,
+.profile-portrait-thumb,
 .portrait-preview {
+  position: relative;
+  width: 100%;
   aspect-ratio: 3 / 4;
   overflow: hidden;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--bg-elevated);
+  contain: layout style;
+  line-height: 0;
 }
 
-.portrait-preview img {
+.portrait-frame > img,
+.profile-portrait-thumb > img,
+.portrait-preview > img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  max-width: none;
+  max-height: none;
   object-fit: cover;
+  object-position: center;
   display: block;
+}
+
+.portrait-frame > .photo-placeholder,
+.profile-portrait-thumb > .photo-placeholder,
+.portrait-preview > .photo-placeholder,
+.portrait-frame-empty {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
 }
 
 .profile-portraits {
@@ -879,29 +906,6 @@ fieldset.field legend {
   min-width: 0;
 }
 
-.profile-portrait-thumb {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--bg-elevated);
-  line-height: 0;
-}
-
-.profile-portrait-thumb img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: cover;
-  object-position: center;
-  display: block;
-}
-
 .profile-portrait-zoom {
   position: absolute;
   inset: 0;
@@ -915,13 +919,6 @@ fieldset.field legend {
 
 .profile-portrait-zoom:hover {
   background: rgba(0, 0, 0, 0.06);
-}
-
-.profile-portrait-item .photo-placeholder {
-  aspect-ratio: 3 / 4;
-  min-height: 0;
-  border-radius: 10px;
-  border: 1px solid var(--line);
 }
 
 .portrait-lightbox {
@@ -1939,7 +1936,8 @@ fieldset.field legend {
   }
 
   .portrait-upload-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 100%;
   }
 
   .profile-portraits {

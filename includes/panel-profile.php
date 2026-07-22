@@ -5,6 +5,7 @@ require_once __DIR__ . '/profile.php';
 
 function casting_render_profile_portraits(array $portraits): void
 {
+    $dims = casting_portrait_display_dimensions();
     ?>
     <div class="profile-portraits">
       <?php foreach (casting_portrait_slots() as $slot => $label) :
@@ -13,19 +14,25 @@ function casting_render_profile_portraits(array $portraits): void
           $full = ($shot['full'] ?? '') !== '' ? $shot['full'] : $thumb;
           ?>
         <figure class="profile-portrait-item">
-          <?php if ($thumb !== '') : ?>
-            <div class="profile-portrait-thumb">
-              <img src="<?= casting_e($thumb) ?>" alt="<?= casting_e($label) ?>" loading="lazy" decoding="async">
+          <div class="portrait-frame profile-portrait-thumb">
+            <?php if ($thumb !== '') : ?>
+              <img
+                src="<?= casting_e($thumb) ?>"
+                alt="<?= casting_e($label) ?>"
+                width="<?= (int) $dims['width'] ?>"
+                height="<?= (int) $dims['height'] ?>"
+                decoding="async"
+              >
               <button
                 type="button"
                 class="profile-portrait-zoom"
                 data-portrait-lightbox="<?= casting_e($full) ?>"
                 aria-label="نمایش بزرگ <?= casting_e($label) ?>"
               ></button>
-            </div>
-          <?php else : ?>
-            <div class="photo-placeholder"><?= casting_e($label) ?></div>
-          <?php endif; ?>
+            <?php else : ?>
+              <div class="photo-placeholder portrait-frame-empty"><?= casting_e($label) ?></div>
+            <?php endif; ?>
+          </div>
           <figcaption><?= casting_e($label) ?></figcaption>
         </figure>
       <?php endforeach; ?>
