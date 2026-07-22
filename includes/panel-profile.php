@@ -63,6 +63,7 @@ function casting_process_profile_post(int $user_id): array
         'birthdate'           => casting_birthdate_from_jalali_post($_POST) ?? '',
         'age'                 => $_POST['age'] ?? '',
         'gender'              => $_POST['gender'] ?? '',
+        'email'               => $_POST['email'] ?? '',
         'mobile'              => $_POST['mobile'] ?? '',
         'phone'               => $_POST['phone'] ?? '',
         'province'            => $_POST['province'] ?? '',
@@ -131,6 +132,7 @@ function casting_profile_completion_items(array $profile): array
     $checks = [
         ['label' => 'تاریخ تولد', 'done' => ($profile['birthdate'] ?? '') !== '' || ($profile['age'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'جنسیت', 'done' => ($profile['gender'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
+        ['label' => 'ایمیل', 'done' => is_email((string) ($profile['email'] ?? '')), 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'موبایل', 'done' => ($profile['mobile'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'استان و شهر', 'done' => ($profile['province'] ?? '') !== '' && ($profile['city'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
     ];
@@ -283,6 +285,11 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         <?php if ($is_self && ($profile['membership_number'] ?? '') !== '') : ?>
           <li><strong>شماره عضویت:</strong> <span class="membership-number"><?= casting_e((string) $profile['membership_number']) ?></span></li>
         <?php endif; ?>
+        <?php if ($is_self) : ?>
+          <li><strong>ایمیل:</strong> <?= $embedded
+              ? casting_panel_missing_label(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '')
+              : casting_e(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '—') ?></li>
+        <?php endif; ?>
         <li><strong>سن:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($profile['age'] !== '' ? $profile['age'] . ' سال' : '')
             : casting_e($profile['age'] !== '' ? $profile['age'] . ' سال' : '—') ?></li>
@@ -406,6 +413,12 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 
   <form class="form" method="post" action="panel.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
     <?php wp_nonce_field('casting_profile'); ?>
+
+    <div class="field">
+      <label for="email">ایمیل</label>
+      <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($profile['email'] ?? '') ?>">
+      <p class="field-hint">برای ورود، بازیابی رمز و اعلان‌ها. برای دیگر اعضا نمایش داده نمی‌شود.</p>
+    </div>
 
     <div class="form-grid">
       <div class="field">

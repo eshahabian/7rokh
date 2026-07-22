@@ -17,10 +17,14 @@ $success = '';
 $login = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_forgot')) {
+    $rate_error = casting_rate_limit_check('forgot_password');
+    if ($rate_error !== null) {
+        $error = $rate_error;
+    } elseif (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_forgot')) {
         $error = 'درخواست نامعتبر است. دوباره تلاش کنید.';
     } else {
         $login = (string) ($_POST['login'] ?? '');
+        casting_rate_limit_hit('forgot_password');
         $result = casting_request_password_reset($login);
         if (!$result['ok']) {
             $error = $result['error'];

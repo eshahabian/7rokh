@@ -28,7 +28,7 @@ function casting_mail_setup_hint(): string
         return ' SMTP را در config.php تنظیم کنید.';
     }
     if (!casting_mail_is_smtp_ready()) {
-        return ' فایل config.local.php بسازید (از config.local.php.example) و CASTING_SMTP_PASS را با رمز contact.us@7rokh.ir پر کنید.';
+        return ' فایل config.local.php بسازید (از config.local.php.example) و CASTING_SMTP_PASS را با رمز noreply@7rokh.ir پر کنید.';
     }
     return '';
 }

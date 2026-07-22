@@ -59,6 +59,32 @@ function casting_register_user(string $name, string $username, string $email, st
     return ['ok' => true, 'user_id' => (int) $user_id, 'role' => $role];
 }
 
+/**
+ * @return array{ok:bool,error?:string}
+ */
+function casting_update_user_email(int $user_id, string $email): array
+{
+    $email = sanitize_email($email);
+    if (!is_email($email)) {
+        return ['ok' => false, 'error' => 'ایمیل معتبر نیست.'];
+    }
+
+    $existing = email_exists($email);
+    if ($existing && (int) $existing !== $user_id) {
+        return ['ok' => false, 'error' => 'این ایمیل قبلاً ثبت شده است.'];
+    }
+
+    $result = wp_update_user([
+        'ID'         => $user_id,
+        'user_email' => $email,
+    ]);
+    if ($result instanceof WP_Error) {
+        return ['ok' => false, 'error' => 'ذخیره ایمیل ناموفق: ' . $result->get_error_message()];
+    }
+
+    return ['ok' => true];
+}
+
 function casting_delete_registered_user(int $user_id): void
 {
     if ($user_id <= 0) {
@@ -171,11 +197,16 @@ function casting_request_password_reset(string $login): array
         . $url . "\n\n"
         . "اگر این درخواست از طرف شما نبوده، این ایمیل را نادیده بگیرید.\n";
 
-    $sent = wp_mail($user->user_email, $subject, $body);
-    if (!$sent) {
+    $mail = casting_send_mail($user->user_email, $subject, $body);
+    if (!$mail['ok']) {
+        $hint = casting_mail_setup_hint();
+        $error = $mail['error'];
+        if ($hint !== '') {
+            $error .= ' —' . $hint;
+        }
         return [
             'ok'      => false,
-            'error'   => 'ارسال ایمیل ناموفق بود. تنظیم SMTP وردپرس را بررسی کنید.',
+            'error'   => $error,
             'message' => '',
         ];
     }

@@ -1,9 +1,9 @@
 <?php
 /**
- * کپی کنید به config.local.php و رمز ایمیل contact.us@7rokh.ir را بگذارید.
+ * کپی کنید به config.local.php و رمز ایمیل noreply@7rokh.ir را بگذارید.
  * این فایل در git ذخیره نمی‌شود.
  */
-define('CASTING_SMTP_PASS', 'رمز-ایمیل-contact-us-اینجا');
+define('CASTING_SMTP_PASS', 'رمز-ایمیل-noreply-اینجا');
 
 define('CASTING_SMTP_HOST', 'mail.7rokh.ir');
 define('CASTING_SMTP_PORT', 465);
