@@ -1534,6 +1534,25 @@ function casting_load_portrait(int $user_id, string $slot): array
 }
 
 /**
+ * @param array<string, mixed> $portraits
+ * @return array{id:int,url:string,full:string}
+ */
+function casting_portrait_shot(array $portraits, string $slot): array
+{
+    $empty = ['id' => 0, 'url' => '', 'full' => ''];
+    $shot = $portraits[$slot] ?? $empty;
+    if (!is_array($shot)) {
+        return $empty;
+    }
+
+    return [
+        'id'   => (int) ($shot['id'] ?? 0),
+        'url'  => is_string($shot['url'] ?? null) ? (string) $shot['url'] : '',
+        'full' => is_string($shot['full'] ?? null) ? (string) $shot['full'] : '',
+    ];
+}
+
+/**
  * @return array<string, array{id:int,url:string,full:string}>
  */
 function casting_load_all_portraits(int $user_id): array
@@ -1563,7 +1582,8 @@ function casting_portraits_complete(array $portraits): bool
 {
     foreach (casting_portrait_slots() as $slot => $label) {
         unset($label);
-        if (empty($portraits[$slot]['id'])) {
+        $shot = casting_portrait_shot($portraits, $slot);
+        if ($shot['id'] <= 0) {
             return false;
         }
     }
@@ -2386,9 +2406,16 @@ function casting_query_talents(array $filters = [], int $page = 1, int $per_page
 
 function casting_profile_complete(array $profile): bool
 {
-    return $profile['age'] !== ''
-        && $profile['gender'] !== ''
-        && casting_portraits_complete($profile['portraits'] ?? []);
+    $base = ($profile['age'] ?? '') !== ''
+        && ($profile['gender'] ?? '') !== '';
+
+    if (casting_profile_hides_talent_fields($profile['activities'] ?? [])) {
+        return $base;
+    }
+
+    $portraits = is_array($profile['portraits'] ?? null) ? $profile['portraits'] : [];
+
+    return $base && casting_portraits_complete($portraits);
 }
 
 /**

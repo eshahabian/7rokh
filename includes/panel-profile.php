@@ -3,15 +3,28 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/profile.php';
 
+function casting_panel_render_section(int $user_id, callable $render): void
+{
+    try {
+        $render();
+    } catch (Throwable $e) {
+        error_log('[casting-portal] panel section: ' . $e->getMessage());
+        if (function_exists('casting_user_is_super_admin') && casting_user_is_super_admin($user_id)) {
+            echo '<div class="flash flash-error" role="alert"><strong>خطا در بارگذاری بخش:</strong> '
+                . casting_e($e->getMessage()) . '</div>';
+        }
+    }
+}
+
 function casting_render_profile_portraits(array $portraits): void
 {
     $dims = casting_portrait_display_dimensions();
     ?>
     <div class="profile-portraits">
       <?php foreach (casting_portrait_slots() as $slot => $label) :
-          $shot = $portraits[$slot] ?? ['full' => '', 'url' => ''];
-          $thumb = ($shot['url'] ?? '') !== '' ? $shot['url'] : ($shot['full'] ?? '');
-          $full = ($shot['full'] ?? '') !== '' ? $shot['full'] : $thumb;
+          $shot = casting_portrait_shot($portraits, $slot);
+          $thumb = $shot['url'] !== '' ? $shot['url'] : $shot['full'];
+          $full = $shot['full'] !== '' ? $shot['full'] : $thumb;
           ?>
         <figure class="profile-portrait-item">
           <div class="portrait-frame profile-portrait-thumb">
@@ -119,8 +132,8 @@ function casting_profile_completion_items(array $profile): array
         if ($hide_talent) {
             break;
         }
-        $shot = $profile['portraits'][$slot] ?? ['id' => 0, 'full' => '', 'url' => ''];
-        $done = !empty($shot['id']) || ($shot['full'] ?? '') !== '' || ($shot['url'] ?? '') !== '';
+        $shot = casting_portrait_shot($profile['portraits'] ?? [], $slot);
+        $done = $shot['id'] > 0 || $shot['full'] !== '' || $shot['url'] !== '';
         $items[] = [
             'label' => 'عکس ' . $label,
             'done'  => $done,
@@ -131,7 +144,7 @@ function casting_profile_completion_items(array $profile): array
 
     $checks = [
         ['label' => 'تاریخ تولد', 'done' => ($profile['birthdate'] ?? '') !== '' || ($profile['age'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'ایمیل', 'done' => is_email((string) ($profile['email'] ?? '')), 'href' => '#edit-profile', 'hint' => 'برای بازیابی رمز'],
+        ['label' => 'ایمیل', 'done' => filter_var((string) ($profile['email'] ?? ''), FILTER_VALIDATE_EMAIL) !== false, 'href' => '#edit-profile', 'hint' => 'برای بازیابی رمز'],
         ['label' => 'جنسیت', 'done' => ($profile['gender'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'موبایل', 'done' => ($profile['mobile'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'استان و شهر', 'done' => ($profile['province'] ?? '') !== '' && ($profile['city'] ?? '') !== '', 'href' => '#edit-profile', 'hint' => ''],
@@ -157,10 +170,16 @@ function casting_panel_missing_label(string $value, string $edit_href = '#edit-p
 function casting_render_panel_completion_card(array $profile): void
 {
     $items = casting_profile_completion_items($profile);
-    $done_count = count(array_filter($items, static fn(array $item): bool => $item['done']));
+    $done_count = count(array_filter($items, static function (array $item): bool {
+        return !empty($item['done']);
+    }));
     $total = count($items);
     $percent = $total > 0 ? (int) round(($done_count / $total) * 100) : 0;
-    $missing = array_values(array_filter($items, static fn(array $item): bool => !$item['done']));
+    $missing = array_values(array_filter($items, static function (array $item): bool {
+        return empty($item['done']);
+    }));
+    $hide_talent = casting_profile_hides_talent_fields($profile['activities'] ?? []);
+    $portraits = is_array($profile['portraits'] ?? null) ? $profile['portraits'] : [];
     ?>
 <section class="dash-card panel-completion" id="completion">
   <div class="panel-completion-head">
@@ -178,10 +197,11 @@ function casting_render_panel_completion_card(array $profile): void
     </div>
   </div>
 
+  <?php if (!$hide_talent) : ?>
   <div class="panel-photo-slots">
     <?php foreach (casting_portrait_slots() as $slot => $label) :
-        $shot = $profile['portraits'][$slot] ?? ['full' => '', 'url' => ''];
-        $src = ($shot['url'] ?? '') !== '' ? $shot['url'] : ($shot['full'] ?? '');
+        $shot = casting_portrait_shot($portraits, $slot);
+        $src = $shot['url'] !== '' ? $shot['url'] : $shot['full'];
         $hint = casting_portrait_slot_hints()[$slot] ?? '';
         ?>
       <a class="panel-photo-slot<?= $src === '' ? ' is-empty' : '' ?>" href="profile-photo.php">
@@ -204,6 +224,7 @@ function casting_render_panel_completion_card(array $profile): void
       </a>
     <?php endforeach; ?>
   </div>
+  <?php endif; ?>
 
   <?php if ($missing) : ?>
     <ul class="panel-missing-list">
@@ -366,7 +387,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     </div>
   </div>
 
-  <?php if ($profile['bio'] !== '') : ?>
+  <?php if (($profile['bio'] ?? '') !== '') : ?>
     <div class="bio-block"><h3>درباره</h3><p><?= nl2br(casting_e($profile['bio'])) ?></p></div>
   <?php elseif ($embedded && $is_self) : ?>
     <div class="bio-block bio-block--missing"><h3>درباره</h3><p><?= casting_panel_missing_label('') ?> — <a href="#edit-profile">نوشتن معرفی</a></p></div>
@@ -430,7 +451,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <div class="field">
       <label for="age_display">سن (خودکار)</label>
       <input id="age_display" type="text" readonly data-age-output value="<?= $profile['age'] !== '' ? casting_e($profile['age']) . ' سال' : '' ?>">
-      <input type="hidden" name="age" value="<?= casting_e($profile['age']) ?>">
+      <input type="hidden" name="age" value="<?= casting_e((string) ($profile['age'] ?? '')) ?>">
     </div>
 
     <fieldset class="field">
@@ -470,7 +491,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <div class="form-grid" data-talent-profile-field<?= $talent_hidden ?>>
       <div class="field">
         <label for="height">قد (سانتی‌متر)</label>
-        <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e($profile['height']) ?>">
+        <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e((string) ($profile['height'] ?? '')) ?>">
         <p class="field-hint">برای بازیگران الزامی است</p>
       </div>
       <div class="field">
@@ -511,7 +532,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       </div>
       <div class="field">
         <label for="experience">سابقه فعالیت (سال)</label>
-        <input id="experience" name="experience" type="number" min="0" max="60" value="<?= casting_e($profile['experience'] !== '' ? $profile['experience'] : '0') ?>">
+        <input id="experience" name="experience" type="number" min="0" max="60" value="<?= casting_e((string) (($profile['experience'] ?? '') !== '' ? $profile['experience'] : '0')) ?>">
       </div>
       <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
         <label for="availability">وضعیت آمادگی برای همکاری</label>
@@ -535,37 +556,37 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 
     <div class="field">
       <label for="work_history">توضیح بیشتر درباره سابقه کاری (اختیاری)</label>
-      <textarea id="work_history" name="work_history" rows="2"><?= casting_e($profile['work_history']) ?></textarea>
+      <textarea id="work_history" name="work_history" rows="2"><?= casting_e((string) ($profile['work_history'] ?? '')) ?></textarea>
     </div>
 
     <?php casting_render_education_fields($profile['education_items'] ?? []); ?>
 
     <div class="field">
       <label for="education">توضیح بیشتر درباره تحصیل (اختیاری)</label>
-      <textarea id="education" name="education" rows="2"><?= casting_e($profile['education']) ?></textarea>
+      <textarea id="education" name="education" rows="2"><?= casting_e((string) ($profile['education'] ?? '')) ?></textarea>
     </div>
 
     <div class="field">
       <label for="bio">درباره من</label>
-      <textarea id="bio" name="bio" rows="3"><?= casting_e($profile['bio']) ?></textarea>
+      <textarea id="bio" name="bio" rows="3"><?= casting_e((string) ($profile['bio'] ?? '')) ?></textarea>
     </div>
 
     <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
       <label for="video">آپلود ویدیو معرفی</label>
       <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime">
       <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت</p>
-      <?php if ($profile['video_file_url'] !== '') : ?>
-        <p class="field-hint"><a href="<?= casting_e($profile['video_file_url']) ?>" target="_blank" rel="noopener">ویدیو فعلی</a></p>
+      <?php if (($profile['video_file_url'] ?? '') !== '') : ?>
+        <p class="field-hint"><a href="<?= casting_e((string) $profile['video_file_url']) ?>" target="_blank" rel="noopener">ویدیو فعلی</a></p>
       <?php endif; ?>
     </div>
 
     <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
       <label for="video_url">یا لینک ویدیو (آپارات / یوتیوب)</label>
-      <input id="video_url" name="video_url" type="url" placeholder="https://" value="<?= casting_e($profile['video_url']) ?>">
+      <input id="video_url" name="video_url" type="url" placeholder="https://" value="<?= casting_e((string) ($profile['video_url'] ?? '')) ?>">
     </div>
 
     <label class="check-row">
-      <input type="checkbox" name="visible" value="1" <?= $profile['visible'] ? 'checked' : '' ?>>
+      <input type="checkbox" name="visible" value="1" <?= !empty($profile['visible']) ? 'checked' : '' ?>>
       <span>پروفایل برای کارفرماها قابل مشاهده باشد</span>
     </label>
 
