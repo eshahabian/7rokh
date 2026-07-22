@@ -893,14 +893,9 @@
       });
 
       const submitBtn = form.querySelector("[data-register-submit]");
-      const rulesConsent = form.querySelector("[data-rules-consent]");
       const rulesCheckbox = form.querySelector("[data-rules-consent-checkbox]");
-      const isActor = hasActingSpecialty();
-      if (rulesConsent) {
-        rulesConsent.hidden = hideTalentFields;
-      }
       if (submitBtn) {
-        submitBtn.disabled = isActor && !(rulesCheckbox && rulesCheckbox.checked);
+        submitBtn.disabled = !(rulesCheckbox && rulesCheckbox.checked);
       }
     };
 

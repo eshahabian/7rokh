@@ -122,8 +122,8 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.';
         } elseif (!$skip_talent_profile && ($health_err = casting_validate_health_fields($health_parsed, true)) !== null) {
             $error = $health_err;
-        } elseif (!$skip_talent_profile && empty($_POST['rules_accepted'])) {
-            $error = 'برای ثبت‌نام به‌عنوان بازیگر، باید قوانین را مطالعه و تأیید کنید.';
+        } elseif (empty($_POST['rules_accepted'])) {
+            $error = 'برای ثبت‌نام باید قوانین را مطالعه و تأیید کنید.';
         } elseif (!$skip_talent_profile && !array_key_exists($availability, casting_availability_labels())) {
             $error = 'وضعیت آمادگی برای همکاری را انتخاب کنید.';
         } else {
@@ -390,15 +390,14 @@ if ($error !== '') {
         </div>
       </fieldset>
 
-      <div class="field" data-talent-profile-field data-rules-consent<?= $hide_talent_profile ? ' hidden' : '' ?>>
+      <div class="field rules-consent-field" data-rules-consent>
         <label class="checkbox-row">
           <input type="checkbox" name="rules_accepted" value="1" data-rules-consent-checkbox<?= !empty($_POST['rules_accepted']) ? ' checked' : '' ?>>
-          <span>قوانین را مطالعه کرده‌ام و می‌پذیرم.</span>
+          <span>قوانین را مطالعه کرده‌ام و می‌پذیرم. <a href="rules.php" target="_blank" rel="noopener">مطالعه قوانین</a></span>
         </label>
-        <p class="field-hint"><a href="rules.php" target="_blank" rel="noopener">مطالعه قوانین</a></p>
       </div>
 
-      <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= $hide_talent_profile ? '' : ' disabled' ?>>ایجاد حساب</button>
+      <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= !empty($_POST['rules_accepted']) ? '' : ' disabled' ?>>ایجاد حساب</button>
     </form>
 
     <p class="form-foot">
