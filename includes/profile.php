@@ -1628,8 +1628,10 @@ function casting_get_profile(int $user_id): array
         casting_sync_portal_owner_activities($user_id);
     }
     $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+    $wp_user = get_user_by('id', $user_id);
 
     return [
+        'email'             => $wp_user instanceof WP_User ? (string) $wp_user->user_email : '',
         'birthdate'         => (string) get_user_meta($user_id, 'casting_birthdate', true),
         'age'               => (string) get_user_meta($user_id, 'casting_age', true),
         'gender'            => (string) get_user_meta($user_id, 'casting_gender', true),
@@ -1880,6 +1882,16 @@ function casting_save_profile(int $user_id, array $data): array
     }
     if ($gender !== '') {
         update_user_meta($user_id, 'casting_gender', $gender);
+    }
+
+    if (array_key_exists('email', $data)) {
+        if (!function_exists('casting_update_user_email')) {
+            require_once __DIR__ . '/auth.php';
+        }
+        $email_result = casting_update_user_email($user_id, (string) $data['email']);
+        if (!$email_result['ok']) {
+            return $email_result;
+        }
     }
 
     if (array_key_exists('mobile', $data)) {
