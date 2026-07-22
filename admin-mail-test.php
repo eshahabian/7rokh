@@ -15,6 +15,12 @@ if (!casting_user_is_super_admin($user_id)) {
 casting_nocache();
 
 $status = casting_mail_status();
+$guard = function_exists('casting_guard_status') ? casting_guard_status() : [
+    'active' => function_exists('casting_guard_block_portal_member_on_wp'),
+    'mu_file' => false,
+    'loader_file' => false,
+    'owner' => casting_portal_owner_login(),
+];
 $error = '';
 $success = '';
 $test_to = (string) $user->user_email;
@@ -93,5 +99,22 @@ define('CASTING_SMTP_PASS', 'رمز-noreply-در-cPanel');</pre>
   </form>
 
   <p class="meta">رمز باید همان رمز اکانت <code>noreply@7rokh.ir</code> در cPanel باشد (نه رمز ایمیل قدیمی contact.us).</p>
+
+  <h2 class="panel-section-title">جداسازی ورود (mu-plugin)</h2>
+  <dl class="admin-mail-status">
+    <dt>Guard فعال در وردپرس</dt>
+    <dd><?= !empty($guard['active']) ? '✓ بله' : '✗ خیر — فایل mu-plugin نصب نشده' ?></dd>
+    <dt>فایل mu-plugins/casting-wp-admin-guard.php</dt>
+    <dd><?= !empty($guard['mu_file']) ? '✓ موجود' : '✗ نیست — deploy کنید یا دستی کپی کنید' ?></dd>
+    <dt>استثنا (می‌تواند wp-login بزند)</dt>
+    <dd><code><?= casting_e((string) ($guard['owner'] ?? '')) ?></code></dd>
+  </dl>
+  <?php if (empty($guard['mu_file'])) : ?>
+    <div class="flash flash-error admin-mail-error" role="alert">
+      <p>برای مسدود کردن wp-login اعضای پورتال، این فایل باید روی سرور باشد:</p>
+      <pre class="code-block">public_html/wp-content/mu-plugins/casting-wp-admin-guard.php</pre>
+      <p class="meta">منبع: <code>casting-portal/mu-plugin/casting-wp-admin-guard.php</code></p>
+    </div>
+  <?php endif; ?>
 </section>
 <?php casting_render_panel_end(); ?>

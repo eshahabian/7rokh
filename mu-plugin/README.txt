@@ -4,33 +4,44 @@
 
 | نوع | شناسایی | ورود |
 |-----|---------|------|
-| **وردپرس** | بدون meta `casting_role` | wp-login / wp-admin — بدون تغییر |
+| **وردپرس** | بدون meta `casting_role` | wp-login — بدون تغییر |
 | **پورتال** | دارای meta `casting_role` | فقط `/casting-portal/login.php` |
 
-## نصب
+## نصب (مهم)
 
-### خودکار (پیشنهادی)
-با deploy از git (`.cpanel.yml`) فایل loader خودکار کپی می‌شود به:
-
-```
-public_html/wp-content/mu-plugins/casting-wp-admin-guard-loader.php
-```
-
-این loader همیشه guard را از `casting-portal/mu-plugin/casting-wp-admin-guard.php` می‌خواند.
-
-### دستی (یک‌بار)
-اگر deploy خودکار ندارید:
+فایل guard باید **مستقیم** در mu-plugins وردپرس باشد:
 
 ```
-cp casting-portal/mu-plugin/casting-wp-admin-guard-loader.php \
-   public_html/wp-content/mu-plugins/casting-wp-admin-guard-loader.php
+public_html/wp-content/mu-plugins/casting-wp-admin-guard.php
 ```
+
+### deploy خودکار (.cpanel.yml)
+با git push فایل guard کپی می‌شود.
+
+### دستی (cPanel File Manager)
+کپی از:
+```
+casting-portal/mu-plugin/casting-wp-admin-guard.php
+```
+به:
+```
+wp-content/mu-plugins/casting-wp-admin-guard.php
+```
+
+## بررسی
+
+پنل → **تست ایمیل** → بخش «جداسازی ورود»
+- Guard فعال: ✓
+- فایل mu-plugin: ✓
+
+## تست
+
+- کاربر پورتال (غیر eshahabian) + `7rokh.ir/wp-login.php` → **خطا**
+- همان کاربر + `casting-portal/login.php` → **ورود**
+- **eshahabian** (owner) → wp-login **مجاز** (استثنا)
 
 ## نتیجه
 
-- کاربران وردپرس (بدون casting_role) → **هیچ تغییری**
-- اعضای پورتال → در wp-login وردپرس **ورود مسدود**
-- اگر قبلاً کوکی wp-login داشتند → روی سایت اصلی logout می‌شوند
-- استثنا: **CASTING_PORTAL_OWNER** (پیش‌فرض: eshahabian)
-
-پورتال session جدا دارد (`casting_portal_sid`).
+- کاربران وردپرس بدون casting_role → بدون تغییر
+- اعضای پورتال → wp-login و کوکی سایت اصلی مسدود
+- پورتال session جدا: `casting_portal_sid`
