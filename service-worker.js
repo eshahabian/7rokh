@@ -1,4 +1,4 @@
-const SW_VERSION = "casting-pwa-v2";
+const SW_VERSION = "casting-pwa-v3";
 const BASE = new URL("./", self.location).pathname;
 
 const PRECACHE = [
@@ -66,17 +66,13 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then((cached) => {
-      const networkFetch = fetch(event.request)
-        .then((response) => {
-          if (response && response.ok) {
-            caches.open(SW_VERSION).then((cache) => cache.put(event.request, response.clone()));
-          }
-          return response;
-        })
-        .catch(() => cached);
-
-      return cached || networkFetch;
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.ok) {
+          caches.open(SW_VERSION).then((cache) => cache.put(event.request, response.clone()));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request, { ignoreSearch: true }))
   );
 });

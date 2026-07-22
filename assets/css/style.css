@@ -2157,12 +2157,24 @@ fieldset.field legend {
 }
 
 .panel-photo-slot img {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  aspect-ratio: 3 / 4;
-  max-height: 6.5rem;
+  height: 100%;
   object-fit: cover;
   border-radius: 8px;
   display: block;
+}
+
+.panel-photo-slot-frame {
+  display: block;
+  max-height: 6.5rem;
+  border: none;
+  border-radius: 8px;
+}
+
+.panel-photo-slot-frame img {
+  border-radius: 8px;
 }
 
 .panel-photo-slot.is-empty {

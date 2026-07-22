@@ -184,7 +184,16 @@ function casting_render_panel_completion_card(array $profile): void
         ?>
       <a class="panel-photo-slot<?= $src === '' ? ' is-empty' : '' ?>" href="profile-photo.php">
         <?php if ($src !== '') : ?>
-          <img src="<?= casting_e($src) ?>" alt="<?= casting_e($label) ?>">
+          <?php $dims = casting_portrait_display_dimensions(); ?>
+          <span class="portrait-frame panel-photo-slot-frame">
+            <img
+              src="<?= casting_e($src) ?>"
+              alt="<?= casting_e($label) ?>"
+              width="<?= (int) $dims['width'] ?>"
+              height="<?= (int) $dims['height'] ?>"
+              decoding="async"
+            >
+          </span>
         <?php else : ?>
           <span class="panel-photo-slot-empty">+</span>
         <?php endif; ?>
