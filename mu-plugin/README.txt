@@ -1,25 +1,36 @@
-# mu-plugin — جداسازی دو نوع کاربر
+# mu-plugin — جداسازی ورود پورتال از وردپرس
 
 ## دو نوع کاربر
 
 | نوع | شناسایی | ورود |
 |-----|---------|------|
-| **وردپرس** | بدون meta `casting_role` | wp-login / wp-admin — بدون تغییر |
+| **وردپرس** | بدون meta `casting_role` | wp-login — بدون تغییر |
 | **پورتال** | دارای meta `casting_role` | فقط `/casting-portal/login.php` |
 
-## نصب (یک‌بار روی وردپرس اصلی)
+## نصب
+
+### خودکار (پیشنهادی)
+با deploy از git (`.cpanel.yml`) فایل guard کپی می‌شود به:
 
 ```
 public_html/wp-content/mu-plugins/casting-wp-admin-guard.php
 ```
 
-فایل را از `casting-portal/mu-plugin/` کopy کنید.
+**مهم:** فقط یک فایل — loader جدا نصب نکنید.
+
+### دستی (یک‌بار)
+```
+casting-portal/mu-plugin/casting-wp-admin-guard.php
+  → public_html/wp-content/mu-plugins/casting-wp-admin-guard.php
+```
 
 ## نتیجه
 
-- کاربران وردپرس (نویسنده، مدیر، مشترک بدون پورتال) → **هیچ تغییری**
-- اعضای پورتال → در 7rokh.ir لاگین نیستند، wp-admin ندارند
-- ورود از wp-login برای اعضای پورتال **مسدود** — پیام: «از پورتال وارد شوید»
-- استثنا: **eshahabian** (مدیر پورتال)
+- کاربران وردپرس (بدون casting_role) → بدون تغییر
+- اعضای پورتال → wp-login مسدود + کوکی سایت اصلی ست نمی‌شود
+- استثنا: `CASTING_PORTAL_OWNER` در config.php (پیش‌فرض: eshahabian)
+- پورتال session جدا: `casting_portal_sid`
 
-پورتال خودش session جدا دارد (`/casting-portal/`).
+## سازگاری
+
+فایل guard با PHP 7.4 سازگار است (بدون str_contains).
