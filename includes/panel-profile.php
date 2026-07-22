@@ -3,6 +3,35 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/profile.php';
 
+function casting_render_profile_portraits(array $portraits): void
+{
+    ?>
+    <div class="profile-portraits">
+      <?php foreach (casting_portrait_slots() as $slot => $label) :
+          $shot = $portraits[$slot] ?? ['full' => '', 'url' => ''];
+          $thumb = ($shot['url'] ?? '') !== '' ? $shot['url'] : ($shot['full'] ?? '');
+          $full = ($shot['full'] ?? '') !== '' ? $shot['full'] : $thumb;
+          ?>
+        <figure class="profile-portrait-item">
+          <?php if ($thumb !== '') : ?>
+            <button
+              type="button"
+              class="profile-portrait-thumb"
+              data-portrait-lightbox="<?= casting_e($full) ?>"
+              aria-label="نمایش بزرگ <?= casting_e($label) ?>"
+            >
+              <img src="<?= casting_e($thumb) ?>" alt="<?= casting_e($label) ?>" loading="lazy">
+            </button>
+          <?php else : ?>
+            <div class="photo-placeholder"><?= casting_e($label) ?></div>
+          <?php endif; ?>
+          <figcaption><?= casting_e($label) ?></figcaption>
+        </figure>
+      <?php endforeach; ?>
+    </div>
+    <?php
+}
+
 /**
  * @return array{error:string,success:string,profile:array|null}
  */
@@ -142,7 +171,7 @@ function casting_render_panel_completion_card(array $profile): void
   <div class="panel-photo-slots">
     <?php foreach (casting_portrait_slots() as $slot => $label) :
         $shot = $profile['portraits'][$slot] ?? ['full' => '', 'url' => ''];
-        $src = ($shot['full'] ?? '') !== '' ? $shot['full'] : ($shot['url'] ?? '');
+        $src = ($shot['url'] ?? '') !== '' ? $shot['url'] : ($shot['full'] ?? '');
         $hint = casting_portrait_slot_hints()[$slot] ?? '';
         ?>
       <a class="panel-photo-slot<?= $src === '' ? ' is-empty' : '' ?>" href="profile-photo.php">
@@ -205,21 +234,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
 
   <div class="profile-hero<?= $embedded ? ' profile-hero--panel' : '' ?>">
     <?php if (!$embedded) : ?>
-    <div class="profile-portraits">
-      <?php foreach (casting_portrait_slots() as $slot => $label) :
-          $shot = $profile['portraits'][$slot] ?? ['full' => '', 'url' => ''];
-          $src = $shot['full'] !== '' ? $shot['full'] : ($shot['url'] ?? '');
-          ?>
-        <figure class="profile-portrait-item">
-          <?php if ($src !== '') : ?>
-            <img src="<?= casting_e($src) ?>" alt="<?= casting_e($label) ?>">
-          <?php else : ?>
-            <div class="photo-placeholder"><?= casting_e($label) ?></div>
-          <?php endif; ?>
-          <figcaption><?= casting_e($label) ?></figcaption>
-        </figure>
-      <?php endforeach; ?>
-    </div>
+    <?php casting_render_profile_portraits($profile['portraits']); ?>
     <?php endif; ?>
     <div class="profile-info">
       <span class="chip"><?= casting_e(casting_role_label($member_role)) ?><?php if ($premium) : ?> · ویژه<?php endif; ?></span>

@@ -928,4 +928,50 @@
         .catch(() => {});
     });
   }
+
+  let portraitLightboxEl = null;
+  let portraitLightboxImg = null;
+
+  const closePortraitLightbox = () => {
+    if (!portraitLightboxEl) return;
+    portraitLightboxEl.classList.remove("is-open");
+    document.body.style.overflow = "";
+    window.setTimeout(() => {
+      if (portraitLightboxEl && !portraitLightboxEl.classList.contains("is-open") && portraitLightboxImg) {
+        portraitLightboxImg.removeAttribute("src");
+      }
+    }, 200);
+  };
+
+  const openPortraitLightbox = (src, alt) => {
+    if (!src) return;
+    if (!portraitLightboxEl) {
+      portraitLightboxEl = document.createElement("button");
+      portraitLightboxEl.type = "button";
+      portraitLightboxEl.className = "portrait-lightbox";
+      portraitLightboxEl.setAttribute("aria-label", "بستن تصویر");
+      portraitLightboxImg = document.createElement("img");
+      portraitLightboxEl.appendChild(portraitLightboxImg);
+      portraitLightboxEl.addEventListener("click", closePortraitLightbox);
+      document.body.appendChild(portraitLightboxEl);
+    }
+    portraitLightboxImg.src = src;
+    portraitLightboxImg.alt = alt || "";
+    portraitLightboxEl.classList.add("is-open");
+    document.body.style.overflow = "hidden";
+  };
+
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-portrait-lightbox]");
+    if (!trigger) return;
+    event.preventDefault();
+    openPortraitLightbox(
+      trigger.getAttribute("data-portrait-lightbox"),
+      trigger.querySelector("img")?.alt || ""
+    );
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closePortraitLightbox();
+  });
 })();
