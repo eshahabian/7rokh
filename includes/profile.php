@@ -1628,8 +1628,11 @@ function casting_get_profile(int $user_id): array
         casting_sync_portal_owner_activities($user_id);
     }
     $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+    $user = get_user_by('id', $user_id);
+    $email = $user ? (string) $user->user_email : '';
 
     return [
+        'email'             => $email,
         'birthdate'         => (string) get_user_meta($user_id, 'casting_birthdate', true),
         'age'               => (string) get_user_meta($user_id, 'casting_age', true),
         'gender'            => (string) get_user_meta($user_id, 'casting_gender', true),
@@ -2058,6 +2061,24 @@ function casting_save_profile(int $user_id, array $data): array
     }
     update_user_meta($user_id, 'casting_video_url', $video_url);
     update_user_meta($user_id, 'casting_visible', !empty($data['visible']) ? '1' : '0');
+
+    if (array_key_exists('email', $data)) {
+        $email = sanitize_email((string) $data['email']);
+        if (!is_email($email)) {
+            return ['ok' => false, 'error' => 'ایمیل معتبر نیست.'];
+        }
+        $existing_id = email_exists($email);
+        if ($existing_id && (int) $existing_id !== $user_id) {
+            return ['ok' => false, 'error' => 'این ایمیل قبلاً برای حساب دیگری ثبت شده است.'];
+        }
+        $current = get_userdata($user_id);
+        if (!$current || (string) $current->user_email !== $email) {
+            $updated = wp_update_user(['ID' => $user_id, 'user_email' => $email]);
+            if (is_wp_error($updated)) {
+                return ['ok' => false, 'error' => 'ذخیره ایمیل ناموفق بود: ' . $updated->get_error_message()];
+            }
+        }
+    }
 
     return ['ok' => true];
 }
