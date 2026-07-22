@@ -78,9 +78,12 @@ function casting_contact_notify_emails(): array
  */
 function casting_mail_status(): array
 {
+    $pass = defined('CASTING_SMTP_PASS') ? (string) CASTING_SMTP_PASS : '';
+
     return [
         'smtp_ready'   => casting_mail_is_smtp_ready(),
         'local_config' => file_exists(dirname(__DIR__) . '/config.local.php'),
+        'pass_set'     => $pass !== '',
         'host'         => defined('CASTING_SMTP_HOST') ? (string) CASTING_SMTP_HOST : '',
         'port'         => defined('CASTING_SMTP_PORT') ? (int) CASTING_SMTP_PORT : 0,
         'user'         => defined('CASTING_SMTP_USER') ? (string) CASTING_SMTP_USER : '',

@@ -154,6 +154,22 @@ function casting_request_password_reset(string $login): array
         return ['ok' => true, 'error' => '', 'message' => $generic];
     }
 
+    if (!is_email($user->user_email)) {
+        return [
+            'ok'      => false,
+            'error'   => 'برای این حساب ایمیل ثبت نشده است. اگر دسترسی دارید از پنل → ویرایش پروفایل ایمیل بگذارید؛ وگرنه با پشتیبانی تماس بگیرید.',
+            'message' => '',
+        ];
+    }
+
+    if (!casting_mail_is_smtp_ready()) {
+        return [
+            'ok'      => false,
+            'error'   => 'ارسال ایمیل از پورتال فعال نیست.' . casting_mail_setup_hint(),
+            'message' => '',
+        ];
+    }
+
     $key = get_password_reset_key($user);
     if (is_wp_error($key)) {
         return ['ok' => false, 'error' => 'ارسال لینک بازیابی ممکن نشد. کمی بعد دوباره تلاش کنید.', 'message' => ''];

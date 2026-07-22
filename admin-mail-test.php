@@ -52,7 +52,9 @@ casting_render_flash();
     <dt>فایل config.local.php روی سرور</dt>
     <dd><?= $status['local_config'] ? '✓ موجود' : '✗ نیست — باید دستی روی سرور بسازید' ?></dd>
     <dt>SMTP آماده</dt>
-    <dd><?= $status['smtp_ready'] ? '✓ بله' : '✗ خیر — رمز noreply@7rokh.ir در config.local.php نیست' ?></dd>
+    <dd><?= $status['smtp_ready'] ? '✓ بله' : '✗ خیر' ?></dd>
+    <dt>رمز SMTP خوانده شده</dt>
+    <dd><?= !empty($status['pass_set']) ? '✓ بله' : '✗ خیر — config.local.php را چک کنید' ?></dd>
     <dt>Host</dt>
     <dd><code><?= casting_e($status['host']) ?></code></dd>
     <dt>Port / Secure</dt>
