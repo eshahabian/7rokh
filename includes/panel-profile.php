@@ -3,15 +3,28 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/profile.php';
 
+function casting_panel_render_section(int $user_id, callable $render): void
+{
+    try {
+        $render();
+    } catch (Throwable $e) {
+        error_log('[casting-portal] panel section: ' . $e->getMessage());
+        if (function_exists('casting_user_is_super_admin') && casting_user_is_super_admin($user_id)) {
+            echo '<div class="flash flash-error" role="alert"><strong>خطا در بارگذاری بخش:</strong> '
+                . casting_e($e->getMessage()) . '</div>';
+        }
+    }
+}
+
 function casting_render_profile_portraits(array $portraits): void
 {
     $dims = casting_portrait_display_dimensions();
     ?>
     <div class="profile-portraits">
       <?php foreach (casting_portrait_slots() as $slot => $label) :
-          $shot = $portraits[$slot] ?? ['full' => '', 'url' => ''];
-          $thumb = ($shot['url'] ?? '') !== '' ? $shot['url'] : ($shot['full'] ?? '');
-          $full = ($shot['full'] ?? '') !== '' ? $shot['full'] : $thumb;
+          $shot = casting_portrait_shot($portraits, $slot);
+          $thumb = $shot['url'] !== '' ? $shot['url'] : $shot['full'];
+          $full = $shot['full'] !== '' ? $shot['full'] : $thumb;
           ?>
         <figure class="profile-portrait-item">
           <div class="portrait-frame profile-portrait-thumb">
@@ -119,8 +132,8 @@ function casting_profile_completion_items(array $profile): array
         if ($hide_talent) {
             break;
         }
-        $shot = $profile['portraits'][$slot] ?? ['id' => 0, 'full' => '', 'url' => ''];
-        $done = !empty($shot['id']) || ($shot['full'] ?? '') !== '' || ($shot['url'] ?? '') !== '';
+        $shot = casting_portrait_shot($profile['portraits'] ?? [], $slot);
+        $done = $shot['id'] > 0 || $shot['full'] !== '' || $shot['url'] !== '';
         $items[] = [
             'label' => 'عکس ' . $label,
             'done'  => $done,
@@ -180,8 +193,8 @@ function casting_render_panel_completion_card(array $profile): void
 
   <div class="panel-photo-slots">
     <?php foreach (casting_portrait_slots() as $slot => $label) :
-        $shot = $profile['portraits'][$slot] ?? ['full' => '', 'url' => ''];
-        $src = ($shot['url'] ?? '') !== '' ? $shot['url'] : ($shot['full'] ?? '');
+        $shot = casting_portrait_shot($profile['portraits'] ?? [], $slot);
+        $src = $shot['url'] !== '' ? $shot['url'] : $shot['full'];
         $hint = casting_portrait_slot_hints()[$slot] ?? '';
         ?>
       <a class="panel-photo-slot<?= $src === '' ? ' is-empty' : '' ?>" href="profile-photo.php">
@@ -570,7 +583,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     </div>
 
     <label class="check-row">
-      <input type="checkbox" name="visible" value="1" <?= $profile['visible'] ? 'checked' : '' ?>>
+      <input type="checkbox" name="visible" value="1" <?= !empty($profile['visible']) ? 'checked' : '' ?>>
       <span>پروفایل برای کارفرماها قابل مشاهده باشد</span>
     </label>
 

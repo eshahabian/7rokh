@@ -1495,6 +1495,25 @@ function casting_portrait_meta_key(string $slot): string
 }
 
 /**
+ * @param array<string, mixed> $portraits
+ * @return array{id:int,url:string,full:string}
+ */
+function casting_portrait_shot(array $portraits, string $slot): array
+{
+    $empty = ['id' => 0, 'url' => '', 'full' => ''];
+    $shot = $portraits[$slot] ?? $empty;
+    if (!is_array($shot)) {
+        return $empty;
+    }
+
+    return [
+        'id'   => (int) ($shot['id'] ?? 0),
+        'url'  => is_string($shot['url'] ?? null) ? (string) $shot['url'] : '',
+        'full' => is_string($shot['full'] ?? null) ? (string) $shot['full'] : '',
+    ];
+}
+
+/**
  * @return array{id:int,url:string,full:string}
  */
 function casting_load_portrait(int $user_id, string $slot): array
