@@ -298,20 +298,32 @@ function casting_activities_show_artistic_works(array $activities): bool
 }
 
 /**
- * فرم و نمایش پروفایل — فیلدهای مخصوص بازیگر برای کارگردان نشان داده نشود
+ * آیا حداقل یک تخصص از دسته «بازیگران» انتخاب شده؟
+ *
+ * @param list<string> $activities
+ */
+function casting_activities_has_acting(array $activities): bool
+{
+    $activities = casting_normalize_activities($activities);
+    foreach ($activities as $activity) {
+        if (casting_activity_category_for_specialty($activity) === 'acting') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * فرم و نمایش پروفایل — فیلدهای مخصوص بازیگر فقط برای دسته بازیگران
  *
  * @param list<string>|mixed $activities
  */
 function casting_profile_hides_talent_fields($activities, int $user_id = 0): bool
 {
-    if (casting_activities_are_directing_only(is_array($activities) ? $activities : [])) {
-        return true;
-    }
-    if ($user_id > 0 && casting_get_user_role($user_id) === 'director') {
-        return true;
-    }
+    unset($user_id);
 
-    return false;
+    return !casting_activities_has_acting(is_array($activities) ? $activities : []);
 }
 
 /**

@@ -110,7 +110,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $apparent_age_range = (string) ($_POST['apparent_age_range'] ?? '');
         $age_calc = $birthdate !== '' ? casting_age_from_birthdate($birthdate) : null;
         $age_preview = $age_calc !== null ? (string) $age_calc : '';
-        $skip_talent_profile = casting_activities_are_directing_only($activities);
+        $skip_talent_profile = !casting_activities_has_acting($activities);
 
         if ($password !== $password2) {
             $error = 'تکرار رمز عبور مطابقت ندارد.';

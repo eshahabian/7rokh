@@ -811,16 +811,13 @@
     const activityBox = form.querySelector("[data-activity-items]");
     if (!activityBox) return;
 
-    const isDirectingOnly = () => {
-      let hasAny = false;
+    const hasActingSpecialty = () => {
       for (const row of activityBox.querySelectorAll(".activity-row")) {
         const cat = row.querySelector("[data-activity-category]")?.value || "";
         const spec = row.querySelector("[data-activity-specialty]")?.value || "";
-        if (!spec) continue;
-        hasAny = true;
-        if (cat !== "directing") return false;
+        if (spec && cat === "acting") return true;
       }
-      return hasAny;
+      return false;
     };
 
     const hasDirectingSpecialty = () => {
@@ -833,7 +830,7 @@
     };
 
     const syncTalentProfileFields = () => {
-      const hideTalentFields = isDirectingOnly();
+      const hideTalentFields = !hasActingSpecialty();
       const enableArtisticWorks = hasDirectingSpecialty();
 
       form.querySelectorAll("[data-talent-profile-field]").forEach((wrap) => {

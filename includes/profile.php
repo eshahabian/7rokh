@@ -489,11 +489,7 @@ function casting_render_artistic_membership_fields(string $has = '', array $orgs
  */
 function casting_activities_need_body_metrics(array $activities): bool
 {
-    $need = [
-        'actor_cinema', 'actor_theater', 'actor_tv', 'actor_youth',
-        'extra', 'stunt', 'host',
-    ];
-    return count(array_intersect(casting_normalize_activities($activities), $need)) > 0;
+    return casting_activities_has_acting($activities);
 }
 
 /**
@@ -1687,7 +1683,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
     if ($activities === []) {
         return ['ok' => false, 'error' => 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.'];
     }
-    $skip_talent_profile = casting_activities_are_directing_only($activities);
+    $skip_talent_profile = !casting_activities_has_acting($activities);
 
     $look = sanitize_key((string) ($data['look'] ?? ''));
     if (!$skip_talent_profile && !array_key_exists($look, casting_look_labels())) {
@@ -1991,8 +1987,8 @@ function casting_save_profile(int $user_id, array $data): array
     update_user_meta($user_id, 'casting_work_history', sanitize_textarea_field((string) ($data['work_history'] ?? '')));
     $skip_talent_profile = false;
     if (array_key_exists('activities', $data)) {
-        $skip_talent_profile = casting_activities_are_directing_only(casting_normalize_activities($data['activities']));
-    } elseif (casting_activities_are_directing_only(casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true)))) {
+        $skip_talent_profile = !casting_activities_has_acting(casting_normalize_activities($data['activities']));
+    } elseif (!casting_activities_has_acting(casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true)))) {
         $skip_talent_profile = true;
     }
     casting_save_user_work_meta($user_id, $data, $skip_talent_profile);
