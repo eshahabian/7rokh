@@ -316,11 +316,11 @@ if ($error !== '') {
       <div class="form-grid" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
         <div class="field">
           <label for="height">قد (سانتی‌متر)</label>
-          <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e($height) ?>" placeholder="برای بازیگران">
+          <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e($height) ?>">
         </div>
         <div class="field">
           <label for="weight">وزن (کیلوگرم)</label>
-          <input id="weight" name="weight" type="number" min="20" max="250" value="<?= casting_e($weight) ?>" placeholder="برای بازیگران">
+          <input id="weight" name="weight" type="number" min="20" max="250" value="<?= casting_e($weight) ?>">
         </div>
       </div>
 
