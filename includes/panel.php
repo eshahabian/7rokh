@@ -1011,25 +1011,6 @@ function casting_parse_member_search_filters(array $input): array
 }
 
 /**
- * @return list<array<string, mixed>>
- */
-function casting_member_visible_meta_query(): array
-{
-    return [
-        'relation' => 'OR',
-        [
-            'key'     => 'casting_visible',
-            'value'   => '1',
-            'compare' => '=',
-        ],
-        [
-            'key'     => 'casting_visible',
-            'compare' => 'NOT EXISTS',
-        ],
-    ];
-}
-
-/**
  * @return array{users: WP_User[], total: int}
  */
 function casting_query_members(int $exclude_id, array $filters = [], int $page = 1, int $per_page = 20): array
@@ -1040,7 +1021,6 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
             'key'     => 'casting_role',
             'compare' => 'EXISTS',
         ],
-        casting_member_visible_meta_query(),
     ];
 
     if (!empty($filters['activity_specialty'])) {
@@ -1206,12 +1186,10 @@ function casting_newest_members(int $limit = 30, int $exclude_id = 0): array
         'orderby'    => 'registered',
         'order'      => 'DESC',
         'meta_query' => [
-            'relation' => 'AND',
             [
                 'key'     => 'casting_role',
                 'compare' => 'EXISTS',
             ],
-            casting_member_visible_meta_query(),
         ],
     ];
     if ($exclude_id > 0) {
@@ -1270,12 +1248,10 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
         'orderby'        => 'display_name',
         'order'          => 'ASC',
         'meta_query'     => [
-            'relation' => 'AND',
             [
                 'key'     => 'casting_role',
                 'compare' => 'EXISTS',
             ],
-            casting_member_visible_meta_query(),
         ],
     ];
     if ($exclude_id > 0) {
@@ -1296,9 +1272,6 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
             continue;
         }
         $profile = casting_get_profile($id);
-        if (!$profile['visible']) {
-            continue;
-        }
         $out[] = [
             'id'        => $id,
             'name'      => (string) $user->display_name,

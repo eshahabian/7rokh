@@ -452,9 +452,6 @@ function casting_panel_admin_nav_items(int $user_id): array
     if (casting_user_has_admin_permission($user_id, 'manage_staff')) {
         $items[] = ['key' => 'admin-staff', 'label' => 'دسترسی مدیران', 'href' => 'admin-staff.php', 'perm' => 'manage_staff'];
     }
-    if (casting_user_is_super_admin($user_id)) {
-        $items[] = ['key' => 'admin-mail', 'label' => 'تست ایمیل', 'href' => 'admin-mail-test.php', 'perm' => 'super'];
-    }
     return $items;
 }
 

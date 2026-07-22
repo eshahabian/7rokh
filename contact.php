@@ -47,11 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($action === 'send') {
-            $rate_error = casting_rate_limit_check('contact_send');
-            if ($rate_error !== null) {
-                $error = $rate_error;
-            } else {
-            casting_rate_limit_hit('contact_send');
             $channel = sanitize_key((string) ($_POST['channel'] ?? ''));
             $subject = sanitize_text_field((string) ($_POST['subject'] ?? ''));
             $message = sanitize_textarea_field((string) ($_POST['message'] ?? ''));
@@ -65,7 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 casting_set_flash('success', 'پیام شما ثبت شد. به‌زودی پاسخ می‌دهیم.');
                 casting_redirect('contact.php');
-            }
             }
         }
     }

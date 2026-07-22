@@ -51,7 +51,7 @@ casting_render_flash();
   <?php if (!$complete) : ?>
     <p class="meta">پروفایلتان کامل نیست. برای دیده‌شدن بهتر، اطلاعات و عکس را تکمیل کنید.</p>
   <?php else : ?>
-    <p class="meta">پروفایل آماده است<?= !empty($profile['visible']) ? ' و قابل مشاهده است' : '؛ فعلاً مخفی است' ?>.</p>
+    <p class="meta">پروفایل آماده است<?= $profile['visible'] ? ' و قابل مشاهده است' : '؛ فعلاً مخفی است' ?>.</p>
   <?php endif; ?>
   <?php if ($premium) : ?>
     <?php casting_render_premium_countdown($user_id); ?>
@@ -64,29 +64,13 @@ casting_render_flash();
   </div>
 </section>
 
-<?php
-casting_panel_render_section($user_id, static function () use ($profile): void {
-    casting_render_panel_completion_card($profile);
-});
-?>
+<?php casting_render_panel_completion_card($profile); ?>
 
 <div class="panel-profile-stack" id="profile">
   <h2 class="panel-section-title panel-stack-heading">پروفایل من</h2>
-  <?php
-  casting_panel_render_section($user_id, static function () use ($user_id): void {
-      casting_render_member_profile_view($user_id, $user_id, true);
-  });
-  ?>
+  <?php casting_render_member_profile_view($user_id, $user_id, true); ?>
 </div>
 
-<?php
-casting_panel_render_section($user_id, static function () use ($user_id, $profile, $profile_error, $profile_success, $complete): void {
-    casting_render_profile_edit_form(
-        $user_id,
-        $profile,
-        $profile_error !== '' || $profile_success !== '' || !$complete || isset($_GET['edit'])
-    );
-});
-?>
+<?php casting_render_profile_edit_form($user_id, $profile, $profile_error !== '' || $profile_success !== '' || !$complete || isset($_GET['edit'])); ?>
 
 <?php casting_render_panel_end(); ?>

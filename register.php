@@ -67,15 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $rate_error = casting_rate_limit_check('register');
-    if ($rate_error !== null) {
-        $error = $rate_error;
-    } else {
     $nonce = (string) ($_POST['_wpnonce'] ?? '');
     if ($nonce === '' || !wp_verify_nonce($nonce, 'casting_register')) {
         $error = 'نشست منقضی شده. یک‌بار صفحه را رفرش کنید و دوباره فرم را بفرستید.';
     } else {
-        casting_rate_limit_hit('register');
         $name = (string) ($_POST['name'] ?? '');
         $username = (string) ($_POST['username'] ?? '');
         $email = (string) ($_POST['email'] ?? '');
@@ -205,7 +200,6 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'خطای سرور در ثبت‌نام: ' . $e->getMessage();
             }
         }
-    }
     }
 }
 

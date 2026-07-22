@@ -51,7 +51,7 @@ function casting_guard_is_portal_request(): bool
 {
     $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
 
-    return str_contains($uri, '/casting-portal/');
+    return $uri !== '' && strpos($uri, '/casting-portal/') !== false;
 }
 
 function casting_guard_portal_login_url(): string

@@ -19,20 +19,15 @@ $error = '';
 $login = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $rate_error = casting_rate_limit_check('login');
-    if ($rate_error !== null) {
-        $error = $rate_error;
-    } elseif (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_login')) {
+    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_login')) {
         $error = 'درخواست نامعتبر است. دوباره تلاش کنید.';
     } else {
         $login = (string) ($_POST['login'] ?? '');
         $password = (string) ($_POST['password'] ?? '');
         $result = casting_login($login, $password);
         if (!$result['ok']) {
-            casting_rate_limit_hit('login');
             $error = $result['error'];
         } else {
-            casting_rate_limit_clear('login');
             casting_redirect(casting_dashboard_for_role((string) $result['role']));
         }
     }

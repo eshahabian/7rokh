@@ -154,22 +154,6 @@ function casting_request_password_reset(string $login): array
         return ['ok' => true, 'error' => '', 'message' => $generic];
     }
 
-    if (!is_email($user->user_email)) {
-        return [
-            'ok'      => false,
-            'error'   => 'برای این حساب ایمیل ثبت نشده است. اگر دسترسی دارید از پنل → ویرایش پروفایل ایمیل بگذارید؛ وگرنه با پشتیبانی تماس بگیرید.',
-            'message' => '',
-        ];
-    }
-
-    if (!casting_mail_is_smtp_ready()) {
-        return [
-            'ok'      => false,
-            'error'   => 'ارسال ایمیل از پورتال فعال نیست.' . casting_mail_setup_hint(),
-            'message' => '',
-        ];
-    }
-
     $key = get_password_reset_key($user);
     if (is_wp_error($key)) {
         return ['ok' => false, 'error' => 'ارسال لینک بازیابی ممکن نشد. کمی بعد دوباره تلاش کنید.', 'message' => ''];
@@ -187,16 +171,11 @@ function casting_request_password_reset(string $login): array
         . $url . "\n\n"
         . "اگر این درخواست از طرف شما نبوده، این ایمیل را نادیده بگیرید.\n";
 
-    $mail = casting_send_mail($user->user_email, $subject, $body);
-    if (!$mail['ok']) {
-        $hint = casting_mail_setup_hint();
-        $error = $mail['error'];
-        if ($hint !== '') {
-            $error .= ' —' . $hint;
-        }
+    $sent = wp_mail($user->user_email, $subject, $body);
+    if (!$sent) {
         return [
             'ok'      => false,
-            'error'   => $error,
+            'error'   => 'ارسال ایمیل ناموفق بود. تنظیم SMTP وردپرس را بررسی کنید.',
             'message' => '',
         ];
     }
