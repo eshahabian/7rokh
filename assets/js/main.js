@@ -987,6 +987,9 @@
   });
 
   const rulesLightbox = document.querySelector("[data-rules-lightbox]");
+  if (rulesLightbox && rulesLightbox.parentElement !== document.body) {
+    document.body.appendChild(rulesLightbox);
+  }
   const rulesLightboxPanel = rulesLightbox?.querySelector(".rules-lightbox-panel");
 
   const closeRulesLightbox = () => {

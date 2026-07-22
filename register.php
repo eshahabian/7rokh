@@ -398,14 +398,6 @@ if ($error !== '') {
         </label>
       </div>
 
-      <div class="rules-lightbox" data-rules-lightbox aria-hidden="true">
-        <div class="rules-lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="rules-lightbox-title">
-          <h2 class="rules-lightbox-title" id="rules-lightbox-title">قوانین <?= casting_e(casting_brand()) ?></h2>
-          <p class="meta">با عضویت و استفاده از پورتال، این قوانین را می‌پذیرید.</p>
-          <?php casting_render_rules_list(); ?>
-        </div>
-      </div>
-
       <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= !empty($_POST['rules_accepted']) ? '' : ' disabled' ?>>ایجاد حساب</button>
     </form>
 
@@ -414,4 +406,11 @@ if ($error !== '') {
     </p>
   </section>
 </main>
+<div class="rules-lightbox" data-rules-lightbox aria-hidden="true">
+  <div class="rules-lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="rules-lightbox-title">
+    <h2 class="rules-lightbox-title" id="rules-lightbox-title">قوانین <?= casting_e(casting_brand()) ?></h2>
+    <p class="meta">با عضویت و استفاده از پورتال، این قوانین را می‌پذیرید.</p>
+    <?php casting_render_rules_list(); ?>
+  </div>
+</div>
 <?php casting_render_footer(); ?>

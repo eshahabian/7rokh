@@ -967,26 +967,28 @@ fieldset.field legend {
 .rules-lightbox {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.25rem;
+  padding: clamp(1rem, 4vw, 2rem);
   background: rgba(0, 0, 0, 0.88);
   cursor: zoom-out;
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .rules-lightbox.is-open {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 .rules-lightbox-panel {
-  width: min(640px, 100%);
-  max-height: min(85vh, 720px);
+  width: min(640px, calc(100vw - 2rem));
+  max-height: min(85vh, 760px);
   overflow: auto;
   padding: 1.25rem 1.35rem 1.35rem;
   border: 1px solid var(--line);
@@ -995,6 +997,7 @@ fieldset.field legend {
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
   cursor: default;
   -webkit-overflow-scrolling: touch;
+  flex: 0 1 auto;
 }
 
 .rules-lightbox-title {
