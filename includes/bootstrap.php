@@ -16,6 +16,10 @@ if (!file_exists(CASTING_WP_LOAD)) {
 
 require_once CASTING_WP_LOAD;
 
+add_action('init', static function (): void {
+    add_image_size('casting_portrait', 360, 480, true);
+});
+
 require_once __DIR__ . '/mail.php';
 
 if (session_status() === PHP_SESSION_NONE) {

@@ -967,11 +967,18 @@
     event.preventDefault();
     openPortraitLightbox(
       trigger.getAttribute("data-portrait-lightbox"),
-      trigger.querySelector("img")?.alt || ""
+      trigger.closest(".profile-portrait-thumb")?.querySelector("img")?.alt || trigger.querySelector("img")?.alt || ""
     );
   });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closePortraitLightbox();
   });
+
+  const adminMemberPanel = document.querySelector("[data-admin-member-panel]");
+  if (adminMemberPanel) {
+    window.requestAnimationFrame(() => {
+      adminMemberPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 })();

@@ -15,6 +15,7 @@ $search = trim((string) ($_GET['q'] ?? ''));
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $target_id = (int) ($_GET['user'] ?? 0);
 $can_suspend = casting_user_has_admin_permission($user_id, 'suspend_users');
+$can_manage_password = true;
 $can_view_blocks = casting_user_has_admin_permission($user_id, 'view_user_blocks')
     || casting_user_has_admin_permission($user_id, 'unblock_users');
 
@@ -31,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($page > 1) {
             $redirect .= '&page=' . $page;
         }
+        $redirect .= '#member-admin';
 
         if ($action === 'suspend' && $can_suspend) {
             $result = casting_admin_suspend_user($target_id, $user_id, (string) ($_POST['reason'] ?? ''));
@@ -38,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'unsuspend' && $can_suspend) {
             $result = casting_admin_unsuspend_user($target_id, $user_id);
             casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'حساب کاربر فعال شد.' : $result['error']);
-        } elseif ($action === 'set_password' && $can_suspend) {
+        } elseif ($action === 'set_password' && $can_manage_password) {
             $result = casting_admin_set_password(
                 $target_id,
                 $user_id,
@@ -57,10 +59,12 @@ $total = $list['total'];
 $total_pages = max(1, (int) ceil($total / $list['per_page']));
 
 $target = $target_id > 0 ? get_user_by('id', $target_id) : false;
+$target_role = $target ? casting_get_user_role($target_id) : '';
 $suspended = $target ? casting_user_is_suspended($target_id) : false;
 $suspend_reason = $target ? (string) get_user_meta($target_id, 'casting_suspended_reason', true) : '';
 $target_premium = $target ? casting_user_is_premium($target_id) : false;
 $target_until_ts = $target_premium ? casting_premium_expire_timestamp($target_id) : null;
+$target_is_super = $target ? casting_user_is_super_admin($target_id) : false;
 
 $list_url = 'admin-premium-users.php';
 if ($search !== '') {
@@ -71,6 +75,17 @@ if ($search !== '') {
 } elseif ($page > 1) {
     $list_url .= '?page=' . $page;
 }
+
+$member_query = static function (int $member_id) use ($search, $page): string {
+    $url = 'admin-premium-users.php?user=' . $member_id;
+    if ($search !== '') {
+        $url .= '&q=' . rawurlencode($search);
+    }
+    if ($page > 1) {
+        $url .= '&page=' . $page;
+    }
+    return $url . '#member-admin';
+};
 
 casting_render_panel_start('مشترکین', 'admin-premium');
 if ($error !== '') {
@@ -92,6 +107,98 @@ casting_render_flash();
       <a class="btn btn-ghost" href="admin-premium-users.php">پاک کردن</a>
     <?php endif; ?>
   </form>
+
+  <?php if ($target && $target_role !== '') : ?>
+    <div class="admin-member-panel" id="member-admin" data-admin-member-panel>
+      <div class="admin-member-panel-head">
+        <h2 class="panel-section-title">مدیریت: <?= casting_e($target->display_name) ?></h2>
+        <a class="btn btn-ghost btn-sm" href="<?= casting_e($list_url) ?>">بستن</a>
+      </div>
+
+      <ul class="info-list">
+        <li><strong>نام کاربری:</strong> <?= casting_e($target->user_login) ?></li>
+        <li><strong>ایمیل:</strong> <?= casting_e($target->user_email) ?></li>
+        <li><strong>نقش:</strong> <?= casting_e(casting_role_label($target_role)) ?></li>
+        <li><strong>وضعیت حساب:</strong> <?= $suspended ? 'غیرفعال (تعلیق)' : 'فعال' ?></li>
+        <?php if ($suspended && $suspend_reason !== '') : ?>
+          <li><strong>دلیل تعلیق:</strong> <?= casting_e($suspend_reason) ?></li>
+        <?php endif; ?>
+        <li>
+          <strong>اشتراک ویژه:</strong>
+          <?php if ($target_premium) : ?>
+            <?php if ($target_until_ts !== null) : ?>
+              <span class="nav-premium-countdown admin-table-countdown" data-premium-until-ts="<?= (int) $target_until_ts ?>">
+                <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label($target_id)) ?></span>
+              </span>
+              — پایان: <?= casting_e(casting_premium_until_label($target_id)) ?>
+            <?php else : ?>
+              فعال
+            <?php endif; ?>
+          <?php else : ?>
+            ندارد
+          <?php endif; ?>
+        </li>
+      </ul>
+
+      <?php if (!$target_is_super) : ?>
+        <div class="admin-member-actions">
+          <?php if ($can_suspend) : ?>
+            <div class="admin-member-action-box">
+              <h3 class="panel-section-title">غیرفعال / فعال کردن حساب</h3>
+              <?php if ($suspended) : ?>
+                <form method="post" action="<?= casting_e($member_query($target_id)) ?>">
+                  <?php wp_nonce_field('casting_admin_members'); ?>
+                  <input type="hidden" name="target_id" value="<?= $target_id ?>">
+                  <button class="btn btn-primary" type="submit" name="action" value="unsuspend">فعال کردن حساب</button>
+                </form>
+              <?php else : ?>
+                <form class="form admin-suspend-form" method="post" action="<?= casting_e($member_query($target_id)) ?>">
+                  <?php wp_nonce_field('casting_admin_members'); ?>
+                  <input type="hidden" name="target_id" value="<?= $target_id ?>">
+                  <div class="field">
+                    <label for="reason">دلیل غیرفعال کردن (اختیاری)</label>
+                    <textarea id="reason" name="reason" rows="2" maxlength="500"></textarea>
+                  </div>
+                  <button class="btn btn-reject" type="submit" name="action" value="suspend">غیرفعال کردن حساب</button>
+                </form>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
+
+          <div class="admin-member-action-box admin-member-action-box--password">
+            <h3 class="panel-section-title">تغییر رمز عبور</h3>
+            <p class="meta">رمز جدید را وارد کنید — کاربر با رمز جدید وارد می‌شود.</p>
+            <form class="form admin-password-form" method="post" action="<?= casting_e($member_query($target_id)) ?>" data-loading>
+              <?php wp_nonce_field('casting_admin_members'); ?>
+              <input type="hidden" name="target_id" value="<?= $target_id ?>">
+              <div class="field">
+                <label for="new_password">رمز جدید</label>
+                <input id="new_password" name="new_password" type="password" minlength="8" autocomplete="new-password" required>
+              </div>
+              <div class="field">
+                <label for="confirm_password">تکرار رمز جدید</label>
+                <input id="confirm_password" name="confirm_password" type="password" minlength="8" autocomplete="new-password" required>
+              </div>
+              <button class="btn btn-primary" type="submit" name="action" value="set_password">ذخیره رمز جدید</button>
+            </form>
+          </div>
+        </div>
+      <?php else : ?>
+        <p class="meta">حساب مدیر اصلی از این بخش قابل تعلیق یا تغییر رمز نیست.</p>
+      <?php endif; ?>
+
+      <?php if (!$can_suspend && !$target_is_super) : ?>
+        <p class="meta">برای غیرفعال کردن حساب، دسترسی «تعلیق / رفع تعلیق کاربر» لازم است.</p>
+      <?php endif; ?>
+
+      <div class="cta-row">
+        <a class="btn btn-ghost btn-sm" href="member.php?id=<?= $target_id ?>">مشاهده پروفایل</a>
+        <?php if ($can_view_blocks) : ?>
+          <a class="btn btn-ghost btn-sm" href="admin-users.php?user=<?= $target_id ?>">بلاک‌ها و تاریخچه</a>
+        <?php endif; ?>
+      </div>
+    </div>
+  <?php endif; ?>
 
   <?php if (!$members) : ?>
     <p class="empty-state">کاربری پیدا نشد.</p>
@@ -137,7 +244,7 @@ casting_render_flash();
                 <?php endif; ?>
               </td>
               <td>
-                <a class="btn btn-ghost btn-sm" href="admin-premium-users.php?user=<?= (int) $row['id'] ?><?= $search !== '' ? '&q=' . rawurlencode($search) : '' ?><?= $page > 1 ? '&page=' . $page : '' ?>">مدیریت</a>
+                <a class="btn btn-primary btn-sm" href="<?= casting_e($member_query((int) $row['id'])) ?>">مدیریت</a>
                 <a class="btn btn-ghost btn-sm" href="member.php?id=<?= (int) $row['id'] ?>">پروفایل</a>
               </td>
             </tr>
@@ -157,91 +264,12 @@ casting_render_flash();
             if ($target_id > 0) {
                 $page_url .= '&user=' . $target_id;
             }
+            $page_url .= $target_id > 0 ? '#member-admin' : '';
             ?>
           <a class="btn btn-ghost btn-sm<?= $p === $page ? ' is-active' : '' ?>" href="<?= casting_e($page_url) ?>"><?= $p ?></a>
         <?php endfor; ?>
       </nav>
     <?php endif; ?>
-  <?php endif; ?>
-
-  <?php if ($target && casting_get_user_role($target_id) !== '') : ?>
-    <div class="admin-user-detail" id="member-admin">
-      <h2 class="panel-section-title">مدیریت: <?= casting_e($target->display_name) ?></h2>
-      <ul class="info-list">
-        <li><strong>نام کاربری:</strong> <?= casting_e($target->user_login) ?></li>
-        <li><strong>ایمیل:</strong> <?= casting_e($target->user_email) ?></li>
-        <li><strong>نقش:</strong> <?= casting_e(casting_role_label(casting_get_user_role($target_id))) ?></li>
-        <li><strong>وضعیت حساب:</strong> <?= $suspended ? 'غیرفعال (تعلیق)' : 'فعال' ?></li>
-        <?php if ($suspended && $suspend_reason !== '') : ?>
-          <li><strong>دلیل تعلیق:</strong> <?= casting_e($suspend_reason) ?></li>
-        <?php endif; ?>
-        <li>
-          <strong>اشتراک ویژه:</strong>
-          <?php if ($target_premium) : ?>
-            <?php if ($target_until_ts !== null) : ?>
-              <span class="nav-premium-countdown admin-table-countdown" data-premium-until-ts="<?= (int) $target_until_ts ?>">
-                <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label($target_id)) ?></span>
-              </span>
-              — پایان: <?= casting_e(casting_premium_until_label($target_id)) ?>
-            <?php else : ?>
-              فعال
-            <?php endif; ?>
-          <?php else : ?>
-            ندارد
-          <?php endif; ?>
-        </li>
-      </ul>
-
-      <?php if ($can_suspend && !casting_user_is_super_admin($target_id)) : ?>
-        <div class="admin-member-actions">
-          <h3 class="panel-section-title">غیرفعال / فعال کردن حساب</h3>
-          <?php if ($suspended) : ?>
-            <form method="post" action="admin-premium-users.php?user=<?= $target_id ?><?= $search !== '' ? '&q=' . rawurlencode($search) : '' ?><?= $page > 1 ? '&page=' . $page : '' ?>">
-              <?php wp_nonce_field('casting_admin_members'); ?>
-              <input type="hidden" name="target_id" value="<?= $target_id ?>">
-              <button class="btn btn-primary" type="submit" name="action" value="unsuspend">فعال کردن حساب</button>
-            </form>
-          <?php else : ?>
-            <form class="form admin-suspend-form" method="post" action="admin-premium-users.php?user=<?= $target_id ?><?= $search !== '' ? '&q=' . rawurlencode($search) : '' ?><?= $page > 1 ? '&page=' . $page : '' ?>">
-              <?php wp_nonce_field('casting_admin_members'); ?>
-              <input type="hidden" name="target_id" value="<?= $target_id ?>">
-              <div class="field">
-                <label for="reason">دلیل غیرفعال کردن (اختیاری)</label>
-                <textarea id="reason" name="reason" rows="2" maxlength="500"></textarea>
-              </div>
-              <button class="btn btn-reject" type="submit" name="action" value="suspend">غیرفعال کردن حساب</button>
-            </form>
-          <?php endif; ?>
-
-          <h3 class="panel-section-title">تغییر رمز عبور</h3>
-          <form class="form admin-password-form" method="post" action="admin-premium-users.php?user=<?= $target_id ?><?= $search !== '' ? '&q=' . rawurlencode($search) : '' ?><?= $page > 1 ? '&page=' . $page : '' ?>" data-loading>
-            <?php wp_nonce_field('casting_admin_members'); ?>
-            <input type="hidden" name="target_id" value="<?= $target_id ?>">
-            <div class="field">
-              <label for="new_password">رمز جدید</label>
-              <input id="new_password" name="new_password" type="password" minlength="8" autocomplete="new-password" required>
-            </div>
-            <div class="field">
-              <label for="confirm_password">تکرار رمز جدید</label>
-              <input id="confirm_password" name="confirm_password" type="password" minlength="8" autocomplete="new-password" required>
-            </div>
-            <button class="btn btn-ghost" type="submit" name="action" value="set_password">ذخیره رمز جدید</button>
-          </form>
-        </div>
-      <?php elseif ($can_suspend && casting_user_is_super_admin($target_id)) : ?>
-        <p class="meta">حساب مدیر اصلی از این بخش قابل تعلیق یا تغییر رمز نیست.</p>
-      <?php else : ?>
-        <p class="meta">برای تعلیق یا تغییر رمز، دسترسی «تعلیق / رفع تعلیق کاربر» لازم است.</p>
-      <?php endif; ?>
-
-      <div class="cta-row">
-        <a class="btn btn-ghost btn-sm" href="<?= casting_e($list_url) ?>">بستن</a>
-        <a class="btn btn-ghost btn-sm" href="member.php?id=<?= $target_id ?>">مشاهده پروفایل</a>
-        <?php if ($can_view_blocks) : ?>
-          <a class="btn btn-ghost btn-sm" href="admin-users.php?user=<?= $target_id ?>">بلاک‌ها و تاریخچه</a>
-        <?php endif; ?>
-      </div>
-    </div>
   <?php endif; ?>
 </section>
 <?php casting_render_panel_end(); ?>

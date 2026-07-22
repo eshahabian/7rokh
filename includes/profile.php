@@ -1506,8 +1506,17 @@ function casting_load_portrait(int $user_id, string $slot): array
         return $empty;
     }
 
-    $url = wp_get_attachment_image_url($id, 'medium');
+    $url = wp_get_attachment_image_url($id, 'casting_portrait');
+    if (!is_string($url) || $url === '') {
+        $url = wp_get_attachment_image_url($id, 'medium');
+    }
+    if (!is_string($url) || $url === '') {
+        $url = wp_get_attachment_image_url($id, 'thumbnail');
+    }
     $full = wp_get_attachment_image_url($id, 'large');
+    if (!is_string($full) || $full === '') {
+        $full = wp_get_attachment_image_url($id, 'full');
+    }
 
     return [
         'id'   => $id,

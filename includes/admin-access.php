@@ -219,7 +219,8 @@ function casting_admin_force_unblock(int $blocker_id, int $target_id, int $admin
  */
 function casting_admin_set_password(int $target_id, int $admin_id, string $new, string $confirm): array
 {
-    if (!casting_user_has_admin_permission($admin_id, 'suspend_users')) {
+    if (!casting_user_has_admin_permission($admin_id, 'view_premium_users')
+        && !casting_user_has_admin_permission($admin_id, 'suspend_users')) {
         return ['ok' => false, 'error' => 'اجازه تغییر رمز کاربر را ندارید.'];
     }
     if ($target_id <= 0 || casting_get_user_role($target_id) === '') {

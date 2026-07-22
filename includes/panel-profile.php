@@ -14,14 +14,15 @@ function casting_render_profile_portraits(array $portraits): void
           ?>
         <figure class="profile-portrait-item">
           <?php if ($thumb !== '') : ?>
-            <button
-              type="button"
-              class="profile-portrait-thumb"
-              data-portrait-lightbox="<?= casting_e($full) ?>"
-              aria-label="نمایش بزرگ <?= casting_e($label) ?>"
-            >
-              <img src="<?= casting_e($thumb) ?>" alt="<?= casting_e($label) ?>" loading="lazy">
-            </button>
+            <div class="profile-portrait-thumb">
+              <img src="<?= casting_e($thumb) ?>" alt="<?= casting_e($label) ?>" loading="lazy" decoding="async">
+              <button
+                type="button"
+                class="profile-portrait-zoom"
+                data-portrait-lightbox="<?= casting_e($full) ?>"
+                aria-label="نمایش بزرگ <?= casting_e($label) ?>"
+              ></button>
+            </div>
           <?php else : ?>
             <div class="photo-placeholder"><?= casting_e($label) ?></div>
           <?php endif; ?>
