@@ -51,6 +51,8 @@ casting_render_flash();
   <dl class="admin-mail-status">
     <dt>فایل config.local.php روی سرور</dt>
     <dd><?= $status['local_config'] ? '✓ موجود' : '✗ نیست — باید دستی روی سرور بسازید' ?></dd>
+    <dt>رمز SMTP خوانده شد</dt>
+    <dd><?= !empty($status['pass_loaded']) ? '✓ بله' : '✗ خیر' ?></dd>
     <dt>SMTP آماده</dt>
     <dd><?= $status['smtp_ready'] ? '✓ بله' : '✗ خیر — رمز noreply@7rokh.ir در config.local.php نیست' ?></dd>
     <dt>Host</dt>

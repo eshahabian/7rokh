@@ -13,13 +13,53 @@ function casting_mail_is_smtp_enabled(): bool
         && CASTING_SMTP_USER !== '';
 }
 
+function casting_local_config_path(): string
+{
+    return dirname(__DIR__) . '/config.local.php';
+}
+
+function casting_read_local_smtp_pass(): string
+{
+    $path = casting_local_config_path();
+    if (!is_readable($path)) {
+        return '';
+    }
+
+    $src = file_get_contents($path);
+    if (!is_string($src) || $src === '') {
+        return '';
+    }
+
+    if (preg_match("/define\s*\(\s*['\"]CASTING_SMTP_PASS['\"]\s*,\s*['\"]([^'\"]*)['\"]\s*\)/", $src, $m)) {
+        return (string) $m[1];
+    }
+
+    return '';
+}
+
+function casting_smtp_password(): string
+{
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $pass = defined('CASTING_SMTP_PASS') ? (string) CASTING_SMTP_PASS : '';
+    if ($pass === '') {
+        $pass = casting_read_local_smtp_pass();
+    }
+
+    $cached = $pass;
+    return $cached;
+}
+
 function casting_mail_is_smtp_ready(): bool
 {
     if (!casting_mail_is_smtp_enabled()) {
         return false;
     }
-    $pass = defined('CASTING_SMTP_PASS') ? (string) CASTING_SMTP_PASS : '';
-    return $pass !== '';
+
+    return casting_smtp_password() !== '';
 }
 
 function casting_mail_setup_hint(): string
@@ -28,12 +68,12 @@ function casting_mail_setup_hint(): string
         return ' SMTP را در config.php تنظیم کنید.';
     }
     if (!casting_mail_is_smtp_ready()) {
-        $local = file_exists(dirname(__DIR__) . '/config.local.php');
+        $local = is_readable(casting_local_config_path());
         if ($local) {
-            return ' فایل config.local.php هست ولی CASTING_SMTP_PASS خالی است — رمز noreply@7rokh.ir را در آن بگذارید.';
+            return ' فایل config.local.php روی سرور هست ولی CASTING_SMTP_PASS خالی یا اشتباه است — رمز noreply@7rokh.ir را در public_html/casting-portal/config.local.php بگذارید.';
         }
 
-        return ' فایل config.local.php بسازید (از config.local.php.example) و CASTING_SMTP_PASS را با رمز noreply@7rokh.ir پر کنید.';
+        return ' فایل public_html/casting-portal/config.local.php روی سرور نیست — از config.local.php.example کپی کنید و CASTING_SMTP_PASS را با رمز noreply@7rokh.ir پر کنید.';
     }
     return '';
 }
@@ -79,13 +119,14 @@ function casting_contact_notify_emails(): array
 }
 
 /**
- * @return array{smtp_ready:bool,local_config:bool,host:string,port:int,user:string,from:string,secure:string}
+ * @return array{smtp_ready:bool,local_config:bool,pass_loaded:bool,host:string,port:int,user:string,from:string,secure:string}
  */
 function casting_mail_status(): array
 {
     return [
         'smtp_ready'   => casting_mail_is_smtp_ready(),
-        'local_config' => file_exists(dirname(__DIR__) . '/config.local.php'),
+        'local_config' => is_readable(casting_local_config_path()),
+        'pass_loaded'  => casting_smtp_password() !== '',
         'host'         => defined('CASTING_SMTP_HOST') ? (string) CASTING_SMTP_HOST : '',
         'port'         => defined('CASTING_SMTP_PORT') ? (int) CASTING_SMTP_PORT : 0,
         'user'         => defined('CASTING_SMTP_USER') ? (string) CASTING_SMTP_USER : '',
@@ -108,7 +149,7 @@ function casting_init_phpmailer($phpmailer): void
     $phpmailer->Port = $port;
     $phpmailer->SMTPAuth = true;
     $phpmailer->Username = CASTING_SMTP_USER;
-    $phpmailer->Password = defined('CASTING_SMTP_PASS') ? (string) CASTING_SMTP_PASS : '';
+    $phpmailer->Password = casting_smtp_password();
 
     if ($secure === 'ssl' || $secure === 'tls') {
         $phpmailer->SMTPSecure = $secure;

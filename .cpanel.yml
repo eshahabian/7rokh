@@ -5,5 +5,6 @@ deployment:
     - export MUPATH=/home/rokhir/public_html/wp-content/mu-plugins/
     - /bin/rm -f $MUPATH/casting-wp-admin-guard-loader.php
     - /bin/cp -R * $DEPLOYPATH
+    - test -f $DEPLOYPATH/config.local.php || cp $DEPLOYPATH/config.local.php.example $DEPLOYPATH/config.local.php
     - /bin/mkdir -p $MUPATH
     - /bin/cp $DEPLOYPATH/mu-plugin/casting-wp-admin-guard.php $MUPATH/casting-wp-admin-guard.php
