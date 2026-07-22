@@ -90,15 +90,22 @@ a:hover {
 }
 
 .brand {
-  font-family: var(--display);
-  font-size: clamp(1.7rem, 3vw, 2.1rem);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
 }
 
-.brand:hover {
-  color: var(--accent);
+.brand-logo {
+  display: block;
+  height: clamp(2.4rem, 5.5vw, 3rem);
+  width: auto;
+  max-width: min(200px, 72vw);
+  object-fit: contain;
+}
+
+.brand:hover .brand-logo {
+  opacity: 0.9;
 }
 
 .nav {
