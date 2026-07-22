@@ -171,11 +171,16 @@ function casting_request_password_reset(string $login): array
         . $url . "\n\n"
         . "اگر این درخواست از طرف شما نبوده، این ایمیل را نادیده بگیرید.\n";
 
-    $sent = wp_mail($user->user_email, $subject, $body);
-    if (!$sent) {
+    $mail = casting_send_mail($user->user_email, $subject, $body);
+    if (!$mail['ok']) {
+        $hint = casting_mail_setup_hint();
+        $error = $mail['error'];
+        if ($hint !== '') {
+            $error .= ' —' . $hint;
+        }
         return [
             'ok'      => false,
-            'error'   => 'ارسال ایمیل ناموفق بود. تنظیم SMTP وردپرس را بررسی کنید.',
+            'error'   => $error,
             'message' => '',
         ];
     }
