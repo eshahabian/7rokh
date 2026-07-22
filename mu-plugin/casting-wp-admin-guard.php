@@ -1,12 +1,18 @@
 <?php
 /**
- * Plugin Name: Casting Portal — جداسازی کاربران
- * Description: دو نوع کاربر: وردپرس (بدون casting_role) و پورتال (با casting_role). اعضای پورتال فقط از پورتال لاگین می‌کنند.
+ * Casting Portal — جداسازی کاربران پورتال از ورود وردپرس اصلی
  *
- * نصب: public_html/wp-content/mu-plugins/casting-wp-admin-guard.php
+ * اعضای پورتال (دارای casting_role) فقط از /casting-portal/login.php وارد می‌شوند.
+ * کاربران وردپرس (بدون casting_role) — بدون تغییر.
+ *
+ * نصب خودکار: فایل loader در wp-content/mu-plugins/ (با deploy پورتال)
  */
 
 declare(strict_types=1);
+
+if (function_exists('casting_guard_register')) {
+    return;
+}
 
 function casting_guard_portal_member_user_id(int $user_id): bool
 {
@@ -27,10 +33,29 @@ function casting_guard_portal_owner_login(): string
         }
     }
 
-    return 'eshahabian';
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $cached = 'eshahabian';
+    if (defined('ABSPATH')) {
+        $config = ABSPATH . 'casting-portal/config.php';
+        if (is_readable($config)) {
+            $src = file_get_contents($config);
+            if (is_string($src) && preg_match("/define\s*\(\s*'CASTING_PORTAL_OWNER'\s*,\s*'([^']+)'/", $src, $m)) {
+                $login = strtolower(trim($m[1]));
+                if ($login !== '') {
+                    $cached = $login;
+                }
+            }
+        }
+    }
+
+    return $cached;
 }
 
-/** کاربر وردپرس (بدون casting_role) — دست‌نخورده. عضو پورتال — فقط eshahabian استثنا. */
+/** کاربر وردپرس (بدون casting_role) — دست‌نخورده. عضو پورتال — فقط owner استثنا. */
 function casting_guard_user_may_use_wp(int $user_id): bool
 {
     if ($user_id <= 0) {
@@ -64,6 +89,11 @@ function casting_guard_portal_panel_url(): string
     return home_url('/casting-portal/panel.php');
 }
 
+function casting_guard_block_portal_member_on_wp(int $user_id): bool
+{
+    return casting_guard_portal_member_user_id($user_id) && !casting_guard_user_may_use_wp($user_id);
+}
+
 function casting_guard_strip_portal_member_wp_auth(): void
 {
     if (casting_guard_is_portal_request() || wp_doing_ajax() || wp_doing_cron()) {
@@ -74,7 +104,7 @@ function casting_guard_strip_portal_member_wp_auth(): void
     }
 
     $user_id = (int) get_current_user_id();
-    if (casting_guard_user_may_use_wp($user_id)) {
+    if (!casting_guard_block_portal_member_on_wp($user_id)) {
         return;
     }
 
@@ -82,13 +112,9 @@ function casting_guard_strip_portal_member_wp_auth(): void
     wp_set_current_user(0);
 }
 
-add_action('init', 'casting_guard_strip_portal_member_wp_auth', 1);
-
-add_filter('authenticate', static function ($user, $username, $password) {
-    if (!($user instanceof WP_User)) {
-        return $user;
-    }
-    if (casting_guard_portal_member_user_id((int) $user->ID) && !casting_guard_user_may_use_wp((int) $user->ID)) {
+function casting_guard_reject_portal_member_auth($user)
+{
+    if ($user instanceof WP_User && casting_guard_block_portal_member_on_wp((int) $user->ID)) {
         return new WP_Error(
             'casting_portal_only',
             'این حساب مربوط به پورتال است. لطفاً از صفحه ورود پورتال وارد شوید.'
@@ -96,49 +122,90 @@ add_filter('authenticate', static function ($user, $username, $password) {
     }
 
     return $user;
-}, 30, 3);
+}
 
-add_action('login_init', static function (): void {
-    if (!is_user_logged_in()) {
+function casting_guard_register(): void
+{
+    static $registered = false;
+    if ($registered) {
         return;
     }
-    $user_id = (int) get_current_user_id();
-    if (casting_guard_portal_member_user_id($user_id) && !casting_guard_user_may_use_wp($user_id)) {
+    $registered = true;
+
+    add_action('init', 'casting_guard_strip_portal_member_wp_auth', 1);
+    add_action('template_redirect', 'casting_guard_strip_portal_member_wp_auth', 1);
+
+    add_filter('authenticate', 'casting_guard_reject_portal_member_auth', 99, 1);
+    add_filter('wp_authenticate_user', 'casting_guard_reject_portal_member_auth', 99, 1);
+
+    add_filter('send_auth_cookies', static function (bool $send, int $user_id): bool {
+        if (casting_guard_block_portal_member_on_wp($user_id)) {
+            return false;
+        }
+
+        return $send;
+    }, 10, 2);
+
+    add_action('wp_login', static function (string $user_login, WP_User $user): void {
+        if (!casting_guard_block_portal_member_on_wp((int) $user->ID)) {
+            return;
+        }
         wp_clear_auth_cookie();
+        wp_set_current_user(0);
         wp_safe_redirect(casting_guard_portal_login_url());
         exit;
-    }
-});
+    }, 1, 2);
 
-add_action('admin_init', static function (): void {
-    if (wp_doing_ajax() || !is_user_logged_in()) {
-        return;
-    }
-    $user_id = (int) get_current_user_id();
-    if (casting_guard_portal_member_user_id($user_id) && !casting_guard_user_may_use_wp($user_id)) {
-        wp_safe_redirect(casting_guard_portal_panel_url());
-        exit;
-    }
-}, 1);
+    add_action('login_init', static function (): void {
+        if (!is_user_logged_in()) {
+            return;
+        }
+        $user_id = (int) get_current_user_id();
+        if (casting_guard_block_portal_member_on_wp($user_id)) {
+            wp_clear_auth_cookie();
+            wp_safe_redirect(casting_guard_portal_login_url());
+            exit;
+        }
+    });
 
-add_filter('login_redirect', static function ($redirect_to, $requested_redirect_to, $user) {
-    if ($user instanceof WP_User && casting_guard_portal_member_user_id((int) $user->ID) && !casting_guard_user_may_use_wp((int) $user->ID)) {
-        return casting_guard_portal_panel_url();
-    }
+    add_action('admin_init', static function (): void {
+        if (wp_doing_ajax() || !is_user_logged_in()) {
+            return;
+        }
+        $user_id = (int) get_current_user_id();
+        if (casting_guard_block_portal_member_on_wp($user_id)) {
+            wp_safe_redirect(casting_guard_portal_panel_url());
+            exit;
+        }
+    }, 1);
 
-    return $redirect_to;
-}, 10, 3);
+    add_filter('login_redirect', static function ($redirect_to, $requested_redirect_to, $user) {
+        if ($user instanceof WP_User && casting_guard_block_portal_member_on_wp((int) $user->ID)) {
+            return casting_guard_portal_panel_url();
+        }
 
-add_filter('show_admin_bar', static function ($show) {
-    if (!is_user_logged_in()) {
+        return $redirect_to;
+    }, 10, 3);
+
+    add_filter('show_admin_bar', static function ($show) {
+        if (!is_user_logged_in()) {
+            return $show;
+        }
+        $user_id = (int) get_current_user_id();
+        if (casting_guard_block_portal_member_on_wp($user_id)) {
+            return false;
+        }
+
         return $show;
-    }
-    $user_id = (int) get_current_user_id();
-    if (casting_guard_portal_member_user_id($user_id) && !casting_guard_user_may_use_wp($user_id)) {
-        return false;
-    }
+    });
 
-    return $show;
-});
+    add_filter('application_password_is_api_request_for_user', static function ($is_api_request, $user) {
+        if ($user instanceof WP_User && casting_guard_block_portal_member_on_wp((int) $user->ID)) {
+            return false;
+        }
 
-add_action('template_redirect', 'casting_guard_strip_portal_member_wp_auth', 1);
+        return $is_api_request;
+    }, 10, 2);
+}
+
+casting_guard_register();

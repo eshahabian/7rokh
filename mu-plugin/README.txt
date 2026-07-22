@@ -7,19 +7,30 @@
 | **وردپرس** | بدون meta `casting_role` | wp-login / wp-admin — بدون تغییر |
 | **پورتال** | دارای meta `casting_role` | فقط `/casting-portal/login.php` |
 
-## نصب (یک‌بار روی وردپرس اصلی)
+## نصب
+
+### خودکار (پیشنهادی)
+با deploy از git (`.cpanel.yml`) فایل loader خودکار کپی می‌شود به:
 
 ```
-public_html/wp-content/mu-plugins/casting-wp-admin-guard.php
+public_html/wp-content/mu-plugins/casting-wp-admin-guard-loader.php
 ```
 
-فایل را از `casting-portal/mu-plugin/` کopy کنید.
+این loader همیشه guard را از `casting-portal/mu-plugin/casting-wp-admin-guard.php` می‌خواند.
+
+### دستی (یک‌بار)
+اگر deploy خودکار ندارید:
+
+```
+cp casting-portal/mu-plugin/casting-wp-admin-guard-loader.php \
+   public_html/wp-content/mu-plugins/casting-wp-admin-guard-loader.php
+```
 
 ## نتیجه
 
-- کاربران وردپرس (نویسنده، مدیر، مشترک بدون پورتال) → **هیچ تغییری**
-- اعضای پورتال → در 7rokh.ir لاگین نیستند، wp-admin ندارند
-- ورود از wp-login برای اعضای پورتال **مسدود** — پیام: «از پورتال وارد شوید»
-- استثنا: **eshahabian** (مدیر پورتال)
+- کاربران وردپرس (بدون casting_role) → **هیچ تغییری**
+- اعضای پورتال → در wp-login وردپرس **ورود مسدود**
+- اگر قبلاً کوکی wp-login داشتند → روی سایت اصلی logout می‌شوند
+- استثنا: **CASTING_PORTAL_OWNER** (پیش‌فرض: eshahabian)
 
-پورتال خودش session جدا دارد (`/casting-portal/`).
+پورتال session جدا دارد (`casting_portal_sid`).

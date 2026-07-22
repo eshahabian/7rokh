@@ -16,6 +16,13 @@ if (!file_exists(CASTING_WP_LOAD)) {
 
 require_once CASTING_WP_LOAD;
 
+$casting_guard = dirname(__DIR__) . '/mu-plugin/casting-wp-admin-guard.php';
+if (is_readable($casting_guard) && function_exists('casting_guard_register')) {
+    casting_guard_register();
+} elseif (is_readable($casting_guard)) {
+    require_once $casting_guard;
+}
+
 add_action('init', static function (): void {
     add_image_size('casting_portrait', 360, 480, true);
 });
