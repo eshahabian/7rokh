@@ -20,6 +20,30 @@ function casting_dm_read_meta_key(): string
     return 'casting_dm_read';
 }
 
+function casting_dm_has_conversation(int $user_a, int $user_b): bool
+{
+    if ($user_a <= 0 || $user_b <= 0 || $user_a === $user_b) {
+        return false;
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $found = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM {$table}
+         WHERE (sender_id = %d AND recipient_id = %d)
+            OR (sender_id = %d AND recipient_id = %d)
+         LIMIT 1",
+        $user_a,
+        $user_b,
+        $user_b,
+        $user_a
+    ));
+
+    return (int) $found > 0;
+}
+
 /**
  * @return array<int, int> peer_id => last_read_message_id
  */
