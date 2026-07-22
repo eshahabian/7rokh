@@ -38,10 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $profile = casting_get_profile($user_id);
 
 casting_render_panel_start('ویرایش تصویر', 'photo');
-if ($error !== '') {
-    echo '<div class="flash flash-error" role="alert">' . casting_e($error) . '</div>';
-}
-casting_render_flash();
 ?>
 <section class="dash-card panel-wide">
   <h1>ویرایش تصویر</h1>
@@ -50,6 +46,12 @@ casting_render_flash();
   <form class="form" method="post" action="profile-photo.php" enctype="multipart/form-data">
     <?php wp_nonce_field('casting_photo'); ?>
     <?php casting_render_portrait_upload_fields($profile['portraits'] ?? [], false); ?>
+    <div class="portrait-form-feedback">
+      <?php if ($error !== '') : ?>
+        <div class="flash flash-error" role="alert"><?= casting_e($error) ?></div>
+      <?php endif; ?>
+      <?php casting_render_flash(); ?>
+    </div>
     <button class="btn btn-primary" type="submit">ذخیره عکس‌ها</button>
   </form>
 </section>

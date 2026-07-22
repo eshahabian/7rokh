@@ -842,6 +842,16 @@ fieldset.field legend {
   max-width: 720px;
 }
 
+.portrait-form-feedback {
+  max-width: 720px;
+  margin: 0 0 1rem;
+}
+
+.portrait-form-feedback .flash {
+  width: 100%;
+  margin: 0;
+}
+
 .portrait-upload-card {
   display: grid;
   gap: 0.75rem;
