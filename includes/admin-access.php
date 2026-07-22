@@ -16,7 +16,7 @@ function casting_admin_permission_definitions(): array
         'view_user_blocks'   => 'مشاهده بلاک‌های کاربران',
         'view_contact_messages' => 'مشاهده پیام‌های تماس',
         'suspend_users'      => 'تعلیق / رفع تعلیق کاربر',
-        'view_premium_users' => 'مشاهده مشترکین ویژه',
+        'view_premium_users' => 'مدیریت مشترکین',
         'manage_staff'       => 'مدیریت دسترسی مدیران',
     ];
 }
@@ -215,6 +215,85 @@ function casting_admin_force_unblock(int $blocker_id, int $target_id, int $admin
 }
 
 /**
+ * @return array{ok:bool,error:string}
+ */
+function casting_admin_set_password(int $target_id, int $admin_id, string $new, string $confirm): array
+{
+    if (!casting_user_has_admin_permission($admin_id, 'suspend_users')) {
+        return ['ok' => false, 'error' => 'اجازه تغییر رمز کاربر را ندارید.'];
+    }
+    if ($target_id <= 0 || casting_get_user_role($target_id) === '') {
+        return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
+    }
+    if (casting_user_is_super_admin($target_id)) {
+        return ['ok' => false, 'error' => 'رمز مدیر اصلی از این بخش قابل تغییر نیست.'];
+    }
+    if (strlen($new) < 8) {
+        return ['ok' => false, 'error' => 'رمز جدید باید حداقل ۸ کاراکتر باشد.'];
+    }
+    if ($new !== $confirm) {
+        return ['ok' => false, 'error' => 'تکرار رمز جدید مطابقت ندارد.'];
+    }
+
+    wp_set_password($new, $target_id);
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * @return array{rows:array<int, array{id:int,name:string,login:string,email:string,role:string,suspended:bool,premium:bool,until:string,remaining:string,until_ts:?int}>,total:int,page:int,per_page:int}
+ */
+function casting_list_casting_members(int $page = 1, int $per_page = 50, string $search = ''): array
+{
+    $page = max(1, $page);
+    $per_page = max(1, min(100, $per_page));
+    $search = trim($search);
+
+    $args = [
+        'meta_key'     => 'casting_role',
+        'meta_compare' => 'EXISTS',
+        'number'       => $per_page,
+        'offset'       => ($page - 1) * $per_page,
+        'orderby'      => 'registered',
+        'order'        => 'DESC',
+        'count_total'  => true,
+    ];
+    if ($search !== '') {
+        $args['search'] = '*' . $search . '*';
+        $args['search_columns'] = ['user_login', 'user_email', 'display_name'];
+    }
+
+    $query = new WP_User_Query($args);
+    $out = [];
+    foreach ($query->get_results() as $user) {
+        $id = (int) $user->ID;
+        if (casting_get_user_role($id) === '') {
+            continue;
+        }
+        $premium = casting_user_is_premium($id);
+        $until_ts = $premium ? casting_premium_expire_timestamp($id) : null;
+        $out[] = [
+            'id'        => $id,
+            'name'      => (string) $user->display_name,
+            'login'     => (string) $user->user_login,
+            'email'     => (string) $user->user_email,
+            'role'      => casting_get_user_role($id),
+            'suspended' => casting_user_is_suspended($id),
+            'premium'   => $premium,
+            'until'     => $premium ? casting_premium_until_label($id) : '',
+            'remaining' => $premium ? casting_premium_countdown_nav_label($id) : '',
+            'until_ts'  => $until_ts,
+        ];
+    }
+
+    return [
+        'rows'     => $out,
+        'total'    => (int) $query->get_total(),
+        'page'     => $page,
+        'per_page' => $per_page,
+    ];
+}
+
+/**
  * @return array<int, array{id:int,name:string,login:string,role:string,until:string,remaining:string,until_ts:?int}>
  */
 function casting_list_premium_members(): array
@@ -286,6 +365,9 @@ function casting_admin_search_casting_users(string $query, int $limit = 40): arr
             'role'      => casting_get_user_role($id),
             'suspended' => casting_user_is_suspended($id),
             'premium'   => casting_user_is_premium($id),
+            'until'     => casting_user_is_premium($id) ? casting_premium_until_label($id) : '',
+            'remaining' => casting_user_is_premium($id) ? casting_premium_countdown_nav_label($id) : '',
+            'until_ts'  => casting_user_is_premium($id) ? casting_premium_expire_timestamp($id) : null,
             'staff'     => casting_user_is_portal_staff($id) || casting_user_is_super_admin($id),
         ];
     }
@@ -354,7 +436,7 @@ function casting_panel_admin_nav_items(int $user_id): array
 {
     $items = [];
     if (casting_user_has_admin_permission($user_id, 'view_premium_users')) {
-        $items[] = ['key' => 'admin-premium', 'label' => 'مشترکین ویژه', 'href' => 'admin-premium-users.php', 'perm' => 'view_premium_users'];
+        $items[] = ['key' => 'admin-premium', 'label' => 'مشترکین', 'href' => 'admin-premium-users.php', 'perm' => 'view_premium_users'];
     }
     if (casting_user_has_admin_permission($user_id, 'approve_receipts')) {
         $items[] = ['key' => 'admin-receipts', 'label' => 'تأیید فیش‌ها', 'href' => 'premium.php#admin-receipts', 'perm' => 'approve_receipts'];
@@ -364,9 +446,6 @@ function casting_panel_admin_nav_items(int $user_id): array
     }
     if (casting_user_has_admin_permission($user_id, 'view_user_blocks')) {
         $items[] = ['key' => 'admin-blocks', 'label' => 'بلاک‌های کاربران', 'href' => 'admin-blocks.php', 'perm' => 'view_user_blocks'];
-    }
-    if (casting_user_has_admin_permission($user_id, 'suspend_users') || casting_user_has_admin_permission($user_id, 'unblock_users')) {
-        $items[] = ['key' => 'admin-users', 'label' => 'کاربران و تعلیق', 'href' => 'admin-users.php', 'perm' => 'suspend_users'];
     }
     if (casting_user_has_admin_permission($user_id, 'manage_staff')) {
         $items[] = ['key' => 'admin-staff', 'label' => 'دسترسی مدیران', 'href' => 'admin-staff.php', 'perm' => 'manage_staff'];

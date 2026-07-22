@@ -21,6 +21,7 @@ $results = $search !== '' ? casting_admin_search_casting_users($search) : [];
 $can_suspend = casting_user_has_admin_permission($user_id, 'suspend_users');
 $can_unblock = casting_user_has_admin_permission($user_id, 'unblock_users');
 $can_view_blocks = casting_user_has_admin_permission($user_id, 'view_user_blocks');
+$can_manage_members = casting_user_has_admin_permission($user_id, 'view_premium_users');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_admin_users')) {
@@ -50,15 +51,15 @@ $block_history = ($target && $can_view_blocks) ? casting_admin_user_block_histor
 $suspended = $target ? casting_user_is_suspended($target_id) : false;
 $suspend_reason = $target ? (string) get_user_meta($target_id, 'casting_suspended_reason', true) : '';
 
-casting_render_panel_start('کاربران و تعلیق', 'admin-users');
+casting_render_panel_start('بلاک‌های کاربر', 'admin-users');
 if ($error !== '') {
     echo '<div class="flash flash-error" role="alert">' . casting_e($error) . '</div>';
 }
 casting_render_flash();
 ?>
 <section class="dash-card">
-  <h1>کاربران و تعلیق</h1>
-  <p class="meta">جستجو، تعلیق حساب، یا رفع بلاک بین کاربران.</p>
+  <h1>بلاک‌های کاربر</h1>
+  <p class="meta">مدیریت بلاک و تاریخچه. برای لیست اعضا و تعلیق حساب به <a href="admin-premium-users.php">مشترکین</a> بروید.</p>
 
   <form class="form admin-search-form" method="get" action="admin-users.php">
     <div class="field">
@@ -92,11 +93,29 @@ casting_render_flash();
         <li><strong>نام کاربری:</strong> <?= casting_e($target->user_login) ?></li>
         <li><strong>ایمیل:</strong> <?= casting_e($target->user_email) ?></li>
         <li><strong>نقش:</strong> <?= casting_e(casting_role_label(casting_get_user_role($target_id))) ?></li>
-        <li><strong>وضعیت:</strong> <?= $suspended ? 'معلق' : 'فعال' ?></li>
+        <li><strong>وضعیت:</strong> <?= $suspended ? 'غیرفعال' : 'فعال' ?></li>
         <?php if ($suspended && $suspend_reason !== '') : ?>
           <li><strong>دلیل تعلیق:</strong> <?= casting_e($suspend_reason) ?></li>
         <?php endif; ?>
+        <?php if (casting_user_is_premium($target_id)) : ?>
+          <?php $until_ts = casting_premium_expire_timestamp($target_id); ?>
+          <li>
+            <strong>اشتراک ویژه:</strong>
+            <?php if ($until_ts !== null) : ?>
+              <span class="nav-premium-countdown admin-table-countdown" data-premium-until-ts="<?= (int) $until_ts ?>">
+                <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label($target_id)) ?></span>
+              </span>
+              — پایان: <?= casting_e(casting_premium_until_label($target_id)) ?>
+            <?php else : ?>
+              فعال
+            <?php endif; ?>
+          </li>
+        <?php endif; ?>
       </ul>
+
+      <?php if ($can_manage_members) : ?>
+        <p class="meta"><a href="admin-premium-users.php?user=<?= $target_id ?>">مدیریت حساب و رمز در بخش مشترکین</a></p>
+      <?php endif; ?>
 
       <?php if ($can_suspend && !casting_user_is_super_admin($target_id)) : ?>
         <div class="cta-row">
@@ -104,17 +123,17 @@ casting_render_flash();
             <form method="post" action="admin-users.php?user=<?= $target_id ?>">
               <?php wp_nonce_field('casting_admin_users'); ?>
               <input type="hidden" name="target_id" value="<?= $target_id ?>">
-              <button class="btn btn-primary" type="submit" name="action" value="unsuspend">رفع تعلیق</button>
+              <button class="btn btn-primary" type="submit" name="action" value="unsuspend">فعال کردن حساب</button>
             </form>
           <?php else : ?>
             <form class="form admin-suspend-form" method="post" action="admin-users.php?user=<?= $target_id ?>">
               <?php wp_nonce_field('casting_admin_users'); ?>
               <input type="hidden" name="target_id" value="<?= $target_id ?>">
               <div class="field">
-                <label for="reason">دلیل تعلیق (اختیاری)</label>
+                <label for="reason">دلیل غیرفعال کردن (اختیاری)</label>
                 <textarea id="reason" name="reason" rows="2" maxlength="500"></textarea>
               </div>
-              <button class="btn btn-reject" type="submit" name="action" value="suspend">تعلیق کاربر</button>
+              <button class="btn btn-reject" type="submit" name="action" value="suspend">غیرفعال کردن حساب</button>
             </form>
           <?php endif; ?>
         </div>
