@@ -4,7 +4,7 @@
  * wp-load را load نمی‌کند؛ مستقیم فایل guard خراب را پاک می‌کند.
  *
  * آپلود: public_html/emergency-fix.php
- * باز کنید: https://7rokh.ir/emergency-fix.php?key=7rokh-fix-now
+ * باز کنید: https://7rokh.ir/casting-portal/emergency-fix.php?key=7rokh-fix-now
  * بعد از موفقیت این فایل را حذف کنید.
  */
 declare(strict_types=1);
@@ -18,6 +18,10 @@ if (($_GET['key'] ?? '') !== '7rokh-fix-now') {
 }
 
 $root = __DIR__;
+// اگر داخل casting-portal اجرا شد، ریشه وردپرس یک پوشه بالاتر است
+if (is_dir($root . '/../wp-content') && !is_dir($root . '/wp-content')) {
+    $root = dirname($root);
+}
 $targets = [
     $root . '/wp-content/mu-plugins/casting-wp-admin-guard.php',
     $root . '/wp-content/mu-plugins/casting-wp-admin-guard-loader.php',
