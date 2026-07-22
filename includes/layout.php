@@ -24,7 +24,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=70">
+  <link rel="stylesheet" href="<?= $css ?>?v=69">
 </head>
 <body class="<?= casting_e($body_class) ?>">
   <div class="bg-atmosphere" aria-hidden="true"></div>
@@ -34,14 +34,11 @@ function casting_render_head(string $title, string $body_class = ''): void
 function casting_render_header(?string $active = null): void
 {
     $brand = casting_e(casting_brand());
-    $logo = casting_e(casting_asset('img/logo.png'));
     $user = casting_current_user();
     $role = $user ? casting_get_user_role((int) $user->ID) : '';
     ?>
   <header class="site-header">
-    <a class="brand" href="index.php">
-      <img class="brand-logo" src="<?= $logo ?>" alt="<?= $brand ?>" width="160" height="48" decoding="async">
-    </a>
+    <a class="brand" href="index.php"><?= $brand ?></a>
     <nav class="nav" aria-label="منوی اصلی">
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت هفت رخ</a>
       <?php if ($role !== '') : ?>

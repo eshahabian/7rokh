@@ -39,6 +39,7 @@ function casting_render_pwa_head(): void
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="<?= casting_e(casting_brand()) ?>">
   <link rel="manifest" href="<?= $manifest ?>">
+  <link rel="icon" type="image/png" sizes="32x32" href="<?= casting_e(casting_url('assets/img/icon-32.png')) ?>">
   <link rel="icon" type="image/png" sizes="192x192" href="<?= $icon192 ?>">
   <link rel="apple-touch-icon" href="<?= $icon512 ?>">
 <?php

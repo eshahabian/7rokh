@@ -5,5 +5,6 @@
 
 آیکون PWA (نصب روی موبایل):
   logo.png
+  icon-32.png
   icon-192.png
   icon-512.png
