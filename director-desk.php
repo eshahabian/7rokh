@@ -32,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$result['ok']) {
                 $error = $result['error'] ?? 'خطا';
             } else {
-                casting_set_flash('success', 'پروژه اضافه شد.');
-                casting_redirect('director-desk.php?project=' . (int) ($result['project_id'] ?? 0));
+                casting_set_flash('success', 'پروژه «' . sanitize_text_field((string) ($_POST['project_title'] ?? '')) . '» اضافه شد.');
+                casting_redirect('director-desk.php');
             }
         } elseif ($action === 'save_project' && $project_id > 0) {
             $result = casting_director_save_project($director_id, $project_id, $_POST);

@@ -30,7 +30,9 @@ function casting_director_desk_install(): void
     $roles = casting_director_roles_table();
     $role_talents = casting_director_role_talents_table();
 
-    $sql = "CREATE TABLE IF NOT EXISTS {$projects} (
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+    dbDelta("CREATE TABLE IF NOT EXISTS {$projects} (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         director_id BIGINT UNSIGNED NOT NULL,
         title VARCHAR(191) NOT NULL DEFAULT '',
@@ -49,9 +51,9 @@ function casting_director_desk_install(): void
         updated_at DATETIME NOT NULL,
         PRIMARY KEY (id),
         KEY director_id (director_id)
-    ) {$charset};
+    ) {$charset};");
 
-    CREATE TABLE IF NOT EXISTS {$roles} (
+    dbDelta("CREATE TABLE IF NOT EXISTS {$roles} (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         project_id BIGINT UNSIGNED NOT NULL,
         director_id BIGINT UNSIGNED NOT NULL,
@@ -63,9 +65,9 @@ function casting_director_desk_install(): void
         PRIMARY KEY (id),
         KEY project_id (project_id),
         KEY director_id (director_id)
-    ) {$charset};
+    ) {$charset};");
 
-    CREATE TABLE IF NOT EXISTS {$role_talents} (
+    dbDelta("CREATE TABLE IF NOT EXISTS {$role_talents} (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         role_id BIGINT UNSIGNED NOT NULL,
         director_id BIGINT UNSIGNED NOT NULL,
@@ -80,21 +82,16 @@ function casting_director_desk_install(): void
         UNIQUE KEY role_talent (role_id, talent_id),
         KEY director_id (director_id),
         KEY role_score (role_id, score_avg)
-    ) {$charset};";
+    ) {$charset};");
 
-    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-    dbDelta($sql);
     casting_director_workspace_install();
     update_option('casting_director_desk_db_version', '2');
 }
 
 function casting_director_desk_ensure_tables(): void
 {
-    if ((string) get_option('casting_director_desk_db_version', '') !== '2') {
-        casting_director_desk_install();
-    } else {
-        casting_director_workspace_ensure_table();
-    }
+    casting_director_desk_install();
+    casting_director_workspace_ensure_table();
 }
 
 function casting_director_require_director(int $user_id): bool
@@ -481,7 +478,7 @@ function casting_director_create_project(int $director_id, string $title, string
 
     global $wpdb;
     $now = current_time('mysql');
-    $wpdb->insert(
+    $inserted = $wpdb->insert(
         casting_director_projects_table(),
         [
             'director_id'       => $director_id,
@@ -498,7 +495,17 @@ function casting_director_create_project(int $director_id, string $title, string
         ['%d', '%s', '%s', '%s', '%d', '%d', '%s', '%d', '%s', '%s']
     );
 
-    return ['ok' => true, 'project_id' => (int) $wpdb->insert_id];
+    if ($inserted === false) {
+        error_log('[casting-portal] create_project db error: ' . $wpdb->last_error);
+        return ['ok' => false, 'error' => 'ذخیره پروژه ناموفق بود. یک بار صفحه را رفرش کنید و دوباره تلاش کنید.'];
+    }
+
+    $new_id = (int) $wpdb->insert_id;
+    if ($new_id <= 0) {
+        return ['ok' => false, 'error' => 'پروژه ساخته نشد.'];
+    }
+
+    return ['ok' => true, 'project_id' => $new_id];
 }
 
 /**
