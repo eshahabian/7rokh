@@ -335,6 +335,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         <li><strong>سن:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($profile['age'] !== '' ? $profile['age'] . ' سال' : '')
             : casting_e($profile['age'] !== '' ? $profile['age'] . ' سال' : '—') ?></li>
+        <?php if (!$hide_talent_details) : ?>
         <?php if (!$embedded && ($profile['apparent_age_range'] ?? '') !== '' && isset($age_ranges[$profile['apparent_age_range']])) : ?>
           <li><strong>سن ظاهری:</strong> <?= casting_e($age_ranges[$profile['apparent_age_range']]['label']) ?></li>
         <?php elseif ($embedded && $is_self) : ?>
@@ -344,9 +345,11 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
                   : ''
           ) ?></li>
         <?php endif; ?>
+        <?php endif; ?>
         <li><strong>جنسیت:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($genders[$profile['gender']] ?? '')
             : casting_e($genders[$profile['gender']] ?? '—') ?></li>
+        <?php if (!$hide_talent_details) : ?>
         <?php if (!$embedded && ($profile['eye_color'] ?? '') !== '') : ?>
           <li><strong>رنگ چشم:</strong> <?= casting_e($eye_colors[$profile['eye_color']] ?? '—') ?></li>
         <?php elseif ($embedded && $is_self) : ?>
@@ -366,7 +369,6 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
                   : ''
           ) ?></li>
         <?php endif; ?>
-        <?php if (!$hide_talent_details) : ?>
         <li><strong>قد:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($profile['height'] !== '' ? $profile['height'] . ' سانتی‌متر' : '')
             : casting_e($profile['height'] !== '' ? $profile['height'] . ' سانتی‌متر' : '—') ?></li>

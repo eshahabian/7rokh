@@ -677,6 +677,15 @@ function casting_save_talent_trait_meta(int $user_id, array $data): array
     return ['ok' => true];
 }
 
+function casting_purge_actor_trait_meta(int $user_id): void
+{
+    delete_user_meta($user_id, 'casting_eye_color');
+    delete_user_meta($user_id, 'casting_hair_color');
+    delete_user_meta($user_id, 'casting_accent');
+    delete_user_meta($user_id, 'casting_accent_other');
+    delete_user_meta($user_id, 'casting_apparent_age_range');
+}
+
 function casting_format_accent_display(string $accent, string $accent_other = ''): string
 {
     if ($accent === '') {
@@ -1647,6 +1656,16 @@ function casting_get_profile(int $user_id): array
         casting_sync_portal_owner_activities($user_id);
     }
     $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+    if (casting_profile_hides_talent_fields($activities, $user_id)) {
+        $has_actor_traits = get_user_meta($user_id, 'casting_eye_color', true) !== ''
+            || get_user_meta($user_id, 'casting_hair_color', true) !== ''
+            || get_user_meta($user_id, 'casting_accent', true) !== ''
+            || get_user_meta($user_id, 'casting_accent_other', true) !== ''
+            || get_user_meta($user_id, 'casting_apparent_age_range', true) !== '';
+        if ($has_actor_traits) {
+            casting_purge_actor_trait_meta($user_id);
+        }
+    }
     $wp_user = get_user_by('id', $user_id);
 
     return [
@@ -1872,6 +1891,8 @@ function casting_save_registration_profile(int $user_id, array $data): array
         if (!$traits['ok']) {
             return $traits;
         }
+    } else {
+        casting_purge_actor_trait_meta($user_id);
     }
 
     return ['ok' => true, 'age' => $age];
@@ -2010,9 +2031,16 @@ function casting_save_profile(int $user_id, array $data): array
         update_user_meta($user_id, 'casting_look', $look);
     }
 
-    $traits = casting_save_talent_trait_meta($user_id, $data);
-    if (!$traits['ok']) {
-        return $traits;
+    $activities_for_traits = isset($data['activities'])
+        ? casting_normalize_activities($data['activities'], $user_id)
+        : casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+    if (casting_activities_has_acting($activities_for_traits)) {
+        $traits = casting_save_talent_trait_meta($user_id, $data);
+        if (!$traits['ok']) {
+            return $traits;
+        }
+    } else {
+        casting_purge_actor_trait_meta($user_id);
     }
 
     if (array_key_exists('skill_items', $data)) {
