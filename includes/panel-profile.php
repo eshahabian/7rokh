@@ -191,11 +191,11 @@ function casting_render_panel_completion_card(array $profile): void
   <div class="panel-completion-head">
     <div>
       <h2 class="panel-section-title">تکمیل پروفایل</h2>
-      <p class="meta panel-completion-meta">
-        <?= $done_count === $total
-            ? 'همه موارد اصلی تکمیل شده است.'
-            : ($total - $done_count) . ' مورد هنوز تکمیل نشده — موارد خالی را پر کنید تا پروفایل بهتر دیده شود.' ?>
-      </p>
+      <?php if ($done_count === $total) : ?>
+      <p class="meta panel-completion-meta">همه موارد اصلی تکمیل شده است.</p>
+      <?php elseif (!$hide_talent) : ?>
+      <p class="meta panel-completion-meta"><?= ($total - $done_count) ?> مورد هنوز تکمیل نشده — موارد خالی را پر کنید تا پروفایل بهتر دیده شود.</p>
+      <?php endif; ?>
     </div>
     <div class="panel-completion-meter" aria-label="پیشرفت تکمیل پروفایل">
       <span class="panel-completion-value"><?= $percent ?>٪</span>
