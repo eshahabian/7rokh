@@ -74,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'is_highlight'         => !empty($_POST['is_highlight']),
                 'highlighted_sections' => is_array($_POST['highlighted_sections'] ?? null) ? $_POST['highlighted_sections'] : [],
                 'assignment_type'      => (string) ($_POST['assignment_type'] ?? ''),
+                'assignment_title'     => (string) ($_POST['assignment_title'] ?? ''),
                 'assignment_text'      => (string) ($_POST['assignment_text'] ?? ''),
             ];
             $save = casting_director_save_workspace($viewer_id, $id, $payload);
