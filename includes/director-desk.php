@@ -91,7 +91,7 @@ function casting_director_desk_ensure_tables(): void
 
 function casting_director_require_director(int $user_id): bool
 {
-    return casting_user_is_director($user_id);
+    return casting_user_is_director_role($user_id);
 }
 
 /**
@@ -623,7 +623,7 @@ function casting_director_best_scores_for_talents(int $director_id, array $talen
     casting_director_desk_ensure_tables();
     $out = [];
     $talent_ids = array_values(array_unique(array_filter(array_map('intval', $talent_ids))));
-    if (!casting_user_is_director($director_id) || $talent_ids === []) {
+    if (!casting_user_is_director_role($director_id) || $talent_ids === []) {
         return $out;
     }
 

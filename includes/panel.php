@@ -116,7 +116,7 @@ function casting_render_panel_sidebar(string $active): void
               <?php
               continue;
           }
-          if ($item['key'] === 'desk' && (!$user || !casting_user_is_director((int) $user->ID))) {
+          if ($item['key'] === 'desk' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
               continue;
           }
           ?>
@@ -1332,7 +1332,7 @@ function casting_render_member_search_results(array $members, int $viewer_id, in
 {
     $director_flags = [];
     $director_scores = [];
-    if (function_exists('casting_user_is_director') && casting_user_is_director($viewer_id)) {
+    if (casting_user_is_director_role($viewer_id)) {
         if (!function_exists('casting_director_workspace_flags_for_talents')) {
             require_once __DIR__ . '/director-workspace.php';
         }

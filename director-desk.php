@@ -9,7 +9,7 @@ require_once __DIR__ . '/includes/director-desk.php';
 $user = casting_require_casting_user();
 $director_id = (int) $user->ID;
 
-if (!casting_user_is_director($director_id)) {
+if (!casting_user_is_director_role($director_id)) {
     casting_set_flash('error', 'میز کار فقط برای کارگردان‌هاست.');
     casting_redirect('panel.php');
 }

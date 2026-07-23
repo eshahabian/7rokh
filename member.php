@@ -31,7 +31,7 @@ if ($is_self) {
 
 if (!$is_self) {
     casting_record_profile_visit($id, $viewer_id);
-    if (casting_user_is_director($viewer_id) && $member_role === 'talent') {
+    if (casting_user_is_director_role($viewer_id) && $member_role === 'talent') {
         casting_director_record_talent_view($viewer_id, $id);
     }
 }
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif (
         isset($_POST['director_workspace'], $_POST['director_action'])
-        && casting_user_is_director($viewer_id)
+        && casting_user_is_director_role($viewer_id)
         && $member_role === 'talent'
     ) {
         if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_director_workspace_' . $id)) {
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif (
         isset($_POST['director_desk'], $_POST['director_desk_action'])
-        && casting_user_is_director($viewer_id)
+        && casting_user_is_director_role($viewer_id)
         && $member_role === 'talent'
     ) {
         if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_director_desk_' . $id)) {

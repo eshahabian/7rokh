@@ -271,7 +271,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     $is_blocked = !$is_self ? casting_is_blocked($viewer_id, $member_id) : false;
     $director_workspace = null;
     $show_director_tools = !$is_self
-        && casting_user_is_director($viewer_id)
+        && casting_user_is_director_role($viewer_id)
         && $member_role === 'talent';
     if ($show_director_tools) {
         $director_workspace = casting_director_get_workspace($viewer_id, $member_id);

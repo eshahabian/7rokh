@@ -43,7 +43,7 @@ function casting_director_workspace_ensure_table(): void
     }
 }
 
-function casting_user_is_director(int $user_id): bool
+function casting_user_is_director_role(int $user_id): bool
 {
     return casting_get_user_role($user_id) === 'director';
 }
@@ -53,7 +53,7 @@ function casting_director_can_manage_talent(int $director_id, int $talent_id): b
     if ($director_id <= 0 || $talent_id <= 0 || $director_id === $talent_id) {
         return false;
     }
-    if (!casting_user_is_director($director_id)) {
+    if (!casting_user_is_director_role($director_id)) {
         return false;
     }
     if (casting_get_user_role($talent_id) !== 'talent') {
@@ -179,7 +179,7 @@ function casting_director_workspace_flags_for_talents(int $director_id, array $t
     casting_director_workspace_ensure_table();
     $out = [];
     $talent_ids = array_values(array_unique(array_filter(array_map('intval', $talent_ids))));
-    if (!casting_user_is_director($director_id) || $talent_ids === []) {
+    if (!casting_user_is_director_role($director_id) || $talent_ids === []) {
         return $out;
     }
 
