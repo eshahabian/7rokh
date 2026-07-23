@@ -272,6 +272,13 @@ a:hover {
   color: var(--accent-strong);
 }
 
+.request-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
 .req-status {
   margin-inline-start: auto;
   padding: 0.2rem 0.65rem;

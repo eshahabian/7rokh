@@ -95,6 +95,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_archive_actio
     casting_redirect(casting_my_requests_redirect_url($post_view, $is_director ? $post_box : 'default'));
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_manage_action'], $_POST['request_id'])) {
+    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_manage_request')) {
+        casting_set_flash('error', 'نشست منقضی شده. دوباره تلاش کنید.');
+    } elseif (!casting_is_employer_role($role)) {
+        casting_set_flash('error', 'این عملیات برای نقش شما فعال نیست.');
+    } else {
+        $action = sanitize_key((string) $_POST['request_manage_action']);
+        $request_id = sanitize_text_field((string) $_POST['request_id']);
+        $post_box = isset($_POST['box']) && (string) $_POST['box'] === 'received' ? 'received' : 'sent';
+        $manage_direction = ($is_director && $post_box === 'sent') || (!$is_director && casting_is_employer_role($role)) ? 'sent' : 'default';
+        if ($action === 'withdraw') {
+            $result = casting_withdraw_request($user_id, $request_id);
+            casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'درخواست پس گرفته شد و از لیست بازیگر حذف شد.' : $result['error']);
+        } elseif ($action === 'delete') {
+            $result = casting_delete_user_request($user_id, $request_id, $manage_direction);
+            casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'درخواست از لیست شما حذف شد.' : $result['error']);
+        } else {
+            casting_set_flash('error', 'عملیات نامعتبر است.');
+        }
+    }
+    $post_view = isset($_POST['view']) && (string) $_POST['view'] === 'archive' ? 'archive' : 'active';
+    $post_box = isset($_POST['box']) && (string) $_POST['box'] === 'received' ? 'received' : 'sent';
+    casting_redirect(casting_my_requests_redirect_url($post_view, $is_director ? $post_box : 'default'));
+}
+
 if (($role === 'talent' || $is_director) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_id'], $_POST['decision'])) {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_respond_request')) {
         casting_set_flash('error', 'نشست منقضی شده. دوباره تلاش کنید.');

@@ -335,6 +335,105 @@ function casting_unarchive_user_request(int $user_id, string $request_id): array
     return casting_move_user_request($user_id, $request_id, 'archive', 'active');
 }
 
+function casting_remove_request_from_user(int $user_id, string $request_id, string $direction): bool
+{
+    $request_id = trim($request_id);
+    if ($request_id === '') {
+        return false;
+    }
+
+    $ok = false;
+    foreach (['active', 'archive'] as $bucket) {
+        $meta_key = casting_request_list_meta_key($user_id, $direction, $bucket);
+        if ($meta_key === null) {
+            continue;
+        }
+        $list = get_user_meta($user_id, $meta_key, true);
+        if (!is_array($list)) {
+            continue;
+        }
+        $changed = false;
+        foreach ($list as $i => $item) {
+            if (!is_array($item) || (string) ($item['id'] ?? '') !== $request_id) {
+                continue;
+            }
+            unset($list[$i]);
+            $changed = true;
+            $ok = true;
+            break;
+        }
+        if ($changed) {
+            update_user_meta($user_id, $meta_key, array_values($list));
+        }
+    }
+
+    return $ok;
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_delete_user_request(int $user_id, string $request_id, string $direction = 'default'): array
+{
+    $request_id = trim($request_id);
+    if ($request_id === '') {
+        return ['ok' => false, 'error' => 'درخواست نامعتبر است.'];
+    }
+
+    if ($direction === 'default') {
+        $ok = false;
+        foreach (casting_user_request_directions($user_id) as $dir) {
+            if (casting_remove_request_from_user($user_id, $request_id, $dir)) {
+                $ok = true;
+            }
+        }
+    } else {
+        $ok = casting_remove_request_from_user($user_id, $request_id, $direction);
+    }
+
+    return $ok
+        ? ['ok' => true, 'error' => '']
+        : ['ok' => false, 'error' => 'درخواست پیدا نشد.'];
+}
+
+/**
+ * پس‌گیری درخواست: از لیست فرستنده و گیرنده حذف می‌شود.
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_withdraw_request(int $employer_id, string $request_id): array
+{
+    $request_id = trim($request_id);
+    if ($request_id === '') {
+        return ['ok' => false, 'error' => 'درخواست نامعتبر است.'];
+    }
+
+    $req = casting_find_user_request($employer_id, $request_id);
+    if ($req === null) {
+        return ['ok' => false, 'error' => 'درخواست پیدا نشد.'];
+    }
+    if ((int) ($req['employer_id'] ?? 0) !== $employer_id) {
+        return ['ok' => false, 'error' => 'دسترسی مجاز نیست.'];
+    }
+    if (casting_request_status_key($req) !== 'pending') {
+        return ['ok' => false, 'error' => 'فقط درخواست‌های در انتظار پاسخ قابل پس‌گیری هستند.'];
+    }
+
+    $recipient_id = (int) ($req['talent_id'] ?? 0);
+    $ok_recipient = $recipient_id > 0
+        ? casting_remove_request_from_user($recipient_id, $request_id, 'received')
+        : false;
+    $ok_sender = casting_remove_request_from_user($employer_id, $request_id, 'sent');
+
+    if (!$ok_recipient && !$ok_sender) {
+        return ['ok' => false, 'error' => 'پس‌گیری درخواست ناموفق بود.'];
+    }
+
+    delete_user_meta($employer_id, 'casting_req_last_' . $recipient_id);
+
+    return ['ok' => true, 'error' => ''];
+}
+
 /**
  * پاسخ هنرمند: accept | reject + نظر
  */
@@ -849,7 +948,34 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
                 <?php endif; ?>
                 <button class="btn btn-ghost btn-sm" type="submit" name="request_archive_action" value="unarchive">بازگردانی از بایگانی</button>
               </form>
+              <form method="post" action="<?= casting_e($form_action) ?>" onsubmit="return confirm('این درخواست برای همیشه از لیست شما حذف شود؟');">
+                <?php wp_nonce_field('casting_manage_request'); ?>
+                <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
+                <input type="hidden" name="view" value="archive">
+                <?php if ($box === 'sent') : ?>
+                  <input type="hidden" name="box" value="sent">
+                <?php endif; ?>
+                <button class="btn btn-ghost btn-sm" type="submit" name="request_manage_action" value="delete">حذف</button>
+              </form>
             <?php else : ?>
+              <?php if ($status === 'pending') : ?>
+                <form method="post" action="<?= casting_e($form_action) ?>" onsubmit="return confirm('درخواست پس گرفته شود و از لیست بازیگر هم حذف گردد؟');">
+                  <?php wp_nonce_field('casting_manage_request'); ?>
+                  <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
+                  <?php if ($box === 'sent') : ?>
+                    <input type="hidden" name="box" value="sent">
+                  <?php endif; ?>
+                  <button class="btn btn-reject btn-sm" type="submit" name="request_manage_action" value="withdraw">عدم ارسال</button>
+                </form>
+              <?php endif; ?>
+              <form method="post" action="<?= casting_e($form_action) ?>" onsubmit="return confirm('این درخواست فقط از لیست شما حذف شود؟ (برای بازیگر همچنان نمایش داده می‌شود مگر «عدم ارسال» بزنید.)');">
+                <?php wp_nonce_field('casting_manage_request'); ?>
+                <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
+                <?php if ($box === 'sent') : ?>
+                  <input type="hidden" name="box" value="sent">
+                <?php endif; ?>
+                <button class="btn btn-ghost btn-sm" type="submit" name="request_manage_action" value="delete">حذف</button>
+              </form>
               <form method="post" action="<?= casting_e($form_action) ?>" onsubmit="return confirm('این درخواست به بایگانی منتقل شود؟');">
                 <?php wp_nonce_field('casting_archive_request'); ?>
                 <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
