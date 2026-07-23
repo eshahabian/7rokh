@@ -36,6 +36,14 @@ function casting_panel_nav_items(): array
     ];
 }
 
+/**
+ * @return list<string>
+ */
+function casting_panel_nav_keys_hidden_for_director(): array
+{
+    return ['premium', 'receipt', 'photo', 'transactions', 'cancel'];
+}
+
 function casting_panel_profile_url(int $user_id): string
 {
     $role = casting_get_user_role($user_id);
@@ -117,6 +125,10 @@ function casting_render_panel_sidebar(string $active): void
               continue;
           }
           if ($item['key'] === 'desk' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
+              continue;
+          }
+          if ($user && casting_user_is_director_role((int) $user->ID)
+              && in_array($item['key'], casting_panel_nav_keys_hidden_for_director(), true)) {
               continue;
           }
           ?>
