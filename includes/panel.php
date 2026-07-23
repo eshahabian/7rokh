@@ -19,7 +19,7 @@ function casting_panel_nav_items(): array
         ['key' => 'messages',   'label' => 'پیام کاربران',            'href' => 'chat.php'],
         ['key' => 'my-requests','label' => 'درخواست‌های من',          'href' => 'my-requests.php'],
         ['key' => 'search',     'label' => 'جستجوی کاربران',          'href' => 'search-users.php'],
-        ['key' => 'desk',       'label' => 'میز کار casting',         'href' => 'director-desk.php'],
+        ['key' => 'desk',       'label' => 'پروژه‌ها',                 'href' => 'director-desk.php'],
         ['key' => 'premium',    'label' => 'خرید و فعال‌سازی',        'href' => 'premium.php'],
         ['key' => 'receipt',    'label' => 'ثبت فیش کارت به کارت',    'href' => 'premium-receipt.php'],
         ['key' => 'newest',     'label' => 'جدیدترین کاربران',        'href' => 'newest-users.php'],

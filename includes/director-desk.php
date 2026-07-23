@@ -36,6 +36,14 @@ function casting_director_desk_install(): void
         title VARCHAR(191) NOT NULL DEFAULT '',
         project_type VARCHAR(32) NOT NULL DEFAULT 'film',
         notes TEXT NULL,
+        actors_needed INT UNSIGNED NOT NULL DEFAULT 0,
+        supporting_needed INT UNSIGNED NOT NULL DEFAULT 0,
+        genre VARCHAR(64) NOT NULL DEFAULT '',
+        location VARCHAR(191) NOT NULL DEFAULT '',
+        shoot_period VARCHAR(191) NOT NULL DEFAULT '',
+        duration_label VARCHAR(64) NOT NULL DEFAULT '',
+        synopsis TEXT NULL,
+        production_status VARCHAR(32) NOT NULL DEFAULT 'planning',
         sort_order INT NOT NULL DEFAULT 0,
         created_at DATETIME NOT NULL,
         updated_at DATETIME NOT NULL,
@@ -77,12 +85,12 @@ function casting_director_desk_install(): void
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
     casting_director_workspace_install();
-    update_option('casting_director_desk_db_version', '1');
+    update_option('casting_director_desk_db_version', '2');
 }
 
 function casting_director_desk_ensure_tables(): void
 {
-    if ((string) get_option('casting_director_desk_db_version', '') !== '1') {
+    if ((string) get_option('casting_director_desk_db_version', '') !== '2') {
         casting_director_desk_install();
     } else {
         casting_director_workspace_ensure_table();
@@ -105,6 +113,120 @@ function casting_director_project_type_labels(): array
         'theater' => 'تئاتر',
         'other'   => 'سایر',
     ];
+}
+
+/**
+ * @return array<string, string>
+ */
+function casting_director_production_status_labels(): array
+{
+    return [
+        'planning'      => 'برنامه‌ریزی',
+        'casting'       => 'کستینگ',
+        'preproduction' => 'پیش‌تولید',
+        'production'    => 'تولید / اجرا',
+        'post'          => 'پس‌تولید',
+        'done'          => 'تمام‌شده',
+    ];
+}
+
+/**
+ * @param array<string, mixed>|null $row
+ * @return array<string, mixed>
+ */
+function casting_director_project_from_row(?array $row): array
+{
+    if (!$row) {
+        return [];
+    }
+
+    return [
+        'id'                => (int) ($row['id'] ?? 0),
+        'director_id'       => (int) ($row['director_id'] ?? 0),
+        'title'             => (string) ($row['title'] ?? ''),
+        'project_type'      => (string) ($row['project_type'] ?? 'film'),
+        'notes'             => (string) ($row['notes'] ?? ''),
+        'actors_needed'     => (int) ($row['actors_needed'] ?? 0),
+        'supporting_needed' => (int) ($row['supporting_needed'] ?? 0),
+        'genre'             => (string) ($row['genre'] ?? ''),
+        'location'          => (string) ($row['location'] ?? ''),
+        'shoot_period'      => (string) ($row['shoot_period'] ?? ''),
+        'duration_label'    => (string) ($row['duration_label'] ?? ''),
+        'synopsis'          => (string) ($row['synopsis'] ?? ''),
+        'production_status' => (string) ($row['production_status'] ?? 'planning'),
+        'created_at'        => (string) ($row['created_at'] ?? ''),
+        'updated_at'        => (string) ($row['updated_at'] ?? ''),
+    ];
+}
+
+/**
+ * @param array<string, mixed> $data
+ * @return array{ok:bool,error?:string}
+ */
+function casting_director_save_project(int $director_id, int $project_id, array $data): array
+{
+    casting_director_desk_ensure_tables();
+    if (!casting_director_get_project($director_id, $project_id)) {
+        return ['ok' => false, 'error' => 'پروژه پیدا نشد.'];
+    }
+
+    $types = casting_director_project_type_labels();
+    $statuses = casting_director_production_status_labels();
+    $project_type = sanitize_key((string) ($data['project_type'] ?? 'film'));
+    if (!isset($types[$project_type])) {
+        $project_type = 'film';
+    }
+    $production_status = sanitize_key((string) ($data['production_status'] ?? 'planning'));
+    if (!isset($statuses[$production_status])) {
+        $production_status = 'planning';
+    }
+
+    global $wpdb;
+    $wpdb->update(
+        casting_director_projects_table(),
+        [
+            'title'             => sanitize_text_field((string) ($data['title'] ?? '')),
+            'project_type'      => $project_type,
+            'actors_needed'     => max(0, (int) ($data['actors_needed'] ?? 0)),
+            'supporting_needed' => max(0, (int) ($data['supporting_needed'] ?? 0)),
+            'genre'             => sanitize_text_field((string) ($data['genre'] ?? '')),
+            'location'          => sanitize_text_field((string) ($data['location'] ?? '')),
+            'shoot_period'      => sanitize_text_field((string) ($data['shoot_period'] ?? '')),
+            'duration_label'    => sanitize_text_field((string) ($data['duration_label'] ?? '')),
+            'synopsis'          => sanitize_textarea_field((string) ($data['synopsis'] ?? '')),
+            'notes'             => sanitize_textarea_field((string) ($data['notes'] ?? '')),
+            'production_status' => $production_status,
+            'updated_at'        => current_time('mysql'),
+        ],
+        [
+            'id'          => $project_id,
+            'director_id' => $director_id,
+        ],
+        ['%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'],
+        ['%d', '%d']
+    );
+
+    return ['ok' => true];
+}
+
+/**
+ * @return array{roles:int,talents:int}
+ */
+function casting_director_project_stats(int $director_id, int $project_id): array
+{
+    global $wpdb;
+    $roles = casting_director_list_roles($director_id, $project_id);
+    $role_ids = array_map(static fn(array $r): int => (int) ($r['id'] ?? 0), $roles);
+    $talents = 0;
+    if ($role_ids !== []) {
+        $placeholders = implode(',', array_fill(0, count($role_ids), '%d'));
+        $sql = 'SELECT COUNT(*) FROM ' . casting_director_role_talents_table()
+            . ' WHERE director_id = %d AND role_id IN (' . $placeholders . ')';
+        $count = $wpdb->get_var($wpdb->prepare($sql, array_merge([$director_id], $role_ids)));
+        $talents = (int) $count;
+    }
+
+    return ['roles' => count($roles), 'talents' => $talents];
 }
 
 /**
@@ -211,7 +333,11 @@ function casting_director_get_project(int $director_id, int $project_id): ?array
         ),
         ARRAY_A
     );
-    return is_array($row) ? $row : null;
+    if (!is_array($row)) {
+        return null;
+    }
+
+    return casting_director_project_from_row($row);
 }
 
 function casting_director_get_role(int $director_id, int $role_id): ?array
@@ -358,15 +484,18 @@ function casting_director_create_project(int $director_id, string $title, string
     $wpdb->insert(
         casting_director_projects_table(),
         [
-            'director_id'  => $director_id,
-            'title'        => $title,
-            'project_type' => $project_type,
-            'notes'        => $notes,
-            'sort_order'   => 0,
-            'created_at'   => $now,
-            'updated_at'   => $now,
+            'director_id'       => $director_id,
+            'title'             => $title,
+            'project_type'      => $project_type,
+            'notes'             => $notes,
+            'actors_needed'     => 0,
+            'supporting_needed' => 0,
+            'production_status' => 'planning',
+            'sort_order'        => 0,
+            'created_at'        => $now,
+            'updated_at'        => $now,
         ],
-        ['%d', '%s', '%s', '%s', '%d', '%s', '%s']
+        ['%d', '%s', '%s', '%s', '%d', '%d', '%s', '%d', '%s', '%s']
     );
 
     return ['ok' => true, 'project_id' => (int) $wpdb->insert_id];
@@ -773,7 +902,7 @@ function casting_render_director_desk_talent_panel(int $director_id, int $talent
           ), JSON_UNESCAPED_UNICODE) ?>;
         </script>
       <?php else : ?>
-        <p class="field-hint">هنوز پروژه‌ای نساخته‌اید. از <a href="director-desk.php">میز کار</a> یک فیلم/پروژه بسازید.</p>
+        <p class="field-hint">هنوز پروژه‌ای نساخته‌اید. از <a href="director-desk.php">پروژه‌ها</a> یک فیلم یا نمایش بسازید.</p>
       <?php endif; ?>
     </div>
     <?php
