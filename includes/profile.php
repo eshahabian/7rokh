@@ -684,6 +684,36 @@ function casting_purge_actor_trait_meta(int $user_id): void
     delete_user_meta($user_id, 'casting_accent');
     delete_user_meta($user_id, 'casting_accent_other');
     delete_user_meta($user_id, 'casting_apparent_age_range');
+    delete_user_meta($user_id, 'casting_health_well');
+    delete_user_meta($user_id, 'casting_health_status');
+    delete_user_meta($user_id, 'casting_availability');
+    delete_user_meta($user_id, 'casting_skill_items');
+    delete_user_meta($user_id, 'casting_skills');
+    delete_user_meta($user_id, 'casting_skills_other');
+}
+
+function casting_user_has_actor_only_profile_meta(int $user_id): bool
+{
+    $keys = [
+        'casting_eye_color',
+        'casting_hair_color',
+        'casting_accent',
+        'casting_accent_other',
+        'casting_apparent_age_range',
+        'casting_health_well',
+        'casting_health_status',
+        'casting_availability',
+        'casting_skills',
+        'casting_skills_other',
+    ];
+    foreach ($keys as $key) {
+        if (get_user_meta($user_id, $key, true) !== '') {
+            return true;
+        }
+    }
+
+    $skill_items = get_user_meta($user_id, 'casting_skill_items', true);
+    return is_array($skill_items) && $skill_items !== [];
 }
 
 function casting_format_accent_display(string $accent, string $accent_other = ''): string
@@ -1656,15 +1686,8 @@ function casting_get_profile(int $user_id): array
         casting_sync_portal_owner_activities($user_id);
     }
     $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
-    if (casting_profile_hides_talent_fields($activities, $user_id)) {
-        $has_actor_traits = get_user_meta($user_id, 'casting_eye_color', true) !== ''
-            || get_user_meta($user_id, 'casting_hair_color', true) !== ''
-            || get_user_meta($user_id, 'casting_accent', true) !== ''
-            || get_user_meta($user_id, 'casting_accent_other', true) !== ''
-            || get_user_meta($user_id, 'casting_apparent_age_range', true) !== '';
-        if ($has_actor_traits) {
-            casting_purge_actor_trait_meta($user_id);
-        }
+    if (casting_profile_hides_talent_fields($activities, $user_id) && casting_user_has_actor_only_profile_meta($user_id)) {
+        casting_purge_actor_trait_meta($user_id);
     }
     $wp_user = get_user_by('id', $user_id);
 
@@ -1877,12 +1900,14 @@ function casting_save_registration_profile(int $user_id, array $data): array
         return ['ok' => false, 'error' => 'وضعیت آمادگی برای همکاری را انتخاب کنید.'];
     }
 
-    update_user_meta($user_id, 'casting_skill_items', $skill_items);
-    update_user_meta($user_id, 'casting_skills_other', '');
-    update_user_meta($user_id, 'casting_skills', casting_format_skill_labels($skill_items));
     update_user_meta($user_id, 'casting_language_items', $language_items);
-    if (!$skip_talent_profile && $availability !== '') {
-        update_user_meta($user_id, 'casting_availability', $availability);
+    if (!$skip_talent_profile) {
+        update_user_meta($user_id, 'casting_skill_items', $skill_items);
+        update_user_meta($user_id, 'casting_skills_other', '');
+        update_user_meta($user_id, 'casting_skills', casting_format_skill_labels($skill_items));
+        if ($availability !== '') {
+            update_user_meta($user_id, 'casting_availability', $availability);
+        }
     }
     update_user_meta($user_id, 'casting_visible', '1');
 
@@ -1987,7 +2012,12 @@ function casting_save_profile(int $user_id, array $data): array
         update_user_meta($user_id, 'casting_weight', (string) $weight);
     }
 
-    if (array_key_exists('health_well', $data) || array_key_exists('health_status', $data)) {
+    $activities_for_traits = isset($data['activities'])
+        ? casting_normalize_activities($data['activities'], $user_id)
+        : casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+    $is_actor_profile = casting_activities_has_acting($activities_for_traits);
+
+    if ($is_actor_profile && (array_key_exists('health_well', $data) || array_key_exists('health_status', $data))) {
         $health = casting_parse_health_post($data);
         $health_err = casting_validate_health_fields($health, false);
         if ($health_err !== null) {
@@ -2031,10 +2061,7 @@ function casting_save_profile(int $user_id, array $data): array
         update_user_meta($user_id, 'casting_look', $look);
     }
 
-    $activities_for_traits = isset($data['activities'])
-        ? casting_normalize_activities($data['activities'], $user_id)
-        : casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
-    if (casting_activities_has_acting($activities_for_traits)) {
+    if ($is_actor_profile) {
         $traits = casting_save_talent_trait_meta($user_id, $data);
         if (!$traits['ok']) {
             return $traits;
@@ -2043,32 +2070,34 @@ function casting_save_profile(int $user_id, array $data): array
         casting_purge_actor_trait_meta($user_id);
     }
 
-    if (array_key_exists('skill_items', $data)) {
-        $skill_items = casting_normalize_skill_items($data['skill_items']);
-        foreach ($skill_items as $row) {
-            if ($row['skill'] === 'other' && $row['note'] === '') {
-                return ['ok' => false, 'error' => 'برای مهارت «سایر» بنویسید چه هنری دارید.'];
+    if ($is_actor_profile) {
+        if (array_key_exists('skill_items', $data)) {
+            $skill_items = casting_normalize_skill_items($data['skill_items']);
+            foreach ($skill_items as $row) {
+                if ($row['skill'] === 'other' && $row['note'] === '') {
+                    return ['ok' => false, 'error' => 'برای مهارت «سایر» بنویسید چه هنری دارید.'];
+                }
+            }
+            update_user_meta($user_id, 'casting_skill_items', $skill_items);
+            update_user_meta($user_id, 'casting_skills_other', '');
+            update_user_meta($user_id, 'casting_skills', casting_format_skill_labels($skill_items));
+        } elseif (array_key_exists('skills', $data)) {
+            update_user_meta($user_id, 'casting_skills', sanitize_text_field((string) $data['skills']));
+        }
+
+        if (array_key_exists('availability', $data)) {
+            $availability = sanitize_key((string) $data['availability']);
+            if ($availability !== '' && !array_key_exists($availability, casting_availability_labels())) {
+                return ['ok' => false, 'error' => 'وضعیت آمادگی برای همکاری را درست انتخاب کنید.'];
+            }
+            if ($availability !== '') {
+                update_user_meta($user_id, 'casting_availability', $availability);
             }
         }
-        update_user_meta($user_id, 'casting_skill_items', $skill_items);
-        update_user_meta($user_id, 'casting_skills_other', '');
-        update_user_meta($user_id, 'casting_skills', casting_format_skill_labels($skill_items));
-    } elseif (array_key_exists('skills', $data)) {
-        update_user_meta($user_id, 'casting_skills', sanitize_text_field((string) $data['skills']));
     }
 
     if (array_key_exists('language_items', $data)) {
         update_user_meta($user_id, 'casting_language_items', casting_normalize_language_items($data['language_items']));
-    }
-
-    if (array_key_exists('availability', $data)) {
-        $availability = sanitize_key((string) $data['availability']);
-        if ($availability !== '' && !array_key_exists($availability, casting_availability_labels())) {
-            return ['ok' => false, 'error' => 'وضعیت آمادگی برای همکاری را درست انتخاب کنید.'];
-        }
-        if ($availability !== '') {
-            update_user_meta($user_id, 'casting_availability', $availability);
-        }
     }
 
     update_user_meta($user_id, 'casting_bio', sanitize_textarea_field((string) ($data['bio'] ?? '')));

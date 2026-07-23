@@ -376,25 +376,31 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
             ? casting_panel_missing_label(($profile['weight'] ?? '') !== '' ? $profile['weight'] . ' کیلوگرم' : '')
             : casting_e(($profile['weight'] ?? '') !== '' ? $profile['weight'] . ' کیلوگرم' : '—') ?></li>
         <?php endif; ?>
+        <?php if (!$hide_talent_details) : ?>
         <li><strong>وضعیت سلامت:</strong> <?= casting_e(casting_format_health_display(
             (string) ($profile['health_well'] ?? 'healthy'),
             (string) ($profile['health_status'] ?? '')
         )) ?></li>
+        <?php endif; ?>
         <li><strong>استان:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($provinces[$profile['province'] ?? ''] ?? '')
             : casting_e($provinces[$profile['province'] ?? ''] ?? '—') ?></li>
         <li><strong>شهر:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($profile['city'] !== '' ? $profile['city'] : '')
             : casting_e($profile['city'] !== '' ? $profile['city'] : '—') ?></li>
+        <?php if (!$hide_talent_details) : ?>
         <li><strong>وضعیت آمادگی:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($availability_labels[$profile['availability'] ?? ''] ?? '')
             : casting_e($availability_labels[$profile['availability'] ?? ''] ?? '—') ?></li>
+        <?php endif; ?>
         <li><strong>تشکل‌های هنری:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label(casting_format_artistic_membership($profile['artistic_membership'] ?? []))
             : casting_e(casting_format_artistic_membership($profile['artistic_membership'] ?? [])) ?></li>
+        <?php if (!$hide_talent_details) : ?>
         <li class="<?= $director_section_class('skills') ?>"><strong>مهارت‌ها:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($skills_text !== '' ? $skills_text : '')
             : casting_e($skills_text !== '' ? $skills_text : '—') ?></li>
+        <?php endif; ?>
       </ul>
       <?php
       $activity_groups = casting_group_activities_for_display($profile['activities'] ?? [], $member_id, $viewer_id);
