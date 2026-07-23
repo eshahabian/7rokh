@@ -3608,3 +3608,108 @@ fieldset.field legend {
 .request-box-tabs {
   margin-bottom: 0.5rem;
 }
+
+.request-compose {
+  margin: 1rem 0 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+}
+
+.request-compose-summary {
+  cursor: pointer;
+  padding: 0.9rem 1rem;
+  font-weight: 600;
+  list-style: none;
+}
+
+.request-compose-summary::-webkit-details-marker {
+  display: none;
+}
+
+.request-compose-body {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.request-pick-list {
+  border: 0;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.request-pick-list legend {
+  margin-bottom: 0.65rem;
+  font-weight: 600;
+}
+
+.request-pick-item {
+  display: block;
+  margin-bottom: 0.55rem;
+  cursor: pointer;
+}
+
+.request-pick-item input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.request-pick-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.12);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.request-pick-item input:checked + .request-pick-card,
+.request-pick-item input:focus-visible + .request-pick-card {
+  border-color: rgba(232, 184, 122, 0.55);
+  background: rgba(232, 184, 122, 0.1);
+}
+
+.request-pick-photo {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.request-pick-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.request-pick-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.request-pick-meta strong {
+  font-size: 0.98rem;
+}
+
+.request-pick-meta span {
+  color: var(--muted, #9a958c);
+  font-size: 0.88rem;
+}
+
+.request-compose-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}

@@ -34,6 +34,30 @@ function casting_my_requests_redirect_url(string $view, string $box = 'default')
 }
 
 $redirect_base = casting_my_requests_redirect_url($view, $box);
+$compose_open = isset($_GET['compose']) && (string) $_GET['compose'] === '1';
+$compose_project = '';
+$compose_message = '';
+$compose_talent_id = 0;
+$compose_error = '';
+
+if ($is_director && $box === 'sent' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_collaboration_request'])) {
+    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_send_request')) {
+        $compose_error = 'نشست منقضی شده. دوباره تلاش کنید.';
+        $compose_open = true;
+    } else {
+        $compose_talent_id = (int) ($_POST['talent_id'] ?? 0);
+        $compose_project = (string) ($_POST['project'] ?? '');
+        $compose_message = (string) ($_POST['message'] ?? '');
+        $result = casting_send_talent_request($user_id, $compose_talent_id, $compose_message, $compose_project);
+        if (!$result['ok']) {
+            $compose_error = $result['error'] ?? 'ارسال درخواست ناموفق بود.';
+            $compose_open = true;
+        } else {
+            casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'درخواست ارسال شد.');
+            casting_redirect('my-requests.php?box=sent');
+        }
+    }
+}
 
 if (isset($_GET['open'])) {
     $open = casting_open_request_chat($user_id, sanitize_text_field((string) $_GET['open']));
@@ -133,6 +157,20 @@ casting_render_flash();
       <p class="lede"><?= $view === 'archive'
           ? 'درخواست‌های ارسالی بایگانی‌شده.'
           : 'درخواست‌هایی که برای بازیگران و هنرمندان ارسال کرده‌اید.' ?></p>
+      <?php if ($view === 'active') :
+          $highlighted_talents = casting_director_list_highlighted_talents($user_id);
+          if ($compose_error !== '') {
+              echo '<div class="flash flash-error" role="alert">' . casting_e($compose_error) . '</div>';
+          }
+          casting_render_director_send_request_compose(
+              $user_id,
+              $highlighted_talents,
+              $compose_open || $compose_error !== '',
+              $compose_project,
+              $compose_message,
+              $compose_talent_id
+          );
+      endif; ?>
       <?php casting_render_employer_sent_requests_list($user_id, $requests, 'my-requests.php', $view, 'sent'); ?>
     <?php endif; ?>
   <?php elseif (casting_is_employer_role($role)) : ?>

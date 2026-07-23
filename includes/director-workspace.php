@@ -207,6 +207,54 @@ function casting_director_workspace_flags_for_talents(int $director_id, array $t
     return $out;
 }
 
+/**
+ * @return list<array{talent_id:int,name:string,photo_url:string,city:string}>
+ */
+function casting_director_list_highlighted_talents(int $director_id): array
+{
+    casting_director_workspace_ensure_table();
+    if (!casting_user_is_director_role($director_id)) {
+        return [];
+    }
+
+    global $wpdb;
+    $rows = $wpdb->get_results(
+        $wpdb->prepare(
+            'SELECT talent_id FROM ' . casting_director_workspace_table()
+            . ' WHERE director_id = %d AND is_highlight = 1 ORDER BY updated_at DESC, talent_id DESC',
+            $director_id
+        ),
+        ARRAY_A
+    );
+    if (!is_array($rows)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $row) {
+        $talent_id = (int) ($row['talent_id'] ?? 0);
+        if ($talent_id <= 0 || !casting_director_can_manage_talent($director_id, $talent_id)) {
+            continue;
+        }
+        $talent = get_user_by('id', $talent_id);
+        if (!$talent) {
+            continue;
+        }
+        $profile = casting_get_profile($talent_id);
+        if (!$profile['visible']) {
+            continue;
+        }
+        $out[] = [
+            'talent_id'  => $talent_id,
+            'name'       => (string) $talent->display_name,
+            'photo_url'  => (string) ($profile['photo_url'] ?? ''),
+            'city'       => (string) ($profile['city'] ?? ''),
+        ];
+    }
+
+    return $out;
+}
+
 function casting_director_record_talent_view(int $director_id, int $talent_id): void
 {
     casting_director_workspace_ensure_table();

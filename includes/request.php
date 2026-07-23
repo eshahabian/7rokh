@@ -876,3 +876,78 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
     </div>
     <?php
 }
+
+/**
+ * @param list<array{talent_id:int,name:string,photo_url:string,city:string}> $highlighted
+ */
+function casting_render_director_send_request_compose(int $director_id, array $highlighted, bool $open = false, string $project = '', string $message = '', int $selected_talent_id = 0): void
+{
+    if ($selected_talent_id <= 0 && $highlighted !== []) {
+        $selected_talent_id = (int) ($highlighted[0]['talent_id'] ?? 0);
+    }
+    ?>
+    <details class="request-compose" id="request-compose"<?= $open ? ' open' : '' ?>>
+      <summary class="request-compose-summary">ارسال درخواست همکاری</summary>
+      <div class="request-compose-body">
+        <?php if ($highlighted !== []) : ?>
+          <p class="field-hint">ابتدا از بین بازیگرانی که برجسته کرده‌اید انتخاب کنید و درخواست را بفرستید.</p>
+          <form class="form request-compose-form" method="post" action="my-requests.php?box=sent#request-compose">
+            <?php wp_nonce_field('casting_send_request'); ?>
+            <input type="hidden" name="send_collaboration_request" value="1">
+            <fieldset class="request-pick-list">
+              <legend>انتخاب‌های برجسته شما</legend>
+              <?php foreach ($highlighted as $talent) :
+                  $tid = (int) $talent['talent_id'];
+                  ?>
+                <label class="request-pick-item">
+                  <input
+                    type="radio"
+                    name="talent_id"
+                    value="<?= $tid ?>"
+                    <?= $selected_talent_id === $tid ? 'checked' : '' ?>
+                    required
+                  >
+                  <span class="request-pick-card">
+                    <span class="request-pick-photo">
+                      <?php if (($talent['photo_url'] ?? '') !== '') : ?>
+                        <img src="<?= casting_e((string) $talent['photo_url']) ?>" alt="">
+                      <?php else : ?>
+                        <span class="photo-placeholder">?</span>
+                      <?php endif; ?>
+                    </span>
+                    <span class="request-pick-meta">
+                      <strong><?= casting_e((string) $talent['name']) ?></strong>
+                      <?php if (($talent['city'] ?? '') !== '') : ?>
+                        <span><?= casting_e((string) $talent['city']) ?></span>
+                      <?php endif; ?>
+                    </span>
+                  </span>
+                </label>
+              <?php endforeach; ?>
+            </fieldset>
+            <div class="field">
+              <label for="req_project">نام پروژه / نقش (اختیاری)</label>
+              <input id="req_project" name="project" type="text" maxlength="191" value="<?= casting_e($project) ?>">
+            </div>
+            <div class="field">
+              <label for="req_message">متن درخواست</label>
+              <textarea id="req_message" name="message" rows="4" required maxlength="2000"><?= casting_e($message) ?></textarea>
+            </div>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="submit">ارسال درخواست</button>
+            </div>
+          </form>
+        <?php else : ?>
+          <p class="field-hint">هنوز بازیگری را برجسته نکرده‌اید. از جستجو پروفایل را باز کنید و «هایلایت» را بزنید تا اینجا سریع‌تر در دسترس باشد.</p>
+        <?php endif; ?>
+
+        <div class="request-compose-search">
+          <a class="btn btn-ghost" href="search-users.php">جستجوی بازیگران</a>
+          <?php if ($highlighted !== []) : ?>
+            <span class="meta">یا بازیگر دیگری را از جستجو پیدا کنید.</span>
+          <?php endif; ?>
+        </div>
+      </div>
+    </details>
+    <?php
+}
