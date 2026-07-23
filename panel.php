@@ -30,6 +30,8 @@ if ($profile_post['profile'] !== null) {
     $complete = casting_profile_complete($profile);
 }
 
+$hide_talent_profile = casting_profile_hides_talent_fields($profile['activities'] ?? [], $user_id);
+
 casting_render_panel_start('پنل کاربری', 'panel');
 if (isset($_GET['welcome'])) {
     echo '<div class="flash flash-success" role="alert">ثبت‌نام و ورود با موفقیت انجام شد.</div>';
@@ -50,7 +52,7 @@ casting_render_flash();
   <?php endif; ?>
   <?php if (!$complete) : ?>
     <p class="meta">پروفایلتان کامل نیست. برای دیده‌شدن بهتر، اطلاعات و عکس را تکمیل کنید.</p>
-  <?php else : ?>
+  <?php elseif (!$hide_talent_profile) : ?>
     <p class="meta">پروفایل آماده است<?= !empty($profile['visible']) ? ' و قابل مشاهده است' : '؛ فعلاً مخفی است' ?>.</p>
   <?php endif; ?>
   <?php if ($premium) : ?>
