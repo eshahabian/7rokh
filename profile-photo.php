@@ -10,6 +10,11 @@ $user_id = (int) $user->ID;
 $profile = casting_get_profile($user_id);
 $error = '';
 
+if (casting_profile_hides_talent_fields($profile['activities'] ?? [], $user_id)) {
+    casting_set_flash('error', 'بارگذاری عکس فقط برای بازیگران است.');
+    casting_redirect('panel.php');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_photo')) {
         $error = 'درخواست نامعتبر است.';

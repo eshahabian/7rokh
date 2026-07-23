@@ -690,6 +690,20 @@ function casting_purge_actor_trait_meta(int $user_id): void
     delete_user_meta($user_id, 'casting_skill_items');
     delete_user_meta($user_id, 'casting_skills');
     delete_user_meta($user_id, 'casting_skills_other');
+    foreach (array_keys(casting_portrait_slots()) as $slot) {
+        $meta_key = casting_portrait_meta_key($slot);
+        if ($meta_key !== '') {
+            delete_user_meta($user_id, $meta_key);
+        }
+    }
+    delete_user_meta($user_id, 'casting_photo_id');
+}
+
+function casting_user_has_acting_profile(int $user_id): bool
+{
+    $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+
+    return casting_activities_has_acting($activities);
 }
 
 function casting_user_has_actor_only_profile_meta(int $user_id): bool
@@ -705,9 +719,17 @@ function casting_user_has_actor_only_profile_meta(int $user_id): bool
         'casting_availability',
         'casting_skills',
         'casting_skills_other',
+        'casting_photo_id',
     ];
     foreach ($keys as $key) {
         if (get_user_meta($user_id, $key, true) !== '') {
+            return true;
+        }
+    }
+
+    foreach (array_keys(casting_portrait_slots()) as $slot) {
+        $meta_key = casting_portrait_meta_key($slot);
+        if ($meta_key !== '' && (int) get_user_meta($user_id, $meta_key, true) > 0) {
             return true;
         }
     }
@@ -2259,6 +2281,19 @@ function casting_handle_portrait_upload(int $user_id, string $slot): array
  */
 function casting_handle_portrait_uploads(int $user_id, bool $require_all = false): array
 {
+    if (!casting_user_has_acting_profile($user_id)) {
+        foreach (array_keys(casting_portrait_slots()) as $slot) {
+            if (!empty($_FILES['photo_' . $slot]['name'])) {
+                return ['ok' => false, 'error' => 'بارگذاری عکس فقط برای بازیگران امکان‌پذیر است.'];
+            }
+        }
+        if ($require_all) {
+            return ['ok' => false, 'error' => 'بارگذاری عکس فقط برای بازیگران امکان‌پذیر است.'];
+        }
+
+        return ['ok' => true, 'error' => ''];
+    }
+
     $labels = casting_portrait_slots();
 
     if ($require_all) {
@@ -2453,9 +2488,14 @@ function casting_query_talents(array $filters = [], int $page = 1, int $per_page
 
 function casting_profile_complete(array $profile): bool
 {
-    return $profile['age'] !== ''
-        && $profile['gender'] !== ''
-        && casting_portraits_complete($profile['portraits'] ?? []);
+    if (($profile['age'] ?? '') === '' || ($profile['gender'] ?? '') === '') {
+        return false;
+    }
+    if (casting_profile_hides_talent_fields($profile['activities'] ?? [])) {
+        return true;
+    }
+
+    return casting_portraits_complete($profile['portraits'] ?? []);
 }
 
 /**

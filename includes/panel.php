@@ -131,6 +131,9 @@ function casting_render_panel_sidebar(string $active): void
               && in_array($item['key'], casting_panel_nav_keys_hidden_for_director(), true)) {
               continue;
           }
+          if ($item['key'] === 'photo' && $user && !casting_user_has_acting_profile((int) $user->ID)) {
+              continue;
+          }
           ?>
           <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= $is_external ? ' target="_blank" rel="noopener"' : '' ?>>
             <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
