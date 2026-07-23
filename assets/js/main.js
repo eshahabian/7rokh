@@ -1030,4 +1030,28 @@
       adminMemberPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
+
+  const deskProjectSelect = document.querySelector("[data-desk-project-select]");
+  const deskRoleSelect = document.querySelector("[data-desk-role-select]");
+  const deskRolesMap = window.CASTING_DESK_ROLES || {};
+  const fillDeskRoles = () => {
+    if (!deskProjectSelect || !deskRoleSelect) return;
+    const projectId = String(deskProjectSelect.value || "");
+    const roles = Array.isArray(deskRolesMap[projectId]) ? deskRolesMap[projectId] : [];
+    deskRoleSelect.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = roles.length ? "انتخاب نقش" : "نقشی برای این پروژه نیست";
+    deskRoleSelect.appendChild(placeholder);
+    roles.forEach((role) => {
+      const opt = document.createElement("option");
+      opt.value = String(role.id || "");
+      opt.textContent = String(role.title || "");
+      deskRoleSelect.appendChild(opt);
+    });
+  };
+  if (deskProjectSelect && deskRoleSelect) {
+    deskProjectSelect.addEventListener("change", fillDeskRoles);
+    fillDeskRoles();
+  }
 })();

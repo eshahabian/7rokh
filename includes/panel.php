@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/profile.php';
 require_once __DIR__ . '/premium.php';
 require_once __DIR__ . '/director-workspace.php';
+require_once __DIR__ . '/director-desk.php';
 require_once __DIR__ . '/admin-access.php';
 require_once __DIR__ . '/chat-rules.php';
 require_once __DIR__ . '/layout.php';
@@ -18,6 +19,7 @@ function casting_panel_nav_items(): array
         ['key' => 'messages',   'label' => 'پیام کاربران',            'href' => 'chat.php'],
         ['key' => 'my-requests','label' => 'درخواست‌های من',          'href' => 'my-requests.php'],
         ['key' => 'search',     'label' => 'جستجوی کاربران',          'href' => 'search-users.php'],
+        ['key' => 'desk',       'label' => 'میز کار casting',         'href' => 'director-desk.php'],
         ['key' => 'premium',    'label' => 'خرید و فعال‌سازی',        'href' => 'premium.php'],
         ['key' => 'receipt',    'label' => 'ثبت فیش کارت به کارت',    'href' => 'premium-receipt.php'],
         ['key' => 'newest',     'label' => 'جدیدترین کاربران',        'href' => 'newest-users.php'],
@@ -112,6 +114,9 @@ function casting_render_panel_sidebar(string $active): void
             <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
           </span>
               <?php
+              continue;
+          }
+          if ($item['key'] === 'desk' && (!$user || !casting_user_is_director((int) $user->ID))) {
               continue;
           }
           ?>
@@ -1223,7 +1228,7 @@ function casting_newest_members(int $limit = 30, int $exclude_id = 0): array
     return is_array($users) ? $users : [];
 }
 
-function casting_render_member_card(WP_User $member, int $viewer_id, ?array $director_flags = null): void
+function casting_render_member_card(WP_User $member, int $viewer_id, ?array $director_flags = null, float $director_score = 0): void
 {
     $id = (int) $member->ID;
     $role = casting_get_user_role($id);
@@ -1249,6 +1254,9 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
         <p class="meta">
           <?= casting_e(casting_role_label($role)) ?>
           <?php if ($premium) : ?><span class="chip chip-premium">ویژه</span><?php endif; ?>
+          <?php if ($director_score > 0) : ?>
+            <span class="director-score-pill" title="بهترین امتیاز شما">★ <?= casting_e(casting_director_format_score($director_score)) ?></span>
+          <?php endif; ?>
           <?php if ($profile['city'] !== '') : ?> · <?= casting_e($profile['city']) ?><?php endif; ?>
         </p>
         <?php if ($viewer_id !== $id && casting_can_users_chat($viewer_id, $id)['ok']) : ?>
@@ -1323,9 +1331,13 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
 function casting_render_member_search_results(array $members, int $viewer_id, int $total, int $page, int $pages, array $filters): void
 {
     $director_flags = [];
+    $director_scores = [];
     if (function_exists('casting_user_is_director') && casting_user_is_director($viewer_id)) {
         if (!function_exists('casting_director_workspace_flags_for_talents')) {
             require_once __DIR__ . '/director-workspace.php';
+        }
+        if (!function_exists('casting_director_best_scores_for_talents')) {
+            require_once __DIR__ . '/director-desk.php';
         }
         $talent_ids = [];
         foreach ($members as $member) {
@@ -1334,6 +1346,7 @@ function casting_render_member_search_results(array $members, int $viewer_id, in
             }
         }
         $director_flags = casting_director_workspace_flags_for_talents($viewer_id, $talent_ids);
+        $director_scores = casting_director_best_scores_for_talents($viewer_id, $talent_ids);
     }
     ?>
   <p class="meta member-search-count"><?= (int) $total ?> کاربر · اعضای ویژه در اولویت نمایش</p>
@@ -1344,7 +1357,12 @@ function casting_render_member_search_results(array $members, int $viewer_id, in
       <?php foreach ($members as $member) : ?>
         <?php
         $member_id = (int) $member->ID;
-        casting_render_member_card($member, $viewer_id, $director_flags[$member_id] ?? null);
+        casting_render_member_card(
+            $member,
+            $viewer_id,
+            $director_flags[$member_id] ?? null,
+            (float) ($director_scores[$member_id] ?? 0)
+        );
         ?>
       <?php endforeach; ?>
     </div>

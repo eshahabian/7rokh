@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/profile.php';
 require_once __DIR__ . '/director-workspace.php';
+require_once __DIR__ . '/director-desk.php';
 
 function casting_panel_render_section(int $user_id, callable $render, string $section = ''): void
 {
@@ -420,6 +421,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
 
   <?php if ($show_director_tools && is_array($director_workspace)) : ?>
     <?php casting_render_director_talent_workspace_panel($viewer_id, $member_id, $director_workspace); ?>
+    <?php casting_render_director_desk_talent_panel($viewer_id, $member_id, max(0, (int) ($_GET['role'] ?? 0))); ?>
   <?php endif; ?>
 
   <?php if (!$is_self && casting_is_employer_role($viewer_role) && $member_role === 'talent') : ?>

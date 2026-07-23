@@ -7,6 +7,7 @@ require_once __DIR__ . '/includes/request.php';
 require_once __DIR__ . '/includes/blocks.php';
 require_once __DIR__ . '/includes/visitors.php';
 require_once __DIR__ . '/includes/director-workspace.php';
+require_once __DIR__ . '/includes/director-desk.php';
 require_once __DIR__ . '/includes/premium.php';
 require_once __DIR__ . '/includes/chat-rules.php';
 require_once __DIR__ . '/includes/panel.php';
@@ -90,6 +91,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 casting_set_flash('success', 'یادداشت ذخیره شد.');
                 casting_redirect('member.php?id=' . $id . '#director-workspace');
+            }
+        }
+    } elseif (
+        isset($_POST['director_desk'], $_POST['director_desk_action'])
+        && casting_user_is_director($viewer_id)
+        && $member_role === 'talent'
+    ) {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_director_desk_' . $id)) {
+            $error = 'نشست منقضی شده. دوباره تلاش کنید.';
+        } else {
+            $role_id_post = (int) ($_POST['role_id'] ?? 0);
+            $action = (string) $_POST['director_desk_action'];
+            if ($action === 'add_to_role') {
+                $role_id_post = (int) ($_POST['role_id'] ?? 0);
+                $result = casting_director_add_talent_to_role($viewer_id, $role_id_post, $id);
+                if (!$result['ok']) {
+                    $error = $result['error'] ?? 'افزودن ناموفق بود.';
+                } else {
+                    casting_set_flash('success', 'بازیگر به نقش اضافه شد.');
+                    casting_redirect('member.php?id=' . $id . '&role=' . $role_id_post . '#director-desk');
+                }
+            } elseif ($action === 'save_role_talent' && $role_id_post > 0) {
+                $result = casting_director_save_role_talent($viewer_id, $role_id_post, $id, [
+                    'ratings' => is_array($_POST['ratings'] ?? null) ? $_POST['ratings'] : [],
+                    'notes'   => (string) ($_POST['role_notes'] ?? ''),
+                    'status'  => (string) ($_POST['status'] ?? 'candidate'),
+                ]);
+                if (!$result['ok']) {
+                    $error = $result['error'] ?? 'ذخیره ناموفق بود.';
+                } else {
+                    casting_set_flash('success', 'امتیاز ذخیره شد.');
+                    casting_redirect('member.php?id=' . $id . '&role=' . $role_id_post . '#director-desk');
+                }
+            } elseif ($action === 'remove_role_talent' && $role_id_post > 0) {
+                casting_director_remove_role_talent($viewer_id, $role_id_post, $id);
+                casting_set_flash('success', 'از نقش حذف شد.');
+                casting_redirect('member.php?id=' . $id . '#director-desk');
             }
         }
     } elseif (casting_is_employer_role(casting_get_user_role($viewer_id)) && $member_role === 'talent') {
