@@ -3593,3 +3593,18 @@ fieldset.field legend {
 .director-project-lines--roles {
   margin-bottom: 1rem;
 }
+
+.director-casting-call {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.director-call-filters .filter-profile-cluster,
+.director-call-filters .filter-body-metrics {
+  margin-bottom: 0.75rem;
+}
+
+.request-box-tabs {
+  margin-bottom: 0.5rem;
+}

@@ -440,6 +440,22 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         <button class="btn btn-primary" type="submit">ارسال درخواست</button>
       </form>
     </div>
+  <?php elseif (!$is_self && $viewer_role === 'producer' && $member_role === 'director') : ?>
+    <div class="bio-block request-box" id="request-box">
+      <h3>ارسال درخواست به کارگردان</h3>
+      <form class="form" method="post" action="member.php?id=<?= $member_id ?>">
+        <?php wp_nonce_field('casting_request_' . $member_id); ?>
+        <div class="field">
+          <label for="project">نام پروژه (اختیاری)</label>
+          <input id="project" name="project" type="text" value="<?= casting_e($project) ?>">
+        </div>
+        <div class="field">
+          <label for="message">متن درخواست</label>
+          <textarea id="message" name="message" rows="4" required maxlength="2000"><?= casting_e($message) ?></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">ارسال درخواست</button>
+      </form>
+    </div>
   <?php endif; ?>
 </section>
     <?php

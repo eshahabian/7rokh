@@ -74,7 +74,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'is_highlight'         => !empty($_POST['is_highlight']),
                 'highlighted_sections' => is_array($_POST['highlighted_sections'] ?? null) ? $_POST['highlighted_sections'] : [],
                 'assignment_type'      => (string) ($_POST['assignment_type'] ?? ''),
-                'assignment_title'     => (string) ($_POST['assignment_title'] ?? ''),
                 'assignment_text'      => (string) ($_POST['assignment_text'] ?? ''),
             ];
             $save = casting_director_save_workspace($viewer_id, $id, $payload);
@@ -131,6 +130,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     } elseif (casting_is_employer_role(casting_get_user_role($viewer_id)) && $member_role === 'talent') {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_request_' . $id)) {
+            $error = 'نشست منقضی شده. دوباره تلاش کنید.';
+        } else {
+            $project = (string) ($_POST['project'] ?? '');
+            $message = (string) ($_POST['message'] ?? '');
+            $result = casting_send_talent_request($viewer_id, $id, $message, $project);
+            if (!$result['ok']) {
+                $error = $result['error'];
+            } else {
+                casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'درخواست ارسال شد.');
+                casting_redirect('member.php?id=' . $id);
+            }
+        }
+    } elseif (casting_get_user_role($viewer_id) === 'producer' && $member_role === 'director') {
         if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_request_' . $id)) {
             $error = 'نشست منقضی شده. دوباره تلاش کنید.';
         } else {

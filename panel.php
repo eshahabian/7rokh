@@ -60,7 +60,7 @@ casting_render_flash();
     <a class="btn btn-ghost" href="#completion">تکمیل پروفایل</a>
     <a class="btn btn-primary" href="#edit-profile">ویرایش اطلاعات</a>
     <a class="btn btn-ghost" href="chat.php">پیام‌ها</a>
-    <a class="btn btn-ghost" href="my-requests.php">درخواست‌های من<?php if ($request_count > 0) : ?> (<?= (int) $request_count ?>)<?php endif; ?></a>
+    <a class="btn btn-ghost" href="my-requests.php">درخواست‌ها<?php if ($request_count > 0) : ?> (<?= (int) $request_count ?>)<?php endif; ?></a>
   </div>
 </section>
 

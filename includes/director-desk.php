@@ -914,3 +914,234 @@ function casting_render_director_desk_talent_panel(int $director_id, int $talent
     </div>
     <?php
 }
+
+/**
+ * @param array<string, string> $input
+ * @return array<string, string>
+ */
+function casting_director_parse_call_filters(array $input): array
+{
+    if (!function_exists('casting_parse_member_search_filters')) {
+        require_once __DIR__ . '/panel.php';
+    }
+
+    return casting_parse_member_search_filters([
+        'gender'       => (string) ($input['gender'] ?? ''),
+        'height_min'   => (string) ($input['height_min'] ?? ''),
+        'height_max'   => (string) ($input['height_max'] ?? ''),
+        'weight_min'   => (string) ($input['weight_min'] ?? ''),
+        'weight_max'   => (string) ($input['weight_max'] ?? ''),
+        'age_min'      => (string) ($input['age_min'] ?? ''),
+        'age_max'      => (string) ($input['age_max'] ?? ''),
+    ]);
+}
+
+function casting_director_call_has_filters(array $filters): bool
+{
+    return ($filters['gender'] ?? '') !== ''
+        || ($filters['height_range'] ?? '') !== ''
+        || ($filters['weight_range'] ?? '') !== ''
+        || ($filters['age_range'] ?? '') !== '';
+}
+
+/**
+ * @param array<string, string> $filters
+ */
+function casting_director_call_filter_summary(array $filters): string
+{
+    $parts = [];
+    if (!empty($filters['gender']) && array_key_exists($filters['gender'], casting_gender_labels())) {
+        $parts[] = 'جنسیت: ' . casting_gender_labels()[$filters['gender']];
+    }
+    if (($filters['age_range'] ?? '') !== '') {
+        $parts[] = 'سن: ' . str_replace('-', ' تا ', (string) $filters['age_range']);
+    }
+    if (($filters['height_range'] ?? '') !== '') {
+        $parts[] = 'قد: ' . str_replace('-', ' تا ', (string) $filters['height_range']) . ' سانتی‌متر';
+    }
+    if (($filters['weight_range'] ?? '') !== '') {
+        $parts[] = 'وزن: ' . str_replace('-', ' تا ', (string) $filters['weight_range']) . ' کیلو';
+    }
+
+    return $parts === [] ? '' : implode(' · ', $parts);
+}
+
+/**
+ * @return list<WP_User>
+ */
+function casting_director_query_call_talents(int $director_id, array $filters, int $max = 250): array
+{
+    if (!function_exists('casting_query_members')) {
+        require_once __DIR__ . '/panel.php';
+    }
+
+    unset($filters['activity_category'], $filters['activity_specialty']);
+
+    $all = [];
+    $page = 1;
+    $per_page = 50;
+    while (count($all) < $max) {
+        $result = casting_query_members($director_id, $filters, $page, $per_page);
+        foreach ($result['users'] as $user) {
+            if (!$user instanceof WP_User) {
+                continue;
+            }
+            if (casting_get_user_role((int) $user->ID) !== 'talent') {
+                continue;
+            }
+            $all[(int) $user->ID] = $user;
+            if (count($all) >= $max) {
+                break 2;
+            }
+        }
+        if ($page * $per_page >= $result['total']) {
+            break;
+        }
+        $page++;
+    }
+
+    return array_values($all);
+}
+
+/**
+ * @return array{ok:bool,error?:string,sent?:int,matched?:int}
+ */
+function casting_director_send_casting_call(int $director_id, int $project_id, array $filters, string $message): array
+{
+    if (!casting_director_get_project($director_id, $project_id)) {
+        return ['ok' => false, 'error' => 'پروژه پیدا نشد.'];
+    }
+    if (!casting_director_call_has_filters($filters)) {
+        return ['ok' => false, 'error' => 'حداقل یک فیلتر (جنسیت، سن، قد یا وزن) انتخاب کنید.'];
+    }
+
+    $message = sanitize_textarea_field($message);
+    if ($message === '') {
+        return ['ok' => false, 'error' => 'متن فراخوان را بنویسید.'];
+    }
+    if (casting_strlen($message) > 3000) {
+        return ['ok' => false, 'error' => 'متن فراخوان خیلی بلند است.'];
+    }
+
+    $project = casting_director_get_project($director_id, $project_id);
+    $director = get_user_by('id', $director_id);
+    if (!$project || !$director) {
+        return ['ok' => false, 'error' => 'اطلاعات پروژه پیدا نشد.'];
+    }
+
+    $talents = casting_director_query_call_talents($director_id, $filters);
+    $matched = count($talents);
+    if ($matched === 0) {
+        return ['ok' => false, 'error' => 'بازیگری با این مشخصات پیدا نشد.'];
+    }
+
+    $call_id = uniqid('call_', true);
+    $filter_summary = casting_director_call_filter_summary($filters);
+    $sent_at = current_time('mysql');
+    $sent = 0;
+
+    if (!function_exists('casting_send_mail')) {
+        require_once __DIR__ . '/mail.php';
+    }
+
+    foreach ($talents as $talent) {
+        $talent_id = (int) $talent->ID;
+        if ($talent_id <= 0) {
+            continue;
+        }
+        if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($director_id, $talent_id)) {
+            continue;
+        }
+
+        $item = [
+            'id'             => uniqid('callitem_', true),
+            'call_id'        => $call_id,
+            'director_id'    => $director_id,
+            'director_name'  => (string) $director->display_name,
+            'project_id'     => $project_id,
+            'project_title'  => (string) ($project['title'] ?? ''),
+            'message'        => $message,
+            'filters'        => $filter_summary,
+            'sent_at'        => $sent_at,
+            'status'         => 'new',
+        ];
+
+        $inbox = get_user_meta($talent_id, 'casting_casting_calls', true);
+        if (!is_array($inbox)) {
+            $inbox = [];
+        }
+        array_unshift($inbox, $item);
+        update_user_meta($talent_id, 'casting_casting_calls', array_slice($inbox, 0, 100));
+
+        $subject = sprintf('[%s] فراخوان کستینگ: %s', casting_brand(), (string) ($project['title'] ?? ''));
+        $body = "سلام " . $talent->display_name . "\n\n"
+            . "کارگردان «" . $director->display_name . "» یک فراخوان کستینگ برای پروژه «" . ($project['title'] ?? '') . "» فرستاده است.\n";
+        if ($filter_summary !== '') {
+            $body .= 'مشخصات: ' . $filter_summary . "\n";
+        }
+        $body .= "\n" . $message . "\n\n"
+            . 'ورود به پورتال: ' . casting_url('panel.php') . "\n";
+        casting_send_mail((string) $talent->user_email, $subject, $body);
+        $sent++;
+    }
+
+    if ($sent === 0) {
+        return ['ok' => false, 'error' => 'به هیچ بازیگری ارسال نشد (ممکن است همه بلاک باشند).'];
+    }
+
+    $log = get_user_meta($director_id, 'casting_director_call_log', true);
+    if (!is_array($log)) {
+        $log = [];
+    }
+    array_unshift($log, [
+        'call_id'       => $call_id,
+        'project_id'    => $project_id,
+        'project_title' => (string) ($project['title'] ?? ''),
+        'filters'       => $filter_summary,
+        'message'       => $message,
+        'matched'       => $matched,
+        'sent'          => $sent,
+        'sent_at'       => $sent_at,
+    ]);
+    update_user_meta($director_id, 'casting_director_call_log', array_slice($log, 0, 50));
+
+    return ['ok' => true, 'sent' => $sent, 'matched' => $matched];
+}
+
+/**
+ * @param array<string, string> $filters
+ */
+function casting_render_director_casting_call_form(int $project_id, array $filters = [], string $message = ''): void
+{
+    if (!function_exists('casting_render_body_metric_search_fields')) {
+        require_once __DIR__ . '/panel.php';
+    }
+    $genders = casting_gender_labels();
+    ?>
+    <div class="director-casting-call">
+      <h2 class="panel-section-title">فراخوان کستینگ</h2>
+      <p class="field-hint">بر اساس مشخصات (جنسیت، قد، وزن، سن) به همه بازیگران منطبق پیام بفرستید.</p>
+      <form class="form" method="post" action="director-desk.php?project=<?= $project_id ?>" onsubmit="return confirm('فراخوان برای بازیگران منطبق با فیلترها ارسال شود؟');">
+        <?php wp_nonce_field('casting_director_desk_page'); ?>
+        <input type="hidden" name="desk_action" value="send_casting_call">
+        <div class="director-call-filters form-grid">
+          <div class="field">
+            <label for="call_gender">جنسیت</label>
+            <select id="call_gender" name="gender">
+              <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+              <?php foreach ($genders as $key => $label) : ?>
+                <option value="<?= casting_e($key) ?>" <?= ($filters['gender'] ?? '') === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <?php casting_render_body_metric_search_fields($filters, ['height', 'weight', 'age']); ?>
+        </div>
+        <div class="field">
+          <label for="call_message">متن فراخوان</label>
+          <textarea id="call_message" name="call_message" rows="4" required maxlength="3000" placeholder="توضیح نقش، زمان تست، محل حضور…"><?= casting_e($message) ?></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">ارسال فراخوان</button>
+      </form>
+    </div>
+    <?php
+}

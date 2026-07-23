@@ -277,11 +277,7 @@ function casting_director_save_workspace(int $director_id, int $talent_id, array
     if (!in_array($assignment_type, ['', 'read_text', 'perform_scene'], true)) {
         $assignment_type = '';
     }
-    $assignment_title = sanitize_text_field((string) ($data['assignment_title'] ?? ''));
     $assignment_text = sanitize_textarea_field((string) ($data['assignment_text'] ?? ''));
-    if (casting_strlen($assignment_title) > 191) {
-        return ['ok' => false, 'error' => 'عنوان تکلیف خیلی بلند است.'];
-    }
     if (casting_strlen($assignment_text) > 5000) {
         return ['ok' => false, 'error' => 'متن تکلیف خیلی بلند است.'];
     }
@@ -294,7 +290,7 @@ function casting_director_save_workspace(int $director_id, int $talent_id, array
         'is_highlight'         => $is_highlight ? 1 : 0,
         'highlighted_sections' => wp_json_encode($sections, JSON_UNESCAPED_UNICODE),
         'assignment_type'      => $assignment_type,
-        'assignment_title'     => $assignment_title,
+        'assignment_title'     => '',
         'assignment_text'      => $assignment_text,
         'updated_at'           => $now,
     ];
@@ -341,8 +337,6 @@ function casting_director_send_assignment(int $director_id, int $talent_id): arr
     $workspace = casting_director_get_workspace($director_id, $talent_id);
     $type = (string) ($workspace['assignment_type'] ?? '');
     $text = trim((string) ($workspace['assignment_text'] ?? ''));
-    $title = trim((string) ($workspace['assignment_title'] ?? ''));
-
     if (!in_array($type, ['read_text', 'perform_scene'], true)) {
         return ['ok' => false, 'error' => 'نوع تکلیف را انتخاب کنید.'];
     }
@@ -361,7 +355,7 @@ function casting_director_send_assignment(int $director_id, int $talent_id): arr
         'director_id'   => $director_id,
         'director_name' => (string) $director->display_name,
         'type'          => $type,
-        'title'         => $title,
+        'title'         => '',
         'text'          => $text,
         'sent_at'       => current_time('mysql'),
         'status'        => 'pending',
@@ -396,11 +390,8 @@ function casting_director_send_assignment(int $director_id, int $talent_id): arr
     $subject = sprintf('[%s] تکلیف جدید از %s', casting_brand(), $director->display_name);
     $body = "سلام " . $talent->display_name . "\n\n"
         . "کارگردان «" . $director->display_name . "» یک تکلیف برای شما فرستاده است.\n"
-        . 'نوع: ' . $type_label . "\n";
-    if ($title !== '') {
-        $body .= 'عنوان: ' . $title . "\n";
-    }
-    $body .= "\n" . $text . "\n\n"
+        . 'نوع: ' . $type_label . "\n\n"
+        . $text . "\n\n"
         . 'برای مشاهده در پورتال وارد شوید: ' . casting_url('panel.php') . "\n";
     casting_send_mail((string) $talent->user_email, $subject, $body);
 
@@ -482,20 +473,14 @@ function casting_render_director_talent_workspace_panel(int $director_id, int $t
         <div class="director-assignment">
           <h4>تکلیف / سناریوی تست</h4>
           <p class="field-hint">متنی برای بازیگر بفرستید — مثلاً بخواند یا یک صحنه را اجرا کند.</p>
-          <div class="form-grid">
-            <div class="field">
-              <label for="assignment_type">نوع تکلیف</label>
-              <select id="assignment_type" name="assignment_type">
-                <option value="">انتخاب کنید</option>
-                <?php foreach ($assignment_types as $key => $label) : ?>
-                  <option value="<?= casting_e($key) ?>" <?= ($workspace['assignment_type'] ?? '') === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-            <div class="field">
-              <label for="assignment_title">عنوان (اختیاری)</label>
-              <input id="assignment_title" name="assignment_title" type="text" maxlength="191" value="<?= casting_e((string) ($workspace['assignment_title'] ?? '')) ?>" placeholder="مثلاً صحنه اول — تست گریم">
-            </div>
+          <div class="field">
+            <label for="assignment_type">نوع تکلیف</label>
+            <select id="assignment_type" name="assignment_type">
+              <option value="">انتخاب کنید</option>
+              <?php foreach ($assignment_types as $key => $label) : ?>
+                <option value="<?= casting_e($key) ?>" <?= ($workspace['assignment_type'] ?? '') === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+              <?php endforeach; ?>
+            </select>
           </div>
           <div class="field">
             <label for="assignment_text">متن تکلیف</label>

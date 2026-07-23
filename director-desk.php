@@ -84,6 +84,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             casting_director_remove_role_talent($director_id, $role_id, $talent_id);
             casting_set_flash('success', 'بازیگر از نقش حذف شد.');
             casting_redirect('director-desk.php?project=' . $project_id . '&role=' . $role_id);
+        } elseif ($action === 'send_casting_call' && $project_id > 0) {
+            $call_filters = casting_director_parse_call_filters($_POST);
+            $result = casting_director_send_casting_call(
+                $director_id,
+                $project_id,
+                $call_filters,
+                (string) ($_POST['call_message'] ?? '')
+            );
+            if (!$result['ok']) {
+                $error = $result['error'] ?? 'ارسال فراخوان ناموفق بود.';
+            } else {
+                casting_set_flash(
+                    'success',
+                    'فراخوان برای ' . (int) ($result['sent'] ?? 0) . ' بازیگر ارسال شد'
+                    . ((int) ($result['matched'] ?? 0) > (int) ($result['sent'] ?? 0)
+                        ? ' (از ' . (int) ($result['matched'] ?? 0) . ' نفر منطبق)'
+                        : '')
+                    . '.'
+                );
+                casting_redirect('director-desk.php?project=' . $project_id);
+            }
         }
     }
 }
@@ -284,6 +305,8 @@ casting_render_flash();
         <button class="btn btn-primary btn-sm" type="submit">افزودن نقش</button>
       </form>
     </div>
+
+    <?php casting_render_director_casting_call_form($project_id); ?>
 
   <?php else : ?>
     <a class="back-link" href="director-desk.php?project=<?= $project_id ?>">← <?= casting_e((string) ($active_project['title'] ?? 'پروژه')) ?></a>
