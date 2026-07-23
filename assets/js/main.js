@@ -807,6 +807,42 @@
     }
   }
 
+  document.querySelectorAll("[data-password-confirm-field]").forEach((field) => {
+    const form = field.closest("form");
+    const pass = form?.querySelector("[data-password-source]");
+    const pass2 = field.querySelector("[data-password-confirm]");
+    const msg = field.querySelector("[data-password-mismatch-msg]");
+    if (!pass || !pass2 || !msg) return;
+
+    const syncPasswordMatch = () => {
+      const mismatch = pass2.value.length > 0 && pass.value !== pass2.value;
+      msg.hidden = !mismatch;
+      field.classList.toggle("is-invalid", mismatch);
+      pass2.setAttribute("aria-invalid", mismatch ? "true" : "false");
+      return !mismatch;
+    };
+
+    pass.addEventListener("input", syncPasswordMatch);
+    pass2.addEventListener("input", syncPasswordMatch);
+    pass2.addEventListener("blur", syncPasswordMatch);
+
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        if (pass.value !== pass2.value) {
+          e.preventDefault();
+          msg.hidden = false;
+          field.classList.add("is-invalid");
+          pass2.setAttribute("aria-invalid", "true");
+          pass2.focus();
+        }
+      });
+    }
+
+    if (!msg.hidden) {
+      field.classList.add("is-invalid");
+    }
+  });
+
   document.querySelectorAll("[data-talent-profile-toggle]").forEach((form) => {
     const activityBox = form.querySelector("[data-activity-items]");
     if (!activityBox) return;

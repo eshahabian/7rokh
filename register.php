@@ -13,6 +13,7 @@ require_once __DIR__ . '/includes/layout.php';
 casting_nocache();
 
 $error = '';
+$password_mismatch = false;
 $name = '';
 $username = '';
 $email = '';
@@ -119,7 +120,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $skip_talent_profile = !casting_activities_has_acting($activities);
 
         if ($password !== $password2) {
-            $error = 'تکرار رمز عبور مطابقت ندارد.';
+            $password_mismatch = true;
         } elseif ($birthdate === '' || $age_calc === null) {
             $error = 'تاریخ تولد شمسی را کامل و درست انتخاب کنید.';
         } elseif (!array_key_exists($gender, casting_gender_labels())) {
@@ -254,11 +255,12 @@ if ($error !== '') {
       <div class="form-grid">
         <div class="field">
           <label for="password">رمز عبور (حداقل ۸ کاراکتر)</label>
-          <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password">
+          <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password" data-password-source>
         </div>
-        <div class="field">
+        <div class="field" data-password-confirm-field<?= $password_mismatch ? ' is-invalid' : '' ?>>
           <label for="password2">تکرار رمز عبور</label>
-          <input id="password2" name="password2" type="password" required minlength="8" autocomplete="new-password">
+          <p class="field-inline-error" data-password-mismatch-msg role="alert"<?= $password_mismatch ? '' : ' hidden' ?>>پسورد یکسان نیست</p>
+          <input id="password2" name="password2" type="password" required minlength="8" autocomplete="new-password" data-password-confirm<?= $password_mismatch ? ' aria-invalid="true"' : '' ?>>
         </div>
       </div>
 
