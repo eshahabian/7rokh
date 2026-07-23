@@ -140,13 +140,16 @@ casting_render_flash();
 
     <?php if ($projects) : ?>
       <div class="director-project-lines" aria-label="فهرست پروژه‌ها">
-        <?php foreach ($projects as $project) :
+        <?php foreach ($projects as $index => $project) :
             $pid = (int) $project['id'];
             $type = $project_types[(string) ($project['project_type'] ?? 'film')] ?? '';
             $stats = casting_director_project_stats($director_id, $pid);
             ?>
           <a class="director-project-line" href="director-desk.php?project=<?= $pid ?>">
-            <span class="director-project-line-title"><?= casting_e((string) $project['title']) ?></span>
+            <span class="director-project-line-start">
+              <span class="director-project-line-num"><?= (int) ($index + 1) ?></span>
+              <span class="director-project-line-title"><?= casting_e((string) $project['title']) ?></span>
+            </span>
             <span class="director-project-line-meta">
               <?= casting_e($type) ?>
               <?php if ((int) ($project['actors_needed'] ?? 0) > 0) : ?>
@@ -249,11 +252,14 @@ casting_render_flash();
 
       <?php if ($roles) : ?>
         <div class="director-project-lines director-project-lines--roles">
-          <?php foreach ($roles as $role) :
+          <?php foreach ($roles as $index => $role) :
               $rid = (int) $role['id'];
               ?>
             <a class="director-project-line" href="director-desk.php?project=<?= $project_id ?>&role=<?= $rid ?>">
-              <span class="director-project-line-title"><?= casting_e((string) $role['title']) ?></span>
+              <span class="director-project-line-start">
+                <span class="director-project-line-num"><?= (int) ($index + 1) ?></span>
+                <span class="director-project-line-title"><?= casting_e((string) $role['title']) ?></span>
+              </span>
               <?php if (($role['description'] ?? '') !== '') : ?>
                 <span class="director-project-line-meta"><?= casting_e((string) $role['description']) ?></span>
               <?php endif; ?>
