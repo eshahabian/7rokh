@@ -1090,4 +1090,30 @@
     deskProjectSelect.addEventListener("change", fillDeskRoles);
     fillDeskRoles();
   }
+
+  const assignmentForm = document.querySelector("[data-assignment-form]");
+  const assignmentTypeSelect = assignmentForm?.querySelector("[data-assignment-type-select]");
+  if (assignmentForm && assignmentTypeSelect) {
+    const hintRead = assignmentForm.querySelector("[data-assignment-hint-read]");
+    const hintScene = assignmentForm.querySelector("[data-assignment-hint-scene]");
+    const extras = assignmentForm.querySelector("[data-assignment-extras]");
+    const extraText = assignmentForm.querySelector("[data-assignment-extra-text]");
+    const extraAudio = assignmentForm.querySelector("[data-assignment-extra-audio]");
+
+    const syncAssignmentForm = () => {
+      const type = String(assignmentTypeSelect.value || "");
+      const isRead = type === "read_text";
+      const isScene = type === "perform_scene";
+      const showExtras = isRead || isScene;
+
+      if (hintRead) hintRead.hidden = !isRead;
+      if (hintScene) hintScene.hidden = !isScene;
+      if (extras) extras.hidden = !showExtras;
+      if (extraText) extraText.hidden = !showExtras;
+      if (extraAudio) extraAudio.hidden = !isScene;
+    };
+
+    assignmentTypeSelect.addEventListener("change", syncAssignmentForm);
+    syncAssignmentForm();
+  }
 })();

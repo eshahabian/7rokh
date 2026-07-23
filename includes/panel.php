@@ -18,6 +18,7 @@ function casting_panel_nav_items(): array
         ['key' => 'panel',      'label' => 'پنل کاربری',              'href' => 'panel.php'],
         ['key' => 'messages',   'label' => 'پیام کاربران',            'href' => 'chat.php'],
         ['key' => 'my-requests','label' => 'درخواست‌ها',              'href' => 'my-requests.php'],
+        ['key' => 'briefs',     'label' => 'تکالیف',                  'href' => 'my-briefs.php'],
         ['key' => 'search',     'label' => 'جستجوی کاربران',          'href' => 'search-users.php'],
         ['key' => 'desk',       'label' => 'پروژه‌ها',                 'href' => 'director-desk.php'],
         ['key' => 'premium',    'label' => 'خرید و فعال‌سازی',        'href' => 'premium.php'],
@@ -59,6 +60,7 @@ function casting_render_panel_sidebar(string $active): void
     $pending_receipts = 0;
     $unread_contacts = 0;
     $request_count = 0;
+    $pending_brief_count = 0;
     $panel_premium_until = null;
     $panel_membership_number = '';
     $user = casting_current_user();
@@ -76,6 +78,12 @@ function casting_render_panel_sidebar(string $active): void
             require_once __DIR__ . '/request.php';
         }
         $request_count = casting_user_new_request_count($user_id);
+        if (!function_exists('casting_talent_pending_brief_count')) {
+            require_once __DIR__ . '/talent-briefs.php';
+        }
+        if (casting_get_user_role($user_id) === 'talent') {
+            $pending_brief_count = casting_talent_pending_brief_count($user_id);
+        }
         if (!function_exists('casting_user_has_admin_permission')) {
             require_once __DIR__ . '/admin-access.php';
         }
@@ -127,6 +135,9 @@ function casting_render_panel_sidebar(string $active): void
           if ($item['key'] === 'desk' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
               continue;
           }
+          if ($item['key'] === 'briefs' && (!$user || casting_get_user_role((int) $user->ID) !== 'talent')) {
+              continue;
+          }
           if ($user && casting_user_is_director_role((int) $user->ID)
               && in_array($item['key'], casting_panel_nav_keys_hidden_for_director(), true)) {
               continue;
@@ -147,6 +158,8 @@ function casting_render_panel_sidebar(string $active): void
               <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
             <?php elseif ($item['key'] === 'my-requests' && $request_count > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $request_count) ?> درخواست"><?= (int) $request_count ?></span>
+            <?php elseif ($item['key'] === 'briefs' && $pending_brief_count > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $pending_brief_count) ?> تکلیف"><?= (int) $pending_brief_count ?></span>
             <?php elseif ($item['key'] === 'contact' && $unread_contacts > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
             <?php endif; ?>

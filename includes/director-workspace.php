@@ -22,6 +22,8 @@ function casting_director_workspace_install(): void
         assignment_type VARCHAR(32) NOT NULL DEFAULT '',
         assignment_title VARCHAR(191) NOT NULL DEFAULT '',
         assignment_text TEXT NULL,
+        assignment_also_require_text TINYINT(1) NOT NULL DEFAULT 0,
+        assignment_also_require_audio TINYINT(1) NOT NULL DEFAULT 0,
         assignment_sent_at DATETIME NULL,
         first_viewed_at DATETIME NULL,
         last_viewed_at DATETIME NULL,
@@ -33,12 +35,12 @@ function casting_director_workspace_install(): void
     ) {$charset};";
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
-    update_option('casting_director_workspace_db_version', '1');
+    update_option('casting_director_workspace_db_version', '2');
 }
 
 function casting_director_workspace_ensure_table(): void
 {
-    if ((string) get_option('casting_director_workspace_db_version', '') !== '1') {
+    if ((string) get_option('casting_director_workspace_db_version', '') !== '2') {
         casting_director_workspace_install();
     }
 }
@@ -92,6 +94,8 @@ function casting_director_workspace_defaults(): array
         'assignment_type'      => '',
         'assignment_title'     => '',
         'assignment_text'      => '',
+        'assignment_also_require_text' => false,
+        'assignment_also_require_audio' => false,
         'assignment_sent_at'   => '',
         'first_viewed_at'      => '',
         'last_viewed_at'       => '',
@@ -143,6 +147,8 @@ function casting_director_workspace_from_row(?array $row): array
         'assignment_type'      => (string) ($row['assignment_type'] ?? ''),
         'assignment_title'     => (string) ($row['assignment_title'] ?? ''),
         'assignment_text'      => (string) ($row['assignment_text'] ?? ''),
+        'assignment_also_require_text' => !empty($row['assignment_also_require_text']),
+        'assignment_also_require_audio' => !empty($row['assignment_also_require_audio']),
         'assignment_sent_at'   => (string) ($row['assignment_sent_at'] ?? ''),
         'first_viewed_at'      => (string) ($row['first_viewed_at'] ?? ''),
         'last_viewed_at'       => (string) ($row['last_viewed_at'] ?? ''),
@@ -334,6 +340,15 @@ function casting_director_save_workspace(int $director_id, int $talent_id, array
         return ['ok' => false, 'error' => 'متن تکلیف خیلی بلند است.'];
     }
 
+    $also_require_text = !empty($data['assignment_also_require_text']);
+    $also_require_audio = !empty($data['assignment_also_require_audio']);
+    if ($assignment_type === 'read_text') {
+        $also_require_audio = false;
+    } elseif ($assignment_type !== 'perform_scene') {
+        $also_require_text = false;
+        $also_require_audio = false;
+    }
+
     global $wpdb;
     $table = casting_director_workspace_table();
     $now = current_time('mysql');
@@ -344,6 +359,8 @@ function casting_director_save_workspace(int $director_id, int $talent_id, array
         'assignment_type'      => $assignment_type,
         'assignment_title'     => $assignment_title,
         'assignment_text'      => $assignment_text,
+        'assignment_also_require_text' => $also_require_text ? 1 : 0,
+        'assignment_also_require_audio' => $also_require_audio ? 1 : 0,
         'updated_at'           => $now,
     ];
 
@@ -363,7 +380,7 @@ function casting_director_save_workspace(int $director_id, int $talent_id, array
                 'director_id' => $director_id,
                 'talent_id'   => $talent_id,
             ],
-            ['%s', '%d', '%s', '%s', '%s', '%s', '%s'],
+            ['%s', '%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s'],
             ['%d', '%d']
         );
     } else {
@@ -374,7 +391,7 @@ function casting_director_save_workspace(int $director_id, int $talent_id, array
         $wpdb->insert(
             $table,
             $payload,
-            ['%s', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s']
+            ['%s', '%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d', '%d', '%s', '%s']
         );
     }
 
@@ -404,14 +421,22 @@ function casting_director_send_assignment(int $director_id, int $talent_id): arr
     }
 
     $brief = [
-        'id'            => uniqid('brief_', true),
-        'director_id'   => $director_id,
-        'director_name' => (string) $director->display_name,
-        'type'          => $type,
-        'title'         => $title,
-        'text'          => $text,
-        'sent_at'       => current_time('mysql'),
-        'status'        => 'pending',
+        'id'                 => uniqid('brief_', true),
+        'director_id'        => $director_id,
+        'director_name'      => (string) $director->display_name,
+        'type'               => $type,
+        'title'              => $title,
+        'text'               => $text,
+        'also_require_text'  => !empty($workspace['assignment_also_require_text']),
+        'also_require_audio' => !empty($workspace['assignment_also_require_audio']),
+        'sent_at'            => current_time('mysql'),
+        'status'             => 'pending',
+        'response'           => [
+            'audio_id'     => 0,
+            'video_id'     => 0,
+            'text'         => '',
+            'submitted_at' => '',
+        ],
     ];
 
     $inbox = get_user_meta($talent_id, 'casting_talent_briefs', true);
@@ -440,15 +465,20 @@ function casting_director_send_assignment(int $director_id, int $talent_id): arr
         require_once __DIR__ . '/mail.php';
     }
     $type_label = $type === 'perform_scene' ? 'اجرای صحنه' : 'خواندن متن';
+    if (!function_exists('casting_talent_brief_requirements_summary')) {
+        require_once __DIR__ . '/talent-briefs.php';
+    }
+    $req_summary = casting_talent_brief_requirements_summary($brief);
     $subject = sprintf('[%s] تکلیف جدید از %s', casting_brand(), $director->display_name);
     $body = "سلام " . $talent->display_name . "\n\n"
         . "کارگردان «" . $director->display_name . "» یک تکلیف برای شما فرستاده است.\n"
-        . 'نوع: ' . $type_label . "\n";
+        . 'نوع: ' . $type_label . "\n"
+        . 'ارسال لازم: ' . $req_summary . "\n";
     if ($title !== '') {
         $body .= 'عنوان: ' . $title . "\n";
     }
     $body .= "\n" . $text . "\n\n"
-        . 'برای مشاهده در پورتال وارد شوید: ' . casting_url('panel.php') . "\n";
+        . 'برای ارسال پاسخ وارد شوید: ' . casting_url('my-briefs.php') . "\n";
     casting_send_mail((string) $talent->user_email, $subject, $body);
 
     return ['ok' => true, 'workspace' => casting_director_get_workspace($director_id, $talent_id)];
@@ -526,13 +556,13 @@ function casting_render_director_talent_workspace_panel(int $director_id, int $t
           </div>
         </fieldset>
 
-        <div class="director-assignment">
+        <div class="director-assignment" data-assignment-form>
           <h4>تکلیف / سناریوی تست</h4>
           <p class="field-hint">متنی برای بازیگر بفرستید — مثلاً بخواند یا یک صحنه را اجرا کند.</p>
           <div class="form-grid">
             <div class="field">
               <label for="assignment_type">نوع تکلیف</label>
-              <select id="assignment_type" name="assignment_type">
+              <select id="assignment_type" name="assignment_type" data-assignment-type-select>
                 <option value="">انتخاب کنید</option>
                 <?php foreach ($assignment_types as $key => $label) : ?>
                   <option value="<?= casting_e($key) ?>" <?= ($workspace['assignment_type'] ?? '') === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
@@ -544,10 +574,34 @@ function casting_render_director_talent_workspace_panel(int $director_id, int $t
               <input id="assignment_title" name="assignment_title" type="text" maxlength="191" value="<?= casting_e((string) ($workspace['assignment_title'] ?? '')) ?>">
             </div>
           </div>
+          <p class="field-hint assignment-type-hint" data-assignment-hint-read hidden>بازیگر باید <strong>فایل صوتی</strong> ارسال کند.</p>
+          <p class="field-hint assignment-type-hint" data-assignment-hint-scene hidden>بازیگر باید <strong>فایل ویدیو</strong> ارسال کند.</p>
           <div class="field">
             <label for="assignment_text">متن تکلیف</label>
             <textarea id="assignment_text" name="assignment_text" rows="5" maxlength="5000" placeholder="متن برای خواندن، یا توضیح صحنه‌ای که باید اجرا شود…"><?= casting_e((string) ($workspace['assignment_text'] ?? '')) ?></textarea>
           </div>
+          <fieldset class="field assignment-extras" data-assignment-extras hidden>
+            <legend>درخواست تکمیلی (اختیاری)</legend>
+            <p class="field-hint">علاوه بر ارسال اصلی، می‌توانید پاسخ متنی یا فایل صوتی هم بخواهید.</p>
+            <label class="check-row" data-assignment-extra-text hidden>
+              <input
+                type="checkbox"
+                name="assignment_also_require_text"
+                value="1"
+                <?= !empty($workspace['assignment_also_require_text']) ? 'checked' : '' ?>
+              >
+              <span>پاسخ متنی هم لازم باشد</span>
+            </label>
+            <label class="check-row" data-assignment-extra-audio hidden>
+              <input
+                type="checkbox"
+                name="assignment_also_require_audio"
+                value="1"
+                <?= !empty($workspace['assignment_also_require_audio']) ? 'checked' : '' ?>
+              >
+              <span>فایل صوتی هم لازم باشد</span>
+            </label>
+          </fieldset>
           <?php if (!empty($workspace['assignment_sent_at'])) : ?>
             <p class="field-hint">آخرین ارسال: <?= casting_e((string) $workspace['assignment_sent_at']) ?></p>
           <?php endif; ?>
@@ -558,6 +612,13 @@ function casting_render_director_talent_workspace_panel(int $director_id, int $t
           <button class="btn btn-ghost" type="submit" name="director_action" value="send_assignment">ارسال تکلیف به بازیگر</button>
         </div>
       </form>
+
+      <?php
+      if (!function_exists('casting_render_director_brief_responses')) {
+          require_once __DIR__ . '/talent-briefs.php';
+      }
+      casting_render_director_brief_responses($director_id, $talent_id);
+      ?>
     </div>
     <?php
 }

@@ -3351,6 +3351,67 @@ fieldset.field legend {
   border-top: 1px dashed var(--line);
 }
 
+.assignment-type-hint {
+  margin: 0.35rem 0 0.75rem;
+}
+
+.assignment-extras {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.brief-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.brief-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.brief-card-head h3,
+.brief-card-head h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.brief-requirements {
+  margin: 0 0 0.75rem;
+}
+
+.brief-text {
+  margin-bottom: 1rem;
+  white-space: pre-wrap;
+}
+
+.brief-response audio,
+.brief-response video {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  margin: 0.5rem 0 1rem;
+}
+
+.director-brief-history {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--line);
+}
+
+.director-brief-history > h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
 /* میز کار کارگردان */
 .director-desk-page .director-desk-head {
   display: flex;

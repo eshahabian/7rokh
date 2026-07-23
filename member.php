@@ -76,6 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'assignment_type'      => (string) ($_POST['assignment_type'] ?? ''),
                 'assignment_title'     => (string) ($_POST['assignment_title'] ?? ''),
                 'assignment_text'      => (string) ($_POST['assignment_text'] ?? ''),
+                'assignment_also_require_text'  => !empty($_POST['assignment_also_require_text']),
+                'assignment_also_require_audio' => !empty($_POST['assignment_also_require_audio']),
             ];
             $save = casting_director_save_workspace($viewer_id, $id, $payload);
             if (!$save['ok']) {
