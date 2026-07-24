@@ -55,7 +55,7 @@ casting_render_flash();
         <input
           id="member-name-q"
           name="q"
-          type="search"
+          type="text"
           inputmode="search"
           value="<?= casting_e($filters['q']) ?>"
           placeholder="نام یا نام کاربری…"
