@@ -62,8 +62,6 @@ casting_render_flash();
       </div>
     </div>
 
-    <?php casting_render_member_work_search_fields($filters); ?>
-
     <?php casting_render_member_search_profile_cluster($filters); ?>
 
     <?php casting_render_body_metric_search_fields($filters, ['height', 'weight', 'age']); ?>

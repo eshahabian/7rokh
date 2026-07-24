@@ -471,22 +471,13 @@ function casting_apply_body_metric_search_filters(array &$meta_query, array $fil
  */
 function casting_apply_member_experience_filters(array &$meta_query, array $filters): void
 {
-    $exp_min = (int) ($filters['experience_min'] ?? 0);
-    $exp_max = (int) ($filters['experience_max'] ?? 0);
-    if ($exp_min >= 0 && $exp_min <= 60 && ($filters['experience_min'] ?? '') !== '') {
+    $experience = (int) ($filters['experience'] ?? 0);
+    if ($experience >= 0 && $experience <= 60 && ($filters['experience'] ?? '') !== '') {
         $meta_query[] = [
             'key'     => 'casting_experience',
-            'value'   => $exp_min,
+            'value'   => $experience,
             'type'    => 'NUMERIC',
             'compare' => '>=',
-        ];
-    }
-    if ($exp_max >= 0 && $exp_max <= 60 && ($filters['experience_max'] ?? '') !== '') {
-        $meta_query[] = [
-            'key'     => 'casting_experience',
-            'value'   => $exp_max,
-            'type'    => 'NUMERIC',
-            'compare' => '<=',
         ];
     }
 }
@@ -669,12 +660,8 @@ function casting_render_member_search_phase1_fields(array $filters): void
     $languages = casting_common_languages();
     ?>
     <div class="field">
-      <label for="experience_min">سابقه از</label>
-      <input id="experience_min" name="experience_min" type="number" min="0" max="60" value="<?= casting_e($filters['experience_min']) ?>" placeholder="سال">
-    </div>
-    <div class="field">
-      <label for="experience_max">سابقه تا</label>
-      <input id="experience_max" name="experience_max" type="number" min="0" max="60" value="<?= casting_e($filters['experience_max']) ?>" placeholder="سال">
+      <label for="experience">مدت سابقه</label>
+      <input id="experience" name="experience" type="number" min="0" max="60" value="<?= casting_e($filters['experience']) ?>" placeholder="سال">
     </div>
     <div class="field">
       <label for="language">زبان</label>
@@ -880,48 +867,6 @@ function casting_render_member_search_profile_cluster(array $filters): void
 /**
  * @param array<string, string> $filters
  */
-function casting_render_member_work_search_fields(array $filters): void
-{
-    $roles = casting_work_contribution_role_labels();
-    $titles = casting_work_catalog_title_suggestions((string) ($filters['work_title'] ?? ''), 20);
-    ?>
-    <div class="form-grid filter-work-search">
-      <div class="field">
-        <label for="work_title">نام اثر (فیلم / تئاتر)</label>
-        <input
-          id="work_title"
-          name="work_title"
-          type="search"
-          list="work-title-suggestions"
-          value="<?= casting_e($filters['work_title']) ?>"
-          placeholder="مثلاً نام فیلم…"
-          autocomplete="off"
-        >
-        <?php if ($titles !== []) : ?>
-          <datalist id="work-title-suggestions">
-            <?php foreach ($titles as $title) : ?>
-              <option value="<?= casting_e($title) ?>"></option>
-            <?php endforeach; ?>
-          </datalist>
-        <?php endif; ?>
-        <p class="field-hint">کارگردان، بازیگر یا تهیه‌کننده مرتبط با این اثر</p>
-      </div>
-      <div class="field">
-        <label for="work_role">نقش در اثر</label>
-        <select id="work_role" name="work_role">
-          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-          <?php foreach ($roles as $key => $label) : ?>
-            <option value="<?= casting_e($key) ?>" <?= $filters['work_role'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-    </div>
-    <?php
-}
-
-/**
- * @param array<string, string> $filters
- */
 function casting_render_member_search_after_health_fields(array $filters): void
 {
     casting_render_member_search_profile_cluster($filters);
@@ -1014,8 +959,6 @@ function casting_parse_member_search_filters(array $input): array
 {
     return [
         'q'                  => (string) ($input['q'] ?? ''),
-        'work_title'         => (string) ($input['work_title'] ?? ''),
-        'work_role'          => (string) ($input['work_role'] ?? ''),
         'activity_category'  => (string) ($input['activity_category'] ?? ''),
         'activity_specialty' => (string) ($input['activity_specialty'] ?? ''),
         'gender'             => (string) ($input['gender'] ?? ''),
@@ -1028,8 +971,7 @@ function casting_parse_member_search_filters(array $input): array
         'city'               => (string) ($input['city'] ?? ''),
         'artistic_org'       => (string) ($input['artistic_org'] ?? ''),
         'availability'       => (string) ($input['availability'] ?? ''),
-        'experience_min'     => (string) ($input['experience_min'] ?? ''),
-        'experience_max'     => (string) ($input['experience_max'] ?? ''),
+        'experience'         => (string) ($input['experience'] ?? $input['experience_min'] ?? ''),
         'language'           => (string) ($input['language'] ?? ''),
         'language_level'     => (string) ($input['language_level'] ?? ''),
         'education_degree'   => (string) ($input['education_degree'] ?? ''),
@@ -1186,27 +1128,6 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
     if ($name_q !== '') {
         $args['search'] = '*' . esc_attr($name_q) . '*';
         $args['search_columns'] = ['display_name', 'user_login'];
-    }
-
-    $work_title = trim(sanitize_text_field((string) ($filters['work_title'] ?? '')));
-    if ($work_title !== '') {
-        $work_role = sanitize_key((string) ($filters['work_role'] ?? ''));
-        $role_labels = casting_work_contribution_role_labels();
-        if ($work_role !== '' && !isset($role_labels[$work_role])) {
-            $work_role = '';
-        }
-        $work_user_ids = casting_work_catalog_find_user_ids($work_title, $work_role);
-        if ($work_user_ids === []) {
-            return ['users' => [], 'total' => 0];
-        }
-        if (!empty($args['include'])) {
-            $args['include'] = array_values(array_intersect($args['include'], $work_user_ids));
-        } else {
-            $args['include'] = $work_user_ids;
-        }
-        if ($args['include'] === []) {
-            return ['users' => [], 'total' => 0];
-        }
     }
 
     $query = new WP_User_Query($args);
