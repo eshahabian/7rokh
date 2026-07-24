@@ -450,7 +450,7 @@ function casting_profile_hides_talent_fields($activities, int $user_id = 0): boo
 /**
  * @param list<string> $selected
  */
-function casting_render_activity_fields(array $selected = [], bool $required = true, int $user_id = 0): void
+function casting_render_activity_fields(array $selected = [], bool $required = false, int $user_id = 0): void
 {
     $rows = casting_activities_to_rows($selected, $user_id);
     $categories = $user_id > 0

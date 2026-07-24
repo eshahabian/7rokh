@@ -1083,7 +1083,7 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
         ];
     }
 
-    $city = casting_normalize_city_name((string) ($filters['city'] ?? ''));
+    $city = casting_city_search_filter_value((string) ($filters['city'] ?? ''));
     if ($city !== '') {
         $meta_query[] = [
             'key'     => 'casting_city',

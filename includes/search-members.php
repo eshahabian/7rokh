@@ -191,7 +191,7 @@ function casting_apply_member_search_meta_query(array &$meta_query, array $filte
         ];
     }
 
-    $city = casting_normalize_city_name((string) ($filters['city'] ?? ''));
+    $city = casting_city_search_filter_value((string) ($filters['city'] ?? ''));
     if ($city !== '') {
         $meta_query[] = [
             'key'     => 'casting_city',
@@ -199,8 +199,6 @@ function casting_apply_member_search_meta_query(array &$meta_query, array $filte
             'compare' => 'LIKE',
         ];
     }
-
-    $exp_min = (int) ($filters['experience_min'] ?? 0);
     $exp_max = (int) ($filters['experience_max'] ?? 0);
     if ($exp_min >= 0 && $exp_min <= 60 && ($filters['experience_min'] ?? '') !== '') {
         $meta_query[] = [
@@ -496,7 +494,6 @@ function casting_render_member_search_advanced(array $filters, string $page = 's
     <form class="filter-details-form" method="get" action="<?= casting_e($page) ?>">
       <input type="hidden" name="q" value="<?= casting_e($filters['q']) ?>">
       <input type="hidden" name="activity_category" value="<?= casting_e($filters['activity_category']) ?>">
-      <input type="hidden" name="city" value="<?= casting_e($filters['city']) ?>">
       <div class="filter-details-body">
         <?php casting_render_member_search_advanced_fields($filters, [
             'yes_no' => $yes_no,
@@ -535,16 +532,8 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
 {
     extract($labels, EXTR_SKIP);
     ?>
+        <?php casting_render_location_fields($filters['province'], $filters['city'], '', false, 'filter-location-inline'); ?>
         <div class="filter-bar filter-bar-wide">
-          <div class="field">
-            <label for="province">استان</label>
-            <select id="province" name="province">
-              <option value="">همه</option>
-              <?php foreach ($provinces as $key => $label) : ?>
-                <option value="<?= casting_e($key) ?>" <?= $filters['province'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
         <div class="field">
           <label for="experience_min">سابقه از (سال)</label>
           <input id="experience_min" name="experience_min" type="number" min="0" max="60" value="<?= casting_e($filters['experience_min']) ?>">

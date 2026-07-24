@@ -613,7 +613,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       </div>
     </div>
 
-    <?php casting_render_activity_fields($profile['activities'] ?? [], true, $user_id); ?>
+    <?php casting_render_activity_fields($profile['activities'] ?? [], false, $user_id); ?>
     <div data-talent-profile-field<?= $talent_hidden ?>>
     <?php casting_render_language_fields($profile['language_items'] ?? []); ?>
     </div>

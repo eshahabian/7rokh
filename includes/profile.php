@@ -372,8 +372,13 @@ function casting_parse_artistic_membership_post(array $post): array
 
 function casting_validate_artistic_membership(array $data): ?string
 {
+    $has = sanitize_key((string) ($data['has'] ?? ''));
+    if ($has === '') {
+        return null;
+    }
+
     $yes_no = casting_yes_no_labels();
-    if (!isset($yes_no[$data['has'] ?? ''])) {
+    if (!isset($yes_no[$has])) {
         return 'سابقه عضویت در تشکل‌های هنری را مشخص کنید.';
     }
     if ($data['has'] === 'no') {
@@ -438,7 +443,7 @@ function casting_render_artistic_membership_fields(string $has = '', array $orgs
     <div class="role-grid role-grid-2">
       <?php foreach (casting_yes_no_labels() as $key => $label) : ?>
         <label class="role-option">
-          <input type="radio" name="artistic_membership" value="<?= casting_e($key) ?>" <?= $has === $key ? 'checked' : '' ?> required data-artistic-has>
+          <input type="radio" name="artistic_membership" value="<?= casting_e($key) ?>" <?= $has === $key ? 'checked' : '' ?> data-artistic-has>
           <span><?= casting_e($label) ?></span>
         </label>
       <?php endforeach; ?>
@@ -1825,9 +1830,6 @@ function casting_save_registration_profile(int $user_id, array $data): array
     }
 
     $activities = casting_normalize_activities($data['activities'] ?? []);
-    if ($activities === []) {
-        return ['ok' => false, 'error' => 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.'];
-    }
     $skip_talent_profile = !casting_activities_has_acting($activities);
 
     $look = sanitize_key((string) ($data['look'] ?? ''));
@@ -2172,9 +2174,6 @@ function casting_save_profile(int $user_id, array $data): array
         if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id) && !in_array('it', $activities, true)) {
             $activities[] = 'it';
         }
-        if ($activities === []) {
-            return ['ok' => false, 'error' => 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.'];
-        }
         if (casting_activities_need_body_metrics($activities)) {
             $h = (string) get_user_meta($user_id, 'casting_height', true);
             $w = (string) get_user_meta($user_id, 'casting_weight', true);
@@ -2431,10 +2430,11 @@ function casting_query_talents(array $filters = [], int $page = 1, int $per_page
         ];
     }
 
-    if (!empty($filters['city'])) {
+    $city_filter = casting_city_search_filter_value((string) ($filters['city'] ?? ''));
+    if ($city_filter !== '') {
         $meta_query[] = [
             'key'     => 'casting_city',
-            'value'   => sanitize_text_field($filters['city']),
+            'value'   => $city_filter,
             'compare' => 'LIKE',
         ];
     }

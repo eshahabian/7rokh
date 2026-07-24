@@ -125,8 +125,6 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'تاریخ تولد شمسی را کامل و درست انتخاب کنید.';
         } elseif (!array_key_exists($gender, casting_gender_labels())) {
             $error = 'جنسیت را انتخاب کنید.';
-        } elseif ($activities === []) {
-            $error = 'حداقل یک تخصص از نوع فعالیت انتخاب کنید.';
         } elseif (!$skip_talent_profile && ($health_err = casting_validate_health_fields($health_parsed, true)) !== null) {
             $error = $health_err;
         } elseif (empty($_POST['rules_accepted'])) {
@@ -232,7 +230,7 @@ if ($error !== '') {
     <form class="form" method="post" action="register.php" enctype="multipart/form-data" autocomplete="on" data-talent-profile-toggle>
       <?php wp_nonce_field('casting_register'); ?>
 
-      <?php casting_render_activity_fields($activities, true); ?>
+      <?php casting_render_activity_fields($activities, false); ?>
 
       <div class="field">
         <label for="name">نام و نام خانوادگی</label>

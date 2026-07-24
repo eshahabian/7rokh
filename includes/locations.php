@@ -57,6 +57,16 @@ function casting_city_all_label(): string
     return 'همه';
 }
 
+function casting_city_search_filter_value(string $city): string
+{
+    $city = casting_normalize_city_name($city);
+    if ($city === '' || $city === casting_city_all_label()) {
+        return '';
+    }
+
+    return $city;
+}
+
 function casting_is_valid_city_for_province(string $province, string $city): bool
 {
     $city = casting_normalize_city_name($city);
@@ -83,7 +93,7 @@ function casting_render_location_fields(
 ): void {
     unset($residence);
     if ($city_allow_all === null) {
-        $city_allow_all = $required;
+        $city_allow_all = true;
     }
     $provinces = casting_province_labels();
     $cities = $province !== '' ? casting_cities_for_province($province) : [];
