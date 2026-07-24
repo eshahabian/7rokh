@@ -49,6 +49,7 @@ define('CASTING_N8N_WEBHOOK_SECRET', '');
  */
 define('CASTING_PORTAL_ADMINS', [
     'eshahabian',
+    'ardavan',
 ]);
 
 /** مدیر اصلی بدون محدودیت — فقط این کاربر */

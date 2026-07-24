@@ -10,7 +10,7 @@ $user_id = (int) $user->ID;
 $profile = casting_get_profile($user_id);
 $error = '';
 
-if (casting_profile_hides_talent_fields($profile['activities'] ?? [], $user_id)) {
+if (!casting_user_can_upload_portraits($user_id)) {
     casting_set_flash('error', 'بارگذاری عکس فقط برای بازیگران است.');
     casting_redirect('panel.php');
 }

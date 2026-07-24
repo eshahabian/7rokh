@@ -706,7 +706,9 @@ function casting_purge_actor_portrait_meta(int $user_id): void
 function casting_purge_non_actor_profile_meta(int $user_id): void
 {
     casting_purge_actor_trait_meta($user_id);
-    casting_purge_actor_portrait_meta($user_id);
+    if (!casting_user_can_upload_portraits($user_id)) {
+        casting_purge_actor_portrait_meta($user_id);
+    }
 }
 
 function casting_user_has_acting_profile(int $user_id): bool
@@ -714,6 +716,33 @@ function casting_user_has_acting_profile(int $user_id): bool
     $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
 
     return casting_activities_has_acting($activities);
+}
+
+function casting_user_can_upload_portraits(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (casting_user_has_acting_profile($user_id)) {
+        return true;
+    }
+    if (!function_exists('casting_user_is_super_admin')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if (casting_user_is_super_admin($user_id) || casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
+
+    return false;
+}
+
+function casting_profile_shows_portraits(array $activities, int $user_id = 0): bool
+{
+    if (!casting_profile_hides_talent_fields($activities, $user_id)) {
+        return true;
+    }
+
+    return casting_user_can_upload_portraits($user_id);
 }
 
 function casting_user_has_actor_only_profile_meta(int $user_id): bool
@@ -2285,7 +2314,7 @@ function casting_handle_portrait_upload(int $user_id, string $slot): array
  */
 function casting_handle_portrait_uploads(int $user_id, bool $require_all = false): array
 {
-    if (!casting_user_has_acting_profile($user_id)) {
+    if (!casting_user_can_upload_portraits($user_id)) {
         foreach (array_keys(casting_portrait_slots()) as $slot) {
             if (!empty($_FILES['photo_' . $slot]['name'])) {
                 return ['ok' => false, 'error' => 'بارگذاری عکس فقط برای بازیگران امکان‌پذیر است.'];

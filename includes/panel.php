@@ -140,9 +140,13 @@ function casting_render_panel_sidebar(string $active): void
           }
           if ($user && casting_user_is_director_role((int) $user->ID)
               && in_array($item['key'], casting_panel_nav_keys_hidden_for_director(), true)) {
-              continue;
+              if ($item['key'] === 'photo' && casting_user_can_upload_portraits((int) $user->ID)) {
+                  // مدیران سایت دسترسی به ویرایش تصویر دارند
+              } else {
+                  continue;
+              }
           }
-          if ($item['key'] === 'photo' && $user && !casting_user_has_acting_profile((int) $user->ID)) {
+          if ($item['key'] === 'photo' && $user && !casting_user_can_upload_portraits((int) $user->ID)) {
               continue;
           }
           ?>

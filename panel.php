@@ -67,8 +67,8 @@ casting_render_flash();
 </section>
 
 <?php
-casting_panel_render_section($user_id, static function () use ($profile): void {
-    casting_render_panel_completion_card($profile);
+casting_panel_render_section($user_id, static function () use ($profile, $user_id): void {
+    casting_render_panel_completion_card($profile, $user_id);
 }, 'تکمیل پروفایل');
 ?>
 
