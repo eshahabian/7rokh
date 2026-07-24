@@ -664,6 +664,15 @@ function casting_render_member_search_phase1_fields(array $filters): void
       <input id="experience" name="experience" type="number" min="0" max="60" value="<?= casting_e($filters['experience']) ?>" placeholder="سال">
     </div>
     <div class="field">
+      <label for="education_degree">تحصیلات</label>
+      <select id="education_degree" name="education_degree">
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+        <?php foreach ($education_degrees as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['education_degree'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="field">
       <label for="language">زبان</label>
       <input id="language" name="language" type="search" list="casting-search-languages" value="<?= casting_e($filters['language']) ?>" placeholder="مثلاً انگلیسی">
       <datalist id="casting-search-languages">
@@ -678,15 +687,6 @@ function casting_render_member_search_phase1_fields(array $filters): void
         <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
         <?php foreach ($language_levels as $key => $label) : ?>
           <option value="<?= casting_e($key) ?>" <?= $filters['language_level'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="field">
-      <label for="education_degree">تحصیلات</label>
-      <select id="education_degree" name="education_degree">
-        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-        <?php foreach ($education_degrees as $key => $label) : ?>
-          <option value="<?= casting_e($key) ?>" <?= $filters['education_degree'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
         <?php endforeach; ?>
       </select>
     </div>
