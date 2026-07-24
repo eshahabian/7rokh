@@ -2902,23 +2902,21 @@ fieldset.field legend {
 
 .block-user-form-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.75rem 1rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.65rem;
 }
 
 .block-user-form-row textarea {
-  flex: 1 1 220px;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 48px;
   resize: vertical;
 }
 
-.block-user-form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+.block-user-form-row .block-user-form-btn {
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .block-reason-user,

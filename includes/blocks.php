@@ -404,12 +404,10 @@ function casting_render_block_user_form(
         <label for="block_reason_<?= $target_id ?>">علت بلاک</label>
         <div class="block-user-form-row">
           <textarea id="block_reason_<?= $target_id ?>" name="block_reason" rows="1" required minlength="3" maxlength="500" placeholder="چرا این کاربر را بلاک می‌کنید؟"></textarea>
-          <div class="block-user-form-actions">
-            <button class="btn btn-reject" type="submit">بلاک</button>
-            <?php if ($message_href !== '') : ?>
-              <a class="btn btn-primary" href="<?= casting_e($message_href) ?>">پیام به این کاربر</a>
-            <?php endif; ?>
-          </div>
+          <button class="btn btn-reject btn-sm block-user-form-btn" type="submit">بلاک</button>
+          <?php if ($message_href !== '') : ?>
+            <a class="btn btn-primary btn-sm block-user-form-btn" href="<?= casting_e($message_href) ?>">پیام به این کاربر</a>
+          <?php endif; ?>
         </div>
       </div>
     </form>
