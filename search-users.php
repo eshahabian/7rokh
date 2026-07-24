@@ -34,7 +34,11 @@ if (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1') {
 casting_render_panel_start('جستجوی کاربران', 'search');
 casting_render_flash();
 ?>
-<section class="dash-card">
+<section class="dash-card dash-card-search">
+  <div id="member-search-results" class="member-search-results-top" data-member-search-results>
+    <?php casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters); ?>
+  </div>
+
   <h1>جستجوی کاربران</h1>
 
   <form class="filter-bar filter-bar-wide" method="get" action="search-users.php" data-member-search-form>
@@ -43,21 +47,17 @@ casting_render_flash();
     <div class="field field-name-search">
       <label for="member-name-q">نام</label>
       <div class="name-search-field" data-name-search-field>
-        <span class="name-search-ruler" data-name-search-ruler aria-hidden="true"></span>
-        <div class="name-search-type">
-          <input
-            id="member-name-q"
-            name="q"
-            type="text"
-            inputmode="search"
-            value="<?= casting_e($filters['q']) ?>"
-            placeholder="نام یا نام کاربری…"
-            autocomplete="off"
-            spellcheck="false"
-            data-name-search-input
-          >
-          <span class="name-search-suffix" data-name-search-ghost aria-hidden="true"></span>
-        </div>
+        <input
+          id="member-name-q"
+          name="q"
+          type="search"
+          inputmode="search"
+          value="<?= casting_e($filters['q']) ?>"
+          placeholder="نام یا نام کاربری…"
+          autocomplete="off"
+          spellcheck="false"
+          data-name-search-input
+        >
         <button type="button" class="name-search-clear" data-name-search-clear hidden aria-label="پاک کردن">×</button>
       </div>
     </div>
@@ -75,9 +75,5 @@ casting_render_flash();
       <a class="btn btn-ghost" href="search-users.php">پاک کردن</a>
     </div>
   </form>
-
-  <div id="member-search-results" data-member-search-results>
-    <?php casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters); ?>
-  </div>
 </section>
 <?php casting_render_panel_end(); ?>

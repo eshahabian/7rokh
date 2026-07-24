@@ -1332,6 +1332,16 @@ fieldset.field legend {
   grid-column: 1 / -1;
 }
 
+.member-search-results-top {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.dash-card-search > h1 {
+  margin-top: 0;
+}
+
 .name-search-field {
   position: relative;
   display: flex;
@@ -1351,82 +1361,24 @@ fieldset.field legend {
   box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
-.name-search-ruler {
-  position: absolute;
-  top: 0;
-  left: 0;
-  visibility: hidden;
-  white-space: pre;
-  font: inherit;
-  font-size: 1rem;
-  line-height: 1.4;
-  padding: 0;
-  height: auto;
-  width: auto;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: 0;
-}
-
-.name-search-type {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-  min-height: 48px;
-  padding: 0.7rem 0.95rem;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: text;
-}
-
-.name-search-suffix {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  pointer-events: none;
-  line-height: 1.4;
-  white-space: nowrap;
-  color: var(--ink-muted);
-  opacity: 0.45;
-}
-
-.name-search-suffix:empty {
-  display: none;
-}
-
-.name-hit-muted {
-  color: var(--ink-muted);
-  opacity: 0.45;
-  font-weight: 400;
-}
-
-.field-name-search .name-search-type input {
-  position: relative;
-  z-index: 1;
+.field-name-search .name-search-field input {
+  flex: 1 1 auto;
   width: 100%;
   min-width: 0;
-  min-height: auto;
+  min-height: 48px;
   margin: 0;
-  padding: 0;
+  padding: 0.7rem 0.95rem;
   border: 0;
   background: transparent;
   box-shadow: none;
-  flex: 1 1 auto;
-  line-height: 1.4;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
 }
 
-.field-name-search .name-search-type input:focus {
+.field-name-search .name-search-field input:focus {
   box-shadow: none;
   outline: none;
-}
-
-.field-name-search .name-search-type.is-typing input {
-  width: auto;
-  flex: 0 0 auto;
-  background: var(--bg-elevated);
 }
 
 .name-search-clear {

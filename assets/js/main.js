@@ -650,10 +650,7 @@
   const memberSearchForm = document.querySelector("[data-member-search-form]");
   const memberSearchResults = document.querySelector("[data-member-search-results]");
   const nameSearchInput = document.querySelector("[data-name-search-input]");
-  const nameSearchGhost = document.querySelector("[data-name-search-ghost]");
-  const nameSearchRuler = document.querySelector("[data-name-search-ruler]");
   const nameSearchField = document.querySelector("[data-name-search-field]");
-  const nameSearchType = document.querySelector(".name-search-type");
   const nameSearchClear = document.querySelector("[data-name-search-clear]");
 
   if (memberSearchForm && memberSearchResults && nameSearchInput) {
@@ -663,60 +660,8 @@
     let suggestAbort = null;
     let predictedFull = "";
 
-    const escapeHtml = (value) =>
-      String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-
-    const syncInputWidth = () => {
-      if (!nameSearchRuler || !nameSearchInput || !nameSearchType) return;
-      const val = nameSearchInput.value || "";
-
-      if (val === "") {
-        nameSearchType.classList.remove("is-typing");
-        nameSearchInput.style.width = "";
-        return;
-      }
-
-      nameSearchType.classList.add("is-typing");
-      nameSearchRuler.textContent = val;
-      const textWidth = nameSearchRuler.offsetWidth;
-      const maxWidth = Math.max(nameSearchType.clientWidth - 24, 48);
-      nameSearchInput.style.width = `${Math.min(textWidth + 2, maxWidth)}px`;
-    };
-
     const clearPrediction = () => {
       predictedFull = "";
-      if (nameSearchGhost) nameSearchGhost.textContent = "";
-      syncInputWidth();
-    };
-
-    const applyPrediction = (query) => {
-      if (!nameSearchGhost) {
-        syncInputWidth();
-        return;
-      }
-      if (!predictedFull || query.length < 2) {
-        nameSearchGhost.textContent = "";
-        syncInputWidth();
-        return;
-      }
-      const q = query.trim();
-      const lowerFull = predictedFull.toLocaleLowerCase("fa");
-      const lowerQ = q.toLocaleLowerCase("fa");
-      let suffix = "";
-      if (lowerFull.startsWith(lowerQ)) {
-        suffix = predictedFull.slice(q.length);
-      } else {
-        const index = lowerFull.indexOf(lowerQ);
-        if (index >= 0) {
-          suffix = predictedFull.slice(index + q.length);
-        }
-      }
-      nameSearchGhost.textContent = suffix;
-      syncInputWidth();
     };
 
     const syncClearButton = () => {
@@ -788,7 +733,6 @@
           const data = await res.json();
           const items = Array.isArray(data.items) ? data.items : [];
           predictedFull = pickPrediction(items, query);
-          applyPrediction(query);
         } catch (err) {
           if (err?.name !== "AbortError") clearPrediction();
         }
@@ -821,7 +765,6 @@
 
     nameSearchInput.addEventListener("input", () => {
       syncClearButton();
-      syncInputWidth();
       fetchPrediction();
       refreshResults();
     });
@@ -840,7 +783,6 @@
 
     memberSearchForm.addEventListener("change", refreshResults);
     syncClearButton();
-    syncInputWidth();
     if ((nameSearchInput.value || "").trim().length >= 2) {
       fetchPrediction();
     }
