@@ -2902,20 +2902,29 @@ fieldset.field legend {
 
 .block-user-form-row {
   display: flex;
-  flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
 }
 
-.block-user-form-row textarea {
-  flex: 1 1 0;
-  width: 100%;
-  min-width: 9rem;
+.block-user-form-reason {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
   min-height: 40px;
   resize: vertical;
 }
 
-.block-user-form-row .block-user-form-btn {
+.block-user-form-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.block-user-form .block-user-form-btn {
+  width: auto;
+  max-width: none;
+  margin-top: 0;
   flex: 0 0 auto;
   white-space: nowrap;
   min-height: 40px;
