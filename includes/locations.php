@@ -52,6 +52,24 @@ function casting_cities_for_province(string $province): array
     return $map[$province] ?? [];
 }
 
+function casting_city_all_label(): string
+{
+    return 'همه';
+}
+
+function casting_is_valid_city_for_province(string $province, string $city): bool
+{
+    $city = casting_normalize_city_name($city);
+    if ($city === '' || !array_key_exists($province, casting_province_labels())) {
+        return false;
+    }
+    if ($city === casting_city_all_label()) {
+        return true;
+    }
+
+    return in_array($city, casting_cities_for_province($province), true);
+}
+
 /**
  * فیلدهای استان و شهر وابسته به هم
  */
@@ -60,11 +78,16 @@ function casting_render_location_fields(
     string $city = '',
     string $residence = '',
     bool $required = true,
-    string $wrapper_class = 'form-grid'
+    string $wrapper_class = 'form-grid',
+    ?bool $city_allow_all = null
 ): void {
     unset($residence);
+    if ($city_allow_all === null) {
+        $city_allow_all = $required;
+    }
     $provinces = casting_province_labels();
     $cities = $province !== '' ? casting_cities_for_province($province) : [];
+    $all_label = casting_city_all_label();
     $map = ['cities' => casting_province_cities_map()];
     $json = wp_json_encode($map, JSON_UNESCAPED_UNICODE);
     $req = $required ? ' required' : '';
@@ -73,7 +96,7 @@ function casting_render_location_fields(
         ? ($province === '' ? 'اول استان را انتخاب کنید' : 'انتخاب شهر…')
         : ($province === '' ? 'اول استان' : 'همه');
     ?>
-  <div class="<?= casting_e($wrapper_class) ?>" data-location-fields data-location-map="<?= casting_e((string) $json) ?>">
+  <div class="<?= casting_e($wrapper_class) ?>" data-location-fields data-location-map="<?= casting_e((string) $json) ?>"<?= $city_allow_all ? ' data-location-city-all="1"' : '' ?>>
     <div class="field">
       <label for="province">استان</label>
       <select id="province" name="province" data-location-province<?= $req ?>>
@@ -87,6 +110,11 @@ function casting_render_location_fields(
       <label for="city">شهر</label>
       <select id="city" name="city" data-location-city<?= $req ?> <?= $province === '' ? 'disabled' : '' ?>>
         <option value=""><?= casting_e($city_empty) ?></option>
+        <?php if ($city_allow_all && $province !== '') : ?>
+          <option value="<?= casting_e($all_label) ?>" <?= $city === $all_label ? 'selected' : '' ?>><?= casting_e($all_label) ?></option>
+        <?php elseif ($city === $all_label && $province !== '') : ?>
+          <option value="<?= casting_e($all_label) ?>" selected><?= casting_e($all_label) ?></option>
+        <?php endif; ?>
         <?php foreach ($cities as $name) : ?>
           <option value="<?= casting_e($name) ?>" <?= $city === $name ? 'selected' : '' ?>><?= casting_e($name) ?></option>
         <?php endforeach; ?>

@@ -217,7 +217,7 @@
     const provinceSel = box.querySelector("[data-location-province]");
     const citySel = box.querySelector("[data-location-city]");
 
-    const fillSelect = (select, items, placeholder, selected) => {
+    const fillSelect = (select, items, placeholder, selected, allowAll) => {
       if (!select) return;
       const keep = selected || "";
       select.innerHTML = "";
@@ -225,6 +225,13 @@
       first.value = "";
       first.textContent = placeholder;
       select.appendChild(first);
+      if (allowAll) {
+        const allOpt = document.createElement("option");
+        allOpt.value = "همه";
+        allOpt.textContent = "همه";
+        if (keep === "همه") allOpt.selected = true;
+        select.appendChild(allOpt);
+      }
       (items || []).forEach((name) => {
         const opt = document.createElement("option");
         opt.value = name;
@@ -234,15 +241,17 @@
       });
     };
 
+    const allowCityAll = box.hasAttribute("data-location-city-all");
+
     const syncCities = (keepCity) => {
       const province = provinceSel?.value || "";
       const cities = province ? map.cities?.[province] || [] : [];
       if (!province) {
         citySel.disabled = true;
-        fillSelect(citySel, [], "اول استان را انتخاب کنید", "");
+        fillSelect(citySel, [], "اول استان را انتخاب کنید", "", false);
       } else {
         citySel.disabled = false;
-        fillSelect(citySel, cities, "انتخاب شهر…", keepCity);
+        fillSelect(citySel, cities, "انتخاب شهر…", keepCity, allowCityAll);
       }
     };
 

@@ -1819,8 +1819,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
     }
 
     $city = casting_normalize_city_name((string) ($data['city'] ?? ''));
-    $province_cities = casting_cities_for_province($province);
-    if ($city === '' || !in_array($city, $province_cities, true)) {
+    if (!casting_is_valid_city_for_province($province, $city)) {
         return ['ok' => false, 'error' => 'شهر را از فهرست همان استان انتخاب کنید.'];
     }
 
@@ -1888,7 +1887,9 @@ function casting_save_registration_profile(int $user_id, array $data): array
     update_user_meta($user_id, 'casting_phone', $phone);
     update_user_meta($user_id, 'casting_province', $province);
     update_user_meta($user_id, 'casting_city', $city);
-    casting_remember_city($city);
+    if ($city !== casting_city_all_label()) {
+        casting_remember_city($city);
+    }
     update_user_meta($user_id, 'casting_residence', $residence);
     update_user_meta($user_id, 'casting_experience', (string) $experience);
     casting_save_artistic_membership_meta($user_id, $artistic);
@@ -2009,12 +2010,13 @@ function casting_save_profile(int $user_id, array $data): array
     $city = casting_normalize_city_name((string) ($data['city'] ?? ''));
     if ($city !== '') {
         $check_province = $province !== '' ? $province : (string) get_user_meta($user_id, 'casting_province', true);
-        $allowed = casting_cities_for_province($check_province);
-        if ($allowed !== [] && !in_array($city, $allowed, true)) {
+        if (!casting_is_valid_city_for_province($check_province, $city)) {
             return ['ok' => false, 'error' => 'شهر را از فهرست همان استان انتخاب کنید.'];
         }
         update_user_meta($user_id, 'casting_city', $city);
-        casting_remember_city($city);
+        if ($city !== casting_city_all_label()) {
+            casting_remember_city($city);
+        }
     }
 
 
