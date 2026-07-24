@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/premium.php';
 require_once __DIR__ . '/blocks.php';
+require_once __DIR__ . '/membership-number.php';
 
 /**
  * @return array<string, string>
@@ -242,7 +243,7 @@ function casting_admin_set_password(int $target_id, int $admin_id, string $new, 
 }
 
 /**
- * @return array{rows:array<int, array{id:int,name:string,login:string,email:string,role:string,suspended:bool,premium:bool,until:string,remaining:string,until_ts:?int}>,total:int,page:int,per_page:int}
+ * @return array{rows:array<int, array{id:int,name:string,login:string,membership_number:string,email:string,role:string,suspended:bool,premium:bool,until:string,remaining:string,until_ts:?int}>,total:int,page:int,per_page:int}
  */
 function casting_list_casting_members(int $page = 1, int $per_page = 50, string $search = ''): array
 {
@@ -274,16 +275,17 @@ function casting_list_casting_members(int $page = 1, int $per_page = 50, string 
         $premium = casting_user_is_premium($id);
         $until_ts = $premium ? casting_premium_expire_timestamp($id) : null;
         $out[] = [
-            'id'        => $id,
-            'name'      => (string) $user->display_name,
-            'login'     => (string) $user->user_login,
-            'email'     => (string) $user->user_email,
-            'role'      => casting_get_user_role($id),
-            'suspended' => casting_user_is_suspended($id),
-            'premium'   => $premium,
-            'until'     => $premium ? casting_premium_until_label($id) : '',
-            'remaining' => $premium ? casting_premium_countdown_nav_label($id) : '',
-            'until_ts'  => $until_ts,
+            'id'                => $id,
+            'name'              => (string) $user->display_name,
+            'login'             => (string) $user->user_login,
+            'membership_number' => casting_get_membership_number($id),
+            'email'             => (string) $user->user_email,
+            'role'              => casting_get_user_role($id),
+            'suspended'         => casting_user_is_suspended($id),
+            'premium'           => $premium,
+            'until'             => $premium ? casting_premium_until_label($id) : '',
+            'remaining'         => $premium ? casting_premium_countdown_nav_label($id) : '',
+            'until_ts'          => $until_ts,
         ];
     }
 
