@@ -282,6 +282,17 @@ function casting_user_profile_chip_label(int $user_id, int $viewer_id = 0): stri
 }
 
 /**
+ * @return array<string, string>
+ */
+function casting_legacy_activity_aliases(): array
+{
+    return [
+        'actor'    => 'actor_cinema',
+        'director' => 'director_cinema',
+    ];
+}
+
+/**
  * @param mixed $raw
  * @return list<string>
  */
@@ -291,12 +302,16 @@ function casting_normalize_activities($raw, int $user_id = 0): array
         return [];
     }
     $labels = $user_id > 0 ? casting_activity_labels_for_user($user_id) : casting_activity_labels();
+    $aliases = casting_legacy_activity_aliases();
     $out = [];
     foreach ($raw as $item) {
         if (is_array($item)) {
             $key = sanitize_key((string) ($item['specialty'] ?? $item['activity'] ?? ''));
         } else {
             $key = sanitize_key((string) $item);
+        }
+        if (isset($aliases[$key])) {
+            $key = $aliases[$key];
         }
         if ($key !== '' && isset($labels[$key]) && !in_array($key, $out, true)) {
             $out[] = $key;
@@ -411,9 +426,8 @@ function casting_activities_show_artistic_works(array $activities): bool
  */
 function casting_activities_has_acting(array $activities): bool
 {
-    $activities = casting_normalize_activities($activities);
     foreach ($activities as $activity) {
-        if (casting_activity_category_for_specialty($activity) === 'acting') {
+        if (casting_activity_category_for_specialty((string) $activity) === 'acting') {
             return true;
         }
     }

@@ -690,6 +690,10 @@ function casting_purge_actor_trait_meta(int $user_id): void
     delete_user_meta($user_id, 'casting_skill_items');
     delete_user_meta($user_id, 'casting_skills');
     delete_user_meta($user_id, 'casting_skills_other');
+}
+
+function casting_purge_actor_portrait_meta(int $user_id): void
+{
     foreach (array_keys(casting_portrait_slots()) as $slot) {
         $meta_key = casting_portrait_meta_key($slot);
         if ($meta_key !== '') {
@@ -697,6 +701,12 @@ function casting_purge_actor_trait_meta(int $user_id): void
         }
     }
     delete_user_meta($user_id, 'casting_photo_id');
+}
+
+function casting_purge_non_actor_profile_meta(int $user_id): void
+{
+    casting_purge_actor_trait_meta($user_id);
+    casting_purge_actor_portrait_meta($user_id);
 }
 
 function casting_user_has_acting_profile(int $user_id): bool
@@ -719,17 +729,9 @@ function casting_user_has_actor_only_profile_meta(int $user_id): bool
         'casting_availability',
         'casting_skills',
         'casting_skills_other',
-        'casting_photo_id',
     ];
     foreach ($keys as $key) {
         if (get_user_meta($user_id, $key, true) !== '') {
-            return true;
-        }
-    }
-
-    foreach (array_keys(casting_portrait_slots()) as $slot) {
-        $meta_key = casting_portrait_meta_key($slot);
-        if ($meta_key !== '' && (int) get_user_meta($user_id, $meta_key, true) > 0) {
             return true;
         }
     }
@@ -1940,7 +1942,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
             return $traits;
         }
     } else {
-        casting_purge_actor_trait_meta($user_id);
+        casting_purge_non_actor_profile_meta($user_id);
     }
 
     return ['ok' => true, 'age' => $age];
@@ -2091,7 +2093,7 @@ function casting_save_profile(int $user_id, array $data): array
             return $traits;
         }
     } else {
-        casting_purge_actor_trait_meta($user_id);
+        casting_purge_non_actor_profile_meta($user_id);
     }
 
     if ($is_actor_profile) {
