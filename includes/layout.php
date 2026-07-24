@@ -24,7 +24,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=74">
+  <link rel="stylesheet" href="<?= $css ?>?v=75">
   <script>
     (function () {
       try {
@@ -40,24 +40,18 @@ function casting_render_head(string $title, string $body_class = ''): void
 <?php
 }
 
-function casting_render_theme_bar(): void
+function casting_render_theme_toggle(): void
 {
     ?>
-  <div class="theme-bar">
-    <div class="theme-bar-inner wrap">
-      <span class="theme-bar-label">ظاهر</span>
-      <div class="theme-toggle" role="group" aria-label="انتخاب روز یا شب">
+      <div class="nav-theme theme-toggle" role="group" aria-label="انتخاب روز یا شب">
         <button type="button" class="theme-toggle-btn is-active" data-theme-pick="night">شب</button>
         <button type="button" class="theme-toggle-btn" data-theme-pick="day">روز</button>
       </div>
-    </div>
-  </div>
-<?php
+    <?php
 }
 
 function casting_render_header(?string $active = null): void
 {
-    casting_render_theme_bar();
     $brand = casting_e(casting_brand());
     $user = casting_current_user();
     $role = $user ? casting_get_user_role((int) $user->ID) : '';
@@ -78,6 +72,7 @@ function casting_render_header(?string $active = null): void
         <a href="faq.php" class="<?= $active === 'faq' ? 'is-active' : '' ?>">سوالات متداول</a>
         <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>
       <?php endif; ?>
+      <?php casting_render_theme_toggle(); ?>
     </nav>
   </header>
 <?php

@@ -129,49 +129,33 @@ a:hover {
   color: var(--accent-strong);
 }
 
-.theme-bar {
-  border-bottom: 1px solid var(--line);
-  background: var(--theme-bar-bg);
-  backdrop-filter: blur(10px);
-}
-
 [data-theme="day"] .bg-atmosphere {
   filter: brightness(1.06) saturate(0.88);
-}
-
-.theme-bar-inner {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.65rem;
-  min-height: 42px;
-  padding-block: 0.35rem;
-}
-
-.theme-bar-label {
-  color: var(--ink-muted);
-  font-size: 0.82rem;
-  font-weight: 500;
 }
 
 .theme-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.2rem;
+  gap: 0.2rem;
+  padding: 0.15rem;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+.nav-theme {
+  margin-inline-start: 0.15rem;
 }
 
 .theme-toggle-btn {
   appearance: none;
   border: 0;
   border-radius: 999px;
-  min-height: 32px;
-  padding: 0.28rem 0.85rem;
+  min-height: 30px;
+  padding: 0.22rem 0.7rem;
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--ink-muted);
   background: transparent;
