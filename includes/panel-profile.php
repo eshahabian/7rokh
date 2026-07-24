@@ -307,19 +307,24 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
       <span class="chip"><?= casting_e(casting_user_profile_chip_label($member_id, $viewer_id)) ?><?php if ($premium) : ?> · ویژه<?php endif; ?></span>
       <h2 class="panel-section-title"><?= casting_e($member->display_name) ?><?php if ($is_self) : ?> <span class="meta">(پروفایل شما)</span><?php endif; ?></h2>
       <?php if (!$is_self) : ?>
-        <div class="cta-row" style="margin:0.75rem 0 1rem">
-          <?php if ($chat_allow['ok']) : ?>
-            <a class="btn btn-primary" href="chat.php?with=<?= $member_id ?>">پیام</a>
-          <?php endif; ?>
+        <div class="block-user-section">
           <?php if ($is_blocked) : ?>
-            <form method="post" action="member.php?id=<?= $member_id ?>" style="display:inline">
-              <?php wp_nonce_field('casting_block'); ?>
-              <input type="hidden" name="block_id" value="<?= $member_id ?>">
-              <button class="btn btn-ghost" type="submit" name="block_action" value="unblock">رفع بلاک</button>
-            </form>
+            <div class="cta-row">
+              <?php if ($chat_allow['ok']) : ?>
+                <a class="btn btn-primary" href="chat.php?with=<?= $member_id ?>">پیام به این کاربر</a>
+              <?php endif; ?>
+              <form method="post" action="member.php?id=<?= $member_id ?>" style="display:inline">
+                <?php wp_nonce_field('casting_block'); ?>
+                <input type="hidden" name="block_id" value="<?= $member_id ?>">
+                <button class="btn btn-ghost" type="submit" name="block_action" value="unblock">رفع بلاک</button>
+              </form>
+            </div>
           <?php else : ?>
             <div class="block-user-wrap">
-              <?php casting_render_block_user_form('member.php?id=' . $member_id, $member_id); ?>
+              <?php
+                $block_message_href = $chat_allow['ok'] ? 'chat.php?with=' . $member_id : '';
+                casting_render_block_user_form('member.php?id=' . $member_id, $member_id, 'casting_block', 'member', $block_message_href);
+              ?>
             </div>
           <?php endif; ?>
         </div>
