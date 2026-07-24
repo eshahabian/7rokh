@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg-deep: #0c0e12;
   --bg-panel: rgba(22, 26, 34, 0.88);
   --bg-elevated: #1a1f2a;
@@ -15,6 +16,48 @@
   --display: "Playfair Display", "Vazirmatn", serif;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --header-bg: rgba(8, 10, 14, 0.35);
+  --surface-glass: rgba(22, 26, 34, 0.78);
+  --surface-muted: rgba(22, 26, 34, 0.82);
+  --hero-text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
+  --atmosphere-base: #0c0e12;
+  --atmosphere-gradient: linear-gradient(180deg, rgba(8, 10, 14, 0.55) 0%, rgba(8, 10, 14, 0.35) 40%, rgba(8, 10, 14, 0.72) 100%);
+  --atmosphere-glow: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(40, 48, 62, 0.45) 0%, transparent 55%);
+  --atmosphere-wash: transparent;
+  --theme-bar-bg: rgba(8, 10, 14, 0.55);
+  --reject-fg: #f0b4aa;
+  --reject-border: rgba(224, 122, 106, 0.55);
+  --reject-bg-hover: rgba(224, 122, 106, 0.15);
+  --on-accent: #1a1208;
+}
+
+[data-theme="day"] {
+  color-scheme: light;
+  --bg-deep: #ebe6da;
+  --bg-panel: rgba(255, 252, 246, 0.94);
+  --bg-elevated: #fffdf9;
+  --ink: #1a2030;
+  --ink-muted: #5a6272;
+  --line: rgba(26, 32, 48, 0.14);
+  --accent: #9a6828;
+  --accent-strong: #7d5418;
+  --accent-dim: rgba(154, 104, 40, 0.14);
+  --danger: #b84334;
+  --success: #2a7a52;
+  --shadow: 0 18px 45px rgba(60, 50, 35, 0.1);
+  --header-bg: rgba(255, 252, 246, 0.88);
+  --surface-glass: rgba(255, 252, 246, 0.9);
+  --surface-muted: rgba(255, 255, 255, 0.94);
+  --hero-text-shadow: 0 1px 10px rgba(255, 255, 255, 0.75);
+  --atmosphere-base: #ebe6da;
+  --atmosphere-gradient: linear-gradient(180deg, rgba(255, 252, 246, 0.82) 0%, rgba(235, 230, 218, 0.58) 42%, rgba(210, 200, 182, 0.78) 100%);
+  --atmosphere-glow: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(255, 255, 255, 0.72) 0%, transparent 58%);
+  --atmosphere-wash: rgba(255, 252, 246, 0.72);
+  --theme-bar-bg: rgba(255, 252, 246, 0.94);
+  --reject-fg: #a8382a;
+  --reject-border: rgba(184, 67, 52, 0.45);
+  --reject-bg-hover: rgba(184, 67, 52, 0.1);
+  --on-accent: #fffdf9;
 }
 
 *,
@@ -43,15 +86,25 @@ body {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-color: #0c0e12;
+  background-color: var(--atmosphere-base);
   background-image:
-    linear-gradient(180deg, rgba(8, 10, 14, 0.55) 0%, rgba(8, 10, 14, 0.35) 40%, rgba(8, 10, 14, 0.72) 100%),
-    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(40, 48, 62, 0.45) 0%, transparent 55%),
+    var(--atmosphere-gradient),
+    var(--atmosphere-glow),
     url("../img/BackGround.png");
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;
   background-attachment: fixed;
+  transition: background-color 0.25s ease;
+}
+
+.bg-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--atmosphere-wash);
+  pointer-events: none;
+  transition: background 0.25s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -76,6 +129,66 @@ a:hover {
   color: var(--accent-strong);
 }
 
+.theme-bar {
+  border-bottom: 1px solid var(--line);
+  background: var(--theme-bar-bg);
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="day"] .bg-atmosphere {
+  filter: brightness(1.06) saturate(0.88);
+}
+
+.theme-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  min-height: 42px;
+  padding-block: 0.35rem;
+}
+
+.theme-bar-label {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+}
+
+.theme-toggle-btn {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  min-height: 32px;
+  padding: 0.28rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+  color: var(--ink);
+}
+
+.theme-toggle-btn.is-active {
+  color: var(--on-accent);
+  background: var(--accent);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.12);
+}
+
 .site-header {
   display: flex;
   flex-direction: column;
@@ -86,7 +199,8 @@ a:hover {
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(10px);
   text-align: center;
-  background: rgba(8, 10, 14, 0.35);
+  background: var(--header-bg);
+  transition: background 0.25s ease;
 }
 
 .brand {
@@ -166,7 +280,7 @@ a:hover {
   color: var(--ink);
   font-size: 1.08rem;
   max-width: 32rem;
-  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
+  text-shadow: var(--hero-text-shadow);
 }
 
 .hero-cta {
@@ -186,7 +300,7 @@ a:hover {
   padding: 0.85rem 0.6rem;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(22, 26, 34, 0.78);
+  background: var(--surface-glass);
   backdrop-filter: blur(8px);
   box-shadow: var(--shadow);
 }
@@ -223,7 +337,7 @@ a:hover {
 
 .quick-chip:hover,
 .quick-chip.is-active {
-  color: #1a1208;
+  color: var(--on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -377,13 +491,13 @@ a:hover {
 
 .btn-reject {
   background: transparent;
-  border: 1px solid rgba(224, 122, 106, 0.55);
-  color: #f0b4aa;
+  border: 1px solid var(--reject-border);
+  color: var(--reject-fg);
 }
 
 .btn-reject:hover {
-  background: rgba(224, 122, 106, 0.15);
-  color: #f7cfc8;
+  background: var(--reject-bg-hover);
+  color: var(--reject-fg);
   border-color: var(--danger);
 }
 
@@ -436,12 +550,12 @@ a:hover {
 
 .btn-primary {
   background: var(--accent);
-  color: #1a1208;
+  color: var(--on-accent);
 }
 
 .btn-primary:hover {
   background: var(--accent-strong);
-  color: #1a1208;
+  color: var(--on-accent);
 }
 
 .btn-ghost {
@@ -471,7 +585,7 @@ a:hover {
   flex-direction: column;
   height: 100%;
   text-align: right;
-  background: rgba(22, 26, 34, 0.82);
+  background: var(--surface-muted);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 1.5rem 1.35rem;
@@ -729,13 +843,17 @@ fieldset.field legend {
 .flash-error {
   background: rgba(224, 122, 106, 0.15);
   border: 1px solid rgba(224, 122, 106, 0.4);
-  color: #f0b4aa;
+  color: var(--reject-fg);
 }
 
 .flash-success {
   background: rgba(124, 184, 154, 0.15);
   border: 1px solid rgba(124, 184, 154, 0.4);
-  color: #b6e0cb;
+  color: var(--success);
+}
+
+[data-theme="day"] .flash-success {
+  color: #1f6b45;
 }
 
 .dash {

@@ -1,4 +1,34 @@
 (() => {
+  const THEME_KEY = "casting_theme";
+
+  const applyTheme = (theme) => {
+    const isDay = theme === "day";
+    if (isDay) {
+      document.documentElement.setAttribute("data-theme", "day");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    document.querySelectorAll("[data-theme-pick]").forEach((btn) => {
+      const pick = btn.getAttribute("data-theme-pick") || "night";
+      btn.classList.toggle("is-active", pick === (isDay ? "day" : "night"));
+    });
+    try {
+      localStorage.setItem(THEME_KEY, isDay ? "day" : "night");
+    } catch (err) {}
+  };
+
+  document.querySelectorAll("[data-theme-pick]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      applyTheme(btn.getAttribute("data-theme-pick") || "night");
+    });
+  });
+
+  let storedTheme = "night";
+  try {
+    storedTheme = localStorage.getItem(THEME_KEY) || "night";
+  } catch (err) {}
+  applyTheme(storedTheme === "day" ? "day" : "night");
+
   const forms = document.querySelectorAll("form[data-loading]");
   forms.forEach((form) => {
     form.addEventListener("submit", () => {

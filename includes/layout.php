@@ -24,15 +24,40 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=73">
+  <link rel="stylesheet" href="<?= $css ?>?v=74">
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('casting_theme') === 'day') {
+          document.documentElement.setAttribute('data-theme', 'day');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body class="<?= casting_e($body_class) ?>">
   <div class="bg-atmosphere" aria-hidden="true"></div>
 <?php
 }
 
+function casting_render_theme_bar(): void
+{
+    ?>
+  <div class="theme-bar">
+    <div class="theme-bar-inner wrap">
+      <span class="theme-bar-label">ظاهر</span>
+      <div class="theme-toggle" role="group" aria-label="انتخاب روز یا شب">
+        <button type="button" class="theme-toggle-btn is-active" data-theme-pick="night">شب</button>
+        <button type="button" class="theme-toggle-btn" data-theme-pick="day">روز</button>
+      </div>
+    </div>
+  </div>
+<?php
+}
+
 function casting_render_header(?string $active = null): void
 {
+    casting_render_theme_bar();
     $brand = casting_e(casting_brand());
     $user = casting_current_user();
     $role = $user ? casting_get_user_role((int) $user->ID) : '';
@@ -80,7 +105,7 @@ function casting_render_footer(): void
     <span aria-hidden="true">↑</span>
   </button>
   <?php casting_render_pwa_bootstrap(); ?>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=60" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=61" defer></script>
 </body>
 </html>
 <?php
