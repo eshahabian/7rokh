@@ -1332,10 +1332,18 @@ fieldset.field legend {
   grid-column: 1 / -1;
 }
 
-.member-search-results-top {
+.member-search-results-anchor--top {
   margin-bottom: 1.5rem;
   padding-bottom: 1.25rem;
   border-bottom: 1px solid var(--line);
+}
+
+.member-search-results-anchor--bottom {
+  margin-top: 1.5rem;
+}
+
+.member-search-results-anchor[hidden] {
+  display: none !important;
 }
 
 .dash-card-search > h1 {

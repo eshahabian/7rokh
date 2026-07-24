@@ -957,6 +957,25 @@ function casting_render_member_search_talent_cluster(array $filters): void
 }
 
 /**
+ * @param array<string, string> $filters
+ */
+function casting_member_search_filters_active(array $filters): bool
+{
+    foreach ($filters as $key => $value) {
+        $value = trim((string) $value);
+        if ($value === '') {
+            continue;
+        }
+        if ($key === 'city' && $value === casting_city_all_label()) {
+            continue;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * @return array<string, string>
  */
 function casting_parse_member_search_filters(array $input): array

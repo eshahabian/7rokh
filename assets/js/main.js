@@ -659,6 +659,30 @@
     let resultsAbort = null;
     let suggestAbort = null;
     let predictedFull = "";
+    const resultsAnchorTop = document.querySelector('[data-member-search-results-anchor="top"]');
+    const resultsAnchorBottom = document.querySelector('[data-member-search-results-anchor="bottom"]');
+
+    const formHasActiveSearch = () => {
+      const params = new URLSearchParams(new FormData(memberSearchForm));
+      for (const [key, value] of params.entries()) {
+        const trimmed = String(value).trim();
+        if (trimmed === "") continue;
+        if (key === "city" && trimmed === "همه") continue;
+        return true;
+      }
+      return false;
+    };
+
+    const placeSearchResults = (active) => {
+      const results = document.querySelector("[data-member-search-results]");
+      if (!results || !resultsAnchorTop || !resultsAnchorBottom) return;
+      const target = active ? resultsAnchorTop : resultsAnchorBottom;
+      if (results.parentElement !== target) {
+        target.appendChild(results);
+      }
+      resultsAnchorTop.hidden = !active;
+      resultsAnchorBottom.hidden = active;
+    };
 
     const clearPrediction = () => {
       predictedFull = "";
@@ -690,6 +714,7 @@
           });
           if (!res.ok) return;
           memberSearchResults.innerHTML = await res.text();
+          placeSearchResults(formHasActiveSearch());
         } catch (err) {
           if (err?.name !== "AbortError") {
             /* ignore */
@@ -783,6 +808,7 @@
 
     memberSearchForm.addEventListener("change", refreshResults);
     syncClearButton();
+    placeSearchResults(formHasActiveSearch());
     if ((nameSearchInput.value || "").trim().length >= 2) {
       fetchPrediction();
     }

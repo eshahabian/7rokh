@@ -25,6 +25,7 @@ $result = casting_query_members($user_id, $filters, $page, 20);
 $members = $result['users'];
 $total = $result['total'];
 $pages = max(1, (int) ceil($total / 20));
+$search_active = casting_member_search_filters_active($filters);
 
 if (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1') {
     casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters);
@@ -35,8 +36,12 @@ casting_render_panel_start('جستجوی کاربران', 'search');
 casting_render_flash();
 ?>
 <section class="dash-card dash-card-search">
-  <div id="member-search-results" class="member-search-results-top" data-member-search-results>
-    <?php casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters); ?>
+  <div class="member-search-results-anchor member-search-results-anchor--top" data-member-search-results-anchor="top"<?= $search_active ? '' : ' hidden' ?>>
+    <?php if ($search_active) : ?>
+      <div id="member-search-results" data-member-search-results>
+        <?php casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters); ?>
+      </div>
+    <?php endif; ?>
   </div>
 
   <h1>جستجوی کاربران</h1>
@@ -75,5 +80,13 @@ casting_render_flash();
       <a class="btn btn-ghost" href="search-users.php">پاک کردن</a>
     </div>
   </form>
+
+  <div class="member-search-results-anchor member-search-results-anchor--bottom" data-member-search-results-anchor="bottom"<?= $search_active ? ' hidden' : '' ?>>
+    <?php if (!$search_active) : ?>
+      <div id="member-search-results" data-member-search-results>
+        <?php casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters); ?>
+      </div>
+    <?php endif; ?>
+  </div>
 </section>
 <?php casting_render_panel_end(); ?>
