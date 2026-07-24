@@ -220,11 +220,13 @@ casting_render_flash();
           <?php foreach ($members as $row) : ?>
             <tr<?= $target_id === (int) $row['id'] ? ' class="is-selected"' : '' ?>>
               <td>
-                <strong><?= casting_e($row['name']) ?></strong>
-                <span class="meta"><?= casting_e($row['login']) ?></span>
-                <?php if (($row['membership_number'] ?? '') !== '') : ?>
-                  <span class="meta membership-number"><?= casting_e((string) $row['membership_number']) ?></span>
-                <?php endif; ?>
+                <div class="admin-member-namecell">
+                  <strong><?= casting_e($row['name']) ?></strong>
+                  <span class="meta"><?= casting_e($row['login']) ?></span>
+                  <?php if (($row['membership_number'] ?? '') !== '') : ?>
+                    <span class="meta membership-number"><?= casting_e((string) $row['membership_number']) ?></span>
+                  <?php endif; ?>
+                </div>
               </td>
               <td><?= casting_e(casting_user_profile_chip_label((int) $row['id'], $user_id)) ?></td>
               <td>
