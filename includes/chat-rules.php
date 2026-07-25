@@ -9,12 +9,38 @@ require_once __DIR__ . '/blocks.php';
  */
 function casting_user_specialty_keys(int $user_id): array
 {
-    return casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true));
+    return casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+}
+
+/**
+ * تخصص‌های مؤثر برای قوانین چت — اگر نوع فعالیت خالی باشد از نقش پورتال استفاده می‌شود.
+ *
+ * @return list<string>
+ */
+function casting_chat_specialty_keys(int $user_id): array
+{
+    $keys = casting_user_specialty_keys($user_id);
+    if ($keys !== []) {
+        return $keys;
+    }
+
+    $role = casting_get_user_role($user_id);
+    if ($role === 'director') {
+        return ['director_cinema'];
+    }
+    if ($role === 'producer') {
+        return ['producer'];
+    }
+    if ($role === 'talent') {
+        return ['actor_cinema'];
+    }
+
+    return [];
 }
 
 function casting_user_has_specialty(int $user_id, string $specialty): bool
 {
-    return in_array($specialty, casting_user_specialty_keys($user_id), true);
+    return in_array($specialty, casting_chat_specialty_keys($user_id), true);
 }
 
 /**
@@ -25,12 +51,12 @@ function casting_user_has_any_specialty(int $user_id, array $needles): bool
     if ($needles === []) {
         return false;
     }
-    return array_intersect(casting_user_specialty_keys($user_id), $needles) !== [];
+    return array_intersect(casting_chat_specialty_keys($user_id), $needles) !== [];
 }
 
 function casting_user_is_actor(int $user_id): bool
 {
-    return casting_activities_has_acting(casting_user_specialty_keys($user_id));
+    return casting_activities_has_acting(casting_chat_specialty_keys($user_id));
 }
 
 /**
@@ -53,7 +79,15 @@ function casting_user_is_director(int $user_id): bool
 
 function casting_user_is_film_director(int $user_id): bool
 {
-    return casting_user_has_any_specialty($user_id, ['director_cinema', 'director_short_film']);
+    $keys = casting_chat_specialty_keys($user_id);
+    if (array_intersect($keys, ['director_cinema', 'director_short_film']) !== []) {
+        return true;
+    }
+    if (array_intersect($keys, ['director_theater', 'director_tv']) !== []) {
+        return false;
+    }
+
+    return casting_get_user_role($user_id) === 'director';
 }
 
 function casting_user_is_producer_for_chat(int $user_id): bool
@@ -152,7 +186,7 @@ function casting_director_start_block_reason(int $from_id, int $to_id): string
         return '';
     }
 
-    foreach (casting_user_specialty_keys($to_id) as $target) {
+    foreach (casting_chat_specialty_keys($to_id) as $target) {
         if (in_array($target, casting_director_specialty_keys(), true)) {
             return 'کارگردان نمی‌تواند به کارگردان دیگر پیام بدهد.';
         }
@@ -179,8 +213,8 @@ function casting_director_start_block_reason(int $from_id, int $to_id): string
  */
 function casting_section_head_allows_start(int $from_id, int $to_id): bool
 {
-    $from_specs = casting_user_specialty_keys($from_id);
-    $to_specs = casting_user_specialty_keys($to_id);
+    $from_specs = casting_chat_specialty_keys($from_id);
+    $to_specs = casting_chat_specialty_keys($to_id);
     if ($from_specs === [] || $to_specs === []) {
         return false;
     }
@@ -247,23 +281,23 @@ function casting_can_start_chat(int $from_id, int $to_id): array
     $to_is_actor = casting_user_is_actor($to_id);
     $producer_targets = casting_producer_message_target_keys();
 
-    // تهیه‌کننده
-    if (casting_user_is_producer_for_chat($from_id)) {
-        if ($to_is_actor) {
-            return ['ok' => false, 'error' => 'تهیه‌کننده نمی‌تواند به بازیگران پیام بدهد.'];
-        }
-        if (casting_user_has_any_specialty($to_id, $producer_targets)) {
-            return ['ok' => true, 'error' => ''];
-        }
-    }
-
-    // کارگردان سینما / فیلم کوتاه
+    // کارگردان سینما / فیلم کوتاه (قبل از تهیه‌کننده — حتی اگر هر دو نقش داشته باشد)
     if (casting_user_is_film_director($from_id)) {
         $block = casting_director_start_block_reason($from_id, $to_id);
         if ($block !== '') {
             return ['ok' => false, 'error' => $block];
         }
         if ($to_is_actor || casting_user_has_any_specialty($to_id, $producer_targets)) {
+            return ['ok' => true, 'error' => ''];
+        }
+    }
+
+    // تهیه‌کننده
+    if (casting_user_is_producer_for_chat($from_id)) {
+        if ($to_is_actor) {
+            return ['ok' => false, 'error' => 'تهیه‌کننده نمی‌تواند به بازیگران پیام بدهد.'];
+        }
+        if (casting_user_has_any_specialty($to_id, $producer_targets)) {
             return ['ok' => true, 'error' => ''];
         }
     }
