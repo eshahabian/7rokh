@@ -85,6 +85,7 @@ if ($peer_id > 0) {
     } else {
         $thread_locked = casting_dm_thread_locked_for_user($my_id, $peer_id);
         $peer_had_unread = casting_dm_unread_count($my_id, $peer_id) > 0;
+        casting_dm_mark_delivered($my_id, $peer_id);
         if (!$thread_locked) {
             casting_dm_mark_read($my_id, $peer_id);
         }
@@ -249,6 +250,11 @@ casting_render_flash();
                   <time><?= casting_e($msg['created_at']) ?></time>
                 </header>
                 <p><?= nl2br(casting_e($msg['message'])) ?></p>
+                <?php if (!empty($msg['is_mine'])) : ?>
+                  <footer class="chat-bubble-foot">
+                    <?php casting_render_dm_receipt_ticks((string) ($msg['receipt'] ?? 'sent')); ?>
+                  </footer>
+                <?php endif; ?>
               </article>
             <?php endforeach; ?>
             <div id="latest"></div>

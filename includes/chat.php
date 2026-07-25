@@ -347,6 +347,86 @@ function casting_dm_mark_read(int $user_id, int $peer_id): void
     $map = casting_dm_read_map($user_id);
     $map[$peer_id] = $last_id;
     update_user_meta($user_id, casting_dm_read_meta_key(), $map);
+
+    $now = current_time('mysql');
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->query($wpdb->prepare(
+        "UPDATE {$table}
+         SET delivered_at = COALESCE(delivered_at, %s),
+             read_at = COALESCE(read_at, %s)
+         WHERE sender_id = %d AND recipient_id = %d AND read_at IS NULL",
+        $now,
+        $now,
+        $peer_id,
+        $user_id
+    ));
+}
+
+/**
+ * پیام‌های دریافتی را «رسیده» علامت بزن (گیرنده گفتگو را باز کرده)
+ */
+function casting_dm_mark_delivered(int $user_id, int $peer_id): void
+{
+    if ($user_id <= 0 || $peer_id <= 0) {
+        return;
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    $now = current_time('mysql');
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->query($wpdb->prepare(
+        "UPDATE {$table}
+         SET delivered_at = %s
+         WHERE sender_id = %d AND recipient_id = %d AND delivered_at IS NULL",
+        $now,
+        $peer_id,
+        $user_id
+    ));
+}
+
+/**
+ * @param array{is_mine?:bool,delivered_at?:string,read_at?:string} $msg
+ */
+function casting_dm_message_receipt_status(array $msg): string
+{
+    if (empty($msg['is_mine'])) {
+        return '';
+    }
+    if (trim((string) ($msg['read_at'] ?? '')) !== '') {
+        return 'read';
+    }
+    if (trim((string) ($msg['delivered_at'] ?? '')) !== '') {
+        return 'delivered';
+    }
+
+    return 'sent';
+}
+
+function casting_render_dm_receipt_ticks(string $status): void
+{
+    if ($status === '') {
+        return;
+    }
+    $label = match ($status) {
+        'read'      => 'خوانده شد',
+        'delivered' => 'رسید',
+        default     => 'ارسال شد',
+    };
+    $double = $status === 'delivered' || $status === 'read';
+    ?>
+    <span class="chat-ticks chat-ticks--<?= casting_e($status) ?>" title="<?= casting_e($label) ?>" aria-label="<?= casting_e($label) ?>">
+      <svg viewBox="0 0 16 11" width="16" height="11" aria-hidden="true" focusable="false">
+        <path d="M5.5 9.5 1.2 5.2l1.1-1.1 3.2 3.2L13.3.5l1.1 1.1z" fill="currentColor"/>
+      </svg>
+      <?php if ($double) : ?>
+        <svg class="chat-ticks-second" viewBox="0 0 16 11" width="16" height="11" aria-hidden="true" focusable="false">
+          <path d="M5.5 9.5 1.2 5.2l1.1-1.1 3.2 3.2L13.3.5l1.1 1.1z" fill="currentColor"/>
+        </svg>
+      <?php endif; ?>
+    </span>
+    <?php
 }
 
 function casting_dm_unread_count(int $user_id, int $peer_id): int
@@ -488,6 +568,8 @@ function casting_chat_install(): void
         recipient_id BIGINT UNSIGNED NOT NULL,
         message TEXT NOT NULL,
         created_at DATETIME NOT NULL,
+        delivered_at DATETIME NULL,
+        read_at DATETIME NULL,
         PRIMARY KEY (id),
         KEY sender_id (sender_id),
         KEY recipient_id (recipient_id),
@@ -497,14 +579,15 @@ function casting_chat_install(): void
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql_public);
     dbDelta($sql_dm);
-    update_option('casting_chat_db_version', '2');
+    update_option('casting_chat_db_version', '3');
 }
 
 function casting_chat_ensure_table(): void
 {
     $ver = (string) get_option('casting_chat_db_version', '');
-    if ($ver !== '2') {
+    if ($ver !== '3') {
         casting_chat_install();
+        casting_dm_migrate_receipt_columns();
         return;
     }
     global $wpdb;
@@ -513,6 +596,30 @@ function casting_chat_ensure_table(): void
     $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $dm));
     if ($exists !== $dm) {
         casting_chat_install();
+        casting_dm_migrate_receipt_columns();
+    }
+}
+
+function casting_dm_migrate_receipt_columns(): void
+{
+    global $wpdb;
+    $table = casting_dm_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $rows = $wpdb->get_results("SHOW COLUMNS FROM {$table}", ARRAY_A);
+    if (!is_array($rows)) {
+        return;
+    }
+    $cols = [];
+    foreach ($rows as $row) {
+        $cols[] = (string) ($row['Field'] ?? '');
+    }
+    if (!in_array('delivered_at', $cols, true)) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->query("ALTER TABLE {$table} ADD COLUMN delivered_at DATETIME NULL AFTER created_at");
+    }
+    if (!in_array('read_at', $cols, true)) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->query("ALTER TABLE {$table} ADD COLUMN read_at DATETIME NULL AFTER delivered_at");
     }
 }
 
@@ -674,7 +781,7 @@ function casting_dm_insert_raw(
 }
 
 /**
- * @return array<int, array{id:int,sender_id:int,recipient_id:int,message:string,created_at:string,is_mine:bool}>
+ * @return array<int, array{id:int,sender_id:int,recipient_id:int,message:string,created_at:string,delivered_at:string,read_at:string,is_mine:bool,receipt:string}>
  */
 function casting_dm_thread(int $user_id, int $peer_id, int $limit = 200): array
 {
@@ -693,7 +800,7 @@ function casting_dm_thread(int $user_id, int $peer_id, int $limit = 200): array
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $rows = $wpdb->get_results(
         $wpdb->prepare(
-            "SELECT id, sender_id, recipient_id, message, created_at
+            "SELECT id, sender_id, recipient_id, message, created_at, delivered_at, read_at
              FROM {$table}
              WHERE (sender_id = %d AND recipient_id = %d)
                 OR (sender_id = %d AND recipient_id = %d)
@@ -714,14 +821,18 @@ function casting_dm_thread(int $user_id, int $peer_id, int $limit = 200): array
 
     $out = [];
     foreach (array_reverse($rows) as $row) {
-        $out[] = [
+        $msg = [
             'id'           => (int) $row['id'],
             'sender_id'    => (int) $row['sender_id'],
             'recipient_id' => (int) $row['recipient_id'],
             'message'      => (string) $row['message'],
             'created_at'   => (string) $row['created_at'],
+            'delivered_at' => (string) ($row['delivered_at'] ?? ''),
+            'read_at'      => (string) ($row['read_at'] ?? ''),
             'is_mine'      => (int) $row['sender_id'] === $user_id,
         ];
+        $msg['receipt'] = casting_dm_message_receipt_status($msg);
+        $out[] = $msg;
     }
     return $out;
 }
