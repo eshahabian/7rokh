@@ -1250,4 +1250,55 @@
     assignmentTypeSelect.addEventListener("change", syncAssignmentForm);
     syncAssignmentForm();
   }
+
+  const panelToggle = document.querySelector("[data-panel-menu-toggle]");
+  const panelDrawer = document.getElementById("panel-drawer");
+  const panelBackdrop = document.querySelector(".panel-drawer-backdrop");
+  if (panelToggle && panelDrawer) {
+    const mobileMenuQuery = window.matchMedia("(max-width: 960px)");
+    const setPanelMenuOpen = (open) => {
+      if (open && !mobileMenuQuery.matches) {
+        return;
+      }
+      document.body.classList.toggle("panel-menu-open", open);
+      panelToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      panelToggle.setAttribute("aria-label", open ? "بستن منوی پنل" : "باز کردن منوی پنل");
+      if (panelBackdrop) {
+        if (open) {
+          panelBackdrop.removeAttribute("hidden");
+        } else {
+          panelBackdrop.setAttribute("hidden", "");
+        }
+      }
+    };
+
+    panelToggle.addEventListener("click", () => {
+      if (!mobileMenuQuery.matches) {
+        return;
+      }
+      const open = panelToggle.getAttribute("aria-expanded") !== "true";
+      setPanelMenuOpen(open);
+    });
+
+    document.querySelectorAll("[data-panel-drawer-close]").forEach((el) => {
+      el.addEventListener("click", () => setPanelMenuOpen(false));
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && panelToggle.getAttribute("aria-expanded") === "true") {
+        setPanelMenuOpen(false);
+      }
+    });
+
+    const onViewportChange = () => {
+      if (!mobileMenuQuery.matches) {
+        setPanelMenuOpen(false);
+      }
+    };
+    if (typeof mobileMenuQuery.addEventListener === "function") {
+      mobileMenuQuery.addEventListener("change", onViewportChange);
+    } else if (typeof mobileMenuQuery.addListener === "function") {
+      mobileMenuQuery.addListener(onViewportChange);
+    }
+  }
 })();

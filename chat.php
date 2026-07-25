@@ -118,7 +118,7 @@ if ($peer_id > 0 && !empty($peer_allow['ok']) && casting_is_employer_role(castin
 }
 $employer_free_hint = casting_employer_free_messages_hint($my_id);
 
-casting_render_panel_start('پیام کاربران', 'messages');
+casting_render_panel_start('پیام‌های من', 'messages');
 if ($error !== '') {
     echo '<div class="flash flash-error" role="alert">' . casting_e($error) . '</div>';
 }

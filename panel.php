@@ -10,13 +10,11 @@ require_once __DIR__ . '/includes/panel-profile.php';
 
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
-$role = casting_get_user_role($user_id);
 $profile = casting_get_profile($user_id);
 $complete = casting_profile_complete($profile);
 $premium = casting_user_is_premium($user_id);
 $profile_error = '';
 $profile_success = '';
-$request_count = casting_user_new_request_count($user_id);
 
 $profile_post = casting_process_profile_post($user_id);
 if ($profile_post['error'] !== '') {
@@ -37,7 +35,7 @@ if ($welcome_photo === '') {
     $welcome_photo = (string) ($profile['photo_url'] ?? '');
 }
 
-casting_render_panel_start('پنل کاربری', 'panel');
+casting_render_panel_start('پروفایل من', 'panel');
 if (isset($_GET['welcome'])) {
     echo '<div class="flash flash-success" role="alert">ثبت‌نام و ورود با موفقیت انجام شد.</div>';
 }
@@ -58,13 +56,19 @@ casting_render_flash();
         <p class="membership-number-line">شماره عضویت: <span class="membership-number"><?= casting_e((string) $profile['membership_number']) ?></span></p>
       <?php endif; ?>
       <?php if (!$complete) : ?>
-        <p class="meta">پروفایلتان کامل نیست. برای دیده‌شدن بهتر، اطلاعات و عکس را تکمیل کنید.</p>
+        <p class="meta">پروفایلتان کامل نیست. اطلاعات و عکس را تکمیل کنید.</p>
       <?php elseif (!$hide_talent_profile) : ?>
         <p class="meta">پروفایل آماده است<?= !empty($profile['visible']) ? ' و قابل مشاهده است' : '؛ فعلاً مخفی است' ?>.</p>
       <?php endif; ?>
       <?php if ($premium) : ?>
         <?php casting_render_premium_countdown($user_id); ?>
       <?php endif; ?>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#edit-profile">ویرایش اطلاعات</a>
+        <?php if (!$complete) : ?>
+          <a class="btn btn-ghost" href="#completion">تکمیل پروفایل</a>
+        <?php endif; ?>
+      </div>
     </div>
     <div class="panel-welcome-photo">
       <?php if ($welcome_photo !== '') : ?>
@@ -74,13 +78,6 @@ casting_render_flash();
       <?php endif; ?>
     </div>
   </div>
-  <div class="cta-row">
-    <a class="btn btn-ghost" href="#completion">تکمیل پروفایل</a>
-    <a class="btn btn-primary" href="#edit-profile">ویرایش اطلاعات</a>
-    <a class="btn btn-ghost" href="chat.php">پیام‌ها</a>
-    <a class="btn btn-ghost" href="my-requests.php">دعوت‌ها<?php if ($request_count > 0) : ?> (<?= (int) $request_count ?>)<?php endif; ?></a>
-  </div>
-  <?php casting_render_premium_account_links(); ?>
 </section>
 
 <?php
