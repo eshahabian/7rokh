@@ -2586,5 +2586,9 @@ function casting_require_casting_user(): WP_User
         casting_set_flash('error', 'حساب شما معلق شده است. برای پیگیری با پشتیبانی تماس بگیرید.');
         casting_redirect('logout.php');
     }
+    if (function_exists('casting_touch_last_active')) {
+        require_once __DIR__ . '/member-preview.php';
+        casting_touch_last_active((int) $user->ID);
+    }
     return $user;
 }

@@ -209,6 +209,10 @@ function casting_render_panel_start(string $title, string $active, string $body_
 
 function casting_render_panel_end(): void
 {
+    if (!function_exists('casting_render_member_preview_lightbox_shell')) {
+        require_once __DIR__ . '/member-preview.php';
+    }
+    casting_render_member_preview_lightbox_shell();
     echo '</div></main>';
     casting_render_footer();
 }
@@ -1221,8 +1225,8 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
     $viewed = !empty($director_flags['viewed']);
     $highlight = !empty($director_flags['is_highlight']);
     ?>
-    <article class="member-card<?= $highlight ? ' member-card--highlight' : '' ?>">
-      <a class="member-card-photo" href="<?= casting_e(casting_panel_profile_url($id)) ?>">
+    <article class="member-card<?= $highlight ? ' member-card--highlight' : '' ?>" data-member-preview="<?= $id ?>">
+      <button type="button" class="member-card-photo" data-member-preview="<?= $id ?>" aria-label="نمایش پروفایل <?= casting_e($member->display_name) ?>">
         <?php if ($photo !== '') : ?>
           <img src="<?= casting_e($photo) ?>" alt="">
         <?php else : ?>
@@ -1231,9 +1235,9 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
         <?php if ($viewed) : ?>
           <?php casting_render_director_viewed_badge(true); ?>
         <?php endif; ?>
-      </a>
+      </button>
       <div class="member-card-body">
-        <h3><a href="<?= casting_e(casting_panel_profile_url($id)) ?>"><?= casting_e($member->display_name) ?></a></h3>
+        <h3><button type="button" class="link-button member-card-name" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button></h3>
         <p class="meta">
           <?= casting_e(casting_role_label($role)) ?>
           <?php if ($premium) : ?><span class="chip chip-premium">ویژه</span><?php endif; ?>
