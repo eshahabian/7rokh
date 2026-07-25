@@ -115,6 +115,7 @@ function casting_render_panel_sidebar(string $active): void
     $sidebar_photo = '';
     $sidebar_name = '';
     $sidebar_views = ['day' => 0, 'month' => 0];
+    $sidebar_show_views = false;
     if ($user) {
         $sidebar_name = (string) $user->display_name;
         $closeup = casting_load_portrait($user_id, 'closeup');
@@ -124,10 +125,17 @@ function casting_render_panel_sidebar(string $active): void
             $sidebar_profile = casting_get_profile($user_id);
             $sidebar_photo = (string) ($sidebar_profile['photo_url'] ?? '');
         }
-        if (!function_exists('casting_profile_view_stats')) {
-            require_once __DIR__ . '/visitors.php';
+        $sidebar_activities = casting_normalize_activities(
+            get_user_meta($user_id, 'casting_activities', true),
+            $user_id
+        );
+        $sidebar_show_views = casting_activities_has_acting($sidebar_activities);
+        if ($sidebar_show_views) {
+            if (!function_exists('casting_profile_view_stats')) {
+                require_once __DIR__ . '/visitors.php';
+            }
+            $sidebar_views = casting_profile_view_stats($user_id);
         }
-        $sidebar_views = casting_profile_view_stats($user_id);
     }
     ?>
     <aside class="panel-sidebar" aria-label="منوی پنل کاربری">
@@ -150,11 +158,13 @@ function casting_render_panel_sidebar(string $active): void
               </p>
             </div>
           </div>
-          <p class="panel-sidebar-views" title="بازدید پروفایل شما">
-            <span>امروز: <?= (int) $sidebar_views['day'] ?></span>
-            <span class="panel-sidebar-views-label">تعداد بازدید</span>
-            <span>این ماه: <?= (int) $sidebar_views['month'] ?></span>
-          </p>
+          <?php if ($sidebar_show_views) : ?>
+            <p class="panel-sidebar-views" title="بازدید پروفایل شما">
+              <span>امروز: <?= (int) $sidebar_views['day'] ?></span>
+              <span class="panel-sidebar-views-label">تعداد بازدید</span>
+              <span>این ماه: <?= (int) $sidebar_views['month'] ?></span>
+            </p>
+          <?php endif; ?>
         <?php endif; ?>
       </div>
       <nav class="panel-nav">
