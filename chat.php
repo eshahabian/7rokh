@@ -145,7 +145,7 @@ casting_render_flash();
                 <?php casting_render_chat_avatar((int) $conv['peer_id'], (string) $conv['name'], $conv_unread > 0); ?>
                 <span class="chat-conv-body">
                   <strong><?= casting_e($conv['name']) ?></strong>
-                  <span><?= casting_e(casting_role_label($conv['role'])) ?></span>
+                  <span><?= casting_e(casting_dm_peer_role_label((int) $conv['peer_id'])) ?></span>
                   <em><?= casting_e(casting_chat_preview($conv['last_message'])) ?></em>
                 </span>
                 <?php if ($conv_unread > 0) : ?>
@@ -185,7 +185,7 @@ casting_render_flash();
               <?php if ($peer_had_unread) : ?>
                 <span class="chat-new-badge">پیام جدید</span>
               <?php endif; ?>
-              <span><?= casting_e(casting_role_label(casting_get_user_role($peer_id))) ?></span>
+              <span><?= casting_e(casting_dm_peer_role_label($peer_id)) ?></span>
             </div>
           </div>
           <div class="cta-row">
