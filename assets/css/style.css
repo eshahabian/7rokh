@@ -2559,12 +2559,12 @@ body.panel-menu-open {
 
 .panel-menu-toggle {
   display: none;
-  position: fixed;
-  top: 5.25rem;
+  position: absolute;
+  top: 0.35rem;
   right: 1rem;
   left: auto;
   bottom: auto;
-  z-index: 240;
+  z-index: 40;
   align-items: center;
   gap: 0.45rem;
   min-height: 2.65rem;
@@ -2673,7 +2673,7 @@ body.panel-menu-open .panel-menu-toggle-icon span:nth-child(3) {
 @media (max-width: 960px) {
   .panel-shell {
     display: block;
-    padding-top: 1.5rem;
+    padding-top: 3.75rem;
   }
 
   .panel-shell-nav {
