@@ -152,6 +152,7 @@ function casting_render_panel_sidebar(string $active): void
           </div>
           <p class="panel-sidebar-views" title="بازدید پروفایل شما">
             <span>امروز: <?= (int) $sidebar_views['day'] ?></span>
+            <span class="panel-sidebar-views-label">تعداد بازدید</span>
             <span>این ماه: <?= (int) $sidebar_views['month'] ?></span>
           </p>
         <?php endif; ?>

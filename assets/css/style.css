@@ -2496,7 +2496,7 @@ fieldset.field legend {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.25rem 0.65rem;
+  gap: 0.25rem 0.45rem;
   margin: 0.55rem 0 0;
   padding: 0.4rem 0.55rem;
   border: 1px solid var(--line);
@@ -2504,6 +2504,12 @@ fieldset.field legend {
   background: rgba(255, 255, 255, 0.03);
   font-size: 0.72rem;
   color: var(--ink-muted);
+}
+
+.panel-sidebar-views-label {
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
 }
 
 .panel-sidebar-views span {
