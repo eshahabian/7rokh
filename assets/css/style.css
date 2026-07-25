@@ -2390,20 +2390,21 @@ fieldset.field legend {
   display: inline-flex;
   align-items: center;
   position: relative;
-  width: 1.15rem;
+  width: 1.25rem;
   height: 0.75rem;
   color: rgba(255, 255, 255, 0.45);
+  flex-shrink: 0;
 }
 
 .chat-ticks svg {
   position: absolute;
   top: 0;
-  left: 0;
+  inset-inline-start: 0;
   display: block;
 }
 
-.chat-ticks-second {
-  left: 0.28rem;
+.chat-ticks svg.chat-ticks-second {
+  inset-inline-start: 0.32rem;
 }
 
 .chat-ticks--sent {
