@@ -10,11 +10,42 @@ require_once __DIR__ . '/chat-rules.php';
 require_once __DIR__ . '/layout.php';
 
 /**
- * آیتم‌های اصلی منوی پنل (همبرگری)
+ * منوی کامل دسکتاپ (مثل قبل)
  *
  * @return array<int, array{key:string,label:string,href:string,icon?:string}>
  */
-function casting_panel_nav_items(): array
+function casting_panel_nav_items_desktop(): array
+{
+    return [
+        ['key' => 'panel',       'label' => 'پنل کاربری',               'href' => 'panel.php'],
+        ['key' => 'messages',    'label' => 'پیام کاربران',             'href' => 'chat.php'],
+        ['key' => 'my-requests', 'label' => 'دعوت‌های همکاری',          'href' => 'my-requests.php'],
+        ['key' => 'briefs',      'label' => 'تکالیف',                   'href' => 'my-briefs.php'],
+        ['key' => 'search',      'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
+        ['key' => 'favorites',   'label' => 'علاقه‌مندی‌ها',             'href' => 'favorites.php'],
+        ['key' => 'desk',        'label' => 'پروژه‌ها',                  'href' => 'director-desk.php'],
+        ['key' => 'premium',     'label' => 'خرید و فعال‌سازی',         'href' => 'premium.php'],
+        ['key' => 'receipt',     'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],
+        ['key' => 'newest',      'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
+        ['key' => 'visitors',    'label' => 'بازدیدکنندگان پروفایل من', 'href' => 'profile-visitors.php'],
+        ['key' => 'blocked',     'label' => 'بلاک‌شده‌های من',          'href' => 'blocked-by-me.php'],
+        ['key' => 'photo',       'label' => 'ویرایش تصویر',             'href' => 'profile-photo.php'],
+        ['key' => 'password',    'label' => 'تغییر رمز عبور',           'href' => 'change-password.php'],
+        ['key' => 'transactions','label' => 'تراکنش‌های مالی',          'href' => 'transactions.php'],
+        ['key' => 'cancel',      'label' => 'انصراف از عضویت',          'href' => 'cancel-membership.php'],
+        ['key' => 'contact',     'label' => 'تماس با ما',               'href' => 'contact.php'],
+        ['key' => 'faq',         'label' => 'سوالات متداول',            'href' => 'faq.php'],
+        ['key' => 'rules',       'label' => 'قوانین',                   'href' => 'rules.php'],
+        ['key' => 'logout',      'label' => 'خروج',                     'href' => 'logout.php'],
+    ];
+}
+
+/**
+ * منوی ساده‌شده موبایل (همبرگری)
+ *
+ * @return array<int, array{key:string,label:string,href:string,icon?:string}>
+ */
+function casting_panel_nav_items_mobile(): array
 {
     return [
         ['key' => 'panel',       'label' => 'پروفایل من',                 'href' => 'panel.php'],
@@ -32,7 +63,16 @@ function casting_panel_nav_items(): array
 }
 
 /**
- * کلید منوی اصلی برای هایلایت (صفحات فرعی → بخش والد)
+ * @deprecated از casting_panel_nav_items_mobile استفاده کنید
+ * @return array<int, array{key:string,label:string,href:string,icon?:string}>
+ */
+function casting_panel_nav_items(): array
+{
+    return casting_panel_nav_items_mobile();
+}
+
+/**
+ * کلید منوی موبایل برای هایلایت (صفحات فرعی → بخش والد)
  */
 function casting_panel_nav_highlight_key(string $active): string
 {
@@ -59,7 +99,7 @@ function casting_panel_nav_highlight_key(string $active): string
  */
 function casting_panel_nav_keys_hidden_for_director(): array
 {
-    return ['cancel'];
+    return ['photo', 'cancel'];
 }
 
 /**
@@ -94,9 +134,9 @@ function casting_render_premium_account_links(string $wrapper_class = 'cta-row p
 {
     ?>
     <div class="<?= casting_e($wrapper_class) ?>">
-      <a class="btn btn-ghost" href="<?= casting_e(casting_url('membership.php')) ?>">عضویت و اعتبار</a>
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('premium.php')) ?>">خرید و فعال‌سازی</a>
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('premium-receipt.php')) ?>">ثبت فیش کارت به کارت</a>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('transactions.php')) ?>">تراکنش‌های مالی</a>
     </div>
     <?php
 }
@@ -108,6 +148,102 @@ function casting_panel_profile_url(int $user_id): string
         return 'member.php?id=' . $user_id;
     }
     return 'member.php?id=' . $user_id;
+}
+
+/**
+ * @param array<int, array{key:string,label:string,href:string,external?:bool}> $items
+ * @param array{
+ *   user:?\WP_User,
+ *   active:string,
+ *   highlight:bool,
+ *   can_member_search:bool,
+ *   unread_peers:int,
+ *   pending_receipts:int,
+ *   unread_contacts:int,
+ *   request_count:int,
+ *   pending_brief_count:int,
+ *   panel_premium_until:?int
+ * } $ctx
+ */
+function casting_render_panel_nav_item_list(array $items, array $ctx): void
+{
+    $user = $ctx['user'];
+    $active = (string) $ctx['active'];
+    $highlight_mode = !empty($ctx['highlight']);
+    $can_member_search = !empty($ctx['can_member_search']);
+    $unread_peers = (int) $ctx['unread_peers'];
+    $pending_receipts = (int) $ctx['pending_receipts'];
+    $unread_contacts = (int) $ctx['unread_contacts'];
+    $request_count = (int) $ctx['request_count'];
+    $pending_brief_count = (int) $ctx['pending_brief_count'];
+    $panel_premium_until = $ctx['panel_premium_until'];
+    $current = $highlight_mode ? casting_panel_nav_highlight_key($active) : $active;
+
+    foreach ($items as $item) {
+        $is_external = !empty($item['external']);
+        $href = (string) $item['href'];
+        if (!$is_external && $href !== '' && !str_starts_with($href, 'http')) {
+            $href = casting_url($href);
+        }
+        if ($item['key'] === 'premium' && $unread_peers === 0 && $pending_receipts > 0) {
+            $href .= '#admin-receipts';
+        }
+        if ($item['key'] === 'membership' && $unread_peers === 0 && $pending_receipts > 0) {
+            $href = casting_url('premium.php#admin-receipts');
+        }
+        if ($item['key'] === 'search' && !$can_member_search) {
+            ?>
+          <span class="panel-nav-link is-disabled" aria-disabled="true" title="برای دسترسی به جستجو، کارگردان باشید یا اشتراک ویژه فعال کنید">
+            <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
+          </span>
+            <?php
+            continue;
+        }
+        if ($item['key'] === 'desk' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
+            continue;
+        }
+        if ($item['key'] === 'favorites' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
+            continue;
+        }
+        if ($item['key'] === 'briefs' && (!$user || casting_get_user_role((int) $user->ID) !== 'talent')) {
+            continue;
+        }
+        if ($user && casting_user_is_director_role((int) $user->ID)
+            && in_array($item['key'], casting_panel_nav_keys_hidden_for_director(), true)) {
+            if ($item['key'] === 'photo' && casting_user_can_upload_portraits((int) $user->ID)) {
+                // مدیران سایت دسترسی به ویرایش تصویر دارند
+            } else {
+                continue;
+            }
+        }
+        if ($item['key'] === 'photo' && $user && !casting_user_can_upload_portraits((int) $user->ID)) {
+            continue;
+        }
+        ?>
+          <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= $is_external ? ' target="_blank" rel="noopener"' : '' ?>>
+            <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
+            <?php if ($item['key'] === 'messages' && $unread_peers > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
+            <?php elseif ($item['key'] === 'panel' && $panel_premium_until !== null && $user) : ?>
+              <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
+                <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
+              </span>
+            <?php elseif ($item['key'] === 'membership' && $panel_premium_until !== null && $user) : ?>
+              <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
+                <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
+              </span>
+            <?php elseif (($item['key'] === 'premium' || $item['key'] === 'membership') && $pending_receipts > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
+            <?php elseif ($item['key'] === 'my-requests' && $request_count > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $request_count) ?> درخواست"><?= (int) $request_count ?></span>
+            <?php elseif ($item['key'] === 'briefs' && $pending_brief_count > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $pending_brief_count) ?> تکلیف"><?= (int) $pending_brief_count ?></span>
+            <?php elseif (($item['key'] === 'contact' || $item['key'] === 'settings') && $unread_contacts > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
+            <?php endif; ?>
+          </a>
+        <?php
+    }
 }
 
 /**
@@ -228,14 +364,26 @@ function casting_render_panel_sidebar(string $active): void
         }
     }
 
-    $highlight = casting_panel_nav_highlight_key($active);
+    $nav_ctx = [
+        'user'                => $user,
+        'active'              => $active,
+        'highlight'           => false,
+        'can_member_search'   => $can_member_search,
+        'unread_peers'        => $unread_peers,
+        'pending_receipts'    => $pending_receipts,
+        'unread_contacts'     => $unread_contacts,
+        'request_count'       => $request_count,
+        'pending_brief_count' => $pending_brief_count,
+        'panel_premium_until' => $panel_premium_until,
+    ];
     ?>
     <div class="panel-shell-nav">
     <div class="panel-drawer-backdrop" data-panel-drawer-close hidden></div>
     <aside class="panel-sidebar panel-drawer" id="panel-drawer" aria-label="منوی پنل کاربری">
       <div class="panel-sidebar-head">
         <div class="panel-drawer-head-row">
-          <p class="panel-sidebar-title">منوی اصلی</p>
+          <p class="panel-sidebar-title panel-sidebar-title-desktop">پنل کاربری</p>
+          <p class="panel-sidebar-title panel-sidebar-title-mobile">منوی اصلی</p>
           <button type="button" class="panel-drawer-close" aria-label="بستن منو" data-panel-drawer-close>&times;</button>
         </div>
         <?php if ($user) : ?>
@@ -272,58 +420,17 @@ function casting_render_panel_sidebar(string $active): void
           <span class="panel-nav-label">سایت هفت رخ</span>
         </a>
       </nav>
-      <nav class="panel-nav">
-        <?php foreach (casting_panel_nav_items() as $item) : ?>
-          <?php
-          $is_external = !empty($item['external']);
-          $href = (string) $item['href'];
-          if (!$is_external && $href !== '' && !str_starts_with($href, 'http')) {
-              $href = casting_url($href);
-          }
-          if ($item['key'] === 'membership' && $unread_peers === 0 && $pending_receipts > 0) {
-              $href = casting_url('premium.php#admin-receipts');
-          }
-          if ($item['key'] === 'search' && !$can_member_search) {
-              ?>
-          <span class="panel-nav-link is-disabled" aria-disabled="true" title="برای دسترسی به جستجو، کارگردان باشید یا اشتراک ویژه فعال کنید">
-            <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
-          </span>
-              <?php
-              continue;
-          }
-          if ($item['key'] === 'desk' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
-              continue;
-          }
-          if ($item['key'] === 'favorites' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
-              continue;
-          }
-          if ($item['key'] === 'briefs' && (!$user || casting_get_user_role((int) $user->ID) !== 'talent')) {
-              continue;
-          }
-          if ($user && casting_user_is_director_role((int) $user->ID)
-              && in_array($item['key'], casting_panel_nav_keys_hidden_for_director(), true)) {
-              continue;
-          }
-          ?>
-          <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $highlight === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= $is_external ? ' target="_blank" rel="noopener"' : '' ?>>
-            <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
-            <?php if ($item['key'] === 'messages' && $unread_peers > 0) : ?>
-              <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
-            <?php elseif ($item['key'] === 'membership' && $panel_premium_until !== null && $user) : ?>
-              <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
-                <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
-              </span>
-            <?php elseif ($item['key'] === 'membership' && $pending_receipts > 0) : ?>
-              <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
-            <?php elseif ($item['key'] === 'my-requests' && $request_count > 0) : ?>
-              <span class="nav-badge" aria-label="<?= casting_e((string) $request_count) ?> درخواست"><?= (int) $request_count ?></span>
-            <?php elseif ($item['key'] === 'briefs' && $pending_brief_count > 0) : ?>
-              <span class="nav-badge" aria-label="<?= casting_e((string) $pending_brief_count) ?> تکلیف"><?= (int) $pending_brief_count ?></span>
-            <?php elseif ($item['key'] === 'settings' && $unread_contacts > 0) : ?>
-              <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
-            <?php endif; ?>
-          </a>
-        <?php endforeach; ?>
+      <nav class="panel-nav panel-nav--desktop">
+        <?php
+        $nav_ctx['highlight'] = false;
+        casting_render_panel_nav_item_list(casting_panel_nav_items_desktop(), $nav_ctx);
+        ?>
+      </nav>
+      <nav class="panel-nav panel-nav--mobile">
+        <?php
+        $nav_ctx['highlight'] = true;
+        casting_render_panel_nav_item_list(casting_panel_nav_items_mobile(), $nav_ctx);
+        ?>
       </nav>
       <div class="panel-drawer-theme">
         <?php casting_render_theme_toggle(); ?>

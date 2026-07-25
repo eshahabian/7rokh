@@ -2633,8 +2633,16 @@ body.panel-menu-open .panel-menu-toggle-icon span:nth-child(3) {
 }
 
 .panel-nav-site-links,
-.panel-drawer-theme {
+.panel-drawer-theme,
+.panel-nav--mobile,
+.panel-sidebar-title-mobile {
   display: none;
+}
+
+.panel-nav--desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
 .panel-drawer-theme {
@@ -2759,6 +2767,22 @@ body.panel-menu-open .panel-menu-toggle-icon span:nth-child(3) {
 
   .panel-drawer-theme {
     display: block;
+  }
+
+  .panel-nav--desktop,
+  .panel-sidebar-title-desktop {
+    display: none;
+  }
+
+  .panel-nav--mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .panel-sidebar-title-mobile {
+    display: block;
+    margin: 0;
   }
 
   .panel-sidebar.panel-drawer {
