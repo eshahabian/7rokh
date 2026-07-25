@@ -140,19 +140,110 @@ function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
     if (!$allow['ok']) {
         return $allow;
     }
-    if (casting_user_requires_premium_for_dm($sender_id) && !casting_dm_is_support_peer($recipient_id)) {
-        return [
-            'ok'    => false,
-            'error' => casting_dm_premium_required_notice_message(),
-        ];
+    if (casting_dm_is_support_peer($recipient_id)) {
+        return ['ok' => true, 'error' => ''];
+    }
+    if (!casting_user_requires_premium_for_dm($sender_id)) {
+        return ['ok' => true, 'error' => ''];
+    }
+    if (casting_employer_has_free_message_quota($sender_id)) {
+        return ['ok' => true, 'error' => ''];
     }
 
-    return ['ok' => true, 'error' => ''];
+    if (casting_user_is_employer_account($sender_id)) {
+        return ['ok' => false, 'error' => casting_employer_premium_send_error()];
+    }
+
+    return [
+        'ok'    => false,
+        'error' => casting_dm_premium_required_notice_message(),
+    ];
 }
 
 function casting_dm_thread_locked_for_user(int $user_id, int $peer_id): bool
 {
     return casting_user_requires_premium_for_dm($user_id) && !casting_dm_is_support_peer($peer_id);
+}
+
+function casting_employer_free_dm_limit(): int
+{
+    return 3;
+}
+
+function casting_user_is_employer_account(int $user_id): bool
+{
+    return casting_is_employer_role(casting_get_user_role($user_id));
+}
+
+function casting_employer_free_messages_used(int $user_id): int
+{
+    return max(0, (int) get_user_meta($user_id, 'casting_employer_free_messages_used', true));
+}
+
+function casting_employer_free_messages_remaining(int $user_id): int
+{
+    if (!casting_user_is_employer_account($user_id)) {
+        return 0;
+    }
+    if (!casting_user_requires_premium_for_dm($user_id)) {
+        return casting_employer_free_dm_limit();
+    }
+
+    return max(0, casting_employer_free_dm_limit() - casting_employer_free_messages_used($user_id));
+}
+
+function casting_employer_has_free_message_quota(int $user_id): bool
+{
+    return casting_employer_free_messages_remaining($user_id) > 0;
+}
+
+function casting_employer_premium_send_error(): string
+{
+    return 'سه پیام رایگان شما تمام شده است. برای ارسال پیام بیشتر، عضویت ویژه فعال کنید.';
+}
+
+function casting_employer_free_messages_hint(int $user_id): string
+{
+    if (!casting_user_is_employer_account($user_id) || !casting_user_requires_premium_for_dm($user_id)) {
+        return '';
+    }
+
+    $remaining = casting_employer_free_messages_remaining($user_id);
+    if ($remaining <= 0) {
+        return 'پیام رایگان باقی‌مانده: ۰ — برای ادامه، عضویت ویژه لازم است.';
+    }
+
+    return 'پیام رایگان باقی‌مانده: ' . $remaining . ' از ' . casting_employer_free_dm_limit();
+}
+
+function casting_employer_default_outreach_message(int $employer_id): string
+{
+    $user = get_user_by('id', $employer_id);
+    $name = $user ? trim((string) $user->display_name) : '';
+    if ($name === '') {
+        $name = '…';
+    }
+
+    return "هنرمند گرامی، سلام\n\n"
+        . "پروفایل شما در سامانه «هفت‌رخ» بررسی شده است. با توجه به سوابق حرفه‌ای شما، مایل هستیم درباره امکان همکاری در یک پروژه جدید با شما گفتگو کنیم. "
+        . "در صورت تمایل، لطفاً آمادگی خود را اعلام فرمایید تا جزئیات همکاری ارائه شود.\n\n"
+        . "با احترام\n"
+        . $name . "\n"
+        . "از طریق سامانه تخصصی هفت‌رخ";
+}
+
+function casting_employer_maybe_consume_free_message(int $user_id): void
+{
+    if (!casting_user_is_employer_account($user_id) || !casting_user_requires_premium_for_dm($user_id)) {
+        return;
+    }
+
+    $used = casting_employer_free_messages_used($user_id);
+    if ($used >= casting_employer_free_dm_limit()) {
+        return;
+    }
+
+    update_user_meta($user_id, 'casting_employer_free_messages_used', $used + 1);
 }
 
 function casting_dm_has_conversation(int $user_a, int $user_b): bool
@@ -488,18 +579,26 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
         return ['ok' => false, 'error' => 'ارسال پیام ناموفق بود.'];
     }
 
+    casting_employer_maybe_consume_free_message($sender_id);
     casting_dm_maybe_send_premium_required_notice($recipient_id, $sender_id);
 
     return ['ok' => true];
 }
 
-function casting_dm_insert_raw(int $sender_id, int $recipient_id, string $message, string $created_at = '', bool $notify_premium = true): bool
+function casting_dm_insert_raw(
+    int $sender_id,
+    int $recipient_id,
+    string $message,
+    string $created_at = '',
+    bool $notify_premium = true,
+    bool $enforce_send_rules = true
+): bool
 {
     if ($sender_id <= 0 || $recipient_id <= 0) {
         return false;
     }
 
-    if ($notify_premium) {
+    if ($enforce_send_rules) {
         $allow = casting_can_user_send_dm($sender_id, $recipient_id);
         if (!$allow['ok']) {
             return false;
@@ -531,6 +630,9 @@ function casting_dm_insert_raw(int $sender_id, int $recipient_id, string $messag
 
     if ($ok && $notify_premium) {
         casting_dm_maybe_send_premium_required_notice($recipient_id, $sender_id);
+    }
+    if ($ok && $enforce_send_rules) {
+        casting_employer_maybe_consume_free_message($sender_id);
     }
 
     return $ok;

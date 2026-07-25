@@ -35,6 +35,10 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
     if (!$chat_allow['ok']) {
         return ['ok' => false, 'error' => $chat_allow['error']];
     }
+    $send_allow = casting_can_user_send_dm($employer_id, $talent_id);
+    if (!$send_allow['ok']) {
+        return ['ok' => false, 'error' => $send_allow['error']];
+    }
 
     $message = sanitize_textarea_field($message);
     $project = sanitize_text_field($project);
@@ -73,6 +77,7 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
 
     casting_store_request_for_users($request);
     update_user_meta($employer_id, $last_key, time());
+    casting_employer_maybe_consume_free_message($employer_id);
 
     $mail = casting_mail_talent_request($talent, $employer, $request);
     if (!$mail['ok']) {
@@ -699,7 +704,7 @@ function casting_request_seed_chat(array $request): void
         $created_at = current_time('mysql');
     }
 
-    casting_dm_insert_raw($employer_id, $talent_id, $message, $created_at);
+    casting_dm_insert_raw($employer_id, $talent_id, $message, $created_at, true, false);
 }
 
 /**
@@ -1011,6 +1016,10 @@ function casting_render_director_send_request_compose(int $director_id, array $h
     if ($selected_talent_id <= 0 && $highlighted !== []) {
         $selected_talent_id = (int) ($highlighted[0]['talent_id'] ?? 0);
     }
+    if ($message === '') {
+        $message = casting_employer_default_outreach_message($director_id);
+    }
+    $free_hint = casting_employer_free_messages_hint($director_id);
     ?>
     <details class="request-compose" id="request-compose"<?= $open ? ' open' : '' ?>>
       <summary class="request-compose-summary">ارسال درخواست همکاری</summary>
@@ -1057,7 +1066,10 @@ function casting_render_director_send_request_compose(int $director_id, array $h
             </div>
             <div class="field">
               <label for="req_message">متن درخواست</label>
-              <textarea id="req_message" name="message" rows="4" required maxlength="2000"><?= casting_e($message) ?></textarea>
+              <textarea id="req_message" name="message" rows="8" required maxlength="2000"><?= casting_e($message) ?></textarea>
+              <?php if ($free_hint !== '') : ?>
+                <p class="field-hint"><?= casting_e($free_hint) ?></p>
+              <?php endif; ?>
             </div>
             <div class="cta-row">
               <button class="btn btn-primary" type="submit">ارسال درخواست</button>

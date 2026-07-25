@@ -273,6 +273,9 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     $skills_text = casting_format_skill_labels($profile['skill_items'] ?? [], (string) ($profile['skills_other'] ?? ''));
     $premium = casting_user_is_premium($member_id);
     $viewer_role = casting_get_user_role($viewer_id);
+    if ($message === '' && !$is_self && casting_is_employer_role($viewer_role)) {
+        $message = casting_employer_default_outreach_message($viewer_id);
+    }
     $chat_allow = !$is_self ? casting_can_users_chat($viewer_id, $member_id) : ['ok' => false];
     $is_blocked = !$is_self ? casting_is_blocked($viewer_id, $member_id) : false;
     $director_workspace = null;
@@ -457,7 +460,10 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         </div>
         <div class="field">
           <label for="message">متن درخواست</label>
-          <textarea id="message" name="message" rows="4" required maxlength="2000"><?= casting_e($message) ?></textarea>
+          <textarea id="message" name="message" rows="8" required maxlength="2000"><?= casting_e($message) ?></textarea>
+          <?php if (($hint = casting_employer_free_messages_hint($viewer_id)) !== '') : ?>
+            <p class="field-hint"><?= casting_e($hint) ?></p>
+          <?php endif; ?>
         </div>
         <button class="btn btn-primary" type="submit">ارسال درخواست</button>
       </form>
@@ -473,7 +479,10 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         </div>
         <div class="field">
           <label for="message">متن درخواست</label>
-          <textarea id="message" name="message" rows="4" required maxlength="2000"><?= casting_e($message) ?></textarea>
+          <textarea id="message" name="message" rows="8" required maxlength="2000"><?= casting_e($message) ?></textarea>
+          <?php if (($hint = casting_employer_free_messages_hint($viewer_id)) !== '') : ?>
+            <p class="field-hint"><?= casting_e($hint) ?></p>
+          <?php endif; ?>
         </div>
         <button class="btn btn-primary" type="submit">ارسال درخواست</button>
       </form>
