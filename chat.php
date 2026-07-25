@@ -75,6 +75,7 @@ $thread = [];
 $peer_allow = ['ok' => false, 'error' => ''];
 $is_blocked = false;
 $peer_had_unread = false;
+$thread_locked = false;
 
 if ($peer_id > 0) {
     $peer = get_user_by('id', $peer_id);
@@ -82,8 +83,11 @@ if ($peer_id > 0) {
         $error = $error !== '' ? $error : 'کاربر پیدا نشد.';
         $peer_id = 0;
     } else {
+        $thread_locked = casting_dm_thread_locked_for_user($my_id, $peer_id);
         $peer_had_unread = casting_dm_unread_count($my_id, $peer_id) > 0;
-        casting_dm_mark_read($my_id, $peer_id);
+        if (!$thread_locked) {
+            casting_dm_mark_read($my_id, $peer_id);
+        }
         if ($request_id !== '') {
             $open = casting_open_request_chat($my_id, $request_id);
             if (!$open['ok']) {
@@ -92,8 +96,16 @@ if ($peer_id > 0) {
                 $active_request = casting_find_user_request($my_id, $request_id);
             }
         }
-        $thread = casting_dm_thread($my_id, $peer_id);
-        $peer_allow = casting_can_users_chat($my_id, $peer_id);
+        if ($thread_locked) {
+            $thread = [];
+            $peer_allow = [
+                'ok'    => false,
+                'error' => casting_dm_premium_required_notice_message(),
+            ];
+        } else {
+            $thread = casting_dm_thread($my_id, $peer_id);
+            $peer_allow = casting_can_user_send_dm($my_id, $peer_id);
+        }
         $is_blocked = casting_is_blocked($my_id, $peer_id);
     }
 }
@@ -121,7 +133,7 @@ casting_render_flash();
               $conv_unread = (int) ($conv['unread'] ?? 0);
               ?>
             <li>
-              <a class="chat-conv-item<?= $peer_id === (int) $conv['peer_id'] ? ' is-active' : '' ?><?= $conv_unread > 0 ? ' has-unread' : '' ?>" href="chat.php?with=<?= (int) $conv['peer_id'] ?>">
+              <a class="chat-conv-item<?= $peer_id === (int) $conv['peer_id'] ? ' is-active' : '' ?><?= $conv_unread > 0 ? ' has-unread' : '' ?><?= !empty($conv['locked']) ? ' is-locked' : '' ?>" href="chat.php?with=<?= (int) $conv['peer_id'] ?>">
                 <?php casting_render_chat_avatar((int) $conv['peer_id'], (string) $conv['name'], $conv_unread > 0); ?>
                 <span class="chat-conv-body">
                   <strong><?= casting_e($conv['name']) ?></strong>
@@ -159,9 +171,9 @@ casting_render_flash();
       <?php if ($peer && $peer_id > 0) : ?>
         <header class="chat-peer-head">
           <div class="chat-peer-title">
-            <?php casting_render_chat_avatar($peer_id, (string) $peer->display_name, $peer_had_unread); ?>
+            <?php casting_render_chat_avatar($peer_id, casting_dm_peer_display_name($peer_id), $peer_had_unread); ?>
             <div>
-              <strong><?= casting_e($peer->display_name) ?></strong>
+              <strong><?= casting_e(casting_dm_peer_display_name($peer_id)) ?></strong>
               <?php if ($peer_had_unread) : ?>
                 <span class="chat-new-badge">پیام جدید</span>
               <?php endif; ?>
@@ -206,13 +218,22 @@ casting_render_flash();
         <?php endif; ?>
 
         <div class="chat-thread" id="chat-thread">
-          <?php if (!$thread) : ?>
+          <?php if ($thread_locked) : ?>
+            <div class="chat-premium-gate">
+              <p><?= casting_e(casting_dm_premium_required_notice_message()) ?></p>
+              <p class="meta">برای خواندن و پاسخ دادن به پیام‌ها، حساب ویژه را فعال کنید.</p>
+              <div class="cta-row">
+                <a class="btn btn-primary" href="premium.php">خرید و فعال‌سازی</a>
+                <a class="btn btn-ghost" href="premium-receipt.php">ثبت فیش</a>
+              </div>
+            </div>
+          <?php elseif (!$thread) : ?>
             <p class="empty-state">هنوز پیامی نیست.</p>
           <?php else : ?>
             <?php foreach ($thread as $msg) : ?>
               <article class="chat-bubble <?= !empty($msg['is_mine']) ? 'is-mine' : '' ?>">
                 <header>
-                  <strong><?= !empty($msg['is_mine']) ? 'شما' : casting_e($peer->display_name) ?></strong>
+                  <strong><?= !empty($msg['is_mine']) ? 'شما' : casting_e(casting_dm_peer_display_name($peer_id)) ?></strong>
                   <time><?= casting_e($msg['created_at']) ?></time>
                 </header>
                 <p><?= nl2br(casting_e($msg['message'])) ?></p>
@@ -233,6 +254,8 @@ casting_render_flash();
             </div>
             <button class="btn btn-primary" type="submit">ارسال</button>
           </form>
+        <?php elseif ($thread_locked) : ?>
+          <p class="meta chat-premium-gate-note"><?= casting_e(casting_dm_premium_required_notice_message()) ?></p>
         <?php else : ?>
           <p class="meta"><?= casting_e($peer_allow['error']) ?></p>
         <?php endif; ?>

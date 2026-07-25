@@ -20,6 +20,141 @@ function casting_dm_read_meta_key(): string
     return 'casting_dm_read';
 }
 
+function casting_dm_premium_required_notice_message(): string
+{
+    return 'هنرمند گرامی شما یک پیام دارین برای دریافت و یا پاسخ به آن ،عضویت ویژه الزامی است';
+}
+
+function casting_dm_support_sender_id(): int
+{
+    if (!function_exists('casting_contact_recipient_id')) {
+        require_once __DIR__ . '/contact-messages.php';
+    }
+    $support_id = casting_contact_recipient_id('site_admin');
+    if ($support_id > 0) {
+        return $support_id;
+    }
+
+    $owner = get_user_by('login', casting_portal_owner_login());
+    return $owner ? (int) $owner->ID : 0;
+}
+
+function casting_dm_is_support_peer(int $peer_id): bool
+{
+    $support_id = casting_dm_support_sender_id();
+
+    return $support_id > 0 && $peer_id === $support_id;
+}
+
+function casting_dm_support_display_name(): string
+{
+    return 'پشتیبان';
+}
+
+function casting_user_requires_premium_for_dm(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (casting_user_is_portal_owner($user_id) || casting_dm_is_support_peer($user_id)) {
+        return false;
+    }
+    if (!function_exists('casting_user_is_premium')) {
+        require_once __DIR__ . '/premium.php';
+    }
+
+    return !casting_user_is_premium($user_id);
+}
+
+function casting_dm_peer_display_name(int $peer_id): string
+{
+    if (casting_dm_is_support_peer($peer_id)) {
+        return casting_dm_support_display_name();
+    }
+    $user = get_user_by('id', $peer_id);
+
+    return $user ? (string) $user->display_name : 'کاربر';
+}
+
+function casting_dm_premium_notice_recently_sent(int $recipient_id): bool
+{
+    $support_id = casting_dm_support_sender_id();
+    if ($support_id <= 0 || $recipient_id <= 0) {
+        return true;
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    $notice = casting_dm_premium_required_notice_message();
+    $since = wp_date('Y-m-d H:i:s', time() - 6 * HOUR_IN_SECONDS);
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $found = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM {$table}
+         WHERE sender_id = %d AND recipient_id = %d AND message = %s AND created_at >= %s
+         LIMIT 1",
+        $support_id,
+        $recipient_id,
+        $notice,
+        $since
+    ));
+
+    return (int) $found > 0;
+}
+
+function casting_dm_maybe_send_premium_required_notice(int $recipient_id, int $sender_id): void
+{
+    if ($recipient_id <= 0 || $sender_id <= 0 || $recipient_id === $sender_id) {
+        return;
+    }
+    if (!casting_user_requires_premium_for_dm($recipient_id)) {
+        return;
+    }
+    if (casting_dm_is_support_peer($sender_id)) {
+        return;
+    }
+    if (casting_dm_premium_notice_recently_sent($recipient_id)) {
+        return;
+    }
+
+    $support_id = casting_dm_support_sender_id();
+    if ($support_id <= 0 || $support_id === $recipient_id) {
+        return;
+    }
+
+    casting_dm_insert_raw(
+        $support_id,
+        $recipient_id,
+        casting_dm_premium_required_notice_message(),
+        '',
+        false
+    );
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
+{
+    $allow = casting_can_users_chat($sender_id, $recipient_id);
+    if (!$allow['ok']) {
+        return $allow;
+    }
+    if (casting_user_requires_premium_for_dm($sender_id) && !casting_dm_is_support_peer($recipient_id)) {
+        return [
+            'ok'    => false,
+            'error' => casting_dm_premium_required_notice_message(),
+        ];
+    }
+
+    return ['ok' => true, 'error' => ''];
+}
+
+function casting_dm_thread_locked_for_user(int $user_id, int $peer_id): bool
+{
+    return casting_user_requires_premium_for_dm($user_id) && !casting_dm_is_support_peer($peer_id);
+}
+
 function casting_dm_has_conversation(int $user_a, int $user_b): bool
 {
     if ($user_a <= 0 || $user_b <= 0 || $user_a === $user_b) {
@@ -322,7 +457,7 @@ function casting_chat_list(int $limit = 80): array
 
 function casting_dm_send(int $sender_id, int $recipient_id, string $message): array
 {
-    $allow = casting_can_users_chat($sender_id, $recipient_id);
+    $allow = casting_can_user_send_dm($sender_id, $recipient_id);
     if (!$allow['ok']) {
         return $allow;
     }
@@ -353,13 +488,22 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
         return ['ok' => false, 'error' => 'ارسال پیام ناموفق بود.'];
     }
 
+    casting_dm_maybe_send_premium_required_notice($recipient_id, $sender_id);
+
     return ['ok' => true];
 }
 
-function casting_dm_insert_raw(int $sender_id, int $recipient_id, string $message, string $created_at = ''): bool
+function casting_dm_insert_raw(int $sender_id, int $recipient_id, string $message, string $created_at = '', bool $notify_premium = true): bool
 {
     if ($sender_id <= 0 || $recipient_id <= 0) {
         return false;
+    }
+
+    if ($notify_premium) {
+        $allow = casting_can_user_send_dm($sender_id, $recipient_id);
+        if (!$allow['ok']) {
+            return false;
+        }
     }
 
     $message = trim(sanitize_textarea_field($message));
@@ -374,7 +518,7 @@ function casting_dm_insert_raw(int $sender_id, int $recipient_id, string $messag
     }
 
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-    return (bool) $wpdb->insert(
+    $ok = (bool) $wpdb->insert(
         casting_dm_table(),
         [
             'sender_id'    => $sender_id,
@@ -384,6 +528,12 @@ function casting_dm_insert_raw(int $sender_id, int $recipient_id, string $messag
         ],
         ['%d', '%d', '%s', '%s']
     );
+
+    if ($ok && $notify_premium) {
+        casting_dm_maybe_send_premium_required_notice($recipient_id, $sender_id);
+    }
+
+    return $ok;
 }
 
 /**
@@ -475,19 +625,25 @@ function casting_dm_conversations(int $user_id): array
         if ($peer <= 0 || isset($seen[$peer])) {
             continue;
         }
-        if (!casting_can_users_chat($user_id, $peer)['ok']) {
+        if (!casting_dm_has_conversation($user_id, $peer) && !casting_can_users_chat($user_id, $peer)['ok']) {
             continue;
         }
         $seen[$peer] = true;
         $user = get_user_by('id', $peer);
+        $locked = casting_dm_thread_locked_for_user($user_id, $peer);
+        $last_message = (string) $row['message'];
+        if ($locked && (int) ($unread_map[$peer] ?? 0) > 0) {
+            $last_message = 'پیام جدید — برای مشاهده عضویت ویژه لازم است';
+        }
         $out[] = [
             'peer_id'      => $peer,
-            'name'         => $user ? (string) $user->display_name : 'کاربر',
+            'name'         => casting_dm_peer_display_name($peer),
             'role'         => casting_get_user_role($peer),
-            'last_message' => (string) $row['message'],
+            'last_message' => $last_message,
             'last_at'      => (string) $row['created_at'],
             'unread'       => (int) ($unread_map[$peer] ?? 0),
             'avatar'       => casting_chat_peer_avatar_url($peer),
+            'locked'       => $locked,
         ];
     }
     return $out;
