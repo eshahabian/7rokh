@@ -68,7 +68,7 @@ casting_render_flash();
     </div>
     <div class="panel-welcome-photo">
       <?php if ($welcome_photo !== '') : ?>
-        <img src="<?= casting_e($welcome_photo) ?>" alt="<?= casting_e($user->display_name) ?>" width="96" height="96">
+        <img src="<?= casting_e($welcome_photo) ?>" alt="<?= casting_e($user->display_name) ?>" width="160" height="160">
       <?php else : ?>
         <span class="panel-welcome-photo-empty" aria-hidden="true">?</span>
       <?php endif; ?>

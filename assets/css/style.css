@@ -2651,15 +2651,15 @@ fieldset.field legend {
 
 .panel-welcome-photo {
   flex: 0 0 auto;
-  width: 96px;
-  height: 96px;
+  width: 160px;
+  height: 160px;
 }
 
 .panel-welcome-photo img,
 .panel-welcome-photo-empty {
   display: block;
-  width: 96px;
-  height: 96px;
+  width: 160px;
+  height: 160px;
   border-radius: 999px;
   object-fit: cover;
   border: 2px solid rgba(212, 175, 106, 0.45);
@@ -2670,7 +2670,7 @@ fieldset.field legend {
 .panel-welcome-photo-empty {
   display: grid;
   place-items: center;
-  font-size: 1.6rem;
+  font-size: 2.4rem;
   font-weight: 700;
   color: var(--accent-strong);
 }
@@ -2679,8 +2679,12 @@ fieldset.field legend {
   .panel-welcome-photo,
   .panel-welcome-photo img,
   .panel-welcome-photo-empty {
-    width: 72px;
-    height: 72px;
+    width: 112px;
+    height: 112px;
+  }
+
+  .panel-welcome-photo-empty {
+    font-size: 1.8rem;
   }
 }
 
