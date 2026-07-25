@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=77">
+  <link rel="stylesheet" href="<?= $css ?>?v=78">
   <script>
     (function () {
       try {
@@ -51,14 +51,42 @@ function casting_render_theme_toggle(): void
     <?php
 }
 
-function casting_render_header(?string $active = null): void
+function casting_render_panel_menu_toggle(int $badge = 0): void
+{
+    ?>
+    <button
+      type="button"
+      class="panel-menu-toggle"
+      id="panel-menu-toggle"
+      aria-controls="panel-drawer"
+      aria-expanded="false"
+      aria-label="باز کردن منوی پنل"
+      data-panel-menu-toggle
+    >
+      <span class="panel-menu-toggle-icon" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </span>
+      <span class="panel-menu-toggle-text">منو</span>
+      <?php if ($badge > 0) : ?>
+        <span class="nav-badge panel-menu-toggle-badge"><?= (int) $badge ?></span>
+      <?php endif; ?>
+    </button>
+    <?php
+}
+
+function casting_render_header(?string $active = null, bool $panel_menu = false, int $panel_menu_badge = 0): void
 {
     $brand = casting_e(casting_brand());
     $user = casting_current_user();
     $role = $user ? casting_get_user_role((int) $user->ID) : '';
     ?>
-  <header class="site-header">
-    <a class="brand" href="index.php"><?= $brand ?></a>
+  <header class="site-header<?= $panel_menu ? ' site-header--panel' : '' ?>">
+    <div class="site-header-bar">
+      <a class="brand" href="index.php"><?= $brand ?></a>
+      <?php if ($panel_menu) : ?>
+        <?php casting_render_panel_menu_toggle($panel_menu_badge); ?>
+      <?php endif; ?>
+    </div>
     <nav class="nav" aria-label="منوی اصلی">
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت هفت رخ</a>
       <?php if ($role !== '') : ?>

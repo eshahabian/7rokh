@@ -110,6 +110,52 @@ function casting_panel_profile_url(int $user_id): string
     return 'member.php?id=' . $user_id;
 }
 
+/**
+ * مجموع نشان‌های منوی همبرگری
+ */
+function casting_panel_menu_badge_count(): int
+{
+    $user = casting_current_user();
+    if (!$user) {
+        return 0;
+    }
+
+    $user_id = (int) $user->ID;
+    $badge = 0;
+
+    if (!function_exists('casting_dm_unread_peer_count')) {
+        require_once __DIR__ . '/chat.php';
+    }
+    $unread_peers = casting_dm_unread_peer_count($user_id);
+    $badge += $unread_peers;
+
+    if (!function_exists('casting_user_new_request_count')) {
+        require_once __DIR__ . '/request.php';
+    }
+    $badge += casting_user_new_request_count($user_id);
+
+    if (!function_exists('casting_talent_pending_brief_count')) {
+        require_once __DIR__ . '/talent-briefs.php';
+    }
+    if (casting_get_user_role($user_id) === 'talent') {
+        $badge += casting_talent_pending_brief_count($user_id);
+    }
+
+    if (!function_exists('casting_contact_unread_count_for_user')) {
+        require_once __DIR__ . '/contact-messages.php';
+    }
+    $badge += casting_contact_unread_count_for_user($user_id);
+
+    if (!function_exists('casting_user_has_admin_permission')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if ($unread_peers === 0 && casting_user_has_admin_permission($user_id, 'approve_receipts')) {
+        $badge += casting_admin_pending_receipt_count();
+    }
+
+    return $badge;
+}
+
 function casting_render_panel_sidebar(string $active): void
 {
     $unread_peers = 0;
@@ -183,29 +229,8 @@ function casting_render_panel_sidebar(string $active): void
     }
 
     $highlight = casting_panel_nav_highlight_key($active);
-    $menu_badge = $unread_peers + $request_count + $pending_brief_count + $unread_contacts;
-    if ($pending_receipts > 0 && $unread_peers === 0) {
-        $menu_badge += $pending_receipts;
-    }
     ?>
     <div class="panel-shell-nav">
-    <button
-      type="button"
-      class="panel-menu-toggle"
-      id="panel-menu-toggle"
-      aria-controls="panel-drawer"
-      aria-expanded="false"
-      aria-label="باز کردن منوی پنل"
-      data-panel-menu-toggle
-    >
-      <span class="panel-menu-toggle-icon" aria-hidden="true">
-        <span></span><span></span><span></span>
-      </span>
-      <span class="panel-menu-toggle-text">منو</span>
-      <?php if ($menu_badge > 0) : ?>
-        <span class="nav-badge panel-menu-toggle-badge"><?= (int) $menu_badge ?></span>
-      <?php endif; ?>
-    </button>
     <div class="panel-drawer-backdrop" data-panel-drawer-close hidden></div>
     <aside class="panel-sidebar panel-drawer" id="panel-drawer" aria-label="منوی پنل کاربری">
       <div class="panel-sidebar-head">
@@ -239,6 +264,14 @@ function casting_render_panel_sidebar(string $active): void
           <?php endif; ?>
         <?php endif; ?>
       </div>
+      <nav class="panel-nav panel-nav-site-links" aria-label="لینک‌های سایت">
+        <a class="panel-nav-link" href="<?= casting_e(casting_url('index.php')) ?>">
+          <span class="panel-nav-label">صفحه اصلی</span>
+        </a>
+        <a class="panel-nav-link panel-nav-link-external" href="<?= casting_e(casting_main_site_url()) ?>" target="_blank" rel="noopener">
+          <span class="panel-nav-label">سایت هفت رخ</span>
+        </a>
+      </nav>
       <nav class="panel-nav">
         <?php foreach (casting_panel_nav_items() as $item) : ?>
           <?php
@@ -292,6 +325,9 @@ function casting_render_panel_sidebar(string $active): void
           </a>
         <?php endforeach; ?>
       </nav>
+      <div class="panel-drawer-theme">
+        <?php casting_render_theme_toggle(); ?>
+      </div>
       <?php if ($admin_nav) : ?>
         <p class="panel-sidebar-title panel-sidebar-title-admin">مدیریت</p>
         <nav class="panel-nav panel-nav-admin">
@@ -312,8 +348,9 @@ function casting_render_panel_sidebar(string $active): void
 
 function casting_render_panel_start(string $title, string $active, string $body_class = 'page-panel'): void
 {
+    $menu_badge = casting_panel_menu_badge_count();
     casting_render_head($title, $body_class . ' has-panel-drawer');
-    casting_render_header('panel');
+    casting_render_header('panel', true, $menu_badge);
     echo '<main class="wrap panel-shell">';
     casting_render_panel_sidebar($active);
     echo '<div class="panel-content">';
