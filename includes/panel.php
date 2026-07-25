@@ -17,7 +17,6 @@ require_once __DIR__ . '/layout.php';
 function casting_panel_nav_items_desktop(): array
 {
     return [
-        ['key' => 'panel',        'label' => 'پنل کاربری',               'href' => 'panel.php'],
         ['key' => 'edit-profile', 'label' => 'ویرایش پروفایل من',        'href' => 'panel.php?edit=1#edit-profile'],
         ['key' => 'messages',     'label' => 'پیام کاربران',             'href' => 'chat.php'],
         ['key' => 'my-requests',  'label' => 'دعوت‌های همکاری',          'href' => 'my-requests.php'],
@@ -379,7 +378,14 @@ function casting_render_panel_sidebar(string $active): void
     <aside class="panel-sidebar panel-drawer" id="panel-drawer" aria-label="منوی پنل کاربری">
       <div class="panel-sidebar-head">
         <div class="panel-drawer-head-row">
-          <p class="panel-sidebar-title panel-sidebar-title-desktop">پنل کاربری</p>
+          <a
+            class="panel-sidebar-title panel-sidebar-title-desktop panel-sidebar-home<?= $active === 'panel' ? ' is-active' : '' ?>"
+            href="<?= casting_e(casting_url('panel.php')) ?>"
+          >پنل کاربری<?php if ($panel_premium_until !== null && $user) : ?>
+            <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
+              <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
+            </span>
+          <?php endif; ?></a>
           <p class="panel-sidebar-title panel-sidebar-title-mobile">منوی اصلی</p>
           <button type="button" class="panel-drawer-close" aria-label="بستن منو" data-panel-drawer-close>&times;</button>
         </div>
