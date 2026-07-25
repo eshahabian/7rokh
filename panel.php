@@ -31,6 +31,11 @@ if ($profile_post['profile'] !== null) {
 }
 
 $hide_talent_profile = casting_profile_hides_talent_fields($profile['activities'] ?? [], $user_id);
+$welcome_closeup = casting_load_portrait($user_id, 'closeup');
+$welcome_photo = (string) ($welcome_closeup['url'] ?? '');
+if ($welcome_photo === '') {
+    $welcome_photo = (string) ($profile['photo_url'] ?? '');
+}
 
 casting_render_panel_start('پنل کاربری', 'panel');
 if (isset($_GET['welcome'])) {
@@ -45,19 +50,30 @@ if ($profile_success !== '') {
 casting_render_flash();
 ?>
 <section class="dash-card panel-welcome">
-  <span class="chip"><?= casting_e(casting_user_profile_chip_label($user_id)) ?><?php if ($premium) : ?> · ویژه<?php endif; ?></span>
-  <h1>سلام، <?= casting_e($user->display_name) ?></h1>
-  <?php if (($profile['membership_number'] ?? '') !== '') : ?>
-    <p class="membership-number-line">شماره عضویت: <span class="membership-number"><?= casting_e((string) $profile['membership_number']) ?></span></p>
-  <?php endif; ?>
-  <?php if (!$complete) : ?>
-    <p class="meta">پروفایلتان کامل نیست. برای دیده‌شدن بهتر، اطلاعات و عکس را تکمیل کنید.</p>
-  <?php elseif (!$hide_talent_profile) : ?>
-    <p class="meta">پروفایل آماده است<?= !empty($profile['visible']) ? ' و قابل مشاهده است' : '؛ فعلاً مخفی است' ?>.</p>
-  <?php endif; ?>
-  <?php if ($premium) : ?>
-    <?php casting_render_premium_countdown($user_id); ?>
-  <?php endif; ?>
+  <div class="panel-welcome-top">
+    <div class="panel-welcome-copy">
+      <span class="chip"><?= casting_e(casting_user_profile_chip_label($user_id)) ?><?php if ($premium) : ?> · ویژه<?php endif; ?></span>
+      <h1>سلام، <?= casting_e($user->display_name) ?></h1>
+      <?php if (($profile['membership_number'] ?? '') !== '') : ?>
+        <p class="membership-number-line">شماره عضویت: <span class="membership-number"><?= casting_e((string) $profile['membership_number']) ?></span></p>
+      <?php endif; ?>
+      <?php if (!$complete) : ?>
+        <p class="meta">پروفایلتان کامل نیست. برای دیده‌شدن بهتر، اطلاعات و عکس را تکمیل کنید.</p>
+      <?php elseif (!$hide_talent_profile) : ?>
+        <p class="meta">پروفایل آماده است<?= !empty($profile['visible']) ? ' و قابل مشاهده است' : '؛ فعلاً مخفی است' ?>.</p>
+      <?php endif; ?>
+      <?php if ($premium) : ?>
+        <?php casting_render_premium_countdown($user_id); ?>
+      <?php endif; ?>
+    </div>
+    <div class="panel-welcome-photo">
+      <?php if ($welcome_photo !== '') : ?>
+        <img src="<?= casting_e($welcome_photo) ?>" alt="<?= casting_e($user->display_name) ?>" width="96" height="96">
+      <?php else : ?>
+        <span class="panel-welcome-photo-empty" aria-hidden="true">?</span>
+      <?php endif; ?>
+    </div>
+  </div>
   <div class="cta-row">
     <a class="btn btn-ghost" href="#completion">تکمیل پروفایل</a>
     <a class="btn btn-primary" href="#edit-profile">ویرایش اطلاعات</a>

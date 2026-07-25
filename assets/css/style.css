@@ -2632,6 +2632,58 @@ fieldset.field legend {
   margin-top: 1rem;
 }
 
+.panel-welcome-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.panel-welcome-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.panel-welcome-copy .meta {
+  margin-bottom: 0.75rem;
+}
+
+.panel-welcome-photo {
+  flex: 0 0 auto;
+  width: 96px;
+  height: 96px;
+}
+
+.panel-welcome-photo img,
+.panel-welcome-photo-empty {
+  display: block;
+  width: 96px;
+  height: 96px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid rgba(212, 175, 106, 0.45);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.panel-welcome-photo-empty {
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+@media (max-width: 640px) {
+  .panel-welcome-photo,
+  .panel-welcome-photo img,
+  .panel-welcome-photo-empty {
+    width: 72px;
+    height: 72px;
+  }
+}
+
 .panel-completion {
   margin-top: 1rem;
 }
