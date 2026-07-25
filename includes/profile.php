@@ -561,9 +561,14 @@ function casting_search_filter_empty_label(): string
     return 'انتخاب کنید';
 }
 
+function casting_search_filter_none_label(): string
+{
+    return 'هیچ کدام';
+}
+
 function casting_search_specialty_empty_label(bool $category_selected): string
 {
-    return $category_selected ? casting_search_filter_empty_label() : 'اول تخصص هنری را انتخاب کنید';
+    return $category_selected ? casting_search_filter_none_label() : 'اول تخصص هنری را انتخاب کنید';
 }
 
 /**

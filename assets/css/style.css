@@ -1597,7 +1597,7 @@ fieldset.field legend {
 }
 
 .field-name-search {
-  grid-column: 1 / -1;
+  grid-column: span 2;
 }
 
 .member-search-results-anchor--top {

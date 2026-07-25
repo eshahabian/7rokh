@@ -419,7 +419,7 @@ function casting_render_body_metric_search_fields(array $filters, ?array $includ
         return;
     }
     ?>
-    <div class="filter-body-metrics" aria-label="فیلتر سن، قد و وزن">
+    <div class="filter-activity-fields" aria-label="فیلتر قد و وزن">
       <?php foreach ($metrics as $metric) {
           casting_render_body_metric_group($filters, $metric);
       } ?>
@@ -791,44 +791,44 @@ function casting_apply_member_phase2_filters(array &$meta_query, array $filters)
 }
 
 /**
- * جنسیت، پوست، سلامت، رنگ چشم، رنگ مو، سن ظاهری، لهجه، همکاری — ۴×۲ یکسان
+ * جنسیت — فیلد تکی برای ترتیب دلخواه جستجو
  *
  * @param array<string, string> $filters
  */
-function casting_render_member_search_profile_cluster(array $filters): void
+function casting_render_member_search_gender_field(array $filters): void
 {
     $genders = casting_gender_labels();
+    ?>
+    <div class="field">
+      <label for="gender">جنسیت</label>
+      <select id="gender" name="gender">
+        <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+        <?php foreach ($genders as $key => $label) : ?>
+          <option value="<?= casting_e($key) ?>" <?= $filters['gender'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <?php
+}
+
+/**
+ * سلامت، رنگ پوست، رنگ چشم، سن ظاهری، لهجه
+ *
+ * @param array<string, string> $filters
+ */
+function casting_render_member_search_appearance_fields(array $filters): void
+{
     $looks = casting_look_labels();
     $eyes = casting_eye_color_labels();
-    $hairs = casting_hair_color_labels();
     $accents = casting_accent_labels();
     $age_ranges = casting_age_range_options();
-    $availability_labels = casting_availability_labels();
     $health = (string) ($filters['health_well'] ?? '');
     $health_options = [
         'healthy'   => 'بله',
         'unhealthy' => 'خیر',
     ];
     ?>
-    <div class="filter-profile-cluster" aria-label="فیلتر مشخصات ظاهری">
-      <div class="field">
-        <label for="gender">جنسیت</label>
-        <select id="gender" name="gender">
-          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-          <?php foreach ($genders as $key => $label) : ?>
-            <option value="<?= casting_e($key) ?>" <?= $filters['gender'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="field">
-        <label for="look">پوست</label>
-        <select id="look" name="look">
-          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-          <?php foreach ($looks as $key => $label) : ?>
-            <option value="<?= casting_e($key) ?>" <?= $filters['look'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
+    <div class="filter-activity-fields" aria-label="فیلتر ظاهر و سلامت">
       <div class="field">
         <label for="health_well">سلامت</label>
         <select id="health_well" name="health_well">
@@ -839,20 +839,20 @@ function casting_render_member_search_profile_cluster(array $filters): void
         </select>
       </div>
       <div class="field">
+        <label for="look">رنگ پوست</label>
+        <select id="look" name="look">
+          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <?php foreach ($looks as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['look'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
         <label for="eye_color">رنگ چشم</label>
         <select id="eye_color" name="eye_color">
           <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
           <?php foreach ($eyes as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= $filters['eye_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="field">
-        <label for="hair_color">رنگ مو</label>
-        <select id="hair_color" name="hair_color">
-          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-          <?php foreach ($hairs as $key => $label) : ?>
-            <option value="<?= casting_e($key) ?>" <?= $filters['hair_color'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
@@ -874,17 +874,18 @@ function casting_render_member_search_profile_cluster(array $filters): void
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="field">
-        <label for="availability">همکاری</label>
-        <select id="availability" name="availability">
-          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-          <?php foreach ($availability_labels as $key => $label) : ?>
-            <option value="<?= casting_e($key) ?>" <?= $filters['availability'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
     </div>
     <?php
+}
+
+/**
+ * @param array<string, string> $filters
+ * @deprecated از ترکیب فیلدهای جداگانه در search-users استفاده شود
+ */
+function casting_render_member_search_profile_cluster(array $filters): void
+{
+    casting_render_member_search_gender_field($filters);
+    casting_render_member_search_appearance_fields($filters);
 }
 
 /**
@@ -903,11 +904,11 @@ function casting_render_member_search_phase2_fields(array $filters): void
 }
 
 /**
- * تخصص هنری، تخصص، مهارت هنری، تشکل، مهارت حرکتی — یک ردیف کنار هم
+ * تخصص هنری + تخصص
  *
  * @param array<string, string> $filters
  */
-function casting_render_member_search_talent_cluster(array $filters): void
+function casting_render_member_search_activity_fields(array $filters): void
 {
     $categories = casting_activity_categories();
     $category = (string) ($filters['activity_category'] ?? '');
@@ -921,15 +922,12 @@ function casting_render_member_search_talent_cluster(array $filters): void
     if (!is_string($map_json)) {
         $map_json = '{}';
     }
-
-    $artistic_orgs = casting_artistic_org_labels();
-    $motor_skills = casting_motor_skill_filter_labels();
     ?>
-    <div class="filter-talent-cluster" data-activity-search data-activity-map="<?= casting_e($map_json) ?>">
+    <div class="filter-activity-fields" data-activity-search data-activity-map="<?= casting_e($map_json) ?>">
       <div class="field">
         <label for="activity_category">تخصص هنری</label>
         <select id="activity_category" name="activity_category" data-activity-category>
-          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <option value=""><?= casting_e(casting_search_filter_none_label()) ?></option>
           <?php foreach ($categories as $key => $cat) : ?>
             <option value="<?= casting_e($key) ?>" <?= $category === $key ? 'selected' : '' ?>><?= casting_e($cat['label']) ?></option>
           <?php endforeach; ?>
@@ -944,35 +942,59 @@ function casting_render_member_search_talent_cluster(array $filters): void
           <?php endforeach; ?>
         </select>
       </div>
+    </div>
+    <?php
+}
+
+/**
+ * مهارت هنری، مهارت حرکتی، تشکل
+ *
+ * @param array<string, string> $filters
+ */
+function casting_render_member_search_skill_org_fields(array $filters): void
+{
+    $artistic_orgs = casting_artistic_org_labels();
+    $motor_skills = casting_motor_skill_filter_labels();
+    ?>
+    <div class="filter-activity-fields" aria-label="مهارت و تشکل">
       <div class="field">
         <label for="artistic_skill">مهارت هنری</label>
         <select id="artistic_skill" name="artistic_skill">
-          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <option value=""><?= casting_e(casting_search_filter_none_label()) ?></option>
           <?php foreach (casting_artistic_skill_filter_labels() as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= $filters['artistic_skill'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
       <div class="field">
-        <label for="artistic_org">تشکل</label>
-        <select id="artistic_org" name="artistic_org">
-          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
-          <?php foreach ($artistic_orgs as $key => $label) : ?>
-            <option value="<?= casting_e($key) ?>" <?= $filters['artistic_org'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="field">
         <label for="motor_skill">مهارت حرکتی</label>
         <select id="motor_skill" name="motor_skill">
-          <option value=""><?= casting_e(casting_search_filter_empty_label()) ?></option>
+          <option value=""><?= casting_e(casting_search_filter_none_label()) ?></option>
           <?php foreach ($motor_skills as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= $filters['motor_skill'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
+      <div class="field">
+        <label for="artistic_org">تشکل</label>
+        <select id="artistic_org" name="artistic_org">
+          <option value=""><?= casting_e(casting_search_filter_none_label()) ?></option>
+          <?php foreach ($artistic_orgs as $key => $label) : ?>
+            <option value="<?= casting_e($key) ?>" <?= $filters['artistic_org'] === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
     </div>
     <?php
+}
+
+/**
+ * @param array<string, string> $filters
+ */
+function casting_render_member_search_talent_cluster(array $filters): void
+{
+    casting_render_member_search_activity_fields($filters);
+    casting_render_member_search_skill_org_fields($filters);
 }
 
 /**

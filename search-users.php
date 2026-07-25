@@ -47,7 +47,7 @@ casting_render_flash();
   <h1>جستجوی کاربران</h1>
 
   <form class="filter-bar filter-bar-wide" method="get" action="search-users.php" data-member-search-form>
-    <?php casting_render_member_search_talent_cluster($filters); ?>
+    <?php casting_render_member_search_activity_fields($filters); ?>
 
     <div class="field field-name-search">
       <label for="member-name-q">نام</label>
@@ -67,11 +67,15 @@ casting_render_flash();
       </div>
     </div>
 
-    <?php casting_render_member_search_profile_cluster($filters); ?>
+    <?php casting_render_member_search_gender_field($filters); ?>
 
-    <?php casting_render_body_metric_search_fields($filters, ['height', 'weight', 'age']); ?>
+    <?php casting_render_body_metric_search_fields($filters, ['height', 'weight']); ?>
 
-    <?php casting_render_location_fields($filters['province'], $filters['city'], '', false, 'filter-location-inline'); ?>
+    <?php casting_render_location_fields($filters['province'], $filters['city'], '', false, 'filter-activity-fields'); ?>
+
+    <?php casting_render_member_search_appearance_fields($filters); ?>
+
+    <?php casting_render_member_search_skill_org_fields($filters); ?>
 
     <?php casting_render_member_search_phase1_fields($filters); ?>
 

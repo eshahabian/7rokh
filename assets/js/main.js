@@ -580,7 +580,7 @@
       specSel.disabled = false;
       const placeholder = document.createElement("option");
       placeholder.value = "";
-      placeholder.textContent = "انتخاب کنید";
+      placeholder.textContent = "هیچ کدام";
       specSel.appendChild(placeholder);
       Object.keys(map[cat]).forEach((key) => {
         const opt = document.createElement("option");
