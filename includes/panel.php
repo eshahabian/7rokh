@@ -112,17 +112,39 @@ function casting_render_panel_sidebar(string $active): void
     }
     $can_member_search = $user && casting_user_can_member_search((int) $user->ID);
     $admin_nav = $user ? casting_panel_admin_nav_items((int) $user->ID) : [];
+    $sidebar_photo = '';
+    $sidebar_name = '';
+    if ($user) {
+        $sidebar_name = (string) $user->display_name;
+        $closeup = casting_load_portrait($user_id, 'closeup');
+        if (($closeup['url'] ?? '') !== '') {
+            $sidebar_photo = (string) $closeup['url'];
+        } else {
+            $sidebar_profile = casting_get_profile($user_id);
+            $sidebar_photo = (string) ($sidebar_profile['photo_url'] ?? '');
+        }
+    }
     ?>
     <aside class="panel-sidebar" aria-label="منوی پنل کاربری">
       <div class="panel-sidebar-head">
         <p class="panel-sidebar-title">پنل کاربری</p>
         <?php if ($user) : ?>
-          <p class="panel-sidebar-user-meta">
-            <span class="panel-sidebar-login">@<?= casting_e((string) $user->user_login) ?></span>
-            <?php if ($panel_membership_number !== '') : ?>
-              <span class="panel-sidebar-membership membership-number"><?= casting_e($panel_membership_number) ?></span>
+          <div class="panel-sidebar-identity">
+            <?php if ($sidebar_photo !== '') : ?>
+              <img class="panel-sidebar-avatar" src="<?= casting_e($sidebar_photo) ?>" alt="" width="40" height="40">
+            <?php else : ?>
+              <span class="panel-sidebar-avatar panel-sidebar-avatar--empty" aria-hidden="true">?</span>
             <?php endif; ?>
-          </p>
+            <div class="panel-sidebar-identity-text">
+              <p class="panel-sidebar-display-name"><?= casting_e($sidebar_name) ?></p>
+              <p class="panel-sidebar-user-meta">
+                <span class="panel-sidebar-login">@<?= casting_e((string) $user->user_login) ?></span>
+                <?php if ($panel_membership_number !== '') : ?>
+                  <span class="panel-sidebar-membership membership-number"><?= casting_e($panel_membership_number) ?></span>
+                <?php endif; ?>
+              </p>
+            </div>
+          </div>
         <?php endif; ?>
       </div>
       <nav class="panel-nav">
