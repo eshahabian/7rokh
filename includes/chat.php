@@ -134,6 +134,22 @@ function casting_dm_maybe_send_premium_required_notice(int $recipient_id, int $s
 /**
  * @return array{ok:bool,error:string}
  */
+function casting_can_user_open_dm(int $from_id, int $to_id): array
+{
+    if (casting_dm_has_conversation($from_id, $to_id)) {
+        if (casting_users_block_each_other($from_id, $to_id)) {
+            return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
+        }
+
+        return ['ok' => true, 'error' => ''];
+    }
+
+    return casting_can_start_chat($from_id, $to_id);
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
 function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
 {
     $allow = casting_can_users_chat($sender_id, $recipient_id);
@@ -160,9 +176,22 @@ function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
     ];
 }
 
+function casting_user_needs_premium_to_read_inbox(int $user_id): bool
+{
+    if (!casting_user_requires_premium_for_dm($user_id)) {
+        return false;
+    }
+    // کارگردان/تهیه‌کننده برای ارسال سهمیه رایگان دارند؛ inboxشان قفل نمی‌شود.
+    if (casting_user_is_employer_account($user_id)) {
+        return false;
+    }
+
+    return true;
+}
+
 function casting_dm_thread_locked_for_user(int $user_id, int $peer_id): bool
 {
-    return casting_user_requires_premium_for_dm($user_id) && !casting_dm_is_support_peer($peer_id);
+    return casting_user_needs_premium_to_read_inbox($user_id) && !casting_dm_is_support_peer($peer_id);
 }
 
 function casting_employer_free_dm_limit(): int
@@ -772,7 +801,7 @@ function casting_dm_allowed_contacts(int $user_id): array
         if ($uid === $user_id) {
             continue;
         }
-        if (!casting_can_users_chat($user_id, $uid)['ok']) {
+        if (!casting_can_user_open_dm($user_id, $uid)['ok']) {
             continue;
         }
         $out[] = [

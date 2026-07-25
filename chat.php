@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             casting_redirect('chat.php?with=' . $target);
         } elseif ($action === 'start') {
             $start_id = (int) ($_POST['peer_id'] ?? 0);
-            $allow = casting_can_users_chat($my_id, $start_id);
+            $allow = casting_can_user_open_dm($my_id, $start_id);
             if (!$allow['ok']) {
                 $error = $allow['error'];
             } else {
@@ -126,6 +126,9 @@ casting_render_flash();
 <section class="dash-card chat-card">
   <h1>پیام کاربران</h1>
   <p class="meta">پیام خصوصی · در صورت مزاحمت می‌توانید کاربر را بلاک کنید.</p>
+  <?php if ($employer_free_hint !== '') : ?>
+    <p class="meta chat-employer-quota"><?= casting_e($employer_free_hint) ?></p>
+  <?php endif; ?>
 
   <div class="chat-layout">
     <aside class="chat-sidebar">
@@ -264,6 +267,14 @@ casting_render_flash();
           </form>
         <?php elseif ($thread_locked) : ?>
           <p class="meta chat-premium-gate-note"><?= casting_e(casting_dm_premium_required_notice_message()) ?></p>
+        <?php elseif (casting_user_is_employer_account($my_id)) : ?>
+          <div class="chat-premium-gate">
+            <p><?= casting_e($peer_allow['error'] !== '' ? $peer_allow['error'] : casting_employer_premium_send_error()) ?></p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="premium.php">خرید و فعال‌سازی</a>
+              <a class="btn btn-ghost" href="premium-receipt.php">ثبت فیش</a>
+            </div>
+          </div>
         <?php else : ?>
           <p class="meta"><?= casting_e($peer_allow['error']) ?></p>
         <?php endif; ?>
