@@ -17,7 +17,7 @@ function casting_panel_nav_items(): array
     return [
         ['key' => 'panel',      'label' => 'پنل کاربری',              'href' => 'panel.php'],
         ['key' => 'messages',   'label' => 'پیام کاربران',            'href' => 'chat.php'],
-        ['key' => 'my-requests','label' => 'درخواست‌ها',              'href' => 'my-requests.php'],
+        ['key' => 'my-requests','label' => 'دعوت‌های همکاری',          'href' => 'my-requests.php'],
         ['key' => 'briefs',     'label' => 'تکالیف',                  'href' => 'my-briefs.php'],
         ['key' => 'search',     'label' => 'جستجوی کاربران',          'href' => 'search-users.php'],
         ['key' => 'favorites',  'label' => 'علاقه‌مندی‌ها',            'href' => 'favorites.php'],

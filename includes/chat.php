@@ -409,11 +409,13 @@ function casting_render_dm_receipt_ticks(string $status): void
     if ($status === '') {
         return;
     }
-    $label = match ($status) {
-        'read'      => 'خوانده شد',
-        'delivered' => 'رسید',
-        default     => 'ارسال شد',
-    };
+    if ($status === 'read') {
+        $label = 'خوانده شد';
+    } elseif ($status === 'delivered') {
+        $label = 'رسید';
+    } else {
+        $label = 'ارسال شد';
+    }
     $double = $status === 'delivered' || $status === 'read';
     ?>
     <span class="chat-ticks chat-ticks--<?= casting_e($status) ?>" title="<?= casting_e($label) ?>" aria-label="<?= casting_e($label) ?>">
@@ -551,75 +553,93 @@ function casting_chat_install(): void
     $charset = $wpdb->get_charset_collate();
 
     $public = casting_chat_table();
-    $sql_public = "CREATE TABLE IF NOT EXISTS {$public} (
-        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        user_id BIGINT UNSIGNED NOT NULL,
-        message TEXT NOT NULL,
-        created_at DATETIME NOT NULL,
-        PRIMARY KEY (id),
-        KEY user_id (user_id),
-        KEY created_at (created_at)
-    ) {$charset};";
-
     $dm = casting_dm_table();
-    $sql_dm = "CREATE TABLE IF NOT EXISTS {$dm} (
-        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        sender_id BIGINT UNSIGNED NOT NULL,
-        recipient_id BIGINT UNSIGNED NOT NULL,
-        message TEXT NOT NULL,
-        created_at DATETIME NOT NULL,
-        delivered_at DATETIME NULL,
-        read_at DATETIME NULL,
-        PRIMARY KEY (id),
-        KEY sender_id (sender_id),
-        KEY recipient_id (recipient_id),
-        KEY pair_created (sender_id, recipient_id, created_at)
-    ) {$charset};";
 
-    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-    dbDelta($sql_public);
-    dbDelta($sql_dm);
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->query(
+        "CREATE TABLE IF NOT EXISTS {$public} (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id BIGINT UNSIGNED NOT NULL,
+            message TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            PRIMARY KEY (id),
+            KEY user_id (user_id),
+            KEY created_at (created_at)
+        ) {$charset}"
+    );
+
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->query(
+        "CREATE TABLE IF NOT EXISTS {$dm} (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            sender_id BIGINT UNSIGNED NOT NULL,
+            recipient_id BIGINT UNSIGNED NOT NULL,
+            message TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            delivered_at DATETIME NULL,
+            read_at DATETIME NULL,
+            PRIMARY KEY (id),
+            KEY sender_id (sender_id),
+            KEY recipient_id (recipient_id),
+            KEY pair_created (sender_id, recipient_id, created_at)
+        ) {$charset}"
+    );
+
+    casting_dm_migrate_receipt_columns();
     update_option('casting_chat_db_version', '3');
 }
 
 function casting_chat_ensure_table(): void
 {
-    $ver = (string) get_option('casting_chat_db_version', '');
-    if ($ver !== '3') {
-        casting_chat_install();
-        casting_dm_migrate_receipt_columns();
+    static $ready = false;
+    if ($ready) {
         return;
     }
+
+    $ver = (string) get_option('casting_chat_db_version', '');
     global $wpdb;
     $dm = casting_dm_table();
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery
     $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $dm));
-    if ($exists !== $dm) {
+
+    if ($exists !== $dm || $ver !== '3') {
         casting_chat_install();
+    } else {
         casting_dm_migrate_receipt_columns();
     }
+
+    $ready = true;
 }
 
 function casting_dm_migrate_receipt_columns(): void
 {
     global $wpdb;
     $table = casting_dm_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists !== $table) {
+        return;
+    }
+
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $rows = $wpdb->get_results("SHOW COLUMNS FROM {$table}", ARRAY_A);
+    $rows = $wpdb->get_results("SHOW COLUMNS FROM `{$table}`", ARRAY_A);
     if (!is_array($rows)) {
         return;
     }
     $cols = [];
     foreach ($rows as $row) {
-        $cols[] = (string) ($row['Field'] ?? '');
+        $field = (string) ($row['Field'] ?? '');
+        if ($field !== '') {
+            $cols[$field] = true;
+        }
     }
-    if (!in_array('delivered_at', $cols, true)) {
+    if (empty($cols['delivered_at'])) {
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-        $wpdb->query("ALTER TABLE {$table} ADD COLUMN delivered_at DATETIME NULL AFTER created_at");
+        $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN delivered_at DATETIME NULL DEFAULT NULL");
     }
-    if (!in_array('read_at', $cols, true)) {
+    if (empty($cols['read_at'])) {
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-        $wpdb->query("ALTER TABLE {$table} ADD COLUMN read_at DATETIME NULL AFTER delivered_at");
+        $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN read_at DATETIME NULL DEFAULT NULL");
     }
 }
 
@@ -814,6 +834,27 @@ function casting_dm_thread(int $user_id, int $peer_id, int $limit = 200): array
         ),
         ARRAY_A
     );
+
+    // اگر ستون‌های تیک هنوز ساخته نشده باشند، بدون آن‌ها بخوان
+    if (!is_array($rows) && $wpdb->last_error !== '') {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, sender_id, recipient_id, message, created_at
+                 FROM {$table}
+                 WHERE (sender_id = %d AND recipient_id = %d)
+                    OR (sender_id = %d AND recipient_id = %d)
+                 ORDER BY id DESC
+                 LIMIT %d",
+                $user_id,
+                $peer_id,
+                $peer_id,
+                $user_id,
+                $limit
+            ),
+            ARRAY_A
+        );
+    }
 
     if (!is_array($rows)) {
         return [];

@@ -138,11 +138,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $project = (string) ($_POST['project'] ?? '');
             $message = (string) ($_POST['message'] ?? '');
-            $result = casting_send_talent_request($viewer_id, $id, $message, $project);
+            $result = casting_send_talent_request($viewer_id, $id, $message, $project, [
+                'project_type' => (string) ($_POST['project_type'] ?? ''),
+                'role_needed'  => (string) ($_POST['role_needed'] ?? ''),
+                'project_city' => (string) ($_POST['project_city'] ?? ''),
+            ]);
             if (!$result['ok']) {
                 $error = $result['error'];
             } else {
-                casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'درخواست ارسال شد.');
+                casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'دعوت همکاری ارسال شد.');
                 casting_redirect('member.php?id=' . $id);
             }
         }
@@ -152,11 +156,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $project = (string) ($_POST['project'] ?? '');
             $message = (string) ($_POST['message'] ?? '');
-            $result = casting_send_talent_request($viewer_id, $id, $message, $project);
+            $result = casting_send_talent_request($viewer_id, $id, $message, $project, [
+                'project_type' => (string) ($_POST['project_type'] ?? ''),
+                'role_needed'  => (string) ($_POST['role_needed'] ?? ''),
+                'project_city' => (string) ($_POST['project_city'] ?? ''),
+            ]);
             if (!$result['ok']) {
                 $error = $result['error'];
             } else {
-                casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'درخواست ارسال شد.');
+                casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'دعوت همکاری ارسال شد.');
                 casting_redirect('member.php?id=' . $id);
             }
         }

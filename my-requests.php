@@ -36,9 +36,13 @@ function casting_my_requests_redirect_url(string $view, string $box = 'default')
 $redirect_base = casting_my_requests_redirect_url($view, $box);
 $compose_open = isset($_GET['compose']) && (string) $_GET['compose'] === '1';
 $compose_project = '';
+$compose_project_type = '';
+$compose_role_needed = '';
+$compose_project_city = '';
 $compose_message = '';
 $compose_talent_id = 0;
 $compose_error = '';
+$open_request_id = isset($_GET['open']) ? sanitize_text_field((string) $_GET['open']) : '';
 
 if ($is_director && $box === 'sent' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_collaboration_request'])) {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_send_request')) {
@@ -47,29 +51,36 @@ if ($is_director && $box === 'sent' && $_SERVER['REQUEST_METHOD'] === 'POST' && 
     } else {
         $compose_talent_id = (int) ($_POST['talent_id'] ?? 0);
         $compose_project = (string) ($_POST['project'] ?? '');
+        $compose_project_type = (string) ($_POST['project_type'] ?? '');
+        $compose_role_needed = (string) ($_POST['role_needed'] ?? '');
+        $compose_project_city = (string) ($_POST['project_city'] ?? '');
         $compose_message = (string) ($_POST['message'] ?? '');
-        $result = casting_send_talent_request($user_id, $compose_talent_id, $compose_message, $compose_project);
+        $result = casting_send_talent_request($user_id, $compose_talent_id, $compose_message, $compose_project, [
+            'project_type' => $compose_project_type,
+            'role_needed'  => $compose_role_needed,
+            'project_city' => $compose_project_city,
+        ]);
         if (!$result['ok']) {
-            $compose_error = $result['error'] ?? 'ارسال درخواست ناموفق بود.';
+            $compose_error = $result['error'] ?? 'ارسال دعوت ناموفق بود.';
             $compose_open = true;
         } else {
-            casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'درخواست ارسال شد.');
+            casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'دعوت همکاری ارسال شد.');
             casting_redirect('my-requests.php?box=sent');
         }
     }
 }
 
-if (isset($_GET['open'])) {
-    $open = casting_open_request_chat($user_id, sanitize_text_field((string) $_GET['open']));
-    if ($open['ok']) {
-        casting_redirect(
-            'chat.php?with=' . (int) $open['peer_id']
-            . '&request=' . rawurlencode((string) ($open['request_id'] ?? ''))
-            . '#latest'
-        );
+if ($open_request_id !== '') {
+    $opened = casting_find_user_request($user_id, $open_request_id);
+    if ($opened !== null) {
+        $updated = $opened;
+        $role_now = casting_get_user_role($user_id);
+        if (($role_now === 'talent' || ($role_now === 'director' && (int) ($opened['employer_id'] ?? 0) !== $user_id))
+            && (string) ($updated['seen_at'] ?? '') === '') {
+            $updated['seen_at'] = current_time('mysql');
+            casting_update_request_everywhere($updated);
+        }
     }
-    casting_set_flash('error', (string) ($open['error'] ?? 'باز کردن درخواست ممکن نبود.'));
-    casting_redirect($redirect_base);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_archive_action'], $_POST['request_id'])) {
@@ -130,9 +141,19 @@ if (($role === 'talent' || $is_director) && $_SERVER['REQUEST_METHOD'] === 'POST
             (string) $_POST['decision'],
             (string) ($_POST['reply'] ?? '')
         );
-        casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok']
-            ? ($result['status'] === 'accepted' ? 'درخواست قبول شد.' : 'درخواست رد شد.')
-            : $result['error']);
+        if ($result['ok']) {
+            $status = (string) ($result['status'] ?? '');
+            if ($status === 'interested') {
+                $msg = 'پاسخ «علاقه‌مندم» ثبت شد. می‌توانید با ارسال‌کننده گفتگو کنید.';
+            } elseif ($status === 'need_info') {
+                $msg = 'پاسخ «نیاز به اطلاعات بیشتر» ثبت شد.';
+            } else {
+                $msg = 'پاسخ «تمایلی ندارم» ثبت شد.';
+            }
+            casting_set_flash('success', $msg);
+        } else {
+            casting_set_flash('error', (string) ($result['error'] ?? 'ثبت پاسخ ناموفق بود.'));
+        }
     }
     casting_redirect(casting_my_requests_redirect_url('active', $is_director ? 'received' : 'default'));
 }
@@ -148,19 +169,19 @@ if ($is_director) {
     $archive_count = count(casting_user_archived_requests($user_id));
 }
 
-casting_render_panel_start('درخواست‌ها', 'my-requests');
+casting_render_panel_start($role === 'talent' ? 'دعوت‌های همکاری' : 'درخواست‌ها', 'my-requests');
 casting_render_flash();
 ?>
 <section class="dash-card">
-  <h1>درخواست‌ها</h1>
+  <h1><?= $role === 'talent' ? 'دعوت‌های همکاری' : 'درخواست‌ها' ?></h1>
   <?php if ($is_director) : ?>
     <nav class="admin-tabs request-box-tabs" aria-label="نوع درخواست‌ها">
-      <a class="admin-tab <?= $box === 'sent' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'sent')) ?>">درخواست‌های ارسالی</a>
-      <a class="admin-tab <?= $box === 'received' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'received')) ?>">درخواست‌های دریافتی</a>
+      <a class="admin-tab <?= $box === 'sent' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'sent')) ?>">دعوت‌های ارسالی</a>
+      <a class="admin-tab <?= $box === 'received' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'received')) ?>">دعوت‌های دریافتی</a>
     </nav>
   <?php endif; ?>
   <?php if ($role === 'talent' || casting_is_employer_role($role)) : ?>
-    <nav class="admin-tabs request-view-tabs" aria-label="نمایش درخواست‌ها">
+    <nav class="admin-tabs request-view-tabs" aria-label="نمایش دعوت‌ها">
       <a class="admin-tab <?= $view === 'active' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url('active', $is_director ? $box : 'default')) ?>">فعال</a>
       <a class="admin-tab <?= $view === 'archive' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url('archive', $is_director ? $box : 'default')) ?>">
         بایگانی<?= $archive_count > 0 ? ' (' . $archive_count . ')' : '' ?>
@@ -169,19 +190,19 @@ casting_render_flash();
   <?php endif; ?>
   <?php if ($role === 'talent') : ?>
     <p class="lede"><?= $view === 'archive'
-        ? 'درخواست‌های بایگانی‌شده. می‌توانید هر زمان آن‌ها را بازگردانید یا گفتگو را ادامه دهید.'
-        : 'درخواست‌های همکاری و بازیگری که کارگردان‌ها و تهیه‌کنندگان برای شما فرستاده‌اند.' ?></p>
-    <?php casting_render_talent_requests_list($user_id, $requests, 'my-requests.php', $view); ?>
+        ? 'دعوت‌های بایگانی‌شده. از پیام‌های عادی جدا هستند.'
+        : 'دعوت‌های همکاری از پیام‌های عادی جدا هستند. جزئیات هر دعوت را ببینید و پاسخ دهید.' ?></p>
+    <?php casting_render_talent_requests_list($user_id, $requests, 'my-requests.php', $view, 'default', $open_request_id); ?>
   <?php elseif ($is_director) : ?>
     <?php if ($box === 'received') : ?>
       <p class="lede"><?= $view === 'archive'
-          ? 'درخواست‌های دریافتی بایگانی‌شده.'
-          : 'درخواست‌هایی که تهیه‌کنندگان و دیگر کارفرماها برای شما فرستاده‌اند.' ?></p>
-      <?php casting_render_talent_requests_list($user_id, $requests, 'my-requests.php', $view, 'received'); ?>
+          ? 'دعوت‌های دریافتی بایگانی‌شده.'
+          : 'دعوت‌هایی که تهیه‌کنندگان و دیگر کارفرماها برای شما فرستاده‌اند.' ?></p>
+      <?php casting_render_talent_requests_list($user_id, $requests, 'my-requests.php', $view, 'received', $open_request_id); ?>
     <?php else : ?>
       <p class="lede"><?= $view === 'archive'
-          ? 'درخواست‌های ارسالی بایگانی‌شده.'
-          : 'درخواست‌هایی که برای بازیگران و هنرمندان ارسال کرده‌اید.' ?></p>
+          ? 'دعوت‌های ارسالی بایگانی‌شده.'
+          : 'دعوت‌های همکاری که برای بازیگران ارسال کرده‌اید (جدا از پیام کاربران).' ?></p>
       <?php if ($view === 'active') :
           $highlighted_talents = casting_director_list_highlighted_talents($user_id);
           if ($compose_error !== '') {
@@ -193,18 +214,21 @@ casting_render_flash();
               $compose_open || $compose_error !== '',
               $compose_project,
               $compose_message,
-              $compose_talent_id
+              $compose_talent_id,
+              $compose_project_type,
+              $compose_role_needed,
+              $compose_project_city
           );
       endif; ?>
       <?php casting_render_employer_sent_requests_list($user_id, $requests, 'my-requests.php', $view, 'sent'); ?>
     <?php endif; ?>
   <?php elseif (casting_is_employer_role($role)) : ?>
     <p class="lede"><?= $view === 'archive'
-        ? 'درخواست‌های بایگانی‌شده. می‌توانید هر زمان آن‌ها را بازگردانید یا گفتگو را ادامه دهید.'
-        : 'درخواست‌هایی که برای هنرمندان و بازیگران ارسال کرده‌اید.' ?></p>
+        ? 'دعوت‌های بایگانی‌شده.'
+        : 'دعوت‌هایی که برای هنرمندان و بازیگران ارسال کرده‌اید.' ?></p>
     <?php casting_render_employer_sent_requests_list($user_id, $requests, 'my-requests.php', $view); ?>
   <?php else : ?>
-    <p class="meta">برای این نقش درخواستی ثبت نشده است.</p>
+    <p class="meta">برای این نقش دعوتی ثبت نشده است.</p>
   <?php endif; ?>
 </section>
 <?php casting_render_panel_end(); ?>

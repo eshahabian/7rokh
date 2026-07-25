@@ -417,6 +417,83 @@ a:hover {
   gap: 0.85rem;
 }
 
+.invitation-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.invitation-card {
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+}
+
+.invitation-card.is-unread {
+  border-color: rgba(212, 165, 116, 0.55);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.invitation-card.is-open {
+  border-color: rgba(212, 165, 116, 0.7);
+}
+
+.invitation-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+  margin-bottom: 0.65rem;
+}
+
+.invitation-project {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--accent-strong);
+}
+
+.invitation-meta {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}
+
+.invitation-meta strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.invitation-excerpt {
+  margin: 0 0 0.85rem;
+  white-space: pre-wrap;
+}
+
+.invitation-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.invitation-reply-form {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+.invitation-decisions {
+  flex-wrap: wrap;
+}
+
+.invitation-response-note {
+  margin: 0.85rem 0 0.5rem;
+  color: var(--ink-muted);
+}
+
 .request-item {
   padding: 1rem;
   border: 1px solid var(--line);

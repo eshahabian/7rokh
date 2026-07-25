@@ -450,41 +450,76 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
   <?php endif; ?>
 
   <?php if (!$is_self && casting_is_employer_role($viewer_role) && $member_role === 'talent') : ?>
+    <?php $invite_types = casting_invitation_project_type_labels(); ?>
     <div class="bio-block request-box" id="request-box">
-      <h3>ارسال درخواست همکاری</h3>
+      <h3>ارسال دعوت همکاری</h3>
+      <p class="field-hint">این دعوت در بخش «دعوت‌های همکاری» دیده می‌شود و وارد پیام کاربران نمی‌شود.</p>
       <form class="form" method="post" action="member.php?id=<?= $member_id ?>">
         <?php wp_nonce_field('casting_request_' . $member_id); ?>
-        <div class="field">
-          <label for="project">نام پروژه / نقش (اختیاری)</label>
-          <input id="project" name="project" type="text" value="<?= casting_e($project) ?>">
+        <div class="form-grid">
+          <div class="field">
+            <label for="project">نام پروژه</label>
+            <input id="project" name="project" type="text" required maxlength="191" value="<?= casting_e($project) ?>">
+          </div>
+          <div class="field">
+            <label for="project_type">نوع پروژه</label>
+            <select id="project_type" name="project_type">
+              <option value="">انتخاب کنید</option>
+              <?php foreach ($invite_types as $key => $label) : ?>
+                <option value="<?= casting_e($key) ?>"><?= casting_e($label) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="field">
+            <label for="role_needed">نقش یا تخصص موردنظر</label>
+            <input id="role_needed" name="role_needed" type="text" maxlength="191">
+          </div>
+          <div class="field">
+            <label for="project_city">شهر پروژه</label>
+            <input id="project_city" name="project_city" type="text" maxlength="120">
+          </div>
         </div>
         <div class="field">
-          <label for="message">متن درخواست</label>
-          <textarea id="message" name="message" rows="8" required maxlength="2000"><?= casting_e($message) ?></textarea>
-          <?php if (($hint = casting_employer_free_messages_hint($viewer_id)) !== '') : ?>
-            <p class="field-hint"><?= casting_e($hint) ?></p>
-          <?php endif; ?>
+          <label for="message">توضیح کوتاه</label>
+          <textarea id="message" name="message" rows="6" required maxlength="2000"><?= casting_e($message) ?></textarea>
         </div>
-        <button class="btn btn-primary" type="submit">ارسال درخواست</button>
+        <button class="btn btn-primary" type="submit">ارسال دعوت</button>
       </form>
     </div>
   <?php elseif (!$is_self && $viewer_role === 'producer' && $member_role === 'director') : ?>
+    <?php $invite_types = casting_invitation_project_type_labels(); ?>
     <div class="bio-block request-box" id="request-box">
-      <h3>ارسال درخواست به کارگردان</h3>
+      <h3>ارسال دعوت به کارگردان</h3>
       <form class="form" method="post" action="member.php?id=<?= $member_id ?>">
         <?php wp_nonce_field('casting_request_' . $member_id); ?>
-        <div class="field">
-          <label for="project">نام پروژه (اختیاری)</label>
-          <input id="project" name="project" type="text" value="<?= casting_e($project) ?>">
+        <div class="form-grid">
+          <div class="field">
+            <label for="project">نام پروژه</label>
+            <input id="project" name="project" type="text" required maxlength="191" value="<?= casting_e($project) ?>">
+          </div>
+          <div class="field">
+            <label for="project_type">نوع پروژه</label>
+            <select id="project_type" name="project_type">
+              <option value="">انتخاب کنید</option>
+              <?php foreach ($invite_types as $key => $label) : ?>
+                <option value="<?= casting_e($key) ?>"><?= casting_e($label) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="field">
+            <label for="role_needed">نقش یا تخصص موردنظر</label>
+            <input id="role_needed" name="role_needed" type="text" maxlength="191">
+          </div>
+          <div class="field">
+            <label for="project_city">شهر پروژه</label>
+            <input id="project_city" name="project_city" type="text" maxlength="120">
+          </div>
         </div>
         <div class="field">
-          <label for="message">متن درخواست</label>
-          <textarea id="message" name="message" rows="8" required maxlength="2000"><?= casting_e($message) ?></textarea>
-          <?php if (($hint = casting_employer_free_messages_hint($viewer_id)) !== '') : ?>
-            <p class="field-hint"><?= casting_e($hint) ?></p>
-          <?php endif; ?>
+          <label for="message">توضیح کوتاه</label>
+          <textarea id="message" name="message" rows="6" required maxlength="2000"><?= casting_e($message) ?></textarea>
         </div>
-        <button class="btn btn-primary" type="submit">ارسال درخواست</button>
+        <button class="btn btn-primary" type="submit">ارسال دعوت</button>
       </form>
     </div>
   <?php endif; ?>

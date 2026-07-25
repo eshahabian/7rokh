@@ -139,7 +139,7 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
 
     if ($action === 'interest') {
         $message = casting_employer_default_outreach_message($viewer_id);
-        $result = casting_send_talent_request($viewer_id, $member_id, $message, '');
+        $result = casting_send_talent_request($viewer_id, $member_id, $message, 'دعوت علاقه‌مندی');
         if (!$result['ok']) {
             return ['ok' => false, 'error' => (string) ($result['error'] ?? 'ارسال ناموفق بود.')];
         }
@@ -147,7 +147,8 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
         return [
             'ok'       => true,
             'error'    => '',
-            'redirect' => 'chat.php?with=' . $member_id,
+            'redirect' => 'my-requests.php?box=sent',
+            'message'  => !empty($result['warning']) ? (string) $result['warning'] : 'دعوت همکاری ارسال شد.',
         ];
     }
 
