@@ -59,6 +59,7 @@ function casting_panel_nav_items_mobile(): array
         ['key' => 'membership',  'label' => 'عضویت و اعتبار',             'href' => 'membership.php'],
         ['key' => 'settings',    'label' => 'تنظیمات',                    'href' => 'settings.php'],
         ['key' => 'logout',      'label' => 'خروج',                       'href' => 'logout.php'],
+        ['key' => 'main-site',   'label' => 'هفت رخ',                     'href' => casting_main_site_url(), 'external' => true],
     ];
 }
 
@@ -424,9 +425,6 @@ function casting_render_panel_sidebar(string $active): void
         casting_render_panel_nav_item_list(casting_panel_nav_items_mobile(), $nav_ctx);
         ?>
       </nav>
-      <div class="panel-drawer-theme">
-        <?php casting_render_theme_toggle(); ?>
-      </div>
       <?php if ($admin_nav) : ?>
         <p class="panel-sidebar-title panel-sidebar-title-admin">مدیریت</p>
         <nav class="panel-nav panel-nav-admin">
