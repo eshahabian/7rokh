@@ -41,26 +41,21 @@ function casting_panel_nav_items_desktop(): array
 }
 
 /**
- * منوی ساده‌شده موبایل (همبرگری)
+ * منوی ساده‌شده موبایل (همبرگری) — همان آیتم‌های کامل + هفت رخ در انتها
  *
- * @return array<int, array{key:string,label:string,href:string,icon?:string}>
+ * @return array<int, array{key:string,label:string,href:string,icon?:string,external?:bool}>
  */
 function casting_panel_nav_items_mobile(): array
 {
-    return [
-        ['key' => 'panel',       'label' => 'پروفایل من',                 'href' => 'panel.php'],
-        ['key' => 'search',      'label' => 'جستجوی کاربران',             'href' => 'search-users.php'],
-        ['key' => 'messages',    'label' => 'پیام‌های من',                'href' => 'chat.php'],
-        ['key' => 'visitors',    'label' => 'بازدیدکنندگان پروفایل من',  'href' => 'profile-visitors.php'],
-        ['key' => 'favorites',   'label' => 'علاقه‌مندی‌های من',          'href' => 'favorites.php'],
-        ['key' => 'desk',        'label' => 'پروژه‌ها',                    'href' => 'director-desk.php'],
-        ['key' => 'my-requests', 'label' => 'دعوت‌های همکاری',            'href' => 'my-requests.php'],
-        ['key' => 'briefs',      'label' => 'تکالیف',                     'href' => 'my-briefs.php'],
-        ['key' => 'membership',  'label' => 'عضویت و اعتبار',             'href' => 'membership.php'],
-        ['key' => 'settings',    'label' => 'تنظیمات',                    'href' => 'settings.php'],
-        ['key' => 'logout',      'label' => 'خروج',                       'href' => 'logout.php'],
-        ['key' => 'main-site',   'label' => 'هفت رخ',                     'href' => casting_main_site_url(), 'external' => true],
+    $items = casting_panel_nav_items_desktop();
+    $items[] = [
+        'key'      => 'main-site',
+        'label'    => 'هفت رخ',
+        'href'     => casting_main_site_url(),
+        'external' => true,
     ];
+
+    return $items;
 }
 
 /**
@@ -421,7 +416,8 @@ function casting_render_panel_sidebar(string $active): void
       </nav>
       <nav class="panel-nav panel-nav--mobile">
         <?php
-        $nav_ctx['highlight'] = true;
+        // موبایل: همان منوی کامل، بدون هایلایت هاب (تا همه آیتم‌ها مثل دسکتاپ دیده شوند)
+        $nav_ctx['highlight'] = false;
         casting_render_panel_nav_item_list(casting_panel_nav_items_mobile(), $nav_ctx);
         ?>
       </nav>
