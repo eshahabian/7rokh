@@ -80,6 +80,25 @@ function casting_role_label(string $role): string
     return CASTING_ROLES[$role] ?? $role;
 }
 
+/**
+ * برچسب نقش عمومی کاربر برای کارت‌ها، چت، پروفایل و …
+ * مدیر اصلی پورتال همیشه «واحد IT» دیده می‌شود.
+ */
+function casting_user_public_role_label(int $user_id): string
+{
+    if ($user_id <= 0) {
+        return '';
+    }
+    if (casting_user_is_portal_owner($user_id)) {
+        return 'واحد IT';
+    }
+    if (function_exists('casting_dm_is_support_peer') && casting_dm_is_support_peer($user_id)) {
+        return 'واحد IT';
+    }
+
+    return casting_role_label(casting_get_user_role($user_id));
+}
+
 function casting_valid_role(string $role): bool
 {
     return array_key_exists($role, CASTING_ROLES);

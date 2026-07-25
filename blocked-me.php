@@ -23,7 +23,7 @@ casting_render_flash();
         <li class="panel-list-item">
           <div>
             <strong><?= casting_e($row['name']) ?></strong>
-            <span class="meta"><?= casting_e(casting_role_label($row['role'])) ?></span>
+            <span class="meta"><?= casting_e(casting_user_public_role_label((int) $row['id'])) ?></span>
           </div>
         </li>
       <?php endforeach; ?>

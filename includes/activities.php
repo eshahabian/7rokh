@@ -267,18 +267,12 @@ function casting_sync_portal_owner_activities(int $user_id): void
 
 function casting_user_profile_chip_label(int $user_id, int $viewer_id = 0): string
 {
-    if ($viewer_id <= 0) {
-        $viewer_id = $user_id;
-    }
-    if (casting_user_is_portal_owner($user_id) && casting_user_is_portal_owner($viewer_id)) {
-        if (function_exists('casting_sync_portal_owner_activities')) {
-            casting_sync_portal_owner_activities($user_id);
-        }
-
-        return casting_hidden_activity_labels()['it'] ?? 'IT';
+    unset($viewer_id);
+    if (casting_user_is_portal_owner($user_id) && function_exists('casting_sync_portal_owner_activities')) {
+        casting_sync_portal_owner_activities($user_id);
     }
 
-    return casting_role_label(casting_get_user_role($user_id));
+    return casting_user_public_role_label($user_id);
 }
 
 /**

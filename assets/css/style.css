@@ -1306,10 +1306,16 @@ fieldset.field legend {
 }
 
 .member-preview-code,
+.member-preview-role,
 .member-preview-status {
   margin: 0.2rem 0 0;
   color: var(--ink-muted);
   font-size: 0.88rem;
+}
+
+.member-preview-role {
+  font-weight: 600;
+  color: var(--accent, #8b6b2e);
 }
 
 .member-preview-status--online {

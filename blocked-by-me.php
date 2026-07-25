@@ -34,7 +34,7 @@ casting_render_flash();
         <li class="panel-list-item panel-list-item-block">
           <div>
             <strong><?= casting_e($row['name']) ?></strong>
-            <span class="meta"><?= casting_e(casting_role_label($row['role'])) ?></span>
+            <span class="meta"><?= casting_e(casting_user_public_role_label((int) $row['id'])) ?></span>
             <?php if (($row['reason'] ?? '') !== '') : ?>
               <p class="meta block-reason-user">علت: <?= casting_e($row['reason']) ?></p>
             <?php endif; ?>

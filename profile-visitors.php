@@ -23,7 +23,7 @@ casting_render_flash();
         <li class="panel-list-item">
           <div>
             <strong><a href="<?= casting_e(casting_panel_profile_url((int) $row['visitor_id'])) ?>"><?= casting_e($row['name']) ?></a></strong>
-            <span class="meta"><?= casting_e(casting_role_label($row['role'])) ?></span>
+            <span class="meta"><?= casting_e(casting_user_public_role_label((int) $row['visitor_id'])) ?></span>
           </div>
           <time><?= casting_e($row['visited_at']) ?></time>
         </li>

@@ -20,6 +20,7 @@ function casting_panel_nav_items(): array
         ['key' => 'my-requests','label' => 'درخواست‌ها',              'href' => 'my-requests.php'],
         ['key' => 'briefs',     'label' => 'تکالیف',                  'href' => 'my-briefs.php'],
         ['key' => 'search',     'label' => 'جستجوی کاربران',          'href' => 'search-users.php'],
+        ['key' => 'favorites',  'label' => 'علاقه‌مندی‌ها',            'href' => 'favorites.php'],
         ['key' => 'desk',       'label' => 'پروژه‌ها',                 'href' => 'director-desk.php'],
         ['key' => 'premium',    'label' => 'خرید و فعال‌سازی',        'href' => 'premium.php'],
         ['key' => 'receipt',    'label' => 'ثبت فیش کارت به کارت',    'href' => 'premium-receipt.php'],
@@ -144,6 +145,9 @@ function casting_render_panel_sidebar(string $active): void
               continue;
           }
           if ($item['key'] === 'desk' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
+              continue;
+          }
+          if ($item['key'] === 'favorites' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
               continue;
           }
           if ($item['key'] === 'briefs' && (!$user || casting_get_user_role((int) $user->ID) !== 'talent')) {
@@ -1239,7 +1243,7 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
       <div class="member-card-body">
         <h3><button type="button" class="link-button member-card-name" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button></h3>
         <p class="meta">
-          <?= casting_e(casting_role_label($role)) ?>
+          <?= casting_e(casting_user_public_role_label($id)) ?>
           <?php if ($premium) : ?><span class="chip chip-premium">ویژه</span><?php endif; ?>
           <?php if ($director_score > 0) : ?>
             <span class="director-score-pill" title="بهترین امتیاز شما">★ <?= casting_e(casting_director_format_score($director_score)) ?></span>

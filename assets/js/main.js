@@ -1126,8 +1126,39 @@
   };
 
   document.addEventListener("click", async (event) => {
+    const actionBtn = event.target.closest("[data-member-preview-action]");
+    if (actionBtn && memberPreviewBody?.contains(actionBtn)) {
+      event.preventDefault();
+      event.stopPropagation();
+      const memberId = actionBtn.getAttribute("data-member-id");
+      const action = actionBtn.getAttribute("data-member-preview-action");
+      if (!memberId || !action || actionBtn.disabled) return;
+      actionBtn.disabled = true;
+      try {
+        const data = await postMemberPreviewAction(memberId, action);
+        if (!data?.ok) {
+          window.alert(data?.error || "عملیات ناموفق بود.");
+          return;
+        }
+        if (data.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
+        if (action === "favorite") {
+          await openMemberPreview(memberId);
+        } else if (data.message) {
+          window.alert(data.message);
+        }
+      } catch (_err) {
+        window.alert("خطا در انجام عملیات.");
+      } finally {
+        actionBtn.disabled = false;
+      }
+      return;
+    }
+
     const openPreview = event.target.closest("[data-member-preview]");
-    if (openPreview && !openPreview.closest("[data-member-preview-action]")) {
+    if (openPreview) {
       if (openPreview.closest("a[href]") && !openPreview.matches("[data-member-preview]")) {
         return;
       }
@@ -1145,35 +1176,6 @@
 
     if (memberPreviewLightbox?.classList.contains("is-open") && !event.target.closest(".member-preview-panel")) {
       closeMemberPreview();
-      return;
-    }
-
-    const actionBtn = event.target.closest("[data-member-preview-action]");
-    if (!actionBtn || !memberPreviewBody?.contains(actionBtn)) return;
-    event.preventDefault();
-    const memberId = actionBtn.getAttribute("data-member-id");
-    const action = actionBtn.getAttribute("data-member-preview-action");
-    if (!memberId || !action) return;
-    actionBtn.disabled = true;
-    try {
-      const data = await postMemberPreviewAction(memberId, action);
-      if (!data?.ok) {
-        window.alert(data?.error || "عملیات ناموفق بود.");
-        return;
-      }
-      if (data.redirect) {
-        window.location.href = data.redirect;
-        return;
-      }
-      if (action === "favorite") {
-        await openMemberPreview(memberId);
-      } else if (data.message) {
-        window.alert(data.message);
-      }
-    } catch (_err) {
-      window.alert("خطا در انجام عملیات.");
-    } finally {
-      actionBtn.disabled = false;
     }
   });
 

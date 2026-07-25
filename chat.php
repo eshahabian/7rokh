@@ -168,7 +168,7 @@ casting_render_flash();
             <option value="">انتخاب مخاطب…</option>
             <?php foreach ($contacts as $contact) : ?>
               <option value="<?= (int) $contact['id'] ?>" <?= $peer_id === (int) $contact['id'] ? 'selected' : '' ?>>
-                <?= casting_e($contact['name'] . ' — ' . casting_role_label($contact['role'])) ?>
+                <?= casting_e($contact['name'] . ' — ' . casting_user_public_role_label((int) $contact['id'])) ?>
               </option>
             <?php endforeach; ?>
           </select>

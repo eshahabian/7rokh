@@ -53,8 +53,8 @@ function casting_dm_support_display_name(): string
 
 function casting_dm_peer_role_label(int $peer_id): string
 {
-    if (casting_dm_is_support_peer($peer_id)) {
-        return '';
+    if (function_exists('casting_user_public_role_label')) {
+        return casting_user_public_role_label($peer_id);
     }
 
     return casting_role_label(casting_get_user_role($peer_id));
@@ -77,9 +77,6 @@ function casting_user_requires_premium_for_dm(int $user_id): bool
 
 function casting_dm_peer_display_name(int $peer_id): string
 {
-    if (casting_dm_is_support_peer($peer_id)) {
-        return casting_dm_support_display_name();
-    }
     $user = get_user_by('id', $peer_id);
 
     return $user ? (string) $user->display_name : 'کاربر';

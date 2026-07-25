@@ -110,23 +110,6 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
     if (!casting_member_preview_can_view($viewer_id, $member_id)) {
         return ['ok' => false, 'error' => 'دسترسی مجاز نیست.'];
     }
-    if (!casting_member_preview_show_employer_actions($viewer_id, $member_id)) {
-        return ['ok' => false, 'error' => 'این عملیات برای نقش شما فعال نیست.'];
-    }
-
-    if ($action === 'interest') {
-        $message = casting_employer_default_outreach_message($viewer_id);
-        $result = casting_send_talent_request($viewer_id, $member_id, $message, '');
-        if (!$result['ok']) {
-            return ['ok' => false, 'error' => (string) ($result['error'] ?? 'ارسال ناموفق بود.')];
-        }
-
-        return [
-            'ok'       => true,
-            'error'    => '',
-            'redirect' => 'chat.php?with=' . $member_id,
-        ];
-    }
 
     if ($action === 'favorite') {
         if (!casting_user_is_director_role($viewer_id) || casting_get_user_role($member_id) !== 'talent') {
@@ -147,6 +130,24 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
             'error'     => '',
             'highlight' => !empty($workspace['is_highlight']),
             'message'   => !empty($workspace['is_highlight']) ? 'به علاقه‌مندی‌ها اضافه شد.' : 'از علاقه‌مندی‌ها حذف شد.',
+        ];
+    }
+
+    if (!casting_member_preview_show_employer_actions($viewer_id, $member_id)) {
+        return ['ok' => false, 'error' => 'این عملیات برای نقش شما فعال نیست.'];
+    }
+
+    if ($action === 'interest') {
+        $message = casting_employer_default_outreach_message($viewer_id);
+        $result = casting_send_talent_request($viewer_id, $member_id, $message, '');
+        if (!$result['ok']) {
+            return ['ok' => false, 'error' => (string) ($result['error'] ?? 'ارسال ناموفق بود.')];
+        }
+
+        return [
+            'ok'       => true,
+            'error'    => '',
+            'redirect' => 'chat.php?with=' . $member_id,
         ];
     }
 
@@ -192,7 +193,8 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
     $completion = casting_member_preview_completion_percent($profile, $member_id);
     $mobile_ok = (string) ($profile['mobile'] ?? '') !== '' && preg_match('/^09\d{9}$/', (string) $profile['mobile']);
     $show_actions = casting_member_preview_show_employer_actions($viewer_id, $member_id);
-    $is_favorite = casting_member_preview_is_favorite($viewer_id, $member_id);
+    $can_favorite = casting_user_is_director_role($viewer_id) && $role === 'talent';
+    $is_favorite = $can_favorite && casting_member_preview_is_favorite($viewer_id, $member_id);
     $viewer_premium = casting_user_is_premium($viewer_id);
     $free_hint = casting_employer_free_messages_hint($viewer_id);
     $chat_ok = casting_can_user_send_dm($viewer_id, $member_id)['ok'];
@@ -201,6 +203,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
     if ($city_label === '' && ($profile['province'] ?? '') !== '') {
         $city_label = casting_province_labels()[(string) $profile['province']] ?? '';
     }
+    $role_label = casting_user_public_role_label($member_id);
     ?>
     <header class="member-preview-head">
       <div class="member-preview-avatar-wrap">
@@ -215,6 +218,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
       </div>
       <div class="member-preview-head-text">
         <h2 class="member-preview-title" id="member-preview-title"><?= casting_e((string) $member->display_name) ?></h2>
+        <p class="member-preview-role"><?= casting_e($role_label) ?></p>
         <?php if ($membership_code !== '') : ?>
           <p class="member-preview-code">کد کاربری: <span dir="ltr"><?= casting_e($membership_code) ?></span></p>
         <?php endif; ?>
@@ -235,21 +239,23 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
       <li><span class="member-preview-icon" aria-hidden="true">📊</span><span>تکمیل پروفایل: <?= (int) $completion ?>٪</span></li>
     </ul>
 
-    <?php if ($show_actions) : ?>
+    <?php if ($show_actions || $can_favorite) : ?>
       <div class="member-preview-actions">
-        <button
-          type="button"
-          class="btn member-preview-btn member-preview-btn--interest"
-          data-member-preview-action="interest"
-          data-member-id="<?= (int) $member_id ?>"
-          <?= $chat_ok ? '' : ' disabled' ?>
-        >پیام علاقه‌مندی</button>
-        <button
-          type="button"
-          class="btn member-preview-btn member-preview-btn--sms"
-          <?= $viewer_premium ? '' : ' disabled title="فقط برای اعضای ویژه با اعتبار پیامک"' ?>
-        >پیامک دعوت به گفتگو</button>
-        <?php if (casting_user_is_director_role($viewer_id) && $role === 'talent') : ?>
+        <?php if ($show_actions) : ?>
+          <button
+            type="button"
+            class="btn member-preview-btn member-preview-btn--interest"
+            data-member-preview-action="interest"
+            data-member-id="<?= (int) $member_id ?>"
+            <?= $chat_ok ? '' : ' disabled' ?>
+          >پیام علاقه‌مندی</button>
+          <button
+            type="button"
+            class="btn member-preview-btn member-preview-btn--sms"
+            <?= $viewer_premium ? '' : ' disabled title="فقط برای اعضای ویژه با اعتبار پیامک"' ?>
+          >پیامک دعوت به گفتگو</button>
+        <?php endif; ?>
+        <?php if ($can_favorite) : ?>
           <button
             type="button"
             class="btn member-preview-btn member-preview-btn--favorite<?= $is_favorite ? ' is-active' : '' ?>"
@@ -258,10 +264,10 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
           ><?= $is_favorite ? 'حذف از علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها' ?></button>
         <?php endif; ?>
       </div>
-      <?php if ($free_hint !== '') : ?>
+      <?php if ($show_actions && $free_hint !== '') : ?>
         <p class="field-hint member-preview-hint"><?= casting_e($free_hint) ?></p>
       <?php endif; ?>
-      <?php if (!$viewer_premium) : ?>
+      <?php if ($show_actions && !$viewer_premium) : ?>
         <p class="field-hint member-preview-hint">دکمه پیامک دعوت فقط برای اعضای ویژه (با اعتبار پیامک) فعال می‌شود.</p>
       <?php endif; ?>
     <?php endif; ?>
