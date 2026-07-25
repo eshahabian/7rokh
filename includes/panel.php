@@ -412,14 +412,6 @@ function casting_render_panel_sidebar(string $active): void
           <?php endif; ?>
         <?php endif; ?>
       </div>
-      <nav class="panel-nav panel-nav-site-links" aria-label="لینک‌های سایت">
-        <a class="panel-nav-link" href="<?= casting_e(casting_url('index.php')) ?>">
-          <span class="panel-nav-label">صفحه اصلی</span>
-        </a>
-        <a class="panel-nav-link panel-nav-link-external" href="<?= casting_e(casting_main_site_url()) ?>" target="_blank" rel="noopener">
-          <span class="panel-nav-label">سایت هفت رخ</span>
-        </a>
-      </nav>
       <nav class="panel-nav panel-nav--desktop">
         <?php
         $nav_ctx['highlight'] = false;

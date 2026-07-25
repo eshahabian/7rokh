@@ -2632,7 +2632,6 @@ body.panel-menu-open .panel-menu-toggle-icon span:nth-child(3) {
   position: relative;
 }
 
-.panel-nav-site-links,
 .panel-drawer-theme,
 .panel-nav--mobile,
 .panel-sidebar-title-mobile {
@@ -2649,12 +2648,6 @@ body.panel-menu-open .panel-menu-toggle-icon span:nth-child(3) {
   margin-top: 0.85rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--line);
-}
-
-.panel-nav-site-links {
-  margin-bottom: 0.55rem;
-  padding-bottom: 0.45rem;
-  border-bottom: 1px solid var(--line);
 }
 
 .panel-drawer-backdrop {
@@ -2757,12 +2750,6 @@ body.panel-menu-open .panel-menu-toggle-icon span:nth-child(3) {
 
   body.panel-menu-open .panel-drawer-backdrop {
     display: block;
-  }
-
-  .panel-nav-site-links {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
   }
 
   .panel-drawer-theme {
