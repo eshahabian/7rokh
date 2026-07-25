@@ -2491,6 +2491,25 @@ fieldset.field legend {
   white-space: nowrap;
 }
 
+.panel-sidebar-views {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.65rem;
+  margin: 0.55rem 0 0;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) - 2px);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+}
+
+.panel-sidebar-views span {
+  white-space: nowrap;
+}
+
 .panel-sidebar-user-meta {
   display: flex;
   flex-wrap: wrap;

@@ -31,6 +31,74 @@ function casting_record_profile_visit(int $profile_user_id, int $visitor_id): vo
         'visited_at' => $now,
     ]);
     update_user_meta($profile_user_id, 'casting_profile_visitors', array_slice($filtered, 0, 200));
+    casting_profile_view_stats_increment($profile_user_id, $now);
+}
+
+/**
+ * @return array<string, int> Y-m-d => count
+ */
+function casting_profile_view_stats_days(int $user_id): array
+{
+    $raw = get_user_meta($user_id, 'casting_profile_view_days', true);
+    if (!is_array($raw)) {
+        return [];
+    }
+    $out = [];
+    foreach ($raw as $day => $count) {
+        $day = (string) $day;
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
+            continue;
+        }
+        $out[$day] = max(0, (int) $count);
+    }
+
+    return $out;
+}
+
+function casting_profile_view_stats_increment(int $user_id, string $mysql_datetime = ''): void
+{
+    if ($user_id <= 0) {
+        return;
+    }
+    $mysql_datetime = trim($mysql_datetime);
+    if ($mysql_datetime === '') {
+        $mysql_datetime = current_time('mysql');
+    }
+    $day = substr($mysql_datetime, 0, 10);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
+        return;
+    }
+
+    $days = casting_profile_view_stats_days($user_id);
+    $days[$day] = ($days[$day] ?? 0) + 1;
+
+    // نگه داشتن حدود ۴۵ روز اخیر برای آمار ماهانه
+    krsort($days);
+    $days = array_slice($days, 0, 45, true);
+    ksort($days);
+    update_user_meta($user_id, 'casting_profile_view_days', $days);
+}
+
+/**
+ * @return array{day:int,month:int}
+ */
+function casting_profile_view_stats(int $user_id): array
+{
+    $days = casting_profile_view_stats_days($user_id);
+    $today = wp_date('Y-m-d');
+    $month_prefix = wp_date('Y-m');
+    $day_count = (int) ($days[$today] ?? 0);
+    $month_count = 0;
+    foreach ($days as $day => $count) {
+        if (str_starts_with($day, $month_prefix)) {
+            $month_count += (int) $count;
+        }
+    }
+
+    return [
+        'day'   => $day_count,
+        'month' => $month_count,
+    ];
 }
 
 /**

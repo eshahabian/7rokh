@@ -114,6 +114,7 @@ function casting_render_panel_sidebar(string $active): void
     $admin_nav = $user ? casting_panel_admin_nav_items((int) $user->ID) : [];
     $sidebar_photo = '';
     $sidebar_name = '';
+    $sidebar_views = ['day' => 0, 'month' => 0];
     if ($user) {
         $sidebar_name = (string) $user->display_name;
         $closeup = casting_load_portrait($user_id, 'closeup');
@@ -123,6 +124,10 @@ function casting_render_panel_sidebar(string $active): void
             $sidebar_profile = casting_get_profile($user_id);
             $sidebar_photo = (string) ($sidebar_profile['photo_url'] ?? '');
         }
+        if (!function_exists('casting_profile_view_stats')) {
+            require_once __DIR__ . '/visitors.php';
+        }
+        $sidebar_views = casting_profile_view_stats($user_id);
     }
     ?>
     <aside class="panel-sidebar" aria-label="منوی پنل کاربری">
@@ -145,6 +150,10 @@ function casting_render_panel_sidebar(string $active): void
               </p>
             </div>
           </div>
+          <p class="panel-sidebar-views" title="بازدید پروفایل شما">
+            <span>امروز: <?= (int) $sidebar_views['day'] ?></span>
+            <span>این ماه: <?= (int) $sidebar_views['month'] ?></span>
+          </p>
         <?php endif; ?>
       </div>
       <nav class="panel-nav">
