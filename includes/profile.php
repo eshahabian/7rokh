@@ -494,7 +494,7 @@ function casting_render_artistic_membership_fields(string $has = '', array $orgs
  */
 function casting_activities_need_body_metrics(array $activities): bool
 {
-    return casting_activities_has_acting($activities);
+    return casting_activities_need_talent_fields($activities);
 }
 
 /**
@@ -563,7 +563,7 @@ function casting_search_filter_empty_label(): string
 
 function casting_search_filter_none_label(): string
 {
-    return 'هیچ کدام';
+    return 'همه';
 }
 
 function casting_search_specialty_empty_label(bool $category_selected): string
@@ -725,7 +725,7 @@ function casting_user_has_acting_profile(int $user_id): bool
 {
     $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
 
-    return casting_activities_has_acting($activities);
+    return casting_activities_need_talent_fields($activities);
 }
 
 function casting_user_can_upload_portraits(int $user_id): bool
@@ -1835,7 +1835,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
     }
 
     $activities = casting_normalize_activities($data['activities'] ?? []);
-    $skip_talent_profile = !casting_activities_has_acting($activities);
+    $skip_talent_profile = !casting_activities_need_talent_fields($activities);
 
     $look = sanitize_key((string) ($data['look'] ?? ''));
     if (!$skip_talent_profile && !array_key_exists($look, casting_look_labels())) {
@@ -2077,7 +2077,7 @@ function casting_save_profile(int $user_id, array $data): array
     $activities_for_traits = isset($data['activities'])
         ? casting_normalize_activities($data['activities'], $user_id)
         : casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
-    $is_actor_profile = casting_activities_has_acting($activities_for_traits);
+    $is_actor_profile = casting_activities_need_talent_fields($activities_for_traits);
 
     if ($is_actor_profile && (array_key_exists('health_well', $data) || array_key_exists('health_status', $data))) {
         $health = casting_parse_health_post($data);
@@ -2166,8 +2166,8 @@ function casting_save_profile(int $user_id, array $data): array
     update_user_meta($user_id, 'casting_work_history', sanitize_textarea_field((string) ($data['work_history'] ?? '')));
     $skip_talent_profile = false;
     if (array_key_exists('activities', $data)) {
-        $skip_talent_profile = !casting_activities_has_acting(casting_normalize_activities($data['activities'], $user_id));
-    } elseif (!casting_activities_has_acting(casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id))) {
+        $skip_talent_profile = !casting_activities_need_talent_fields(casting_normalize_activities($data['activities'], $user_id));
+    } elseif (!casting_activities_need_talent_fields(casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id))) {
         $skip_talent_profile = true;
     }
     casting_save_user_work_meta($user_id, $data, $skip_talent_profile);

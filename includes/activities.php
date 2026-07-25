@@ -147,6 +147,12 @@ function casting_activity_categories(): array
                 'art_consultant'   => 'مشاور هنری',
             ],
         ],
+        'none' => [
+            'label' => 'هیچ کدام',
+            'items' => [
+                'activity_none' => 'هیچ کدام',
+            ],
+        ],
     ];
 }
 
@@ -430,7 +436,29 @@ function casting_activities_has_acting(array $activities): bool
 }
 
 /**
- * فرم و نمایش پروفایل — فیلدهای مخصوص بازیگر فقط برای دسته بازیگران
+ * آیا گزینه «هیچ کدام» به‌عنوان نوع فعالیت انتخاب شده؟
+ *
+ * @param list<string> $activities
+ */
+function casting_activities_has_none(array $activities): bool
+{
+    return in_array('activity_none', casting_normalize_activities($activities), true);
+}
+
+/**
+ * فیلدهای ظاهری/مهارتی مثل بازیگر لازم است؟ (بازیگر یا هیچ‌کدام)
+ *
+ * @param list<string> $activities
+ */
+function casting_activities_need_talent_fields(array $activities): bool
+{
+    $activities = casting_normalize_activities($activities);
+
+    return casting_activities_has_acting($activities) || casting_activities_has_none($activities);
+}
+
+/**
+ * فرم و نمایش پروفایل — فیلدهای مخصوص بازیگر برای دسته بازیگران و «هیچ کدام»
  *
  * @param list<string>|mixed $activities
  */
@@ -438,7 +466,20 @@ function casting_profile_hides_talent_fields($activities, int $user_id = 0): boo
 {
     unset($user_id);
 
-    return !casting_activities_has_acting(is_array($activities) ? $activities : []);
+    return !casting_activities_need_talent_fields(is_array($activities) ? $activities : []);
+}
+
+/**
+ * دسته‌های قابل نمایش در جستجو (بدون گزینه ثبت‌نامی «هیچ کدام»)
+ *
+ * @return array<string, array{label:string, items:array<string,string>}>
+ */
+function casting_activity_categories_for_search(): array
+{
+    $categories = casting_activity_categories();
+    unset($categories['none']);
+
+    return $categories;
 }
 
 /**

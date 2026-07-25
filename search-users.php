@@ -49,24 +49,6 @@ casting_render_flash();
   <form class="filter-bar filter-bar-wide" method="get" action="search-users.php" data-member-search-form>
     <?php casting_render_member_search_activity_fields($filters); ?>
 
-    <div class="field field-name-search">
-      <label for="member-name-q">نام</label>
-      <div class="name-search-field" data-name-search-field>
-        <input
-          id="member-name-q"
-          name="q"
-          type="text"
-          inputmode="search"
-          value="<?= casting_e($filters['q']) ?>"
-          placeholder="نام یا نام کاربری…"
-          autocomplete="off"
-          spellcheck="false"
-          data-name-search-input
-        >
-        <button type="button" class="name-search-clear" data-name-search-clear hidden aria-label="پاک کردن">×</button>
-      </div>
-    </div>
-
     <?php casting_render_member_search_gender_field($filters); ?>
 
     <?php casting_render_body_metric_search_fields($filters, ['height', 'weight']); ?>

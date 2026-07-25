@@ -491,18 +491,25 @@
         specSel.appendChild(opt);
         return;
       }
+      const keys = Object.keys(map[cat]);
+      const isNoneCategory = cat === "none";
       specSel.disabled = false;
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "انتخاب تخصص…";
-      specSel.appendChild(placeholder);
-      Object.keys(map[cat]).forEach((key) => {
+      if (!isNoneCategory) {
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "انتخاب تخصص…";
+        specSel.appendChild(placeholder);
+      }
+      keys.forEach((key) => {
         const opt = document.createElement("option");
         opt.value = key;
         opt.textContent = map[cat][key];
-        if (prev === key) opt.selected = true;
+        if (prev === key || (isNoneCategory && !prev && key === "activity_none")) opt.selected = true;
         specSel.appendChild(opt);
       });
+      if (isNoneCategory && !specSel.value && keys.includes("activity_none")) {
+        specSel.value = "activity_none";
+      }
     };
 
     const reindex = () => {
@@ -580,7 +587,7 @@
       specSel.disabled = false;
       const placeholder = document.createElement("option");
       placeholder.value = "";
-      placeholder.textContent = "هیچ کدام";
+      placeholder.textContent = "همه";
       specSel.appendChild(placeholder);
       Object.keys(map[cat]).forEach((key) => {
         const opt = document.createElement("option");
@@ -589,6 +596,9 @@
         if (prev === key) opt.selected = true;
         specSel.appendChild(opt);
       });
+      if (cat === "none" && !specSel.value && map[cat].activity_none) {
+        specSel.value = "activity_none";
+      }
     };
 
     catSel.addEventListener("change", () => fillSpecialty(false));
@@ -859,6 +869,7 @@
         const cat = row.querySelector("[data-activity-category]")?.value || "";
         const spec = row.querySelector("[data-activity-specialty]")?.value || "";
         if (spec && cat === "acting") return true;
+        if (cat === "none" || spec === "activity_none") return true;
       }
       return false;
     };
