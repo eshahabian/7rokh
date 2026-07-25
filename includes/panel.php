@@ -42,7 +42,18 @@ function casting_panel_nav_items(): array
  */
 function casting_panel_nav_keys_hidden_for_director(): array
 {
-    return ['premium', 'receipt', 'photo', 'transactions', 'cancel'];
+    return ['photo', 'cancel'];
+}
+
+function casting_render_premium_account_links(string $wrapper_class = 'cta-row profile-premium-links'): void
+{
+    ?>
+    <div class="<?= casting_e($wrapper_class) ?>">
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('premium.php')) ?>">خرید و فعال‌سازی</a>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('premium-receipt.php')) ?>">ثبت فیش کارت به کارت</a>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('transactions.php')) ?>">تراکنش‌های مالی</a>
+    </div>
+    <?php
 }
 
 function casting_panel_profile_url(int $user_id): string

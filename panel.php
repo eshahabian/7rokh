@@ -64,6 +64,7 @@ casting_render_flash();
     <a class="btn btn-ghost" href="chat.php">پیام‌ها</a>
     <a class="btn btn-ghost" href="my-requests.php">درخواست‌ها<?php if ($request_count > 0) : ?> (<?= (int) $request_count ?>)<?php endif; ?></a>
   </div>
+  <?php casting_render_premium_account_links(); ?>
 </section>
 
 <?php

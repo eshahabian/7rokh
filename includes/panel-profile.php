@@ -335,6 +335,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           <?php endif; ?>
           <a class="btn btn-ghost" href="#edit-profile">ویرایش اطلاعات</a>
         </div>
+        <?php casting_render_premium_account_links('cta-row profile-panel-actions profile-premium-links'); ?>
       <?php endif; ?>
       <ul class="info-list<?= $director_section_class('info') ?>">
         <?php if ($is_self && ($profile['membership_number'] ?? '') !== '') : ?>
