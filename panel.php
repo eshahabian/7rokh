@@ -36,7 +36,7 @@ if ($welcome_photo === '') {
     $welcome_photo = (string) ($profile['photo_url'] ?? '');
 }
 
-casting_render_panel_start('پنل کاربری', 'panel');
+casting_render_panel_start('پنل کاربری', isset($_GET['edit']) ? 'edit-profile' : 'panel');
 if (isset($_GET['welcome'])) {
     echo '<div class="flash flash-success" role="alert">ثبت‌نام و ورود با موفقیت انجام شد.</div>';
 }
@@ -89,7 +89,6 @@ casting_panel_render_section($user_id, static function () use ($profile, $user_i
 ?>
 
 <div class="panel-profile-stack" id="profile">
-  <h2 class="panel-section-title panel-stack-heading">پروفایل من</h2>
   <?php
   casting_panel_render_section($user_id, static function () use ($user_id): void {
       casting_render_member_profile_view($user_id, $user_id, true);
@@ -98,12 +97,9 @@ casting_panel_render_section($user_id, static function () use ($profile, $user_i
 </div>
 
 <?php
-casting_panel_render_section($user_id, static function () use ($user_id, $profile, $profile_error, $profile_success, $complete): void {
-    casting_render_profile_edit_form(
-        $user_id,
-        $profile,
-        $profile_error !== '' || $profile_success !== '' || !$complete || isset($_GET['edit'])
-    );
+$edit_open = $profile_error !== '' || $profile_success !== '' || !$complete || isset($_GET['edit']);
+casting_panel_render_section($user_id, static function () use ($user_id, $profile, $edit_open): void {
+    casting_render_profile_edit_form($user_id, $profile, $edit_open);
 }, 'ویرایش پروفایل');
 ?>
 
