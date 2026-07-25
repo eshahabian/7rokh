@@ -2567,6 +2567,19 @@ function casting_member_counts(): array
     ];
 }
 
+function casting_touch_last_active(int $user_id): void
+{
+    if ($user_id <= 0) {
+        return;
+    }
+    $prev = (string) get_user_meta($user_id, 'casting_last_active', true);
+    $now = time();
+    if ($prev !== '' && ($now - (int) strtotime($prev)) < 300) {
+        return;
+    }
+    update_user_meta($user_id, 'casting_last_active', current_time('mysql'));
+}
+
 function casting_require_casting_user(): WP_User
 {
     $user = casting_current_user();
@@ -2586,9 +2599,7 @@ function casting_require_casting_user(): WP_User
         casting_set_flash('error', 'حساب شما معلق شده است. برای پیگیری با پشتیبانی تماس بگیرید.');
         casting_redirect('logout.php');
     }
-    if (function_exists('casting_touch_last_active')) {
-        require_once __DIR__ . '/member-preview.php';
-        casting_touch_last_active((int) $user->ID);
-    }
+    casting_touch_last_active((int) $user->ID);
+
     return $user;
 }

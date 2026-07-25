@@ -1067,6 +1067,120 @@
     if (event.key === "Escape") closeRulesLightbox();
   });
 
+  const memberPreviewLightbox = document.querySelector("[data-member-preview-lightbox]");
+  if (memberPreviewLightbox && memberPreviewLightbox.parentElement !== document.body) {
+    document.body.appendChild(memberPreviewLightbox);
+  }
+  const memberPreviewBody = memberPreviewLightbox?.querySelector("[data-member-preview-body]");
+  const memberPreviewPanel = memberPreviewLightbox?.querySelector(".member-preview-panel");
+  const memberPreviewNonce = memberPreviewLightbox?.dataset.memberPreviewNonce || "";
+  let memberPreviewLoading = false;
+
+  const closeMemberPreview = () => {
+    if (!memberPreviewLightbox) return;
+    memberPreviewLightbox.classList.remove("is-open");
+    memberPreviewLightbox.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  };
+
+  const openMemberPreview = async (memberId) => {
+    if (!memberPreviewLightbox || !memberPreviewBody || memberPreviewLoading) return;
+    const id = parseInt(String(memberId || "0"), 10);
+    if (!id) return;
+    memberPreviewLoading = true;
+    memberPreviewBody.innerHTML = '<p class="meta">در حال بارگذاری…</p>';
+    memberPreviewLightbox.classList.add("is-open");
+    memberPreviewLightbox.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    try {
+      const res = await fetch(`member-preview.php?ajax=1&id=${encodeURIComponent(String(id))}`, {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const data = await res.json();
+      if (!data?.ok || !data.html) {
+        memberPreviewBody.innerHTML = '<p class="empty-state">بارگذاری پروفایل ناموفق بود.</p>';
+      } else {
+        memberPreviewBody.innerHTML = data.html;
+      }
+    } catch (_err) {
+      memberPreviewBody.innerHTML = '<p class="empty-state">خطا در بارگذاری پروفایل.</p>';
+    } finally {
+      memberPreviewLoading = false;
+      memberPreviewPanel?.scrollTo(0, 0);
+    }
+  };
+
+  const postMemberPreviewAction = async (memberId, action) => {
+    const body = new FormData();
+    body.append("_wpnonce", memberPreviewNonce);
+    body.append("member_id", String(memberId));
+    body.append("action", action);
+    const res = await fetch("member-preview.php", {
+      method: "POST",
+      credentials: "same-origin",
+      body,
+      headers: { Accept: "application/json" },
+    });
+    return res.json();
+  };
+
+  document.addEventListener("click", async (event) => {
+    const openPreview = event.target.closest("[data-member-preview]");
+    if (openPreview && !openPreview.closest("[data-member-preview-action]")) {
+      if (openPreview.closest("a[href]") && !openPreview.matches("[data-member-preview]")) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      await openMemberPreview(openPreview.getAttribute("data-member-preview"));
+      return;
+    }
+
+    if (event.target.closest("[data-member-preview-close]")) {
+      event.preventDefault();
+      closeMemberPreview();
+      return;
+    }
+
+    if (memberPreviewLightbox?.classList.contains("is-open") && !event.target.closest(".member-preview-panel")) {
+      closeMemberPreview();
+      return;
+    }
+
+    const actionBtn = event.target.closest("[data-member-preview-action]");
+    if (!actionBtn || !memberPreviewBody?.contains(actionBtn)) return;
+    event.preventDefault();
+    const memberId = actionBtn.getAttribute("data-member-id");
+    const action = actionBtn.getAttribute("data-member-preview-action");
+    if (!memberId || !action) return;
+    actionBtn.disabled = true;
+    try {
+      const data = await postMemberPreviewAction(memberId, action);
+      if (!data?.ok) {
+        window.alert(data?.error || "عملیات ناموفق بود.");
+        return;
+      }
+      if (data.redirect) {
+        window.location.href = data.redirect;
+        return;
+      }
+      if (action === "favorite") {
+        await openMemberPreview(memberId);
+      } else if (data.message) {
+        window.alert(data.message);
+      }
+    } catch (_err) {
+      window.alert("خطا در انجام عملیات.");
+    } finally {
+      actionBtn.disabled = false;
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMemberPreview();
+  });
+
   const adminMemberPanel = document.querySelector("[data-admin-member-panel]");
   if (adminMemberPanel) {
     window.requestAnimationFrame(() => {

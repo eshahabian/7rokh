@@ -7,19 +7,6 @@ require_once __DIR__ . '/panel-profile.php';
 require_once __DIR__ . '/chat.php';
 require_once __DIR__ . '/request.php';
 
-function casting_touch_last_active(int $user_id): void
-{
-    if ($user_id <= 0) {
-        return;
-    }
-    $prev = (string) get_user_meta($user_id, 'casting_last_active', true);
-    $now = time();
-    if ($prev !== '' && ($now - (int) strtotime($prev)) < 300) {
-        return;
-    }
-    update_user_meta($user_id, 'casting_last_active', current_time('mysql'));
-}
-
 function casting_format_jalali_datetime_compact(string $mysql): string
 {
     $mysql = trim($mysql);
@@ -138,7 +125,6 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
             'ok'       => true,
             'error'    => '',
             'redirect' => 'chat.php?with=' . $member_id,
-            'message'  => !empty($result['warning']) ? (string) $result['warning'] : 'پیام علاقه‌مندی ارسال شد.',
         ];
     }
 
@@ -170,7 +156,7 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
 function casting_render_member_preview_lightbox_shell(): void
 {
     ?>
-<div class="member-preview-lightbox" data-member-preview-lightbox aria-hidden="true">
+<div class="member-preview-lightbox" data-member-preview-lightbox aria-hidden="true" data-member-preview-nonce="<?= casting_e(wp_create_nonce('casting_member_preview')) ?>">
   <div class="member-preview-panel" role="dialog" aria-modal="true" aria-labelledby="member-preview-title">
     <button type="button" class="member-preview-close" data-member-preview-close aria-label="بستن">×</button>
     <div class="member-preview-body" data-member-preview-body>
