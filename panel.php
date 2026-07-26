@@ -38,6 +38,9 @@ casting_render_flash();
       ['src' => casting_asset('images/promo-slide-1.png'), 'alt' => 'صحنه فیلم‌برداری و صندلی کارگردان'],
       ['src' => casting_asset('images/promo-slide-2.png'), 'alt' => 'دوربین سینمایی و تجهیزات تولید'],
       ['src' => casting_asset('images/promo-slide-3.png'), 'alt' => 'سالن سینما و پرده نمایش'],
+      ['src' => casting_asset('images/promo-slide-4.png'), 'alt' => 'دوربین سینمایی روی سه‌پایه در استودیو'],
+      ['src' => casting_asset('images/promo-slide-5.png'), 'alt' => 'میز گریم و آینه پشت صحنه'],
+      ['src' => casting_asset('images/promo-slide-6.png'), 'alt' => 'میکروفون بوم و صحنه فیلم‌برداری'],
   ];
   ?>
   <section class="panel-promo-banner" aria-label="محل نمایش تبلیغات اعضای ویژه" data-promo-slider>
