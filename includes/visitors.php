@@ -80,7 +80,7 @@ function casting_profile_view_stats_increment(int $user_id, string $mysql_dateti
 }
 
 /**
- * @return array{day:int,month:int}
+ * @return array{day:int,month:int,total:int}
  */
 function casting_profile_view_stats(int $user_id): array
 {
@@ -89,15 +89,19 @@ function casting_profile_view_stats(int $user_id): array
     $month_prefix = wp_date('Y-m');
     $day_count = (int) ($days[$today] ?? 0);
     $month_count = 0;
+    $total = 0;
     foreach ($days as $day => $count) {
+        $n = (int) $count;
+        $total += $n;
         if (str_starts_with($day, $month_prefix)) {
-            $month_count += (int) $count;
+            $month_count += $n;
         }
     }
 
     return [
         'day'   => $day_count,
         'month' => $month_count,
+        'total' => $total,
     ];
 }
 
