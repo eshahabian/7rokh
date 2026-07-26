@@ -50,6 +50,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (string) ($_POST['confirm_password'] ?? '')
             );
             casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'رمز عبور کاربر تغییر کرد.' : $result['error']);
+        } elseif ($action === 'grant_premium') {
+            $was_premium = casting_user_is_premium($target_id);
+            $result = casting_admin_grant_premium($target_id, $user_id);
+            if ($result['ok']) {
+                casting_set_flash(
+                    'success',
+                    $was_premium
+                        ? 'اشتراک ویژه کاربر ۳۰ روز تمدید شد.'
+                        : 'کاربر به عضو ویژه تبدیل شد (۳۰ روز).'
+                );
+            } else {
+                casting_set_flash('error', $result['error']);
+            }
         }
         casting_redirect($redirect);
     }
@@ -144,6 +157,16 @@ casting_render_flash();
 
       <?php if (!$target_is_super) : ?>
         <div class="admin-member-actions">
+          <div class="admin-member-action-box">
+            <h3 class="panel-section-title">اشتراک ویژه</h3>
+            <p class="meta"><?= $target_premium ? 'می‌توانید اشتراک ویژه را ۳۰ روز تمدید کنید.' : 'می‌توانید این کاربر را به عضو ویژه تبدیل کنید (۳۰ روز).' ?></p>
+            <form method="post" action="<?= casting_e($member_query($target_id)) ?>" onsubmit="return confirm('<?= $target_premium ? 'اشتراک ویژه ۳۰ روز تمدید شود؟' : 'کاربر به عضو ویژه تبدیل شود؟' ?>');">
+              <?php wp_nonce_field('casting_admin_members'); ?>
+              <input type="hidden" name="target_id" value="<?= $target_id ?>">
+              <button class="btn btn-primary" type="submit" name="action" value="grant_premium"><?= $target_premium ? 'تمدید ویژه (+۳۰ روز)' : 'تبدیل به عضو ویژه' ?></button>
+            </form>
+          </div>
+
           <?php if ($can_suspend) : ?>
             <div class="admin-member-action-box">
               <h3 class="panel-section-title">غیرفعال / فعال کردن حساب</h3>
@@ -251,8 +274,16 @@ casting_render_flash();
                 <?php endif; ?>
               </td>
               <td>
-                <a class="btn btn-primary btn-sm" href="<?= casting_e($member_query((int) $row['id'])) ?>">مدیریت</a>
-                <a class="btn btn-ghost btn-sm" href="member.php?id=<?= (int) $row['id'] ?>">پروفایل</a>
+                <div class="admin-member-actions-inline">
+                  <a class="btn btn-primary btn-sm" href="<?= casting_e($member_query((int) $row['id'])) ?>">مدیریت</a>
+                  <a class="btn btn-ghost btn-sm" href="member.php?id=<?= (int) $row['id'] ?>">پروفایل</a>
+                  <form class="admin-grant-premium-form" method="post" action="<?= casting_e($list_url !== '' ? $list_url : 'admin-premium-users.php') ?>" onsubmit="return confirm('<?= $row['premium'] ? 'اشتراک ویژه این کاربر ۳۰ روز تمدید شود؟' : 'این کاربر به عضو ویژه تبدیل شود؟' ?>');">
+                    <?php wp_nonce_field('casting_admin_members'); ?>
+                    <input type="hidden" name="target_id" value="<?= (int) $row['id'] ?>">
+                    <input type="hidden" name="action" value="grant_premium">
+                    <button class="btn btn-ghost btn-sm" type="submit"><?= $row['premium'] ? 'تمدید ویژه' : 'تبدیل به عضو ویژه' ?></button>
+                  </form>
+                </div>
               </td>
             </tr>
           <?php endforeach; ?>

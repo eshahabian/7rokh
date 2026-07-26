@@ -4155,6 +4155,18 @@ a.panel-sidebar-title.is-active {
   display: block;
 }
 
+.admin-member-actions-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.admin-grant-premium-form {
+  display: inline;
+  margin: 0;
+}
+
 .admin-members-table tr.is-selected td {
   background: rgba(212, 165, 116, 0.08);
 }

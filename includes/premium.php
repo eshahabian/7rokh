@@ -317,6 +317,53 @@ function casting_approve_premium_receipt(int $receipt_id): array
 }
 
 /**
+ * فعال‌سازی یا تمدید دستی اشتراک ویژه توسط مدیر
+ *
+ * @return array{ok:bool,error:string,until?:string}
+ */
+function casting_admin_grant_premium(int $target_id, int $admin_id, string $plan_key = 'featured_30'): array
+{
+    if (!function_exists('casting_user_has_admin_permission')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if ($admin_id <= 0 || (!casting_user_has_admin_permission($admin_id, 'view_premium_users') && !casting_user_is_super_admin($admin_id))) {
+        return ['ok' => false, 'error' => 'اجازه فعال‌سازی اشتراک ویژه را ندارید.'];
+    }
+    if ($target_id <= 0 || casting_get_user_role($target_id) === '') {
+        return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
+    }
+
+    $plans = casting_premium_plans();
+    if (!isset($plans[$plan_key])) {
+        $plan_key = 'featured_30';
+    }
+    if (!isset($plans[$plan_key])) {
+        return ['ok' => false, 'error' => 'پلن ویژه تعریف نشده است.'];
+    }
+
+    $days = max(1, (int) $plans[$plan_key]['days']);
+    $current = (string) get_user_meta($target_id, 'casting_premium_until', true);
+    $now = (string) current_time('mysql');
+    $now_ts = strtotime($now);
+    $base_ts = ($current !== '' && strtotime($current) > $now_ts) ? strtotime($current) : $now_ts;
+    if ($base_ts === false || $now_ts === false) {
+        return ['ok' => false, 'error' => 'محاسبه تاریخ اشتراک ممکن نشد.'];
+    }
+    $until = wp_date('Y-m-d H:i:s', $base_ts + ($days * DAY_IN_SECONDS));
+    update_user_meta($target_id, 'casting_premium_until', $until);
+
+    casting_add_transaction($target_id, [
+        'type'   => 'activation',
+        'title'  => 'فعال‌سازی دستی ' . $plans[$plan_key]['label'] . ' توسط مدیر',
+        'amount' => 0,
+        'status' => 'approved',
+        'ref'    => 'admin:' . $admin_id,
+    ]);
+
+    return ['ok' => true, 'error' => '', 'until' => $until];
+}
+
+/**
  * @return array{ok:bool,error:string}
  */
 function casting_reject_premium_receipt(int $receipt_id): array
