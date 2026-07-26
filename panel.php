@@ -88,7 +88,7 @@ else :
     <div class="panel-promo-banner-copy">
       <h1>محل نمایش تبلیغات اعضای ویژه</h1>
       <p>اینجا بهترین مکان برای دیده شدن استعداد شماست</p>
-      <a class="btn btn-ghost panel-promo-banner-cta" href="<?= casting_e(casting_url('premium.php')) ?>" target="_blank" rel="noopener">جزئیات بیشتر</a>
+      <a class="btn btn-ghost panel-promo-banner-cta" href="<?= casting_e(casting_url('premium.php')) ?>">جزئیات بیشتر</a>
     </div>
     <div class="panel-promo-banner-art" aria-hidden="true"></div>
     <div class="panel-promo-dots" aria-hidden="true">
@@ -110,13 +110,13 @@ else :
             <h3><?= casting_e($ad['title']) ?></h3>
             <p><?= casting_e($ad['desc']) ?></p>
             <p class="panel-ad-place"><?= casting_e($ad['place']) ?></p>
-            <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('newest-users.php')) ?>" target="_blank" rel="noopener">مشاهده پروفایل</a>
+            <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('newest-users.php')) ?>">مشاهده پروفایل</a>
           </div>
         </article>
       <?php endforeach; ?>
     </div>
     <div class="panel-ads-foot">
-      <a class="btn btn-ghost" href="<?= casting_e(casting_url('newest-users.php')) ?>" target="_blank" rel="noopener">مشاهده همه تبلیغات</a>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('newest-users.php')) ?>">مشاهده همه تبلیغات</a>
     </div>
   </section>
 

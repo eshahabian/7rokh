@@ -216,7 +216,7 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
             continue;
         }
         ?>
-          <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= ($is_external || $item['key'] !== 'logout') ? ' target="_blank" rel="noopener"' : '' ?>>
+          <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= $is_external ? ' target="_blank" rel="noopener"' : '' ?>>
             <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
             <?php if ($item['key'] === 'messages' && $unread_peers > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
@@ -381,8 +381,6 @@ function casting_render_panel_sidebar(string $active): void
           <a
             class="panel-sidebar-title panel-sidebar-title-desktop panel-sidebar-home<?= $active === 'panel' ? ' is-active' : '' ?>"
             href="<?= casting_e(casting_url('panel.php')) ?>"
-            target="_blank"
-            rel="noopener"
           >پنل کاربری<?php if ($panel_premium_until !== null && $user) : ?>
             <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
               <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
@@ -417,15 +415,8 @@ function casting_render_panel_sidebar(string $active): void
           <?php endif; ?>
         <?php endif; ?>
       </div>
-      <nav class="panel-nav panel-nav--desktop">
+      <nav class="panel-nav">
         <?php
-        $nav_ctx['highlight'] = false;
-        casting_render_panel_nav_item_list(casting_panel_nav_items_desktop(), $nav_ctx);
-        ?>
-      </nav>
-      <nav class="panel-nav panel-nav--mobile">
-        <?php
-        // موبایل: همان منوی کامل، بدون هایلایت هاب (تا همه آیتم‌ها مثل دسکتاپ دیده شوند)
         $nav_ctx['highlight'] = false;
         casting_render_panel_nav_item_list(casting_panel_nav_items_mobile(), $nav_ctx);
         ?>
@@ -434,7 +425,7 @@ function casting_render_panel_sidebar(string $active): void
         <p class="panel-sidebar-title panel-sidebar-title-admin">مدیریت</p>
         <nav class="panel-nav panel-nav-admin">
           <?php foreach ($admin_nav as $item) : ?>
-            <a class="panel-nav-link panel-nav-link-admin <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?>" target="_blank" rel="noopener">
+            <a class="panel-nav-link panel-nav-link-admin <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?>">
               <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
               <?php if ($item['key'] === 'admin-receipts' && $pending_receipts > 0) : ?>
                 <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
