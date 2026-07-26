@@ -1,6 +1,41 @@
 (() => {
   const THEME_KEY = "casting_theme";
 
+  const castingIsPwaShell = () =>
+    window.matchMedia("(display-mode: standalone)").matches
+    || window.matchMedia("(display-mode: fullscreen)").matches
+    || window.matchMedia("(display-mode: minimal-ui)").matches
+    || Boolean(window.navigator.standalone);
+
+  const castingIsSameOriginHref = (href) => {
+    try {
+      return new URL(href, window.location.href).origin === window.location.origin;
+    } catch (err) {
+      return false;
+    }
+  };
+
+  // در PWA لینک‌های داخلی همان اپ باز شوند؛ در مرورگر target=_blank می‌ماند
+  if (castingIsPwaShell()) {
+    document.documentElement.classList.add("is-pwa");
+    document.addEventListener(
+      "click",
+      (e) => {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+          return;
+        }
+        const a = e.target.closest("a[href]");
+        if (!a || a.getAttribute("target") !== "_blank") return;
+        const href = a.getAttribute("href") || "";
+        if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+        if (!castingIsSameOriginHref(href)) return;
+        e.preventDefault();
+        window.location.assign(a.href);
+      },
+      true
+    );
+  }
+
   const applyTheme = (theme) => {
     const isDay = theme === "day";
     if (isDay) {
@@ -663,7 +698,7 @@
   const nameSearchField = document.querySelector("[data-name-search-field]");
   const nameSearchClear = document.querySelector("[data-name-search-clear]");
 
-  if (memberSearchForm && memberSearchResults && nameSearchInput) {
+  if (memberSearchForm && memberSearchResults) {
     let resultsTimer = 0;
     let suggestTimer = 0;
     let resultsAbort = null;
@@ -699,13 +734,17 @@
     };
 
     const syncClearButton = () => {
-      if (!nameSearchClear) return;
+      if (!nameSearchClear || !nameSearchInput) return;
       nameSearchClear.hidden = (nameSearchInput.value || "") === "";
     };
 
-    const buildFormQuery = () => {
+    const buildFormQuery = (forAjax = true) => {
       const params = new URLSearchParams(new FormData(memberSearchForm));
-      params.set("ajax", "1");
+      if (forAjax) {
+        params.set("ajax", "1");
+      } else {
+        params.delete("ajax");
+      }
       params.delete("page");
       return params.toString();
     };
@@ -716,23 +755,26 @@
       resultsTimer = window.setTimeout(async () => {
         const controller = new AbortController();
         resultsAbort = controller;
-        memberSearchResults.classList.add("is-loading");
+        const resultsEl = document.querySelector("[data-member-search-results]") || memberSearchResults;
+        resultsEl.classList.add("is-loading");
         try {
-          const res = await fetch(`${memberSearchForm.getAttribute("action") || "search-users.php"}?${buildFormQuery()}`, {
+          const res = await fetch(`${memberSearchForm.getAttribute("action") || "search-users.php"}?${buildFormQuery(true)}`, {
             signal: controller.signal,
             headers: { "X-Requested-With": "XMLHttpRequest" },
           });
           if (!res.ok) return;
-          memberSearchResults.innerHTML = await res.text();
+          resultsEl.innerHTML = await res.text();
           placeSearchResults(formHasActiveSearch());
+          const query = buildFormQuery(false);
+          window.history.replaceState({}, "", query ? `search-users.php?${query}` : "search-users.php");
         } catch (err) {
           if (err?.name !== "AbortError") {
             /* ignore */
           }
         } finally {
-          memberSearchResults.classList.remove("is-loading");
+          resultsEl.classList.remove("is-loading");
         }
-      }, 400);
+      }, 280);
     };
 
     const pickPrediction = (items, query) => {
@@ -748,6 +790,7 @@
     };
 
     const fetchPrediction = () => {
+      if (!nameSearchInput) return;
       window.clearTimeout(suggestTimer);
       suggestAbort?.abort();
       const query = (nameSearchInput.value || "").trim();
@@ -775,7 +818,7 @@
     };
 
     const acceptPrediction = () => {
-      if (!predictedFull) return false;
+      if (!nameSearchInput || !predictedFull) return false;
       nameSearchInput.value = predictedFull;
       clearPrediction();
       syncClearButton();
@@ -783,45 +826,59 @@
       return true;
     };
 
-    nameSearchField?.addEventListener("click", (e) => {
-      if (e.target.closest("[data-name-search-clear]")) return;
-      nameSearchInput.focus();
-    });
+    if (nameSearchInput) {
+      nameSearchField?.addEventListener("click", (e) => {
+        if (e.target.closest("[data-name-search-clear]")) return;
+        nameSearchInput.focus();
+      });
 
-    nameSearchClear?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      nameSearchInput.value = "";
-      clearPrediction();
-      syncClearButton();
-      refreshResults();
-      nameSearchInput.focus();
-    });
+      nameSearchClear?.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        nameSearchInput.value = "";
+        clearPrediction();
+        syncClearButton();
+        refreshResults();
+        nameSearchInput.focus();
+      });
 
-    nameSearchInput.addEventListener("input", () => {
-      syncClearButton();
-      fetchPrediction();
-      refreshResults();
-    });
+      nameSearchInput.addEventListener("input", () => {
+        syncClearButton();
+        fetchPrediction();
+        refreshResults();
+      });
 
-    nameSearchInput.addEventListener("keydown", (e) => {
-      if (!predictedFull) return;
-      if (e.key === "Tab" || e.key === "ArrowRight") {
-        const atEnd = nameSearchInput.selectionStart === nameSearchInput.value.length
-          && nameSearchInput.selectionEnd === nameSearchInput.value.length;
-        if (e.key === "Tab" || atEnd) {
-          e.preventDefault();
-          acceptPrediction();
+      nameSearchInput.addEventListener("keydown", (e) => {
+        if (!predictedFull) return;
+        if (e.key === "Tab" || e.key === "ArrowRight") {
+          const atEnd = nameSearchInput.selectionStart === nameSearchInput.value.length
+            && nameSearchInput.selectionEnd === nameSearchInput.value.length;
+          if (e.key === "Tab" || atEnd) {
+            e.preventDefault();
+            acceptPrediction();
+          }
         }
+      });
+
+      syncClearButton();
+      if ((nameSearchInput.value || "").trim().length >= 2) {
+        fetchPrediction();
       }
-    });
+    }
 
     memberSearchForm.addEventListener("change", refreshResults);
-    syncClearButton();
+    memberSearchForm.addEventListener("input", (e) => {
+      const el = e.target;
+      if (!(el instanceof HTMLElement)) return;
+      if (el.matches("input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea")) {
+        refreshResults();
+      }
+    });
+    memberSearchForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      refreshResults();
+    });
     placeSearchResults(formHasActiveSearch());
-    if ((nameSearchInput.value || "").trim().length >= 2) {
-      fetchPrediction();
-    }
   }
 
   document.querySelectorAll("[data-password-confirm-field]").forEach((field) => {
