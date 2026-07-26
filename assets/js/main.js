@@ -166,8 +166,23 @@
       const jy = Number(yearEl.value || 0);
       const jm = Number(monthEl.value || 0);
       const jd = Number(dayEl.value || 0);
+      const hiddenAge = document.querySelector('input[name="age"]');
+      const setAgeView = (age) => {
+        if (ageOut.tagName === "SELECT") {
+          if (!Number.isFinite(age) || age < 0) {
+            ageOut.value = "";
+            return;
+          }
+          const plus = Number(ageOut.getAttribute("data-age-plus") || 76);
+          const maxExact = plus - 1;
+          ageOut.value = age > maxExact ? String(plus) : String(age);
+          return;
+        }
+        ageOut.value = age >= 0 ? age + " سال" : "";
+      };
       if (!jy || !jm || !jd) {
-        ageOut.value = "";
+        setAgeView(-1);
+        if (hiddenAge) hiddenAge.value = "";
         return;
       }
       const { gy, gm, gd } = jalaliToGregorian(jy, jm, jd);
@@ -175,9 +190,8 @@
       let age = today.getFullYear() - gy;
       const md = today.getMonth() + 1 - gm;
       if (md < 0 || (md === 0 && today.getDate() < gd)) age -= 1;
-      ageOut.value = age >= 0 ? age + " سال" : "";
-      const hiddenAge = document.querySelector('input[name="age"]');
-      if (hiddenAge) hiddenAge.value = String(age);
+      setAgeView(age);
+      if (hiddenAge) hiddenAge.value = age >= 0 ? String(age) : "";
     };
 
     yearEl.addEventListener("change", () => {

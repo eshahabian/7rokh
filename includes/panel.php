@@ -573,6 +573,10 @@ function casting_parse_search_metric_range(string $raw, int $floor, int $ceil): 
         if ($min > $max) {
             [$min, $max] = [$max, $min];
         }
+    } elseif (preg_match('/^(\d+)\s*-$/', $raw, $matches) === 1) {
+        $min = (int) $matches[1];
+    } elseif (preg_match('/^-\s*(\d+)$/', $raw, $matches) === 1) {
+        $max = (int) $matches[1];
     } elseif (preg_match('/^\d+$/', $raw) === 1) {
         $min = (int) $raw;
     } else {
@@ -604,15 +608,18 @@ function casting_search_metric_range_from_input(array $input, string $range_key,
     if ($min !== '' && $max !== '') {
         return $min . '-' . $max;
     }
+    if ($min !== '') {
+        return $min . '-';
+    }
 
-    return $min !== '' ? $min : $max;
+    return '-' . $max;
 }
 
 /**
- * یک گروه متریک (سن / قد / وزن) — بدون wrapper کل عرض
+ * یک گروه متریک (سن / قد / وزن) — کرکره «از» و «تا»
  *
  * @param array<string, string> $filters
- * @param array{prefix: string, label: string, unit: string, floor: int, ceil: int, range_key: string} $metric
+ * @param array{prefix: string, label: string, unit: string, floor: int, ceil: int, range_key: string, kind: string} $metric
  */
 function casting_render_body_metric_group(array $filters, array $metric): void
 {
@@ -623,6 +630,7 @@ function casting_render_body_metric_group(array $filters, array $metric): void
     );
     $min_val = $parts['min'] !== null ? (string) $parts['min'] : '';
     $max_val = $parts['max'] !== null ? (string) $parts['max'] : '';
+    $kind = (string) ($metric['kind'] ?? $metric['prefix']);
     ?>
     <div class="filter-metric-group">
       <div class="filter-metric-head">
@@ -631,28 +639,12 @@ function casting_render_body_metric_group(array $filters, array $metric): void
       </div>
       <div class="filter-metric-range">
         <div class="field">
-          <input
-            id="<?= casting_e($metric['prefix']) ?>_min"
-            name="<?= casting_e($metric['prefix']) ?>_min"
-            type="text"
-            inputmode="numeric"
-            autocomplete="off"
-            value="<?= casting_e($min_val) ?>"
-            placeholder="از"
-            aria-label="<?= casting_e($metric['label']) ?> از"
-          >
+          <label class="sr-only" for="<?= casting_e($metric['prefix']) ?>_min"><?= casting_e($metric['label']) ?> از</label>
+          <?php casting_render_body_metric_select($kind, $metric['prefix'] . '_min', $metric['prefix'] . '_min', $min_val, 'از'); ?>
         </div>
         <div class="field">
-          <input
-            id="<?= casting_e($metric['prefix']) ?>_max"
-            name="<?= casting_e($metric['prefix']) ?>_max"
-            type="text"
-            inputmode="numeric"
-            autocomplete="off"
-            value="<?= casting_e($max_val) ?>"
-            placeholder="تا"
-            aria-label="<?= casting_e($metric['label']) ?> تا"
-          >
+          <label class="sr-only" for="<?= casting_e($metric['prefix']) ?>_max"><?= casting_e($metric['label']) ?> تا</label>
+          <?php casting_render_body_metric_select($kind, $metric['prefix'] . '_max', $metric['prefix'] . '_max', $max_val, 'تا'); ?>
         </div>
       </div>
     </div>
@@ -660,17 +652,42 @@ function casting_render_body_metric_group(array $filters, array $metric): void
 }
 
 /**
- * سن، قد و وزن — هر کدام دو فیلد «از» و «تا»
+ * سن، قد و وزن — کرکره در بازه تعریف‌شده
  *
  * @param array<string, string> $filters
  * @param list<string>|null $include
  */
 function casting_render_body_metric_search_fields(array $filters, ?array $include = null): void
 {
+    $defs = casting_body_metric_defs();
     $metrics = [
-        ['prefix' => 'age', 'label' => 'سن', 'unit' => 'سال', 'floor' => 5, 'ceil' => 100, 'range_key' => 'age_range'],
-        ['prefix' => 'height', 'label' => 'قد', 'unit' => 'سانتی‌متر', 'floor' => 80, 'ceil' => 230, 'range_key' => 'height_range'],
-        ['prefix' => 'weight', 'label' => 'وزن', 'unit' => 'کیلو', 'floor' => 20, 'ceil' => 250, 'range_key' => 'weight_range'],
+        [
+            'prefix'    => 'age',
+            'kind'      => 'age',
+            'label'     => $defs['age']['label'],
+            'unit'      => $defs['age']['unit'],
+            'floor'     => $defs['age']['min'],
+            'ceil'      => casting_body_metric_plus_value('age'),
+            'range_key' => 'age_range',
+        ],
+        [
+            'prefix'    => 'height',
+            'kind'      => 'height',
+            'label'     => $defs['height']['label'],
+            'unit'      => $defs['height']['unit'],
+            'floor'     => $defs['height']['min'],
+            'ceil'      => casting_body_metric_plus_value('height'),
+            'range_key' => 'height_range',
+        ],
+        [
+            'prefix'    => 'weight',
+            'kind'      => 'weight',
+            'label'     => $defs['weight']['label'],
+            'unit'      => $defs['weight']['unit'],
+            'floor'     => $defs['weight']['min'],
+            'ceil'      => casting_body_metric_plus_value('weight'),
+            'range_key' => 'weight_range',
+        ],
     ];
     if ($include !== null) {
         $allowed = array_flip($include);
@@ -684,7 +701,7 @@ function casting_render_body_metric_search_fields(array $filters, ?array $includ
         return;
     }
     ?>
-    <div class="filter-activity-fields" aria-label="فیلتر قد و وزن">
+    <div class="filter-activity-fields" aria-label="فیلتر سن، قد و وزن">
       <?php foreach ($metrics as $metric) {
           casting_render_body_metric_group($filters, $metric);
       } ?>
@@ -723,18 +740,20 @@ function casting_apply_search_metric_range_filter(
     string $meta_key,
     string $filter_value,
     int $floor,
-    int $ceil
+    int $exact_max
 ): void {
-    $parsed = casting_parse_search_metric_range($filter_value, $floor, $ceil);
+    $plus = $exact_max + 1;
+    $parsed = casting_parse_search_metric_range($filter_value, $floor, $plus);
     if ($parsed['min'] !== null) {
+        $min = $parsed['min'] >= $plus ? $exact_max : $parsed['min'];
         $meta_query[] = [
             'key'     => $meta_key,
-            'value'   => $parsed['min'],
+            'value'   => $min,
             'type'    => 'NUMERIC',
             'compare' => '>=',
         ];
     }
-    if ($parsed['max'] !== null) {
+    if ($parsed['max'] !== null && $parsed['max'] < $plus) {
         $meta_query[] = [
             'key'     => $meta_key,
             'value'   => $parsed['max'],
@@ -749,9 +768,28 @@ function casting_apply_search_metric_range_filter(
  */
 function casting_apply_body_metric_search_filters(array &$meta_query, array $filters): void
 {
-    casting_apply_search_metric_range_filter($meta_query, 'casting_age', (string) ($filters['age_range'] ?? ''), 5, 100);
-    casting_apply_search_metric_range_filter($meta_query, 'casting_height', (string) ($filters['height_range'] ?? ''), 80, 230);
-    casting_apply_search_metric_range_filter($meta_query, 'casting_weight', (string) ($filters['weight_range'] ?? ''), 20, 250);
+    $defs = casting_body_metric_defs();
+    casting_apply_search_metric_range_filter(
+        $meta_query,
+        'casting_age',
+        (string) ($filters['age_range'] ?? ''),
+        (int) $defs['age']['min'],
+        (int) $defs['age']['max']
+    );
+    casting_apply_search_metric_range_filter(
+        $meta_query,
+        'casting_height',
+        (string) ($filters['height_range'] ?? ''),
+        (int) $defs['height']['min'],
+        (int) $defs['height']['max']
+    );
+    casting_apply_search_metric_range_filter(
+        $meta_query,
+        'casting_weight',
+        (string) ($filters['weight_range'] ?? ''),
+        (int) $defs['weight']['min'],
+        (int) $defs['weight']['max']
+    );
 }
 
 /**

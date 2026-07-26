@@ -387,11 +387,15 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           ) ?></li>
         <?php endif; ?>
         <li><strong>قد:</strong> <?= $embedded && $is_self
-            ? casting_panel_missing_label($profile['height'] !== '' ? $profile['height'] . ' سانتی‌متر' : '')
-            : casting_e($profile['height'] !== '' ? $profile['height'] . ' سانتی‌متر' : '—') ?></li>
+            ? casting_panel_missing_label(casting_format_body_metric_value('height', (string) ($profile['height'] ?? '')))
+            : casting_e(casting_format_body_metric_value('height', (string) ($profile['height'] ?? '')) !== ''
+                ? casting_format_body_metric_value('height', (string) ($profile['height'] ?? ''))
+                : '—') ?></li>
         <li><strong>وزن:</strong> <?= $embedded && $is_self
-            ? casting_panel_missing_label(($profile['weight'] ?? '') !== '' ? $profile['weight'] . ' کیلوگرم' : '')
-            : casting_e(($profile['weight'] ?? '') !== '' ? $profile['weight'] . ' کیلوگرم' : '—') ?></li>
+            ? casting_panel_missing_label(casting_format_body_metric_value('weight', (string) ($profile['weight'] ?? '')))
+            : casting_e(casting_format_body_metric_value('weight', (string) ($profile['weight'] ?? '')) !== ''
+                ? casting_format_body_metric_value('weight', (string) ($profile['weight'] ?? ''))
+                : '—') ?></li>
         <?php endif; ?>
         <?php if (!$hide_talent_details) : ?>
         <li><strong>وضعیت سلامت:</strong> <?= casting_e(casting_format_health_display(
@@ -562,8 +566,13 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 
     <?php casting_render_jalali_birthday_fields($profile['birthdate'], false); ?>
     <div class="field">
-      <label for="age_display">سن (خودکار)</label>
-      <input id="age_display" type="text" readonly data-age-output value="<?= $profile['age'] !== '' ? casting_e($profile['age']) . ' سال' : '' ?>">
+      <label for="age_display">سن (خودکار از تاریخ تولد)</label>
+      <select id="age_display" data-age-output data-age-plus="<?= (int) casting_body_metric_plus_value('age') ?>" disabled aria-live="polite">
+        <option value="">بعد از انتخاب تاریخ پر می‌شود</option>
+        <?php foreach (casting_body_metric_options('age') as $opt) : ?>
+          <option value="<?= casting_e($opt['value']) ?>" <?= casting_body_metric_select_value('age', (string) ($profile['age'] ?? '')) === $opt['value'] ? 'selected' : '' ?>><?= casting_e($opt['label']) ?></option>
+        <?php endforeach; ?>
+      </select>
       <input type="hidden" name="age" value="<?= casting_e($profile['age']) ?>">
     </div>
 
@@ -604,12 +613,12 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <div class="form-grid" data-talent-profile-field<?= $talent_hidden ?>>
       <div class="field">
         <label for="height">قد (سانتی‌متر)</label>
-        <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e($profile['height']) ?>">
+        <?php casting_render_body_metric_select('height', 'height', 'height', (string) ($profile['height'] ?? '')); ?>
         <p class="field-hint">برای بازیگران الزامی است</p>
       </div>
       <div class="field">
         <label for="weight">وزن (کیلوگرم)</label>
-        <input id="weight" name="weight" type="number" min="20" max="250" value="<?= casting_e($profile['weight'] ?? '') ?>">
+        <?php casting_render_body_metric_select('weight', 'weight', 'weight', (string) ($profile['weight'] ?? '')); ?>
         <p class="field-hint">برای بازیگران الزامی است</p>
       </div>
     </div>

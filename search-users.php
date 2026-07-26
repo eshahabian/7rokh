@@ -51,7 +51,7 @@ casting_render_flash();
 
     <?php casting_render_member_search_gender_field($filters); ?>
 
-    <?php casting_render_body_metric_search_fields($filters, ['height', 'weight']); ?>
+    <?php casting_render_body_metric_search_fields($filters, ['age', 'height', 'weight']); ?>
 
     <?php casting_render_location_fields($filters['province'], $filters['city'], '', false, 'filter-activity-fields'); ?>
 

@@ -275,8 +275,13 @@ if ($error !== '') {
 
       <?php casting_render_jalali_birthday_fields($birthdate, true); ?>
       <div class="field">
-        <label for="age_display">سن (خودکار)</label>
-        <input id="age_display" type="text" readonly value="<?= $age_preview !== '' ? casting_e($age_preview) . ' سال' : '' ?>" data-age-output placeholder="بعد از انتخاب تاریخ پر می‌شود">
+        <label for="age_display">سن (خودکار از تاریخ تولد)</label>
+        <select id="age_display" data-age-output data-age-plus="<?= (int) casting_body_metric_plus_value('age') ?>" disabled aria-live="polite">
+          <option value="">بعد از انتخاب تاریخ پر می‌شود</option>
+          <?php foreach (casting_body_metric_options('age') as $opt) : ?>
+            <option value="<?= casting_e($opt['value']) ?>" <?= casting_body_metric_select_value('age', $age_preview) === $opt['value'] ? 'selected' : '' ?>><?= casting_e($opt['label']) ?></option>
+          <?php endforeach; ?>
+        </select>
       </div>
 
       <fieldset class="field">
@@ -316,11 +321,11 @@ if ($error !== '') {
       <div class="form-grid" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
         <div class="field">
           <label for="height">قد (سانتی‌متر)</label>
-          <input id="height" name="height" type="number" min="80" max="230" value="<?= casting_e($height) ?>">
+          <?php casting_render_body_metric_select('height', 'height', 'height', $height); ?>
         </div>
         <div class="field">
           <label for="weight">وزن (کیلوگرم)</label>
-          <input id="weight" name="weight" type="number" min="20" max="250" value="<?= casting_e($weight) ?>">
+          <?php casting_render_body_metric_select('weight', 'weight', 'weight', $weight); ?>
         </div>
       </div>
 

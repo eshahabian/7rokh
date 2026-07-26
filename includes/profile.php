@@ -17,6 +17,153 @@ function casting_gender_labels(): array
 }
 
 /**
+ * بازه‌های کرکره‌ای سن / قد / وزن (ثبت‌نام و جستجو)
+ *
+ * @return array<string, array{label:string,unit:string,min:int,max:int}>
+ */
+function casting_body_metric_defs(): array
+{
+    return [
+        'age' => [
+            'label' => 'سن',
+            'unit'  => 'سال',
+            'min'   => 3,
+            'max'   => 75,
+        ],
+        'height' => [
+            'label' => 'قد',
+            'unit'  => 'سانتی‌متر',
+            'min'   => 50,
+            'max'   => 200,
+        ],
+        'weight' => [
+            'label' => 'وزن',
+            'unit'  => 'کیلوگرم',
+            'min'   => 15,
+            'max'   => 150,
+        ],
+    ];
+}
+
+function casting_body_metric_plus_value(string $kind): int
+{
+    $defs = casting_body_metric_defs();
+    if (!isset($defs[$kind])) {
+        return 0;
+    }
+
+    return (int) $defs[$kind]['max'] + 1;
+}
+
+/**
+ * @return list<array{value:string,label:string}>
+ */
+function casting_body_metric_options(string $kind): array
+{
+    $defs = casting_body_metric_defs();
+    if (!isset($defs[$kind])) {
+        return [];
+    }
+    $def = $defs[$kind];
+    $out = [];
+    for ($i = (int) $def['min']; $i <= (int) $def['max']; $i++) {
+        $out[] = [
+            'value' => (string) $i,
+            'label' => (string) $i,
+        ];
+    }
+    $out[] = [
+        'value' => (string) casting_body_metric_plus_value($kind),
+        'label' => (string) $def['max'] . ' یا بالاتر',
+    ];
+
+    return $out;
+}
+
+function casting_body_metric_is_valid(string $kind, int $value): bool
+{
+    $defs = casting_body_metric_defs();
+    if (!isset($defs[$kind]) || $value <= 0) {
+        return false;
+    }
+    $min = (int) $defs[$kind]['min'];
+    $plus = casting_body_metric_plus_value($kind);
+
+    return $value >= $min && $value <= $plus;
+}
+
+/**
+ * مقدار ذخیره‌شده را به value کرکره نگاشت می‌کند (مقادیر بالاتر از سقف → «یا بالاتر»)
+ */
+function casting_body_metric_select_value(string $kind, string $stored): string
+{
+    $stored = trim($stored);
+    if ($stored === '' || !ctype_digit($stored)) {
+        return '';
+    }
+    $value = (int) $stored;
+    if (!casting_body_metric_is_valid($kind, $value) && $value > 0) {
+        $defs = casting_body_metric_defs();
+        if (isset($defs[$kind]) && $value > (int) $defs[$kind]['max']) {
+            return (string) casting_body_metric_plus_value($kind);
+        }
+
+        return '';
+    }
+
+    return $value > 0 ? (string) $value : '';
+}
+
+function casting_format_body_metric_value(string $kind, string $stored): string
+{
+    $defs = casting_body_metric_defs();
+    if (!isset($defs[$kind])) {
+        return '';
+    }
+    $stored = trim($stored);
+    if ($stored === '') {
+        return '';
+    }
+    $value = (int) $stored;
+    if ($value <= 0) {
+        return '';
+    }
+    $max = (int) $defs[$kind]['max'];
+    $unit = (string) $defs[$kind]['unit'];
+    if ($value > $max) {
+        return $max . ' یا بالاتر';
+    }
+
+    return $value . ' ' . $unit;
+}
+
+/**
+ * کرکره انتخاب مقدار سن / قد / وزن
+ */
+function casting_render_body_metric_select(
+    string $kind,
+    string $name,
+    string $id,
+    string $selected,
+    string $empty_label = 'انتخاب کنید',
+    bool $required = false
+): void {
+    $defs = casting_body_metric_defs();
+    if (!isset($defs[$kind])) {
+        return;
+    }
+    $selected = casting_body_metric_select_value($kind, $selected);
+    ?>
+    <select id="<?= casting_e($id) ?>" name="<?= casting_e($name) ?>"<?= $required ? ' required' : '' ?>>
+      <option value=""><?= casting_e($empty_label) ?></option>
+      <?php foreach (casting_body_metric_options($kind) as $opt) : ?>
+        <option value="<?= casting_e($opt['value']) ?>" <?= $selected === $opt['value'] ? 'selected' : '' ?>><?= casting_e($opt['label']) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <?php
+}
+
+/**
  * بازه‌های سنی فیلتر جستجوی کارفرما
  *
  * @return array<string, array{label:string,min:?int,max:?int}>
@@ -1825,8 +1972,8 @@ function casting_save_registration_profile(int $user_id, array $data): array
     if ($age === null) {
         return ['ok' => false, 'error' => 'تاریخ تولد معتبر نیست.'];
     }
-    if ($age < 5 || $age > 100) {
-        return ['ok' => false, 'error' => 'سن محاسبه‌شده باید بین ۵ تا ۱۰۰ باشد.'];
+    if ($age < 3 || $age > 120) {
+        return ['ok' => false, 'error' => 'سن محاسبه‌شده باید حداقل ۳ سال باشد.'];
     }
 
     $gender = sanitize_key((string) ($data['gender'] ?? ''));
@@ -1894,14 +2041,14 @@ function casting_save_registration_profile(int $user_id, array $data): array
     $weight = 0;
     if ($height_raw !== '') {
         $height = (int) $height_raw;
-        if ($height < 80 || $height > 230) {
-            return ['ok' => false, 'error' => 'قد باید بین ۸۰ تا ۲۳۰ سانتی‌متر باشد.'];
+        if (!casting_body_metric_is_valid('height', $height)) {
+            return ['ok' => false, 'error' => 'قد را از فهرست انتخاب کنید (۵۰ تا ۲۰۰ سانتی‌متر یا بالاتر).'];
         }
     }
     if ($weight_raw !== '') {
         $weight = (int) $weight_raw;
-        if ($weight < 20 || $weight > 250) {
-            return ['ok' => false, 'error' => 'وزن باید بین ۲۰ تا ۲۵۰ کیلوگرم باشد.'];
+        if (!casting_body_metric_is_valid('weight', $weight)) {
+            return ['ok' => false, 'error' => 'وزن را از فهرست انتخاب کنید (۱۵ تا ۱۵۰ کیلوگرم یا بالاتر).'];
         }
     }
 
@@ -1989,15 +2136,15 @@ function casting_save_profile(int $user_id, array $data): array
     $birthdate = sanitize_text_field((string) ($data['birthdate'] ?? ''));
     if ($birthdate !== '') {
         $age = casting_age_from_birthdate($birthdate);
-        if ($age === null || $age < 5 || $age > 100) {
+        if ($age === null || $age < 3 || $age > 120) {
             return ['ok' => false, 'error' => 'تاریخ تولد معتبر نیست.'];
         }
         update_user_meta($user_id, 'casting_birthdate', $birthdate);
         update_user_meta($user_id, 'casting_age', (string) $age);
     } else {
         $age = isset($data['age']) ? (int) $data['age'] : 0;
-        if ($age < 5 || $age > 100) {
-            return ['ok' => false, 'error' => 'سن باید بین ۵ تا ۱۰۰ باشد.'];
+        if (!casting_body_metric_is_valid('age', $age)) {
+            return ['ok' => false, 'error' => 'سن را از فهرست انتخاب کنید (۳ تا ۷۵ سال یا بالاتر).'];
         }
         update_user_meta($user_id, 'casting_age', (string) $age);
     }
@@ -2060,16 +2207,16 @@ function casting_save_profile(int $user_id, array $data): array
 
     if (isset($data['height']) && $data['height'] !== '') {
         $height = (int) $data['height'];
-        if ($height < 80 || $height > 230) {
-            return ['ok' => false, 'error' => 'قد باید بین ۸۰ تا ۲۳۰ سانتی‌متر باشد.'];
+        if (!casting_body_metric_is_valid('height', $height)) {
+            return ['ok' => false, 'error' => 'قد را از فهرست انتخاب کنید (۵۰ تا ۲۰۰ سانتی‌متر یا بالاتر).'];
         }
         update_user_meta($user_id, 'casting_height', (string) $height);
     }
 
     if (isset($data['weight']) && $data['weight'] !== '') {
         $weight = (int) $data['weight'];
-        if ($weight < 20 || $weight > 250) {
-            return ['ok' => false, 'error' => 'وزن باید بین ۲۰ تا ۲۵۰ کیلوگرم باشد.'];
+        if (!casting_body_metric_is_valid('weight', $weight)) {
+            return ['ok' => false, 'error' => 'وزن را از فهرست انتخاب کنید (۱۵ تا ۱۵۰ کیلوگرم یا بالاتر).'];
         }
         update_user_meta($user_id, 'casting_weight', (string) $weight);
     }
