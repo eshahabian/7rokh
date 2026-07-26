@@ -64,6 +64,25 @@
   } catch (err) {}
   applyTheme(storedTheme === "day" ? "day" : "night");
 
+  document.querySelectorAll("[data-password-toggle]").forEach((btn) => {
+    const wrap = btn.closest(".password-field");
+    const input = wrap?.querySelector("[data-password-input], input[type='password'], input[type='text']");
+    if (!input) return;
+    const iconShow = btn.querySelector(".password-toggle-icon--show");
+    const iconHide = btn.querySelector(".password-toggle-icon--hide");
+
+    btn.addEventListener("click", () => {
+      const showing = input.type === "text";
+      input.type = showing ? "password" : "text";
+      const nowShowing = !showing;
+      btn.setAttribute("aria-pressed", nowShowing ? "true" : "false");
+      btn.setAttribute("aria-label", nowShowing ? "مخفی کردن رمز عبور" : "نمایش رمز عبور");
+      btn.setAttribute("title", nowShowing ? "مخفی کردن رمز عبور" : "نمایش رمز عبور");
+      if (iconShow) iconShow.hidden = nowShowing;
+      if (iconHide) iconHide.hidden = !nowShowing;
+    });
+  });
+
   const forms = document.querySelectorAll("form[data-loading]");
   forms.forEach((form) => {
     form.addEventListener("submit", () => {

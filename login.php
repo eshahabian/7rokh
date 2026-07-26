@@ -63,7 +63,18 @@ casting_render_flash();
 
       <div class="field">
         <label for="password">رمز عبور</label>
-        <input id="password" name="password" type="password" required autocomplete="current-password">
+        <div class="password-field">
+          <input id="password" name="password" type="password" required autocomplete="current-password" data-password-input>
+          <button type="button" class="password-toggle" data-password-toggle aria-label="نمایش رمز عبور" title="نمایش رمز عبور" aria-pressed="false">
+            <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+              <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+              <circle fill="none" stroke="currentColor" stroke-width="1.8" cx="12" cy="12" r="3"/>
+            </svg>
+            <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" hidden>
+              <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.6 10.6A3 3 0 0 0 12 15a3 3 0 0 0 2.4-4.4M9.9 5.1A10.5 10.5 0 0 1 12 5c6.5 0 10 7 10 7a17.3 17.3 0 0 1-4.1 4.7M6.1 6.1A17.5 17.5 0 0 0 2 12s3.5 7 10 7a10.4 10.4 0 0 0 4.2-.9"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <p class="form-inline-link">

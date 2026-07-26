@@ -144,16 +144,7 @@ casting_render_flash();
             <li>
               <a class="chat-conv-item<?= $peer_id === (int) $conv['peer_id'] ? ' is-active' : '' ?><?= $conv_unread > 0 ? ' has-unread' : '' ?><?= !empty($conv['locked']) ? ' is-locked' : '' ?>" href="chat.php?with=<?= (int) $conv['peer_id'] ?>">
                 <?php casting_render_chat_avatar((int) $conv['peer_id'], (string) $conv['name'], $conv_unread > 0); ?>
-                <span class="chat-conv-body">
-                  <strong><?= casting_e($conv['name']) ?></strong>
-                  <?php if (casting_dm_peer_role_label((int) $conv['peer_id']) !== '') : ?>
-                  <span><?= casting_e(casting_dm_peer_role_label((int) $conv['peer_id'])) ?></span>
-                  <?php endif; ?>
-                  <em><?= casting_e(casting_chat_preview($conv['last_message'])) ?></em>
-                </span>
-                <?php if ($conv_unread > 0) : ?>
-                  <span class="chat-conv-badge" aria-hidden="true"><?= $conv_unread ?></span>
-                <?php endif; ?>
+                <strong class="chat-conv-name"><?= casting_e($conv['name']) ?></strong>
               </a>
             </li>
           <?php endforeach; ?>

@@ -860,6 +860,49 @@ fieldset.field legend {
   padding-left: 2.35rem;
 }
 
+.password-field {
+  position: relative;
+  display: block;
+}
+
+.field .password-field input {
+  width: 100%;
+  padding-left: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  left: 0.45rem;
+  transform: translateY(-50%);
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  color: var(--accent-strong);
+  background: rgba(212, 165, 116, 0.12);
+  outline: none;
+}
+
+.password-toggle[aria-pressed="true"] {
+  color: var(--accent-strong);
+}
+
+.password-toggle-icon {
+  display: block;
+}
+
 .role-grid {
   display: grid;
   gap: 0.65rem;
@@ -2169,7 +2212,7 @@ fieldset.field legend {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.65rem 0.75rem;
+  padding: 0.55rem 0.75rem;
   border: 1px solid transparent;
   border-radius: 10px;
   color: inherit;
@@ -2181,12 +2224,14 @@ fieldset.field legend {
   background: rgba(224, 122, 106, 0.08);
 }
 
-.chat-conv-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+.chat-conv-name {
   min-width: 0;
   flex: 1;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-conv-badge {
@@ -2237,24 +2282,8 @@ fieldset.field legend {
   background: var(--accent-dim);
 }
 
-.chat-conv-item strong {
-  font-size: 0.95rem;
-}
-
-.chat-conv-item span,
-.chat-conv-item em {
-  font-size: 0.8rem;
-  color: var(--ink-muted);
-  font-style: normal;
-}
-
-.chat-conv-item.has-unread strong {
+.chat-conv-item.has-unread .chat-conv-name {
   color: var(--ink);
-}
-
-.chat-conv-item.has-unread em {
-  color: var(--ink);
-  font-weight: 500;
 }
 
 .chat-conv-item:hover,
@@ -2364,7 +2393,7 @@ fieldset.field legend {
   background: rgba(212, 165, 116, 0.08);
 }
 
-.chat-conv-item.is-locked em {
+.chat-conv-item.is-locked .chat-conv-name {
   color: var(--accent);
 }
 
@@ -2374,11 +2403,11 @@ fieldset.field legend {
   border-radius: 12px;
   background: var(--bg-elevated);
   border: 1px solid var(--line);
-  align-self: flex-start;
+  align-self: flex-end; /* چپ در RTL = پیام دریافتی */
 }
 
 .chat-bubble.is-mine {
-  align-self: flex-end;
+  align-self: flex-start; /* راست در RTL = پیام ارسالی */
   background: var(--accent-dim);
   border-color: rgba(212, 165, 116, 0.35);
 }
