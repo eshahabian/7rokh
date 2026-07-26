@@ -1485,8 +1485,9 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
  */
 function casting_newest_members(int $limit = 30, int $exclude_id = 0): array
 {
+    $limit = max(1, min(60, $limit));
     $args = [
-        'number'     => $limit,
+        'number'     => max($limit * 3, 40),
         'orderby'    => 'registered',
         'order'      => 'DESC',
         'meta_query' => [
@@ -1503,7 +1504,22 @@ function casting_newest_members(int $limit = 30, int $exclude_id = 0): array
     }
     $query = new WP_User_Query($args);
     $users = $query->get_results();
-    return is_array($users) ? $users : [];
+    if (!is_array($users)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($users as $user) {
+        if (casting_user_is_premium((int) $user->ID)) {
+            continue;
+        }
+        $out[] = $user;
+        if (count($out) >= $limit) {
+            break;
+        }
+    }
+
+    return $out;
 }
 
 /**

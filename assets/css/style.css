@@ -4155,16 +4155,32 @@ a.panel-sidebar-title.is-active {
   display: block;
 }
 
+.admin-members-table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .admin-member-actions-inline {
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.35rem;
+  white-space: nowrap;
 }
 
 .admin-grant-premium-form {
-  display: inline;
+  display: inline-flex;
+  flex: 0 0 auto;
   margin: 0;
+}
+
+.admin-member-actions-inline .btn {
+  flex: 0 0 auto;
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
 
 .admin-members-table tr.is-selected td {
