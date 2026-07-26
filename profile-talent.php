@@ -5,4 +5,4 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/panel.php';
 
 $user = casting_require_casting_user();
-casting_redirect('panel.php#edit-profile');
+casting_redirect('edit-profile.php');

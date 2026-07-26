@@ -17,7 +17,7 @@ require_once __DIR__ . '/layout.php';
 function casting_panel_nav_items_desktop(): array
 {
     return [
-        ['key' => 'edit-profile', 'label' => 'ویرایش پروفایل من',        'href' => 'panel.php?edit=1#edit-profile'],
+        ['key' => 'edit-profile', 'label' => 'ویرایش پروفایل من',        'href' => 'edit-profile.php'],
         ['key' => 'messages',     'label' => 'پیام کاربران',             'href' => 'chat.php'],
         ['key' => 'my-requests',  'label' => 'دعوت‌های همکاری',          'href' => 'my-requests.php'],
         ['key' => 'briefs',       'label' => 'تکالیف',                   'href' => 'my-briefs.php'],
@@ -216,7 +216,7 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
             continue;
         }
         ?>
-          <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= $is_external ? ' target="_blank" rel="noopener"' : '' ?>>
+          <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= ($is_external || $item['key'] !== 'logout') ? ' target="_blank" rel="noopener"' : '' ?>>
             <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
             <?php if ($item['key'] === 'messages' && $unread_peers > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
@@ -425,7 +425,7 @@ function casting_render_panel_sidebar(string $active): void
         <p class="panel-sidebar-title panel-sidebar-title-admin">مدیریت</p>
         <nav class="panel-nav panel-nav-admin">
           <?php foreach ($admin_nav as $item) : ?>
-            <a class="panel-nav-link panel-nav-link-admin <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?>">
+            <a class="panel-nav-link panel-nav-link-admin <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?>" target="_blank" rel="noopener">
               <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
               <?php if ($item['key'] === 'admin-receipts' && $pending_receipts > 0) : ?>
                 <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>

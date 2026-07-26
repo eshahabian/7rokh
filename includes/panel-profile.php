@@ -540,7 +540,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
   <div class="panel-edit-body">
   <p class="lede">اطلاعات را کامل کنید.<?php if (casting_profile_shows_portraits($profile['activities'] ?? [], $user_id)) : ?> برای عکس‌ها به <a href="profile-photo.php">ویرایش تصویر</a> بروید.<?php endif; ?></p>
 
-  <form class="form" method="post" action="panel.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
+  <form class="form" method="post" action="edit-profile.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
     <?php wp_nonce_field('casting_profile'); ?>
 
     <div class="field">

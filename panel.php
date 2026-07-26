@@ -6,7 +6,6 @@ require_once __DIR__ . '/includes/profile.php';
 require_once __DIR__ . '/includes/request.php';
 require_once __DIR__ . '/includes/premium.php';
 require_once __DIR__ . '/includes/panel.php';
-require_once __DIR__ . '/includes/panel-profile.php';
 require_once __DIR__ . '/includes/visitors.php';
 require_once __DIR__ . '/includes/chat.php';
 require_once __DIR__ . '/includes/director-workspace.php';
@@ -16,23 +15,6 @@ $user_id = (int) $user->ID;
 $profile = casting_get_profile($user_id);
 $complete = casting_profile_complete($profile);
 $premium = casting_user_is_premium($user_id);
-$profile_error = '';
-$profile_success = '';
-$is_edit_mode = isset($_GET['edit']);
-
-$profile_post = casting_process_profile_post($user_id);
-if ($profile_post['error'] !== '') {
-    $profile_error = $profile_post['error'];
-    $is_edit_mode = true;
-}
-if ($profile_post['success'] !== '') {
-    $profile_success = $profile_post['success'];
-    $is_edit_mode = true;
-}
-if ($profile_post['profile'] !== null) {
-    $profile = $profile_post['profile'];
-    $complete = casting_profile_complete($profile);
-}
 
 $view_stats = casting_profile_view_stats($user_id);
 $unread_messages = casting_dm_unread_peer_count($user_id);
@@ -65,23 +47,11 @@ $promo_ads = [
     ],
 ];
 
-casting_render_panel_start('پنل کاربری', $is_edit_mode ? 'edit-profile' : 'panel');
+casting_render_panel_start('پنل کاربری', 'panel');
 if (isset($_GET['welcome'])) {
     echo '<div class="flash flash-success" role="alert">ثبت‌نام و ورود با موفقیت انجام شد.</div>';
 }
-if ($profile_error !== '') {
-    echo '<div class="flash flash-error" role="alert">' . casting_e($profile_error) . '</div>';
-}
-if ($profile_success !== '') {
-    echo '<div class="flash flash-success" role="alert">' . casting_e($profile_success) . '</div>';
-}
 casting_render_flash();
-
-if ($is_edit_mode) :
-    casting_panel_render_section($user_id, static function () use ($user_id, $profile): void {
-        casting_render_profile_edit_form($user_id, $profile, true);
-    }, 'ویرایش پروفایل');
-else :
 ?>
 <section class="panel-home" aria-label="داشبورد پنل">
   <section class="panel-promo-banner" aria-label="محل نمایش تبلیغات اعضای ویژه">
@@ -158,7 +128,5 @@ else :
   <?php endif; ?>
 </section>
 <?php
-endif;
-
 casting_render_panel_end();
 ?>
