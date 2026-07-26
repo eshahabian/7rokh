@@ -3149,12 +3149,24 @@ a.panel-sidebar-title.is-active {
   background:
     linear-gradient(160deg, rgba(212, 165, 116, 0.28), transparent 55%),
     linear-gradient(20deg, #1a2030, #2a3344);
+  background-size: cover;
+  background-position: center;
+}
+
+.panel-ad-card-media.has-photo {
+  background-color: #1a2030;
 }
 
 [data-theme="day"] .panel-ad-card-media {
   background:
     linear-gradient(160deg, rgba(154, 104, 40, 0.2), transparent 55%),
     linear-gradient(20deg, #d9d0c0, #b8ae9c);
+  background-size: cover;
+  background-position: center;
+}
+
+[data-theme="day"] .panel-ad-card-media.has-photo {
+  background-color: #d9d0c0;
 }
 
 .panel-ad-badge {

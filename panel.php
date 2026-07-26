@@ -23,29 +23,8 @@ if (casting_user_is_director_role($user_id)) {
     $favorites_count = count(casting_director_list_highlighted_talents($user_id));
 }
 
-/** @var list<array{title:string,desc:string,place:string}> $promo_ads */
-$promo_ads = [
-    [
-        'title' => 'خانه هنرمندان جوان',
-        'desc'  => 'فضای تمرین، کارگاه و معرفی استعدادهای نو',
-        'place' => 'تهران، میرداماد',
-    ],
-    [
-        'title' => 'دوبلاژ صداهای ماندگار',
-        'desc'  => 'استودیو صدا، گویندگی و دوبله حرفه‌ای',
-        'place' => 'تهران، جردن',
-    ],
-    [
-        'title' => 'آتلیه تصویر سینمایی',
-        'desc'  => 'عکاسی پرتره، کلوزآپ و بسته‌های ویژه بازیگری',
-        'place' => 'تهران، ونک',
-    ],
-    [
-        'title' => 'کارگاه بازیگری صحنه',
-        'desc'  => 'کلاس‌های فشرده بازی و آمادگی تست بازیگری',
-        'place' => 'اصفهان، چهارباغ',
-    ],
-];
+$premium_members = casting_home_premium_members(8, $user_id);
+$newest_members = casting_newest_members(8, $user_id);
 
 casting_render_panel_start('پنل کاربری', 'panel');
 if (isset($_GET['welcome'])) {
@@ -66,28 +45,37 @@ casting_render_flash();
     </div>
   </section>
 
-  <section class="panel-ads-section" aria-labelledby="panel-ads-title">
+  <section class="panel-ads-section" aria-labelledby="panel-premium-title">
     <header class="panel-ads-head">
-      <h2 id="panel-ads-title">تبلیغات اعضای ویژه</h2>
+      <h2 id="panel-premium-title">اعضای ویژه</h2>
     </header>
-    <div class="panel-ads-grid">
-      <?php foreach ($promo_ads as $ad) : ?>
-        <article class="panel-ad-card">
-          <div class="panel-ad-card-media">
-            <span class="panel-ad-badge">عضو ویژه</span>
-          </div>
-          <div class="panel-ad-card-body">
-            <h3><?= casting_e($ad['title']) ?></h3>
-            <p><?= casting_e($ad['desc']) ?></p>
-            <p class="panel-ad-place"><?= casting_e($ad['place']) ?></p>
-            <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('newest-users.php')) ?>">مشاهده پروفایل</a>
-          </div>
-        </article>
-      <?php endforeach; ?>
-    </div>
-    <div class="panel-ads-foot">
-      <a class="btn btn-ghost" href="<?= casting_e(casting_url('newest-users.php')) ?>">مشاهده همه تبلیغات</a>
-    </div>
+    <?php if ($premium_members === []) : ?>
+      <p class="empty-state">فعلاً عضو ویژه‌ای برای نمایش نیست.</p>
+    <?php else : ?>
+      <div class="panel-ads-grid">
+        <?php foreach ($premium_members as $member) : ?>
+          <?php casting_render_panel_home_member_tile($member, true); ?>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </section>
+
+  <section class="panel-ads-section" aria-labelledby="panel-newest-title">
+    <header class="panel-ads-head">
+      <h2 id="panel-newest-title">جدیدترین اعضا</h2>
+    </header>
+    <?php if ($newest_members === []) : ?>
+      <p class="empty-state">هنوز عضو جدیدی نیست.</p>
+    <?php else : ?>
+      <div class="panel-ads-grid">
+        <?php foreach ($newest_members as $member) : ?>
+          <?php casting_render_panel_home_member_tile($member, false); ?>
+        <?php endforeach; ?>
+      </div>
+      <div class="panel-ads-foot">
+        <a class="btn btn-ghost" href="<?= casting_e(casting_url('newest-users.php')) ?>">مشاهده همه اعضای جدید</a>
+      </div>
+    <?php endif; ?>
   </section>
 
   <section class="panel-stat-grid" aria-label="خلاصه وضعیت">

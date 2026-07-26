@@ -1506,6 +1506,87 @@ function casting_newest_members(int $limit = 30, int $exclude_id = 0): array
     return is_array($users) ? $users : [];
 }
 
+/**
+ * اعضای ویژه فعال برای داشبورد پنل
+ *
+ * @return array<int, WP_User>
+ */
+function casting_home_premium_members(int $limit = 8, int $exclude_id = 0): array
+{
+    $limit = max(1, min(24, $limit));
+    $args = [
+        'number'     => 80,
+        'orderby'    => 'registered',
+        'order'      => 'DESC',
+        'meta_key'   => 'casting_premium_until',
+        'meta_compare' => 'EXISTS',
+        'meta_query' => [
+            'relation' => 'AND',
+            [
+                'key'     => 'casting_role',
+                'compare' => 'EXISTS',
+            ],
+            casting_member_visible_meta_query(),
+        ],
+    ];
+    if ($exclude_id > 0) {
+        $args['exclude'] = [$exclude_id];
+    }
+    $query = new WP_User_Query($args);
+    $users = $query->get_results();
+    if (!is_array($users)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($users as $user) {
+        $id = (int) $user->ID;
+        if (!casting_user_is_premium($id)) {
+            continue;
+        }
+        $out[] = $user;
+        if (count($out) >= $limit) {
+            break;
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * کاشی عضو برای داشبورد پنل
+ */
+function casting_render_panel_home_member_tile(WP_User $member, bool $premium_badge = false): void
+{
+    $id = (int) $member->ID;
+    $profile = casting_get_profile($id);
+    $photo = (string) ($profile['photo_url'] ?? '');
+    if ($photo === '') {
+        $closeup = casting_load_portrait($id, 'closeup');
+        $photo = (string) ($closeup['url'] ?? '');
+    }
+    $city = trim((string) ($profile['city'] ?? ''));
+    $role_label = casting_user_public_role_label($id);
+    $href = casting_url('member.php?id=' . $id);
+    ?>
+    <article class="panel-ad-card">
+      <div class="panel-ad-card-media<?= $photo !== '' ? ' has-photo' : '' ?>"<?= $photo !== '' ? ' style="background-image:url(' . casting_e($photo) . ')"' : '' ?>>
+        <?php if ($premium_badge || casting_user_is_premium($id)) : ?>
+          <span class="panel-ad-badge">عضو ویژه</span>
+        <?php endif; ?>
+      </div>
+      <div class="panel-ad-card-body">
+        <h3><?= casting_e($member->display_name) ?></h3>
+        <p><?= casting_e($role_label) ?></p>
+        <?php if ($city !== '') : ?>
+          <p class="panel-ad-place"><?= casting_e($city) ?></p>
+        <?php endif; ?>
+        <a class="btn btn-ghost btn-sm" href="<?= casting_e($href) ?>">مشاهده پروفایل</a>
+      </div>
+    </article>
+    <?php
+}
+
 function casting_render_member_card(WP_User $member, int $viewer_id, ?array $director_flags = null, float $director_score = 0): void
 {
     $id = (int) $member->ID;
