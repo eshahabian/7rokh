@@ -3029,8 +3029,9 @@ a.panel-sidebar-title.is-active {
 .panel-promo-banner {
   position: relative;
   overflow: hidden;
-  min-height: 260px;
-  padding: 1.75rem 1.5rem 2.4rem;
+  min-height: calc(260px * 1.5);
+  aspect-ratio: 16 / 6.75;
+  padding: 2.4rem 1.75rem 2.8rem;
   border: 1px solid var(--line);
   border-radius: calc(var(--radius) + 4px);
   background: #12161e;
@@ -3140,8 +3141,8 @@ a.panel-sidebar-title.is-active {
 
 .panel-ads-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
-  gap: 0.95rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
 }
 
 .panel-ad-card {
@@ -3271,6 +3272,7 @@ a.panel-sidebar-title.is-active {
 }
 
 @media (max-width: 1100px) {
+  .panel-ads-grid,
   .panel-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3278,14 +3280,12 @@ a.panel-sidebar-title.is-active {
 
 @media (max-width: 640px) {
   .panel-promo-banner {
-    min-height: 220px;
-    padding: 1.35rem 1.1rem 2.1rem;
+    min-height: calc(200px * 1.5);
+    aspect-ratio: auto;
+    padding: 1.5rem 1.1rem 2.3rem;
   }
 
-  .panel-ads-grid {
-    grid-template-columns: 1fr;
-  }
-
+  .panel-ads-grid,
   .panel-stat-grid {
     grid-template-columns: 1fr;
   }
