@@ -3029,25 +3029,53 @@ a.panel-sidebar-title.is-active {
 .panel-promo-banner {
   position: relative;
   overflow: hidden;
-  min-height: 220px;
-  padding: 1.75rem 1.5rem 2.25rem;
+  min-height: 260px;
+  padding: 1.75rem 1.5rem 2.4rem;
   border: 1px solid var(--line);
   border-radius: calc(var(--radius) + 4px);
-  background:
-    radial-gradient(ellipse 70% 90% at 12% 80%, rgba(212, 165, 116, 0.22) 0%, transparent 55%),
-    linear-gradient(120deg, #161b24 0%, #1e2533 45%, #12161e 100%);
+  background: #12161e;
   color: #f3eee4;
 }
 
-[data-theme="day"] .panel-promo-banner {
+.panel-promo-slides {
+  position: absolute;
+  inset: 0;
+}
+
+.panel-promo-slide {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 0.7s var(--ease);
+}
+
+.panel-promo-slide.is-active {
+  opacity: 1;
+  z-index: 1;
+}
+
+.panel-promo-slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.panel-promo-slides::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   background:
-    radial-gradient(ellipse 70% 90% at 12% 80%, rgba(154, 104, 40, 0.18) 0%, transparent 55%),
-    linear-gradient(120deg, #2a3344 0%, #3a4558 45%, #242b38 100%);
+    linear-gradient(90deg, rgba(8, 10, 14, 0.82) 0%, rgba(8, 10, 14, 0.45) 48%, rgba(8, 10, 14, 0.2) 100%),
+    linear-gradient(180deg, transparent 40%, rgba(8, 10, 14, 0.55) 100%);
+  pointer-events: none;
 }
 
 .panel-promo-banner-copy {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   max-width: 28rem;
 }
 
@@ -3057,55 +3085,38 @@ a.panel-sidebar-title.is-active {
   font-size: clamp(1.35rem, 2.6vw, 1.85rem);
   line-height: 1.35;
   color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
 }
 
 .panel-promo-banner-copy p {
-  margin: 0 0 1.1rem;
-  color: rgba(243, 238, 228, 0.82);
+  margin: 0;
+  color: rgba(243, 238, 228, 0.9);
   font-size: 0.95rem;
   line-height: 1.6;
-}
-
-.panel-promo-banner-cta {
-  border-color: rgba(243, 238, 228, 0.35);
-  color: #fff;
-}
-
-.panel-promo-banner-cta:hover {
-  border-color: var(--accent-strong);
-  color: var(--accent-strong);
-}
-
-.panel-promo-banner-art {
-  position: absolute;
-  inset-inline-start: -4%;
-  bottom: -18%;
-  width: min(46%, 280px);
-  height: 140%;
-  background:
-    radial-gradient(circle at 40% 40%, rgba(232, 184, 122, 0.35) 0%, transparent 42%),
-    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.08) 0%, transparent 48%);
-  opacity: 0.9;
-  pointer-events: none;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
 }
 
 .panel-promo-dots {
   position: absolute;
   left: 50%;
   bottom: 0.85rem;
+  z-index: 4;
   display: flex;
   gap: 0.35rem;
   transform: translateX(-50%);
 }
 
-.panel-promo-dots span {
+.panel-promo-dots button {
   width: 0.45rem;
   height: 0.45rem;
+  padding: 0;
+  border: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
 }
 
-.panel-promo-dots span.is-active {
+.panel-promo-dots button.is-active {
   width: 1.1rem;
   background: var(--accent-strong);
 }
@@ -3129,8 +3140,8 @@ a.panel-sidebar-title.is-active {
 
 .panel-ads-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+  gap: 0.95rem;
 }
 
 .panel-ad-card {
@@ -3260,7 +3271,6 @@ a.panel-sidebar-title.is-active {
 }
 
 @media (max-width: 1100px) {
-  .panel-ads-grid,
   .panel-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3268,15 +3278,14 @@ a.panel-sidebar-title.is-active {
 
 @media (max-width: 640px) {
   .panel-promo-banner {
-    min-height: 200px;
+    min-height: 220px;
     padding: 1.35rem 1.1rem 2.1rem;
   }
 
-  .panel-promo-banner-art {
-    opacity: 0.45;
+  .panel-ads-grid {
+    grid-template-columns: 1fr;
   }
 
-  .panel-ads-grid,
   .panel-stat-grid {
     grid-template-columns: 1fr;
   }

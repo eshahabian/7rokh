@@ -33,15 +33,35 @@ if (isset($_GET['welcome'])) {
 casting_render_flash();
 ?>
 <section class="panel-home" aria-label="داشبورد پنل">
-  <section class="panel-promo-banner" aria-label="محل نمایش تبلیغات اعضای ویژه">
+  <?php
+  $promo_slides = [
+      ['src' => casting_asset('images/promo-slide-1.png'), 'alt' => 'صحنه فیلم‌برداری و صندلی کارگردان'],
+      ['src' => casting_asset('images/promo-slide-2.png'), 'alt' => 'دوربین سینمایی و تجهیزات تولید'],
+      ['src' => casting_asset('images/promo-slide-3.png'), 'alt' => 'سالن سینما و پرده نمایش'],
+  ];
+  ?>
+  <section class="panel-promo-banner" aria-label="محل نمایش تبلیغات اعضای ویژه" data-promo-slider>
+    <div class="panel-promo-slides">
+      <?php foreach ($promo_slides as $i => $slide) : ?>
+        <figure class="panel-promo-slide<?= $i === 0 ? ' is-active' : '' ?>">
+          <img src="<?= casting_e($slide['src']) ?>" alt="<?= casting_e($slide['alt']) ?>" width="1280" height="720" decoding="<?= $i === 0 ? 'sync' : 'async' ?>">
+        </figure>
+      <?php endforeach; ?>
+    </div>
     <div class="panel-promo-banner-copy">
       <h1>محل نمایش تبلیغات اعضای ویژه</h1>
       <p>اینجا بهترین مکان برای دیده شدن استعداد شماست</p>
-      <a class="btn btn-ghost panel-promo-banner-cta" href="<?= casting_e(casting_url('premium.php')) ?>">جزئیات بیشتر</a>
     </div>
-    <div class="panel-promo-banner-art" aria-hidden="true"></div>
-    <div class="panel-promo-dots" aria-hidden="true">
-      <span class="is-active"></span><span></span><span></span>
+    <div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدهای تبلیغات">
+      <?php foreach ($promo_slides as $i => $slide) : ?>
+        <button
+          type="button"
+          class="<?= $i === 0 ? 'is-active' : '' ?>"
+          aria-label="اسلاید <?= (int) ($i + 1) ?>"
+          aria-selected="<?= $i === 0 ? 'true' : 'false' ?>"
+          data-promo-dot="<?= (int) $i ?>"
+        ></button>
+      <?php endforeach; ?>
     </div>
   </section>
 

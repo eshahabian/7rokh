@@ -1301,4 +1301,43 @@
       mobileMenuQuery.addListener(onViewportChange);
     }
   }
+
+  const promoSlider = document.querySelector("[data-promo-slider]");
+  if (promoSlider) {
+    const slides = Array.from(promoSlider.querySelectorAll(".panel-promo-slide"));
+    const dots = Array.from(promoSlider.querySelectorAll("[data-promo-dot]"));
+    let index = Math.max(0, slides.findIndex((slide) => slide.classList.contains("is-active")));
+    if (index < 0) index = 0;
+    let timer = null;
+
+    const showSlide = (next) => {
+      if (!slides.length) return;
+      index = ((next % slides.length) + slides.length) % slides.length;
+      slides.forEach((slide, i) => {
+        slide.classList.toggle("is-active", i === index);
+      });
+      dots.forEach((dot, i) => {
+        const active = i === index;
+        dot.classList.toggle("is-active", active);
+        dot.setAttribute("aria-selected", active ? "true" : "false");
+      });
+    };
+
+    const startTimer = () => {
+      window.clearInterval(timer);
+      if (slides.length < 2) return;
+      timer = window.setInterval(() => showSlide(index + 1), 5000);
+    };
+
+    dots.forEach((dot) => {
+      dot.addEventListener("click", () => {
+        const next = Number(dot.getAttribute("data-promo-dot") || "0");
+        showSlide(next);
+        startTimer();
+      });
+    });
+
+    showSlide(index);
+    startTimer();
+  }
 })();
