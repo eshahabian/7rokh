@@ -23,8 +23,8 @@ if (casting_user_is_director_role($user_id)) {
     $favorites_count = count(casting_director_list_highlighted_talents($user_id));
 }
 
-$premium_members = casting_home_premium_members(8, $user_id);
-$newest_members = casting_newest_members(8, $user_id);
+$premium_members = casting_home_premium_members(24, $user_id);
+$newest_members = casting_newest_members(24, $user_id);
 
 casting_render_panel_start('پنل کاربری', 'panel');
 if (isset($_GET['welcome'])) {
@@ -72,11 +72,7 @@ casting_render_flash();
     <?php if ($premium_members === []) : ?>
       <p class="empty-state">فعلاً عضو ویژه‌ای برای نمایش نیست.</p>
     <?php else : ?>
-      <div class="panel-ads-grid">
-        <?php foreach ($premium_members as $member) : ?>
-          <?php casting_render_panel_home_member_tile($member, true); ?>
-        <?php endforeach; ?>
-      </div>
+      <?php casting_render_panel_home_member_row($premium_members, true, 'panel-premium-more'); ?>
     <?php endif; ?>
   </section>
 
@@ -87,14 +83,7 @@ casting_render_flash();
     <?php if ($newest_members === []) : ?>
       <p class="empty-state">هنوز عضو جدیدی نیست.</p>
     <?php else : ?>
-      <div class="panel-ads-grid">
-        <?php foreach ($newest_members as $member) : ?>
-          <?php casting_render_panel_home_member_tile($member, false); ?>
-        <?php endforeach; ?>
-      </div>
-      <div class="panel-ads-foot">
-        <a class="btn btn-ghost" href="<?= casting_e(casting_url('newest-users.php')) ?>">مشاهده همه اعضای جدید</a>
-      </div>
+      <?php casting_render_panel_home_member_row($newest_members, false, 'panel-newest-more'); ?>
     <?php endif; ?>
   </section>
 

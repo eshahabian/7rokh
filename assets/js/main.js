@@ -1340,4 +1340,15 @@
     showSlide(index);
     startTimer();
   }
+
+  document.querySelectorAll("[data-show-more]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-show-more") || "";
+      const more = targetId !== "" ? document.getElementById(targetId) : null;
+      if (!more) return;
+      more.hidden = false;
+      const foot = btn.closest(".panel-ads-foot");
+      if (foot) foot.hidden = true;
+    });
+  });
 })();

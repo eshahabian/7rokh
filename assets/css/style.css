@@ -3224,6 +3224,28 @@ a.panel-sidebar-title.is-active {
 .panel-ads-foot {
   display: flex;
   justify-content: center;
+  margin-top: 0.35rem;
+}
+
+.panel-ads-more-link {
+  border: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.panel-ads-more-link:hover {
+  color: var(--accent);
+}
+
+.panel-ads-grid-more {
+  margin-top: 0.85rem;
 }
 
 .panel-stat-grid {

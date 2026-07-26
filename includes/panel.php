@@ -1587,6 +1587,38 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
     <?php
 }
 
+/**
+ * یک ردیف اعضا + لینک «بیشتر» برای نمایش بقیه
+ *
+ * @param array<int, WP_User> $members
+ */
+function casting_render_panel_home_member_row(array $members, bool $premium_badge, string $more_id, int $row_size = 4): void
+{
+    if ($members === []) {
+        return;
+    }
+    $row_size = max(1, $row_size);
+    $first = array_slice($members, 0, $row_size);
+    $rest = array_slice($members, $row_size);
+    ?>
+    <div class="panel-ads-grid">
+      <?php foreach ($first as $member) : ?>
+        <?php casting_render_panel_home_member_tile($member, $premium_badge); ?>
+      <?php endforeach; ?>
+    </div>
+    <?php if ($rest !== []) : ?>
+      <div class="panel-ads-grid panel-ads-grid-more" id="<?= casting_e($more_id) ?>" hidden>
+        <?php foreach ($rest as $member) : ?>
+          <?php casting_render_panel_home_member_tile($member, $premium_badge); ?>
+        <?php endforeach; ?>
+      </div>
+      <div class="panel-ads-foot">
+        <button type="button" class="panel-ads-more-link" data-show-more="<?= casting_e($more_id) ?>">بیشتر</button>
+      </div>
+    <?php endif; ?>
+    <?php
+}
+
 function casting_render_member_card(WP_User $member, int $viewer_id, ?array $director_flags = null, float $director_score = 0): void
 {
     $id = (int) $member->ID;
