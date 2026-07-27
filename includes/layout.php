@@ -88,7 +88,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <?php endif; ?>
     </div>
     <nav class="nav" aria-label="منوی اصلی">
-      <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت 7 رخ</a>
+      <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت ۷ رخ</a>
       <?php if ($role !== '') : ?>
         <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <a href="panel.php" class="<?= $active === 'panel' ? 'is-active' : '' ?>">پنل کاربری</a>

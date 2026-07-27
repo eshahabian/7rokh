@@ -132,7 +132,7 @@ function casting_login(string $login, string $password, string $portal = ''): ar
 
     $role = casting_get_user_role((int) $user->ID);
     if ($role === '') {
-        return ['ok' => false, 'error' => 'این حساب برای پورتال 7 رخ ثبت نشده است.'];
+        return ['ok' => false, 'error' => 'این حساب برای پورتال ۷ رخ ثبت نشده است.'];
     }
 
     $portal = sanitize_key($portal);
@@ -174,7 +174,7 @@ function casting_request_password_reset(string $login): array
     }
 
     // پیام یکسان برای جلوگیری از افشای وجود حساب
-    $generic = 'اگر حسابی با این مشخصات در 7 رخ باشد، لینک بازیابی رمز به ایمیل آن ارسال می‌شود.';
+    $generic = 'اگر حسابی با این مشخصات در ۷ رخ باشد، لینک بازیابی رمز به ایمیل آن ارسال می‌شود.';
 
     if (!$user || casting_get_user_role((int) $user->ID) === '') {
         return ['ok' => true, 'error' => '', 'message' => $generic];
@@ -252,7 +252,7 @@ function casting_reset_password_with_key(string $login, string $key, string $pas
     }
 
     if (casting_get_user_role((int) $user->ID) === '') {
-        return ['ok' => false, 'error' => 'این حساب برای پورتال 7 رخ ثبت نشده است.'];
+        return ['ok' => false, 'error' => 'این حساب برای پورتال ۷ رخ ثبت نشده است.'];
     }
 
     reset_password($user, $password);

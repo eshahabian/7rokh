@@ -63,7 +63,7 @@ if ($current) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($current && casting_get_user_role((int) $current->ID) === '') {
-        $error = 'با یک حساب وردپرس وارد هستید که نقش 7 رخ ندارد. اول خارج شوید، بعد ثبت‌نام کنید.';
+        $error = 'با یک حساب وردپرس وارد هستید که نقش ۷ رخ ندارد. اول خارج شوید، بعد ثبت‌نام کنید.';
     }
 }
 
@@ -215,7 +215,7 @@ casting_render_head('ثبت‌نام', 'page-register');
 casting_render_header('register');
 
 if ($current && casting_get_user_role((int) $current->ID) === '') {
-    echo '<div class="flash flash-error" role="alert">شما با یک حساب وردپرس وارد هستید که نقش 7 رخ ندارد. اول خارج شوید، بعد اینجا ثبت‌نام کنید. <a href="' . casting_e(wp_logout_url(casting_url('register.php'))) . '">خروج</a></div>';
+    echo '<div class="flash flash-error" role="alert">شما با یک حساب وردپرس وارد هستید که نقش ۷ رخ ندارد. اول خارج شوید، بعد اینجا ثبت‌نام کنید. <a href="' . casting_e(wp_logout_url(casting_url('register.php'))) . '">خروج</a></div>';
 }
 
 if ($error !== '') {

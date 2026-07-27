@@ -10,7 +10,7 @@ function casting_contact_channel_labels(): array
 {
     return [
         'site_admin'  => 'مدیر سایت',
-        'brand_admin' => 'مدیر 7 رخ',
+        'brand_admin' => 'مدیر ۷ رخ',
     ];
 }
 

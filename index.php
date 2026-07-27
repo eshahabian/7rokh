@@ -20,7 +20,7 @@ casting_render_header('home');
 ?>
 <main class="wrap hero">
   <div class="hero-copy">
-    <p class="hero-lead">7 رخ - پرتابل ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
+    <p class="hero-lead">۷ رخ - پرتابل ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
     <div class="cta-row hero-cta">
       <a class="btn btn-primary" href="register.php">عضویت</a>
       <a class="btn btn-primary" href="login.php">ورود</a>

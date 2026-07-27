@@ -1,5 +1,5 @@
 {
-  "name": "7 رخ — ثبت‌نام → تلگرام",
+  "name": "۷ رخ — ثبت‌نام → تلگرام",
   "nodes": [
     {
       "parameters": {
@@ -31,7 +31,7 @@
       "credentials": {
         "telegramApi": {
           "id": "TELEGRAM_CREDENTIAL_ID",
-          "name": "7 رخ Bot"
+          "name": "۷ رخ Bot"
         }
       }
     }
