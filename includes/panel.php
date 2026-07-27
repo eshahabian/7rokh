@@ -194,7 +194,7 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
         if ($item['key'] === 'search' && !$can_member_search) {
             ?>
           <span class="panel-nav-link is-disabled" aria-disabled="true" title="برای دسترسی به جستجو، کارگردان باشید یا اشتراک ویژه فعال کنید">
-            <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
+            <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
           </span>
             <?php
             continue;
@@ -221,7 +221,7 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
         }
         ?>
           <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= ($is_external || $item['key'] !== 'logout') ? ' target="_blank" rel="noopener"' : '' ?>>
-            <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
+            <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
             <?php if ($item['key'] === 'messages' && $unread_peers > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
             <?php elseif ($item['key'] === 'panel' && $panel_premium_until !== null && $user) : ?>
@@ -430,7 +430,7 @@ function casting_render_panel_sidebar(string $active): void
         <nav class="panel-nav panel-nav-admin">
           <?php foreach ($admin_nav as $item) : ?>
             <a class="panel-nav-link panel-nav-link-admin <?= $active === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($item['href']) ?>" target="_blank" rel="noopener">
-              <span class="panel-nav-label"><?= casting_e($item['label']) ?></span>
+              <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
               <?php if ($item['key'] === 'admin-receipts' && $pending_receipts > 0) : ?>
                 <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
               <?php endif; ?>

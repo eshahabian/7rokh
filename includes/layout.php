@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=95">
+  <link rel="stylesheet" href="<?= $css ?>?v=96">
   <script>
     (function () {
       try {
@@ -76,19 +76,18 @@ function casting_render_panel_menu_toggle(int $badge = 0): void
 
 function casting_render_header(?string $active = null, bool $panel_menu = false, int $panel_menu_badge = 0): void
 {
-    $brand = casting_e(casting_brand());
     $user = casting_current_user();
     $role = $user ? casting_get_user_role((int) $user->ID) : '';
     ?>
   <header class="site-header<?= $panel_menu ? ' site-header--panel' : '' ?>">
     <div class="site-header-bar">
-      <a class="brand" href="index.php"><?= $brand ?></a>
       <?php if ($panel_menu) : ?>
         <?php casting_render_panel_menu_toggle($panel_menu_badge); ?>
       <?php endif; ?>
+      <a class="brand" href="index.php"><?= casting_brand_html() ?></a>
     </div>
     <nav class="nav" aria-label="منوی اصلی">
-      <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت ۷ رخ</a>
+      <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت <?= casting_brand_html() ?></a>
       <?php if ($role !== '') : ?>
         <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <a href="panel.php" class="<?= $active === 'panel' ? 'is-active' : '' ?>">پنل کاربری</a>
@@ -115,7 +114,7 @@ function casting_render_flash(): void
     }
     $type = $flash['type'] === 'success' ? 'success' : 'error';
     ?>
-  <div class="flash flash-<?= casting_e($type) ?>" role="alert"><?= casting_e($flash['message']) ?></div>
+  <div class="flash flash-<?= casting_e($type) ?>" role="alert"><?= casting_brandify($flash['message']) ?></div>
 <?php
 }
 
@@ -123,13 +122,13 @@ function casting_render_footer(): void
 {
     ?>
   <footer class="site-footer">
-    <p><?= casting_e(casting_brand()) ?> — پورتال استعداد و بازیگری</p>
+    <p><?= casting_brand_html() ?> — پورتال استعداد و بازیگری</p>
   </footer>
   <button type="button" class="scroll-top" data-scroll-top aria-label="بازگشت به بالای صفحه">
     <span aria-hidden="true">↑</span>
   </button>
   <?php casting_render_pwa_bootstrap(); ?>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=68" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=69" defer></script>
 </body>
 </html>
 <?php

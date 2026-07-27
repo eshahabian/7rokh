@@ -75,6 +75,25 @@ function casting_brand(): string
     return CASTING_BRAND;
 }
 
+/**
+ * نمایش رنگی برند: ۷ سفید، رخ زرد
+ */
+function casting_brand_html(): string
+{
+    return '<span class="brand-mark"><span class="brand-mark-7">۷</span> <span class="brand-mark-rokh">رخ</span></span>';
+}
+
+/**
+ * جایگزینی امن «۷ رخ» با نسخه رنگی داخل متن HTML-escaped
+ */
+function casting_brandify(string $text): string
+{
+    $safe = casting_e($text);
+    $mark = casting_brand_html();
+
+    return str_replace(['۷ رخ', '7 رخ'], $mark, $safe);
+}
+
 function casting_role_label(string $role): string
 {
     return CASTING_ROLES[$role] ?? $role;

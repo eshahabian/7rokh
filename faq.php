@@ -24,7 +24,7 @@ casting_render_flash();
 <?php if (!$logged_in) : ?><main class="wrap panel-page"><?php endif; ?>
   <section class="<?= $logged_in ? 'dash-card panel-wide faq-page' : 'panel panel-wide faq-page' ?>">
     <h1>سوالات متداول (FAQ)</h1>
-    <p class="lede">پاسخ پرسش‌های رایج درباره <?= casting_e(casting_brand()) ?>.</p>
+    <p class="lede">پاسخ پرسش‌های رایج درباره <?= casting_brand_html() ?>.</p>
     <?php casting_render_faq_accordion(); ?>
   </section>
 <?php if ($logged_in) : ?>

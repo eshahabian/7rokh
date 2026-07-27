@@ -215,7 +215,7 @@ casting_render_head('ثبت‌نام', 'page-register');
 casting_render_header('register');
 
 if ($current && casting_get_user_role((int) $current->ID) === '') {
-    echo '<div class="flash flash-error" role="alert">شما با یک حساب وردپرس وارد هستید که نقش ۷ رخ ندارد. اول خارج شوید، بعد اینجا ثبت‌نام کنید. <a href="' . casting_e(wp_logout_url(casting_url('register.php'))) . '">خروج</a></div>';
+    echo '<div class="flash flash-error" role="alert">' . casting_brandify('شما با یک حساب وردپرس وارد هستید که نقش ۷ رخ ندارد. اول خارج شوید، بعد اینجا ثبت‌نام کنید.') . ' <a href="' . casting_e(wp_logout_url(casting_url('register.php'))) . '">خروج</a></div>';
 }
 
 if ($error !== '') {
@@ -418,7 +418,7 @@ if ($error !== '') {
 </main>
 <div class="rules-lightbox" data-rules-lightbox aria-hidden="true">
   <div class="rules-lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="rules-lightbox-title">
-    <h2 class="rules-lightbox-title" id="rules-lightbox-title">قوانین <?= casting_e(casting_brand()) ?></h2>
+    <h2 class="rules-lightbox-title" id="rules-lightbox-title">قوانین <?= casting_brand_html() ?></h2>
     <p class="meta">با عضویت و استفاده از پورتال، این قوانین را می‌پذیرید.</p>
     <?php casting_render_rules_list(); ?>
   </div>

@@ -83,11 +83,11 @@ function casting_render_faq_accordion(): void
     <?php foreach ($items as $i => $item) : ?>
       <details class="faq-item">
         <summary class="faq-question">
-          <span class="faq-question-text"><?= casting_e($item['question']) ?></span>
+          <span class="faq-question-text"><?= casting_brandify($item['question']) ?></span>
           <span class="faq-icon" aria-hidden="true"></span>
         </summary>
         <div class="faq-answer">
-          <p><?= casting_e($item['answer']) ?></p>
+          <p><?= casting_brandify($item['answer']) ?></p>
         </div>
       </details>
     <?php endforeach; ?>

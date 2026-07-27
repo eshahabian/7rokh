@@ -270,7 +270,43 @@ a:hover {
 }
 
 .brand:hover {
-  color: var(--accent);
+  color: inherit;
+}
+
+.brand-mark {
+  display: inline;
+  white-space: nowrap;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+}
+
+.brand-mark-7 {
+  color: #ffffff;
+  font: inherit;
+  font-weight: inherit;
+}
+
+.brand-mark-rokh {
+  color: #f5c542;
+  font: inherit;
+  font-weight: inherit;
+}
+
+html[data-theme="day"] .brand-mark-7 {
+  color: #111827;
+}
+
+html[data-theme="day"] .brand-mark-rokh {
+  color: #c99212;
+}
+
+.brand:hover .brand-mark-rokh {
+  color: var(--accent-strong);
+}
+
+html[data-theme="day"] .brand:hover .brand-mark-rokh {
+  color: #a67a0a;
 }
 
 .nav {

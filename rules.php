@@ -22,7 +22,7 @@ casting_render_flash();
 ?>
 <?php if (!$logged_in) : ?><main class="wrap panel-page"><?php endif; ?>
   <section class="<?= $logged_in ? 'dash-card panel-wide rules-page' : 'panel panel-wide rules-page' ?>">
-    <h1>قوانین <?= casting_e(casting_brand()) ?></h1>
+    <h1>قوانین <?= casting_brand_html() ?></h1>
     <p class="lede">با عضویت و استفاده از پورتال، این قوانین را می‌پذیرید.</p>
     <?php casting_render_rules_list(); ?>
   </section>

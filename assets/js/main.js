@@ -64,6 +64,42 @@
   } catch (err) {}
   applyTheme(storedTheme === "day" ? "day" : "night");
 
+  const brandifyTextNodes = (root) => {
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const value = node.nodeValue || "";
+        if (!/۷\s*رخ|7\s*رخ/.test(value)) return NodeFilter.FILTER_REJECT;
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        if (parent.closest("script, style, textarea, code, pre, .brand-mark, [contenteditable]")) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((textNode) => {
+      const value = textNode.nodeValue || "";
+      const parts = value.split(/(۷\s*رخ|7\s*رخ)/g);
+      if (parts.length < 2) return;
+      const frag = document.createDocumentFragment();
+      parts.forEach((part) => {
+        if (/^(۷\s*رخ|7\s*رخ)$/.test(part)) {
+          const mark = document.createElement("span");
+          mark.className = "brand-mark";
+          mark.innerHTML = '<span class="brand-mark-7">۷</span> <span class="brand-mark-rokh">رخ</span>';
+          frag.appendChild(mark);
+        } else if (part) {
+          frag.appendChild(document.createTextNode(part));
+        }
+      });
+      textNode.parentNode?.replaceChild(frag, textNode);
+    });
+  };
+  brandifyTextNodes(document.body);
+
   document.querySelectorAll("[data-password-toggle]").forEach((btn) => {
     const wrap = btn.closest(".password-field");
     const input = wrap?.querySelector("[data-password-input], input[type='password'], input[type='text']");

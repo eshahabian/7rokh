@@ -102,7 +102,7 @@ casting_render_flash();
 <?php if (!$logged_in) : ?><main class="wrap panel-page"><?php endif; ?>
   <section class="<?= $logged_in ? 'dash-card panel-wide' : 'panel panel-wide' ?>">
     <h1>تماس با ما</h1>
-    <p class="lede">برای پشتیبانی، پیشنهاد یا سوال درباره پورتال <?= casting_e(casting_brand()) ?> پیام بگذارید. نیازی به ورود نیست.</p>
+    <p class="lede">برای پشتیبانی، پیشنهاد یا سوال درباره پورتال <?= casting_brand_html() ?> پیام بگذارید. نیازی به ورود نیست.</p>
 
     <?php if ($recipient_channels !== []) : ?>
       <?php foreach ($recipient_channels as $recipient_channel) :
@@ -111,7 +111,7 @@ casting_render_flash();
           ?>
         <div class="contact-inbox-block">
           <h2 class="panel-section-title">
-            پیام‌های دریافتی — <?= casting_e($channels[$recipient_channel]) ?>
+            پیام‌های دریافتی — <?= casting_brandify($channels[$recipient_channel]) ?>
             <?php if ($unread > 0) : ?><span class="chip chip-active"><?= (int) $unread ?> جدید</span><?php endif; ?>
           </h2>
           <?php if ($rows === []) : ?>
