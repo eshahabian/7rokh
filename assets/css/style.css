@@ -46,6 +46,7 @@
   --radius: 14px;
   --font: "Vazirmatn", "Segoe UI", Tahoma, system-ui, sans-serif;
   --display: "Playfair Display", "Vazirmatn", serif;
+  --brand-mark: "Lalezar", "Vazirmatn", Tahoma, sans-serif;
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a39a8c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -273,26 +274,33 @@ a:hover {
   color: inherit;
 }
 
-/* فقط خودِ «۷ رخ»: ۷ سفید، رخ زرد — بقیه جمله دست‌نخورده */
+/* فقط خودِ «۷ رخ»: فونت متمایز + بولد، ۷ سفید، رخ زرد */
 .brand-mark {
   display: inline;
   white-space: nowrap;
-  font: inherit;
+  font-family: var(--brand-mark);
+  font-weight: 700;
+  font-style: normal;
+  font-size: 1.12em;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: inherit;
+  vertical-align: baseline;
+}
+
+.brand-mark-7,
+.brand-mark-rokh {
+  font-family: inherit;
   font-weight: inherit;
   letter-spacing: inherit;
-  color: inherit;
 }
 
 .brand-mark-7 {
   color: #ffffff !important;
-  font: inherit;
-  font-weight: inherit;
 }
 
 .brand-mark-rokh {
   color: #f5c542 !important;
-  font: inherit;
-  font-weight: inherit;
 }
 
 html[data-theme="day"] .brand-mark-7 {
@@ -301,6 +309,20 @@ html[data-theme="day"] .brand-mark-7 {
 
 html[data-theme="day"] .brand-mark-rokh {
   color: #c99212 !important;
+}
+
+/* در منوها کمی درشت‌تر تا بیشتر به چشم بیاید */
+.nav .brand-mark,
+.panel-nav-link .brand-mark,
+.panel-nav-label .brand-mark {
+  font-size: 1.22em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.brand .brand-mark {
+  font-size: 1em;
+  font-weight: 700;
 }
 
 .nav {
