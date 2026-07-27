@@ -1574,10 +1574,6 @@ fieldset.field legend {
   color: var(--accent);
 }
 
-.activity-row {
-  grid-template-columns: 1fr 1fr 44px;
-}
-
 .activity-display {
   margin: 1rem 0 0.25rem;
   text-align: right;
@@ -2037,6 +2033,10 @@ fieldset.field legend {
   grid-template-columns: 110px 1fr 44px;
   gap: 0.5rem;
   align-items: center;
+}
+
+.work-credit-row.activity-row {
+  grid-template-columns: minmax(12.5rem, 1.2fr) minmax(0, 1fr) 44px;
 }
 
 /* مهارت: با «سایر» فیلد توضیح باز می‌شود */
