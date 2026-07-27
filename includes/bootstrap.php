@@ -90,8 +90,9 @@ function casting_brandify(string $text): string
 {
     $safe = casting_e($text);
     $mark = casting_brand_html();
+    $out = preg_replace('/۷\s*رخ|7\s*رخ/u', $mark, $safe);
 
-    return str_replace(['۷ رخ', '7 رخ'], $mark, $safe);
+    return is_string($out) ? $out : $safe;
 }
 
 function casting_role_label(string $role): string

@@ -273,40 +273,34 @@ a:hover {
   color: inherit;
 }
 
+/* فقط خودِ «۷ رخ»: ۷ سفید، رخ زرد — بقیه جمله دست‌نخورده */
 .brand-mark {
   display: inline;
   white-space: nowrap;
   font: inherit;
   font-weight: inherit;
   letter-spacing: inherit;
+  color: inherit;
 }
 
 .brand-mark-7 {
-  color: #ffffff;
+  color: #ffffff !important;
   font: inherit;
   font-weight: inherit;
 }
 
 .brand-mark-rokh {
-  color: #f5c542;
+  color: #f5c542 !important;
   font: inherit;
   font-weight: inherit;
 }
 
 html[data-theme="day"] .brand-mark-7 {
-  color: #111827;
+  color: #111827 !important;
 }
 
 html[data-theme="day"] .brand-mark-rokh {
-  color: #c99212;
-}
-
-.brand:hover .brand-mark-rokh {
-  color: var(--accent-strong);
-}
-
-html[data-theme="day"] .brand:hover .brand-mark-rokh {
-  color: #a67a0a;
+  color: #c99212 !important;
 }
 
 .nav {
@@ -338,6 +332,14 @@ html[data-theme="day"] .brand:hover .brand-mark-rokh {
 
 .nav a.nav-external:hover {
   color: var(--accent);
+}
+
+.nav a.nav-external .brand-mark-7 {
+  color: #ffffff !important;
+}
+
+.nav a.nav-external .brand-mark-rokh {
+  color: #f5c542 !important;
 }
 
 .nav a.is-active {
@@ -3041,7 +3043,7 @@ a.panel-sidebar-title.is-active {
 .panel-nav-link:hover,
 .panel-nav-link.is-active {
   background: var(--accent-dim);
-  color: var(--accent-strong);
+  color: var(--ink);
 }
 
 .panel-hub-grid {
@@ -4602,7 +4604,15 @@ a.panel-sidebar-title.is-active {
 }
 
 .panel-nav-link-external .panel-nav-label {
-  color: var(--accent-strong);
+  color: inherit;
+}
+
+.panel-nav-link-external .panel-nav-label .brand-mark-7 {
+  color: #ffffff !important;
+}
+
+.panel-nav-link-external .panel-nav-label .brand-mark-rokh {
+  color: #f5c542 !important;
 }
 
 /* کارگردان — دیده‌شده، هایلایت، یادداشت */
