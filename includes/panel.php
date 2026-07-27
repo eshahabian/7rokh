@@ -35,7 +35,7 @@ function casting_panel_nav_items_desktop(): array
         ['key' => 'rules',        'label' => 'قوانین',                   'href' => 'rules.php'],
         [
             'key'      => 'news',
-            'label'    => 'اخبار ۷رخ',
+            'label'    => 'اخبار 7 رخ',
             'href'     => casting_main_site_url(),
             'external' => true,
         ],

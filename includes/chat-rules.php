@@ -268,7 +268,7 @@ function casting_can_start_chat(int $from_id, int $to_id): array
     $from_role = casting_get_user_role($from_id);
     $to_role = casting_get_user_role($to_id);
     if ($from_role === '' || $to_role === '') {
-        return ['ok' => false, 'error' => 'فقط اعضای هفت رخ می‌توانند چت کنند.'];
+        return ['ok' => false, 'error' => 'فقط اعضای 7 رخ می‌توانند چت کنند.'];
     }
 
     if (!function_exists('casting_user_is_premium')) {

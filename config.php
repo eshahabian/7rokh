@@ -14,7 +14,7 @@
 define('CASTING_WP_LOAD', __DIR__ . '/../wp-load.php');
 
 /** نام نمایشی برند (قابل تغییر) */
-define('CASTING_BRAND', 'هفت رخ');
+define('CASTING_BRAND', '7 رخ');
 
 /** آدرس سایت اصلی */
 define('CASTING_MAIN_SITE_URL', 'https://7rokh.ir');
@@ -31,7 +31,7 @@ define('CASTING_EMPLOYER_ROLES', ['director', 'producer']);
 
 /** اطلاعات واریز کارت به کارت */
 define('CASTING_PAYMENT_CARD', '6037-9971-0000-0000');
-define('CASTING_PAYMENT_HOLDER', 'هفت رخ');
+define('CASTING_PAYMENT_HOLDER', '7 رخ');
 
 /**
  * n8n — وقتی کسی ثبت‌نام کرد، JSON به این آدرس POST می‌شود.
@@ -58,7 +58,7 @@ define('CASTING_PORTAL_OWNER', 'eshahabian');
 /** گیرنده پیام «تماس با مدیر سایت» — نام کاربری وردپرس */
 define('CASTING_CONTACT_SITE_ADMIN', 'eshahabian');
 
-/** گیرنده پیام «تماس با مدیر هفت رخ» — نام کاربری وردپرس */
+/** گیرنده پیام «تماس با مدیر 7 رخ» — نام کاربری وردپرس */
 define('CASTING_CONTACT_BRAND_ADMIN', 'Ardavan');
 
 /** @deprecated دیگر برای تماس با ما استفاده نمی‌شود */
@@ -95,5 +95,5 @@ if (!defined('CASTING_MAIL_FROM')) {
     define('CASTING_MAIL_FROM', 'noreply@7rokh.ir');
 }
 if (!defined('CASTING_MAIL_FROM_NAME')) {
-    define('CASTING_MAIL_FROM_NAME', 'هفت رخ');
+    define('CASTING_MAIL_FROM_NAME', '7 رخ');
 }

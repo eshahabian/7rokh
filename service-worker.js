@@ -1,4 +1,4 @@
-const SW_VERSION = "casting-pwa-v5";
+const SW_VERSION = "casting-pwa-v6";
 const BASE = new URL("./", self.location).pathname;
 
 const PRECACHE = [
@@ -14,7 +14,7 @@ const OFFLINE_HTML = `<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>آفلاین | هفت رخ</title>
+  <title>آفلاین | 7 رخ</title>
   <style>
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0c0e12; color: #e8e4dc; font-family: sans-serif; padding: 1.5rem; text-align: center; }
     p { max-width: 22rem; line-height: 1.7; color: #9a958c; }
@@ -24,7 +24,7 @@ const OFFLINE_HTML = `<!DOCTYPE html>
 <body>
   <div>
     <h1>اتصال اینترنت نیست</h1>
-    <p>برای استفاده از پورتال هفت رخ به اینترنت نیاز دارید. اتصال را بررسی کنید و دوباره تلاش کنید.</p>
+    <p>برای استفاده از پورتال 7 رخ به اینترنت نیاز دارید. اتصال را بررسی کنید و دوباره تلاش کنید.</p>
   </div>
 </body>
 </html>`;

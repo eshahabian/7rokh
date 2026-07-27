@@ -2741,7 +2741,7 @@ function casting_require_casting_user(): WP_User
     }
     $role = casting_get_user_role((int) $user->ID);
     if ($role === '') {
-        casting_set_flash('error', 'فقط اعضای هفت رخ می‌توانند گفتگو کنند.');
+        casting_set_flash('error', 'فقط اعضای 7 رخ می‌توانند گفتگو کنند.');
         casting_redirect('index.php');
     }
     if (!function_exists('casting_user_is_suspended')) {
