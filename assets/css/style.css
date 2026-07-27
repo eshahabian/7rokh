@@ -326,14 +326,7 @@ html[data-theme="day"] .brand-mark-rokh {
   color: var(--ink);
 }
 
-.nav a.nav-external {
-  color: var(--accent-strong);
-}
-
-.nav a.nav-external:hover {
-  color: var(--accent);
-}
-
+/* «سایت» مثل بقیه منو؛ فقط ۷ سفید و رخ زرد */
 .nav a.nav-external .brand-mark-7 {
   color: #ffffff !important;
 }
@@ -4607,12 +4600,26 @@ a.panel-sidebar-title.is-active {
   color: inherit;
 }
 
-.panel-nav-link-external .panel-nav-label .brand-mark-7 {
+.panel-nav-link-external .panel-nav-label .brand-mark-7,
+.panel-nav-link .brand-mark-7,
+.nav a .brand-mark-7 {
   color: #ffffff !important;
 }
 
-.panel-nav-link-external .panel-nav-label .brand-mark-rokh {
+.panel-nav-link-external .panel-nav-label .brand-mark-rokh,
+.panel-nav-link .brand-mark-rokh,
+.nav a .brand-mark-rokh {
   color: #f5c542 !important;
+}
+
+html[data-theme="day"] .panel-nav-link .brand-mark-7,
+html[data-theme="day"] .nav a .brand-mark-7 {
+  color: #111827 !important;
+}
+
+html[data-theme="day"] .panel-nav-link .brand-mark-rokh,
+html[data-theme="day"] .nav a .brand-mark-rokh {
+  color: #c99212 !important;
 }
 
 /* کارگردان — دیده‌شده، هایلایت، یادداشت */
