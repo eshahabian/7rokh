@@ -26,7 +26,7 @@ if (!$member || $member_role === '') {
 
 $is_self = $viewer_id === $id;
 if ($is_self) {
-    casting_redirect('panel.php#profile');
+    casting_redirect('my-profile.php');
 }
 
 if (!$is_self) {

@@ -294,6 +294,37 @@ function casting_change_password(int $user_id, string $current, string $new, str
 /**
  * @return array{ok:bool,error:string}
  */
+function casting_change_phone(int $user_id, string $password, string $mobile_raw): array
+{
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
+    }
+    if (!wp_check_password($password, $user->user_pass, $user_id)) {
+        return ['ok' => false, 'error' => 'رمز عبور اشتباه است.'];
+    }
+
+    if (!function_exists('casting_normalize_mobile')) {
+        require_once __DIR__ . '/profile.php';
+    }
+    $mobile = casting_normalize_mobile($mobile_raw);
+    if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
+        return ['ok' => false, 'error' => 'شماره موبایل را درست وارد کنید (مثلاً ۰۹۱۲۱۲۳۴۵۶۷).'];
+    }
+
+    $current = casting_normalize_mobile((string) get_user_meta($user_id, 'casting_mobile', true));
+    if ($current === $mobile) {
+        return ['ok' => false, 'error' => 'این شماره همان شماره فعلی شماست.'];
+    }
+
+    update_user_meta($user_id, 'casting_mobile', $mobile);
+
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
 function casting_cancel_membership(int $user_id, string $password): array
 {
     $user = get_user_by('id', $user_id);

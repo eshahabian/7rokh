@@ -12,50 +12,51 @@ require_once __DIR__ . '/layout.php';
 /**
  * منوی کامل دسکتاپ (مثل قبل)
  *
- * @return array<int, array{key:string,label:string,href:string,icon?:string}>
+ * @return array<int, array{key:string,label:string,href:string,icon?:string,external?:bool}>
  */
 function casting_panel_nav_items_desktop(): array
 {
     return [
-        ['key' => 'edit-profile', 'label' => 'ویرایش پروفایل من',        'href' => 'edit-profile.php'],
         ['key' => 'messages',     'label' => 'پیام کاربران',             'href' => 'chat.php'],
-        ['key' => 'my-requests',  'label' => 'دعوت‌های همکاری',          'href' => 'my-requests.php'],
-        ['key' => 'briefs',       'label' => 'تکالیف',                   'href' => 'my-briefs.php'],
+        ['key' => 'my-requests',  'label' => 'دعوت‌های کاربران',         'href' => 'my-requests.php'],
         ['key' => 'search',       'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
-        ['key' => 'favorites',    'label' => 'علاقه‌مندی‌ها',             'href' => 'favorites.php'],
-        ['key' => 'desk',         'label' => 'پروژه‌ها',                  'href' => 'director-desk.php'],
-        ['key' => 'premium',      'label' => 'خرید و فعال‌سازی',         'href' => 'premium.php'],
-        ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],
         ['key' => 'newest',       'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
-        ['key' => 'visitors',     'label' => 'بازدیدکنندگان پروفایل من', 'href' => 'profile-visitors.php'],
+        ['key' => 'favorites',    'label' => 'علاقه‌مندی‌ها',             'href' => 'favorites.php'],
         ['key' => 'blocked',      'label' => 'بلاک‌شده‌های من',          'href' => 'blocked-by-me.php'],
-        ['key' => 'photo',        'label' => 'ویرایش تصویر',             'href' => 'profile-photo.php'],
+        ['key' => 'premium',      'label' => 'فعال‌سازی',                'href' => 'premium.php'],
+        ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],
+        ['key' => 'my-profile',   'label' => 'مشاهده پروفایل من',        'href' => 'my-profile.php'],
+        ['key' => 'edit-profile', 'label' => 'ویرایش پروفایل من',        'href' => 'edit-profile.php'],
+        ['key' => 'desk',         'label' => 'پروژه‌ها',                  'href' => 'director-desk.php'],
         ['key' => 'password',     'label' => 'تغییر رمز عبور',           'href' => 'change-password.php'],
-        ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',          'href' => 'transactions.php'],
+        ['key' => 'phone',        'label' => 'تغییر شماره تلفن',         'href' => 'change-phone.php'],
         ['key' => 'cancel',       'label' => 'انصراف از عضویت',          'href' => 'cancel-membership.php'],
+        ['key' => 'logout',       'label' => 'خروج',                     'href' => 'logout.php'],
+        ['key' => 'rules',        'label' => 'قوانین',                   'href' => 'rules.php'],
+        [
+            'key'      => 'news',
+            'label'    => 'اخبار ۷رخ',
+            'href'     => casting_main_site_url(),
+            'external' => true,
+        ],
+        // آیتم‌های قبلی که در لیست درخواستی نبودند — انتها
+        ['key' => 'briefs',       'label' => 'تکالیف',                   'href' => 'my-briefs.php'],
+        ['key' => 'visitors',     'label' => 'بازدیدکنندگان پروفایل من', 'href' => 'profile-visitors.php'],
+        ['key' => 'photo',        'label' => 'ویرایش تصویر',             'href' => 'profile-photo.php'],
+        ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',          'href' => 'transactions.php'],
         ['key' => 'contact',      'label' => 'تماس با ما',               'href' => 'contact.php'],
         ['key' => 'faq',          'label' => 'سوالات متداول',            'href' => 'faq.php'],
-        ['key' => 'rules',        'label' => 'قوانین',                   'href' => 'rules.php'],
-        ['key' => 'logout',       'label' => 'خروج',                     'href' => 'logout.php'],
     ];
 }
 
 /**
- * منوی ساده‌شده موبایل (همبرگری) — همان آیتم‌های کامل + هفت رخ در انتها
+ * منوی موبایل — همان ترتیب دسکتاپ
  *
  * @return array<int, array{key:string,label:string,href:string,icon?:string,external?:bool}>
  */
 function casting_panel_nav_items_mobile(): array
 {
-    $items = casting_panel_nav_items_desktop();
-    $items[] = [
-        'key'      => 'main-site',
-        'label'    => 'هفت رخ',
-        'href'     => casting_main_site_url(),
-        'external' => true,
-    ];
-
-    return $items;
+    return casting_panel_nav_items_desktop();
 }
 
 /**
@@ -73,18 +74,21 @@ function casting_panel_nav_items(): array
 function casting_panel_nav_highlight_key(string $active): string
 {
     $map = [
-        'premium'      => 'membership',
-        'receipt'      => 'membership',
-        'transactions' => 'membership',
-        'cancel'       => 'membership',
-        'password'     => 'settings',
-        'photo'        => 'settings',
-        'blocked'      => 'settings',
-        'blockers'     => 'settings',
-        'contact'      => 'settings',
-        'faq'          => 'settings',
-        'rules'        => 'settings',
-        'newest'       => 'settings',
+        'premium'      => 'premium',
+        'receipt'      => 'receipt',
+        'transactions' => 'transactions',
+        'cancel'       => 'cancel',
+        'password'     => 'password',
+        'phone'        => 'phone',
+        'photo'        => 'photo',
+        'blocked'      => 'blocked',
+        'blockers'     => 'blocked',
+        'contact'      => 'contact',
+        'faq'          => 'faq',
+        'rules'        => 'rules',
+        'newest'       => 'newest',
+        'my-profile'   => 'my-profile',
+        'news'         => 'news',
     ];
 
     return $map[$active] ?? $active;
