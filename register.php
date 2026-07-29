@@ -128,14 +128,16 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($mobile_norm === '' || !preg_match('/^09\d{9}$/', $mobile_norm)) {
                 $error = 'شماره موبایل را درست وارد کنید.';
                 $focus_field = 'mobile';
+                casting_rate_limit_hit('otp_send');
             } elseif (casting_mobile_is_taken($mobile_norm)) {
                 $error = 'این شماره موبایل قبلاً ثبت شده است.';
                 $focus_field = 'mobile';
-            } elseif ($otp_action === 'send') {
                 casting_rate_limit_hit('otp_send');
+            } elseif ($otp_action === 'send') {
                 $send = casting_otp_send('register', $mobile_norm);
                 if (!$send['ok']) {
                     $error = $send['error'];
+                    casting_rate_limit_hit('otp_send');
                 } else {
                     $otp_notice = 'کد تأیید به موبایل ارسال شد.';
                 }
@@ -144,6 +146,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$verify['ok']) {
                     $error = $verify['error'];
                     $focus_field = 'otp_code';
+                    casting_rate_limit_hit('otp_send');
                 } else {
                     casting_otp_mark_session_verified('register', $mobile_norm);
                     $otp_notice = 'موبایل تأیید شد. حالا ثبت‌نام را کامل کنید.';
@@ -154,8 +157,6 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($rate_error !== null) {
                 $error = $rate_error;
             } else {
-                casting_rate_limit_hit('register');
-
                 if ($password !== $password2) {
                     $password_mismatch = true;
                     $focus_field = 'password2';
@@ -261,6 +262,8 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                             if ($error === '') {
                                 casting_mark_mobile_verified($user_id, $mobile_norm);
                                 casting_otp_clear_session('register');
+                                casting_rate_limit_clear('register');
+                                casting_rate_limit_clear('otp_send');
                                 if (function_exists('casting_notify_n8n_registration')) {
                                     casting_notify_n8n_registration($user_id);
                                 }
@@ -269,6 +272,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
                                 $login = casting_login($email, $password);
                                 if ($login['ok']) {
+                                    casting_rate_limit_clear('login');
                                     casting_set_flash('success', 'ثبت‌نام و ورود با موفقیت انجام شد.');
                                     casting_redirect(casting_dashboard_for_role((string) $result['role']));
                                 }
@@ -278,6 +282,10 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     } catch (Throwable $e) {
                         $error = 'خطای سرور در ثبت‌نام: ' . $e->getMessage();
                     }
+                }
+
+                if ($error !== '' || $password_mismatch) {
+                    casting_rate_limit_hit('register');
                 }
             }
         }

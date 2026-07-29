@@ -37,17 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $mobile = (string) ($_POST['mobile'] ?? '');
             if ($otp_action === 'send') {
-                casting_rate_limit_hit('otp_send');
                 $norm = casting_normalize_mobile($mobile);
                 $found = casting_find_user_by_mobile($norm);
                 if (empty($found['ok'])) {
-                    // پیام عمومی
+                    // پیام عمومی — برای جلوگیری از افشا، مثل ارسال موفق رفتار می‌کنیم
                     $success = 'اگر حسابی با این موبایل باشد، کد تأیید ارسال می‌شود.';
                     $otp_sent = true;
                 } else {
                     $send = casting_otp_send('login', $norm);
                     if (!$send['ok']) {
                         $error = $send['error'];
+                        casting_rate_limit_hit('otp_send');
                     } else {
                         $success = 'کد تأیید به شماره موبایل ارسال شد.';
                         $otp_sent = true;
@@ -61,6 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $otp_sent = true;
                 } else {
                     casting_rate_limit_clear('login_otp');
+                    casting_rate_limit_clear('login');
+                    casting_rate_limit_clear('otp_send');
                     casting_redirect(casting_dashboard_for_role((string) $result['role']));
                 }
             }
@@ -80,6 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = $result['error'];
             } else {
                 casting_rate_limit_clear('login');
+                casting_rate_limit_clear('login_otp');
+                casting_rate_limit_clear('otp_send');
                 casting_redirect(casting_dashboard_for_role((string) $result['role']));
             }
         }
