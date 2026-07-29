@@ -4,6 +4,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/activities.php';
 
 const CASTING_MSG_ACCESS_OPTION = 'casting_message_access_v1';
+/** با افزایش نسخه، ماتریس ذخیره‌شده با پیش‌فرض سلسله‌مراتبی جایگزین می‌شود */
+const CASTING_MSG_ACCESS_VERSION = 2;
 
 /**
  * مدیران بخش‌ها (ارتباط بین‌بخشی فقط در این سطح)
@@ -120,6 +122,67 @@ function casting_message_access_add_edges(array &$edges, $froms, $tos, bool $req
 }
 
 /**
+ * نقش‌هایی که بازیگر فقط با رابطه/پروژه/پیام قبلی می‌تواند به آن‌ها پیام بدهد
+ *
+ * @return list<string>
+ */
+function casting_message_access_actor_gated_targets(): array
+{
+    return array_values(array_unique(array_merge(
+        casting_message_access_director_keys(),
+        [
+            'producer',
+            'first_ad',
+            'second_ad',
+            'third_ad',
+            'production_manager',
+            'executive',
+            'scheduler',
+            'script_supervisor',
+            'costume_designer',
+            'makeup_designer',
+            'dop',
+            'sound_mixer',
+            'set_designer',
+            'post_manager',
+            'vfx_manager',
+            'logistics_manager',
+            'location_manager',
+            'finance_manager',
+            'transport_manager',
+            'coordinator',
+            'composer',
+            'pr_manager',
+            'promo_manager',
+        ]
+    )));
+}
+
+/**
+ * آیا فرستنده بازیگر/هنرمند است و گیرنده کارگردان/تهیه‌کننده یا نقش گیت‌شده؟
+ * این قانون سخت‌گیرانه است و از ماتریس ذخیره‌شده عبور نمی‌کند.
+ */
+function casting_message_access_is_actor_to_gated_lead(int $from_id, int $to_id): bool
+{
+    $from_specs = casting_message_access_user_specs($from_id);
+    $to_specs = casting_message_access_user_specs($to_id);
+    $actors = casting_message_access_actor_keys();
+
+    $from_is_actor = array_intersect($from_specs, $actors) !== []
+        || casting_activities_has_acting($from_specs)
+        || casting_get_user_role($from_id) === 'talent';
+    if (!$from_is_actor) {
+        return false;
+    }
+
+    $gated = casting_message_access_actor_gated_targets();
+
+    return array_intersect($to_specs, $gated) !== []
+        || casting_get_user_role($to_id) === 'director'
+        || casting_get_user_role($to_id) === 'producer';
+}
+
+/**
  * ساخت ماتریس پیش‌فرض طبق قوانین سلسله‌مراتبی هفت‌رخ
  *
  * @return array<string, array{can_start:bool,require_project:bool,enabled:bool}>
@@ -145,10 +208,12 @@ function casting_message_access_build_default_edges(): array
             'writer', 'playwright', 'screenwriter',
         ]
     )));
-    casting_message_access_add_edges($edges, 'producer', $producer_targets, false, true);
+    // یک‌طرفه از تهیه‌کننده به مدیران؛ برگشت جداگانه از قوانین همان نقش
+    casting_message_access_add_edges($edges, 'producer', $producer_targets, false, false);
+    casting_message_access_add_edges($edges, $producer_targets, 'producer', false, false);
     casting_message_access_add_edges($edges, 'producer', $actors, true, false);
 
-    // --- کارگردان → مدیران هنری/فنی + بازیگر (با پروژه/رابطه) ---
+    // --- کارگردان → مدیران هنری/فنی ---
     $director_targets = [
         'producer', 'executive', 'production_manager', 'scheduler', 'first_ad', 'script_supervisor',
         'dop', 'videographer', 'sound_mixer', 'casting_director',
@@ -157,9 +222,10 @@ function casting_message_access_build_default_edges(): array
         'stunt_coordinator', 'choreographer', 'sfx',
         'location_manager', 'lighting_designer',
     ];
-    casting_message_access_add_edges($edges, $directors, $director_targets, false, true);
-    casting_message_access_add_edges($edges, $directors, $actors, true, false);
-    casting_message_access_add_edges($edges, $directors, ['first_ad', 'scheduler', 'script_supervisor'], false, true);
+    casting_message_access_add_edges($edges, $directors, $director_targets, false, false);
+    casting_message_access_add_edges($edges, $director_targets, $directors, false, false);
+    // کارگردان می‌تواند به بازیگر پیام بدهد (شروع)، بازیگر برنمی‌گردد مگر با رابطه
+    casting_message_access_add_edges($edges, $directors, $actors, false, false);
 
     // --- مدیر تولید ---
     $pm_targets = array_values(array_unique(array_merge(
@@ -172,27 +238,29 @@ function casting_message_access_build_default_edges(): array
         ],
         $heads
     )));
-    casting_message_access_add_edges($edges, 'production_manager', $pm_targets, false, true);
+    casting_message_access_add_edges($edges, 'production_manager', $pm_targets, false, false);
+    casting_message_access_add_edges($edges, $pm_targets, 'production_manager', false, false);
 
-    // --- مجری طرح شبیه مدیر تولید ولی محدودتر ---
     casting_message_access_add_edges($edges, 'executive', array_merge($directors, [
         'producer', 'production_manager', 'scheduler',
-    ], $heads), false, true);
+    ], $heads), false, false);
+    casting_message_access_add_edges($edges, array_merge($directors, [
+        'producer', 'production_manager', 'scheduler',
+    ], $heads), 'executive', false, false);
 
-    // --- برنامه‌ریز ---
     casting_message_access_add_edges($edges, 'scheduler', array_merge($directors, [
         'producer', 'production_manager', 'executive', 'first_ad', 'script_supervisor',
         'dop', 'sound_mixer', 'casting_director', 'location_manager', 'coordinator',
-    ]), false, true);
+    ]), false, false);
 
-    // --- مدیران بخش: با مدیران دیگر بخش‌ها + زیرمجموعه همان بخش ---
+    // --- مدیران بخش ---
     foreach ($heads as $head) {
         if ($head === 'producer' || $head === 'production_manager') {
             continue;
         }
-        // peer heads
         casting_message_access_add_edges($edges, $head, $heads, false, false);
-        casting_message_access_add_edges($edges, $head, array_merge($directors, ['producer', 'production_manager', 'executive', 'scheduler']), false, true);
+        casting_message_access_add_edges($edges, $head, array_merge($directors, ['producer', 'production_manager', 'executive', 'scheduler']), false, false);
+        casting_message_access_add_edges($edges, array_merge($directors, ['producer', 'production_manager', 'executive', 'scheduler']), $head, false, false);
 
         $guild = casting_activity_category_for_specialty($head);
         if ($guild === '') {
@@ -200,33 +268,29 @@ function casting_message_access_build_default_edges(): array
         }
         $cats = casting_activity_categories();
         $members = array_keys($cats[$guild]['items'] ?? []);
-        // head → guild members (assistants)
+        // مدیر بخش ↔ نیروهای همان بخش
         casting_message_access_add_edges($edges, $head, $members, false, true);
     }
 
-    // --- مدیر فیلمبرداری: جزئیات صریح نور و تجهیزات ---
     casting_message_access_add_edges($edges, 'dop', [
         'lighting_designer', 'gaffer', 'cameraman', 'camera_assistant',
         'camera_first_assistant', 'camera_second_assistant', 'camera_third_assistant',
         'camera_technical_crew', 'videographer', 'crane_op', 'steadicam_op', 'gimbal_op', 'drone_op',
     ], false, true);
 
-    // --- مدیر صدا ---
     casting_message_access_add_edges($edges, 'sound_mixer', [
         'sound_assistant', 'boom_op', 'sound_editor',
     ], false, true);
 
-    // --- طراح صحنه ---
     casting_message_access_add_edges($edges, 'set_designer', [
         'art_assistant', 'stage_manager', 'stage_assistant', 'set_deco', 'props', 'costume_designer',
     ], false, true);
 
-    // --- طراح لباس / گریم → بازیگر مرتبط (پروژه) ---
+    // طراح لباس/گریم → بازیگر فقط با پروژه
     casting_message_access_add_edges($edges, ['costume_designer', 'makeup_designer'], $actors, true, false);
     casting_message_access_add_edges($edges, 'costume_designer', ['art_assistant'], false, true);
     casting_message_access_add_edges($edges, 'makeup_designer', ['makeup_artist'], false, true);
 
-    // --- مدیر تدوین ---
     casting_message_access_add_edges($edges, 'post_manager', [
         'dop', 'sound_mixer', 'editor', 'colorist', 'vfx_manager', 'vfx', 'motion', 'animator',
         'sound_editor', 'composer',
@@ -235,20 +299,23 @@ function casting_message_access_build_default_edges(): array
         'post_manager', 'vfx', 'motion', 'animator', 'editor',
     ], false, true);
 
-    // --- مدیر انتخاب بازیگر ---
+    // مدیر انتخاب بازیگر → بازیگر (آزاد برای شروع از طرف کستینگ)
+    // مهم: دوطرفه نباشد تا بازیگر نتواند آزادانه به کارگردان برسد
     casting_message_access_add_edges($edges, 'casting_director', array_merge($directors, [
         'producer', 'production_manager', 'casting_assistant', 'actor_coordinator', 'acting_coach',
-    ]), false, true);
-    casting_message_access_add_edges($edges, 'casting_director', $actors, false, true);
+    ]), false, false);
+    casting_message_access_add_edges($edges, array_merge($directors, [
+        'producer', 'production_manager', 'casting_assistant', 'actor_coordinator', 'acting_coach',
+    ]), 'casting_director', false, false);
+    casting_message_access_add_edges($edges, 'casting_director', $actors, false, false);
 
-    // --- دستیار اول کارگردان ---
     casting_message_access_add_edges($edges, 'first_ad', array_merge($directors, [
         'producer', 'production_manager', 'scheduler', 'script_supervisor', 'second_ad', 'third_ad',
         'casting_director', 'actor_coordinator',
-    ]), false, true);
-    casting_message_access_add_edges($edges, 'first_ad', $actors, true, false);
+    ]), false, false);
+    casting_message_access_add_edges($edges, 'first_ad', $actors, false, false);
 
-    // --- دستیاران و نیروهای اجرایی: فقط همان بخش + مدیر تولید/برنامه‌ریز ---
+    // دستیاران: فقط همان بخش
     $lead_or_head = array_flip(array_merge(
         ['producer'],
         $directors,
@@ -268,7 +335,6 @@ function casting_message_access_build_default_edges(): array
         $members = array_keys($cats[$guild]['items'] ?? []);
         casting_message_access_add_edges($edges, $spec, $members, false, false);
         casting_message_access_add_edges($edges, $spec, ['production_manager', 'scheduler'], false, false);
-        // به مدیر مستقیم همان بخش (اگر head در guild است)
         foreach ($heads as $head) {
             if (casting_activity_category_for_specialty($head) === $guild) {
                 casting_message_access_add_edges($edges, $spec, $head, false, false);
@@ -276,21 +342,19 @@ function casting_message_access_build_default_edges(): array
         }
     }
 
-    // --- بازیگر ---
+    // --- بازیگر: فقط کستینگ آزاد؛ بقیه فقط با رابطه/پروژه/پیام قبلی ---
     $actor_free = ['casting_director', 'casting_assistant', 'actor_coordinator', 'acting_coach'];
     casting_message_access_add_edges($edges, $actors, $actor_free, false, false);
-    casting_message_access_add_edges($edges, $actors, array_merge($directors, [
-        'first_ad', 'production_manager', 'scheduler',
-        'costume_designer', 'makeup_designer', 'producer',
-    ]), true, false);
+    casting_message_access_add_edges($edges, $actors, casting_message_access_actor_gated_targets(), true, false);
 
-    // --- کاربر عادی / بدون سمت ---
     casting_message_access_add_edges($edges, 'activity_none', ['casting_director'], false, false);
 
-    // نویسندگان ↔ کارگردان/تهیه‌کننده
     casting_message_access_add_edges($edges, ['writer', 'playwright', 'screenwriter', 'script_consultant'], array_merge($directors, [
         'producer', 'production_manager',
-    ]), false, true);
+    ]), false, false);
+    casting_message_access_add_edges($edges, array_merge($directors, [
+        'producer', 'production_manager',
+    ]), ['writer', 'playwright', 'screenwriter', 'script_consultant'], false, false);
 
     return $edges;
 }
@@ -301,9 +365,9 @@ function casting_message_access_build_default_edges(): array
 function casting_message_access_defaults_payload(): array
 {
     return [
-        'version'     => 1,
-        'edges'       => casting_message_access_build_default_edges(),
-        'customized'  => false,
+        'version'    => CASTING_MSG_ACCESS_VERSION,
+        'edges'      => casting_message_access_build_default_edges(),
+        'customized' => false,
     ];
 }
 
@@ -314,9 +378,18 @@ function casting_message_access_defaults_payload(): array
  */
 function casting_message_access_get(): array
 {
+    $defaults = casting_message_access_defaults_payload();
     $stored = get_option(CASTING_MSG_ACCESS_OPTION, null);
     if (!is_array($stored) || empty($stored['edges']) || !is_array($stored['edges'])) {
-        return casting_message_access_defaults_payload();
+        return $defaults;
+    }
+
+    $stored_version = (int) ($stored['version'] ?? 1);
+    // نسخه قدیمی (مثلاً لبه‌های دوطرفهٔ اشتباه بازیگر→کارگردان) را با پیش‌فرض جدید جایگزین کن
+    if ($stored_version < CASTING_MSG_ACCESS_VERSION) {
+        update_option(CASTING_MSG_ACCESS_OPTION, $defaults, false);
+
+        return $defaults;
     }
 
     $edges = [];
@@ -332,7 +405,7 @@ function casting_message_access_get(): array
     }
 
     return [
-        'version'    => (int) ($stored['version'] ?? 1),
+        'version'    => $stored_version,
         'edges'      => $edges,
         'customized' => !empty($stored['customized']),
     ];
@@ -372,7 +445,7 @@ function casting_message_access_save(array $payload): bool
     }
 
     $data = [
-        'version'    => 1,
+        'version'    => CASTING_MSG_ACCESS_VERSION,
         'edges'      => $edges,
         'customized' => true,
         'updated_at' => current_time('mysql'),
@@ -538,6 +611,18 @@ function casting_message_access_allows_start(int $from_id, int $to_id): array
         return ['ok' => false, 'error' => 'برای پیام‌رسانی باید نوع فعالیت در پروفایل مشخص باشد.'];
     }
 
+    // قفل سخت: بازیگر نمی‌تواند اول به کارگردان/تهیه‌کننده/... پیام بدهد
+    if (casting_message_access_is_actor_to_gated_lead($from_id, $to_id)) {
+        if (casting_users_have_message_relationship($from_id, $to_id)) {
+            return ['ok' => true, 'error' => ''];
+        }
+
+        return [
+            'ok'    => false,
+            'error' => 'بازیگر فقط وقتی می‌تواند به کارگردان یا مدیران پروژه پیام بدهد که عضو پروژه باشد، درخواست تأییدشده داشته باشد، یا طرف مقابل اول پیام داده باشد.',
+        ];
+    }
+
     $need_relationship = false;
     $any_edge = false;
     foreach ($from_specs as $from_spec) {
@@ -646,6 +731,10 @@ function casting_message_access_toggle_edge(string $from, string $to, string $fi
             return ['ok' => false, 'error' => 'اول دسترسی پیام را روشن کنید.', 'enabled' => false, 'require_project' => false];
         }
         $next_require = $force !== null ? $force : !$require_now;
+        if (in_array($from, casting_message_access_actor_keys(), true)
+            && in_array($to, casting_message_access_actor_gated_targets(), true)) {
+            $next_require = true;
+        }
         $edges[$key] = [
             'can_start'       => true,
             'require_project' => $next_require,
@@ -667,10 +756,13 @@ function casting_message_access_toggle_edge(string $from, string $to, string $fi
     }
 
     $next_on = $force !== null ? $force : !$is_on;
+    // بازیگر → کارگردان/مدیران: همیشه نیازمند رابطه/پروژه
+    $force_require = in_array($from, casting_message_access_actor_keys(), true)
+        && in_array($to, casting_message_access_actor_gated_targets(), true);
     if ($next_on) {
         $edges[$key] = [
             'can_start'       => true,
-            'require_project' => $require_now,
+            'require_project' => $force_require || $require_now,
             'enabled'         => true,
         ];
     } else {
