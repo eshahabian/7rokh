@@ -457,6 +457,12 @@ function casting_panel_admin_nav_items(int $user_id): array
     if (casting_user_is_super_admin($user_id)) {
         $items[] = ['key' => 'admin-mail', 'label' => 'تست ایمیل', 'href' => 'admin-mail-test.php', 'perm' => 'super'];
     }
+    if (casting_user_is_portal_owner($user_id)) {
+        $items[] = ['key' => 'admin-msg-access', 'label' => 'دسترسی پیام‌رسان', 'href' => 'admin-message-access.php', 'perm' => 'owner'];
+        if (is_file(dirname(__DIR__) . '/admin-sms-test.php')) {
+            $items[] = ['key' => 'admin-sms', 'label' => 'تست پیامک', 'href' => 'admin-sms-test.php', 'perm' => 'owner'];
+        }
+    }
     return $items;
 }
 

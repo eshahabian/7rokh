@@ -41,7 +41,8 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
     if (casting_users_block_each_other($employer_id, $talent_id)) {
         return ['ok' => false, 'error' => 'به‌دلیل بلاک، ارسال دعوت ممکن نیست.'];
     }
-    if (empty($options['skip_chat_rules'])) {
+    // دعوت/فراخوان کانال رسمی است و تابع قوانین چت آزاد نیست؛ مگر صریحاً enforce شود
+    if (!empty($options['enforce_chat_rules'])) {
         $chat_allow = casting_can_start_chat($employer_id, $talent_id);
         if (!$chat_allow['ok']) {
             return ['ok' => false, 'error' => $chat_allow['error']];

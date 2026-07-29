@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/activities.php';
 require_once __DIR__ . '/blocks.php';
+require_once __DIR__ . '/message-access.php';
 
 /**
  * @return list<string>
@@ -35,7 +36,7 @@ function casting_chat_specialty_keys(int $user_id): array
         return ['actor_cinema'];
     }
 
-    return [];
+    return ['activity_none'];
 }
 
 function casting_user_has_specialty(int $user_id, string $specialty): bool
@@ -51,6 +52,7 @@ function casting_user_has_any_specialty(int $user_id, array $needles): bool
     if ($needles === []) {
         return false;
     }
+
     return array_intersect(casting_chat_specialty_keys($user_id), $needles) !== [];
 }
 
@@ -64,12 +66,7 @@ function casting_user_is_actor(int $user_id): bool
  */
 function casting_director_specialty_keys(): array
 {
-    return [
-        'director_theater',
-        'director_short_film',
-        'director_tv',
-        'director_cinema',
-    ];
+    return casting_message_access_director_keys();
 }
 
 function casting_user_is_director(int $user_id): bool
@@ -100,149 +97,6 @@ function casting_user_is_producer_for_chat(int $user_id): bool
 }
 
 /**
- * مدیر هر بخش (برای شروع چت)
- *
- * @return array<string, list<string>>
- */
-function casting_chat_guild_head_keys(): array
-{
-    return [
-        'directing'  => casting_director_specialty_keys(),
-        'writing'    => ['writer', 'playwright', 'screenwriter'],
-        'production' => ['producer', 'production_manager', 'logistics_manager', 'executive'],
-        'camera'     => ['dop'],
-        'sound'      => ['sound_mixer'],
-        'post'       => ['editor', 'colorist'],
-        'music'      => ['composer'],
-        'art'        => ['set_designer', 'costume_designer', 'makeup_designer'],
-        'lighting'   => ['lighting_designer'],
-        'set_crew'   => ['stage_manager'],
-    ];
-}
-
-function casting_is_guild_head_specialty(string $specialty): bool
-{
-    foreach (casting_chat_guild_head_keys() as $heads) {
-        if (in_array($specialty, $heads, true)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/**
- * @return list<string>
- */
-function casting_all_guild_head_specialty_keys(): array
-{
-    $keys = [];
-    foreach (casting_chat_guild_head_keys() as $heads) {
-        foreach ($heads as $head) {
-            $keys[] = $head;
-        }
-    }
-
-    return array_values(array_unique($keys));
-}
-
-/**
- * مخاطبان مجاز تهیه‌کننده (بدون بازیگر)
- *
- * @return list<string>
- */
-function casting_producer_message_target_keys(): array
-{
-    return array_values(array_unique(array_merge(
-        ['writer', 'playwright', 'screenwriter', 'script_consultant', 'researcher'],
-        casting_director_specialty_keys(),
-        ['first_ad', 'second_ad', 'third_ad', 'scheduler', 'script_supervisor'],
-        ['production_manager', 'logistics_manager', 'executive', 'production_assistant', 'logistics_assistant', 'logistics_driver'],
-        ['dop'],
-        ['sound_mixer', 'sound_editor'],
-        ['editor', 'colorist', 'vfx', 'motion', 'animator'],
-        ['composer', 'musician', 'singer'],
-        ['set_designer', 'costume_designer', 'makeup_designer', 'makeup_artist', 'art_assistant'],
-        ['lighting_designer', 'gaffer'],
-        ['stage_manager', 'stage_assistant', 'set_deco', 'props'],
-        casting_all_guild_head_specialty_keys()
-    )));
-}
-
-/**
- * @return list<string>
- */
-function casting_director_allowed_directing_sub_keys(): array
-{
-    return ['first_ad', 'scheduler', 'script_supervisor'];
-}
-
-/**
- * محدودیت‌های کارگردان هنگام شروع چت
- */
-function casting_director_start_block_reason(int $from_id, int $to_id): string
-{
-    if (!casting_user_is_director($from_id)) {
-        return '';
-    }
-
-    foreach (casting_chat_specialty_keys($to_id) as $target) {
-        if (in_array($target, casting_director_specialty_keys(), true)) {
-            return 'کارگردان نمی‌تواند به کارگردان دیگر پیام بدهد.';
-        }
-        if (in_array($target, ['second_ad', 'third_ad'], true)) {
-            return 'کارگردان نمی‌تواند به دستیار دوم یا سوم کارگردان پیام بدهد.';
-        }
-        $guild = casting_activity_category_for_specialty($target);
-        if ($guild === 'camera' && $target !== 'dop') {
-            return 'کارگردان فقط می‌تواند به مدیر فیلمبرداری پیام بدهد، نه زیرمجموعه فیلمبرداری.';
-        }
-        if ($guild === 'sound' && $target !== 'sound_mixer') {
-            return 'کارگردان فقط می‌تواند به مدیر صدابرداری پیام بدهد، نه دستیار صدا.';
-        }
-        if ($guild === 'directing' && !in_array($target, casting_director_allowed_directing_sub_keys(), true)) {
-            return 'در بخش کارگردانی فقط دستیار اول، برنامه‌ریز و منشی صحنه مجازند.';
-        }
-    }
-
-    return '';
-}
-
-/**
- * مدیر بخش → زیرمجموعه همان بخش
- */
-function casting_section_head_allows_start(int $from_id, int $to_id): bool
-{
-    $from_specs = casting_chat_specialty_keys($from_id);
-    $to_specs = casting_chat_specialty_keys($to_id);
-    if ($from_specs === [] || $to_specs === []) {
-        return false;
-    }
-
-    foreach ($from_specs as $from_spec) {
-        if (!casting_is_guild_head_specialty($from_spec)) {
-            continue;
-        }
-        $guild = casting_activity_category_for_specialty($from_spec);
-        if ($guild === '') {
-            continue;
-        }
-        foreach ($to_specs as $to_spec) {
-            if (casting_activity_category_for_specialty($to_spec) !== $guild) {
-                continue;
-            }
-            if (casting_is_guild_head_specialty($to_spec)) {
-                continue;
-            }
-
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/**
  * @return array{ok:bool,error:string}
  */
 function casting_can_start_chat(int $from_id, int $to_id): array
@@ -258,6 +112,7 @@ function casting_can_start_chat(int $from_id, int $to_id): array
         return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
     }
 
+    // فقط مالک پورتال (eshahabian) از قوانین سمتی معاف است
     if (casting_user_is_portal_owner($from_id)) {
         $to_role = casting_get_user_role($to_id);
         if ($to_role !== '') {
@@ -271,62 +126,12 @@ function casting_can_start_chat(int $from_id, int $to_id): array
         return ['ok' => false, 'error' => 'فقط اعضای ۷ رخ می‌توانند چت کنند.'];
     }
 
-    if (!function_exists('casting_user_is_premium')) {
-        require_once __DIR__ . '/premium.php';
-    }
-    if (casting_user_is_premium($from_id)) {
-        return ['ok' => true, 'error' => ''];
-    }
-
-    $to_is_actor = casting_user_is_actor($to_id);
-    $producer_targets = casting_producer_message_target_keys();
-
-    // کارگردان سینما / فیلم کوتاه (قبل از تهیه‌کننده — حتی اگر هر دو نقش داشته باشد)
-    if (casting_user_is_film_director($from_id)) {
-        $block = casting_director_start_block_reason($from_id, $to_id);
-        if ($block !== '') {
-            return ['ok' => false, 'error' => $block];
-        }
-        if ($to_is_actor || casting_user_has_any_specialty($to_id, $producer_targets)) {
-            return ['ok' => true, 'error' => ''];
-        }
-    }
-
-    // تهیه‌کننده
-    if (casting_user_is_producer_for_chat($from_id)) {
-        if ($to_is_actor) {
-            return ['ok' => false, 'error' => 'تهیه‌کننده نمی‌تواند به بازیگران پیام بدهد.'];
-        }
-        if (casting_user_has_any_specialty($to_id, $producer_targets)) {
-            return ['ok' => true, 'error' => ''];
-        }
-    }
-
-    // سایر کارگردان‌ها (تئاتر، تلویزیون)
-    if (casting_user_is_director($from_id) && !casting_user_is_film_director($from_id)) {
-        $block = casting_director_start_block_reason($from_id, $to_id);
-        if ($block !== '') {
-            return ['ok' => false, 'error' => $block];
-        }
-        if (!$to_is_actor && casting_user_has_any_specialty($to_id, $producer_targets)) {
-            return ['ok' => true, 'error' => ''];
-        }
-    }
-
-    // دستیار اول کارگردان → بازیگر
-    if (casting_user_has_specialty($from_id, 'first_ad') && $to_is_actor) {
-        return ['ok' => true, 'error' => ''];
-    }
-
-    // مدیر هر بخش → زیرمجموعه همان بخش
-    if (casting_section_head_allows_start($from_id, $to_id)) {
-        return ['ok' => true, 'error' => ''];
-    }
-
-    return ['ok' => false, 'error' => 'طبق قوانین پورتال، امکان شروع گفتگو با این کاربر وجود ندارد.'];
+    return casting_message_access_allows_start($from_id, $to_id);
 }
 
 /**
+ * پاسخ به گفتگوی موجود همیشه مجاز است؛ شروع گفتگو تابع قوانین سلسله‌مراتبی است.
+ *
  * @return array{ok:bool,error:string}
  */
 function casting_can_users_chat(int $from_id, int $to_id): array
