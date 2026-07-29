@@ -99,7 +99,7 @@ function casting_panel_nav_highlight_key(string $active): string
  */
 function casting_panel_nav_keys_hidden_for_director(): array
 {
-    return ['photo', 'cancel'];
+    return ['cancel'];
 }
 
 /**
@@ -340,6 +340,7 @@ function casting_render_panel_sidebar(string $active): void
     $admin_nav = $user ? casting_panel_admin_nav_items((int) $user->ID) : [];
     $sidebar_photo = '';
     $sidebar_name = '';
+    $sidebar_primary_activity = '';
     $sidebar_views = ['day' => 0, 'month' => 0];
     $sidebar_show_views = false;
     if ($user) {
@@ -355,6 +356,7 @@ function casting_render_panel_sidebar(string $active): void
             get_user_meta($user_id, 'casting_activities', true),
             $user_id
         );
+        $sidebar_primary_activity = casting_user_primary_activity_label($user_id);
         $sidebar_show_views = casting_activities_has_acting($sidebar_activities);
         if ($sidebar_show_views) {
             if (!function_exists('casting_profile_view_stats')) {
@@ -385,7 +387,9 @@ function casting_render_panel_sidebar(string $active): void
           <a
             class="panel-sidebar-title panel-sidebar-title-desktop panel-sidebar-home<?= $active === 'panel' ? ' is-active' : '' ?>"
             href="<?= casting_e(casting_url('panel.php')) ?>"
-          >پنل کاربری<?php if ($panel_premium_until !== null && $user) : ?>
+          >پنل کاربری<?php if ($sidebar_primary_activity !== '') : ?>
+            <span class="panel-sidebar-activity"> · <?= casting_e($sidebar_primary_activity) ?></span>
+          <?php endif; ?><?php if ($panel_premium_until !== null && $user) : ?>
             <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
               <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
             </span>

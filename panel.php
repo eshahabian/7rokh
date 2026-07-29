@@ -26,7 +26,12 @@ if (casting_user_is_director_role($user_id)) {
 $premium_members = casting_home_premium_members(24, $user_id);
 $newest_members = casting_newest_members(24, $user_id);
 
-casting_render_panel_start('پنل کاربری', 'panel');
+$panel_title = 'پنل کاربری';
+$primary_activity = casting_user_primary_activity_label($user_id);
+if ($primary_activity !== '') {
+    $panel_title .= ' · ' . $primary_activity;
+}
+casting_render_panel_start($panel_title, 'panel');
 if (isset($_GET['welcome'])) {
     echo '<div class="flash flash-success" role="alert">ثبت‌نام و ورود با موفقیت انجام شد.</div>';
 }

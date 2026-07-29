@@ -1962,15 +1962,14 @@ function casting_normalize_phone(string $phone): string
 function casting_register_focus_for_error(string $error): string
 {
     $map = [
-        'نام'              => 'name',
         'نام کاربری'       => 'username',
+        'تلفن ثابت'        => 'phone',
+        'تاریخ تولد'       => 'birth_jd',
+        'رنگ پوست'         => 'look',
         'ایمیل'            => 'email',
         'رمز عبور'         => 'password',
         'موبایل'           => 'mobile',
-        'تلفن ثابت'        => 'phone',
-        'تاریخ تولد'       => 'birth_jd',
         'جنسیت'            => 'gender',
-        'رنگ پوست'         => 'look',
         'استان'            => 'province',
         'شهر'              => 'city',
         'قد'               => 'height',
@@ -1984,6 +1983,7 @@ function casting_register_focus_for_error(string $error): string
         'لهجه'             => 'accent',
         'تشکل'             => 'artistic_membership',
         'قوانین'           => 'rules_accepted',
+        'نام'              => 'name',
     ];
     foreach ($map as $needle => $field) {
         if (str_contains($error, $needle)) {
@@ -2352,6 +2352,9 @@ function casting_save_profile(int $user_id, array $data): array
 
     if (array_key_exists('activities', $data)) {
         $activities = casting_normalize_activities($data['activities'], $user_id);
+        if ($activities === []) {
+            return ['ok' => false, 'error' => 'حداقل یک نوع فعالیت انتخاب کنید.'];
+        }
         if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id) && !in_array('it', $activities, true)) {
             $activities[] = 'it';
         }

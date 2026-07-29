@@ -38,7 +38,7 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
         return ['ok' => false, 'error' => $chat_allow['error']];
     }
 
-    $message = sanitize_textarea_field($message);
+    $message = casting_employer_resolve_outbound_message($employer_id, sanitize_textarea_field($message));
     $project = sanitize_text_field($project);
     $project_type = sanitize_text_field((string) ($extra['project_type'] ?? ''));
     $role_needed = sanitize_text_field((string) ($extra['role_needed'] ?? ''));

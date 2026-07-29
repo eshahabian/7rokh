@@ -276,6 +276,10 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     if ($message === '' && !$is_self && casting_is_employer_role($viewer_role)) {
         $message = casting_employer_default_outreach_message($viewer_id);
     }
+    $invite_message_locked = !$is_self
+        && casting_is_employer_role($viewer_role)
+        && function_exists('casting_employer_must_use_fixed_outreach')
+        && casting_employer_must_use_fixed_outreach($viewer_id);
     $chat_allow = !$is_self ? casting_can_users_chat($viewer_id, $member_id) : ['ok' => false];
     $is_blocked = !$is_self ? casting_is_blocked($viewer_id, $member_id) : false;
     $director_workspace = null;
@@ -485,7 +489,13 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         </div>
         <div class="field">
           <label for="message">توضیح کوتاه</label>
-          <textarea id="message" name="message" rows="6" required maxlength="2000"><?= casting_e($message) ?></textarea>
+          <?php if ($invite_message_locked) : ?>
+            <input type="hidden" name="message" value="<?= casting_e($message) ?>">
+            <textarea id="message" rows="6" maxlength="2000" readonly><?= casting_e($message) ?></textarea>
+            <p class="field-hint"><?= casting_e(casting_employer_free_messages_hint($viewer_id)) ?></p>
+          <?php else : ?>
+            <textarea id="message" name="message" rows="6" required maxlength="2000"><?= casting_e($message) ?></textarea>
+          <?php endif; ?>
         </div>
         <button class="btn btn-primary" type="submit">ارسال دعوت</button>
       </form>
@@ -521,7 +531,13 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         </div>
         <div class="field">
           <label for="message">توضیح کوتاه</label>
-          <textarea id="message" name="message" rows="6" required maxlength="2000"><?= casting_e($message) ?></textarea>
+          <?php if ($invite_message_locked) : ?>
+            <input type="hidden" name="message" value="<?= casting_e($message) ?>">
+            <textarea id="message" rows="6" maxlength="2000" readonly><?= casting_e($message) ?></textarea>
+            <p class="field-hint"><?= casting_e(casting_employer_free_messages_hint($viewer_id)) ?></p>
+          <?php else : ?>
+            <textarea id="message" name="message" rows="6" required maxlength="2000"><?= casting_e($message) ?></textarea>
+          <?php endif; ?>
         </div>
         <button class="btn btn-primary" type="submit">ارسال دعوت</button>
       </form>
@@ -542,10 +558,12 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <span class="panel-edit-toggle">باز / بسته</span>
   </summary>
   <div class="panel-edit-body">
-  <p class="lede">اطلاعات را کامل کنید.<?php if (casting_profile_shows_portraits($profile['activities'] ?? [], $user_id)) : ?> برای عکس‌ها به <a href="profile-photo.php">ویرایش تصویر</a> بروید.<?php endif; ?></p>
+  <p class="lede">نوع فعالیت و اطلاعات پروفایل را می‌توانید تغییر دهید.<?php if (casting_profile_shows_portraits($profile['activities'] ?? [], $user_id)) : ?> برای عکس‌ها به <a href="profile-photo.php">ویرایش تصویر</a> بروید.<?php endif; ?></p>
 
   <form class="form" method="post" action="edit-profile.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
     <?php wp_nonce_field('casting_profile'); ?>
+
+    <?php casting_render_activity_fields($profile['activities'] ?? [], true, $user_id); ?>
 
     <div class="field">
       <label for="email">ایمیل</label>
@@ -578,7 +596,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 
     <fieldset class="field">
       <legend>جنسیت</legend>
-      <div class="role-grid role-grid-3">
+      <div class="role-grid role-grid-2">
         <?php foreach (casting_gender_labels() as $key => $label) : ?>
           <label class="role-option">
             <input type="radio" name="gender" value="<?= casting_e($key) ?>" <?= $profile['gender'] === $key ? 'checked' : '' ?>>
@@ -667,7 +685,6 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       </div>
     </div>
 
-    <?php casting_render_activity_fields($profile['activities'] ?? [], false, $user_id); ?>
     <div data-talent-profile-field<?= $talent_hidden ?>>
     <?php casting_render_language_fields($profile['language_items'] ?? []); ?>
     </div>

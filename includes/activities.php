@@ -271,6 +271,36 @@ function casting_sync_portal_owner_activities(int $user_id): void
     update_user_meta($user_id, 'casting_activities', $activities);
 }
 
+function casting_user_primary_activity_label(int $user_id): string
+{
+    if ($user_id <= 0) {
+        return '';
+    }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id) && function_exists('casting_sync_portal_owner_activities')) {
+        casting_sync_portal_owner_activities($user_id);
+    }
+    $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+    if ($activities === []) {
+        return '';
+    }
+    $first = (string) $activities[0];
+    if ($first === 'it' || $first === 'activity_none') {
+        foreach ($activities as $key) {
+            $key = (string) $key;
+            if ($key !== 'it' && $key !== 'activity_none') {
+                $first = $key;
+                break;
+            }
+        }
+    }
+    if ($first === 'it' || $first === 'activity_none') {
+        return '';
+    }
+    $labels = casting_activity_labels_for_user($user_id);
+
+    return (string) ($labels[$first] ?? '');
+}
+
 function casting_user_profile_chip_label(int $user_id, int $viewer_id = 0): string
 {
     unset($viewer_id);

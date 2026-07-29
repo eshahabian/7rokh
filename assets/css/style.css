@@ -1623,7 +1623,10 @@ fieldset.field legend {
   accent-color: var(--accent);
 }
 
-.activity-fields .req-mark {
+.activity-fields .req-mark,
+.form .req-mark,
+.jalali-label .req-mark,
+legend .req-mark {
   color: var(--accent);
 }
 
@@ -2893,6 +2896,12 @@ a.panel-sidebar-title {
 a.panel-sidebar-title:hover,
 a.panel-sidebar-title.is-active {
   color: var(--accent);
+}
+
+.panel-sidebar-activity {
+  font-weight: 600;
+  font-size: 0.86em;
+  color: var(--muted);
 }
 
 .panel-drawer-head-row .panel-sidebar-title {

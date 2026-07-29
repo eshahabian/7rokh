@@ -1064,6 +1064,20 @@
         mark.hidden = hideTalentFields;
       });
 
+      const nonTalentPhotoHint = form.querySelector("[data-non-talent-photo-hint]");
+      if (nonTalentPhotoHint) {
+        nonTalentPhotoHint.hidden = !hideTalentFields;
+      }
+
+      form.querySelectorAll("#profile-photos input[type='file']").forEach((input) => {
+        const isPrimary = input.hasAttribute("data-portrait-primary");
+        if (hideTalentFields) {
+          input.required = isPrimary;
+        } else {
+          input.required = true;
+        }
+      });
+
       form.querySelectorAll("[data-director-profile-field]").forEach((wrap) => {
         wrap.hidden = !enableArtisticWorks;
         wrap.classList.remove("is-talent-muted");
@@ -1091,6 +1105,46 @@
       }
     });
     syncTalentProfileFields();
+  });
+
+  document.querySelectorAll("form[data-register-form]").forEach((form) => {
+    const focusRegisterField = (target) => {
+      if (!target) return;
+      const el =
+        typeof target === "string"
+          ? form.querySelector("#" + CSS.escape(target)) ||
+            form.querySelector(`[name="${CSS.escape(target)}"]`) ||
+            form.querySelector(`input[name="${CSS.escape(target)}"]`)
+          : target;
+      if (!el) return;
+      const scrollTarget = el.closest(".field, fieldset, .jalali-birth, .portrait-upload-card") || el;
+      scrollTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+      window.setTimeout(() => {
+        try {
+          el.focus({ preventScroll: true });
+        } catch (_err) {}
+      }, 150);
+    };
+
+    form.addEventListener(
+      "invalid",
+      (event) => {
+        const first = event.target;
+        if (!(first instanceof HTMLElement)) return;
+        if (form.dataset.registerInvalidHandled === "1") return;
+        form.dataset.registerInvalidHandled = "1";
+        window.setTimeout(() => {
+          delete form.dataset.registerInvalidHandled;
+        }, 300);
+        focusRegisterField(first);
+      },
+      true
+    );
+
+    const focusId = form.getAttribute("data-focus-field");
+    if (focusId) {
+      window.setTimeout(() => focusRegisterField(focusId), 80);
+    }
   });
 
   const scrollTopBtn = document.querySelector("[data-scroll-top]");
