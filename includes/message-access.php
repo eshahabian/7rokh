@@ -586,6 +586,74 @@ function casting_message_access_targets_for(string $from_spec): array
 }
 
 /**
+ * روشن/خاموش کردن یک رابطه from → to (اعمال فوری)
+ *
+ * @return array{ok:bool,error:string,enabled?:bool,require_project?:bool}
+ */
+function casting_message_access_toggle_edge(string $from, string $to, string $field = 'enabled', ?bool $force = null): array
+{
+    $from = sanitize_key($from);
+    $to = sanitize_key($to);
+    $labels = casting_activity_labels();
+    if ($from === '' || $to === '' || $from === $to || !isset($labels[$from]) || !isset($labels[$to])) {
+        return ['ok' => false, 'error' => 'نقش فرستنده یا گیرنده نامعتبر است.'];
+    }
+    if (!in_array($field, ['enabled', 'require_project', 'can_start'], true)) {
+        return ['ok' => false, 'error' => 'فیلد نامعتبر است.'];
+    }
+
+    $data = casting_message_access_get();
+    $edges = $data['edges'];
+    $key = casting_message_access_edge_key($from, $to);
+    $row = $edges[$key] ?? [
+        'can_start'       => true,
+        'require_project' => false,
+        'enabled'         => false,
+    ];
+
+    if ($field === 'enabled' || $field === 'can_start') {
+        $next = $force !== null ? $force : empty($row['enabled']);
+        if ($next) {
+            $row['can_start'] = true;
+            $row['enabled'] = true;
+        } else {
+            // خاموش = حذف دسترسی شروع گفتگو
+            unset($edges[$key]);
+            if (!casting_message_access_save(['edges' => $edges, 'customized' => true])) {
+                return ['ok' => false, 'error' => 'ذخیره ناموفق بود.'];
+            }
+
+            return ['ok' => true, 'error' => '', 'enabled' => false, 'require_project' => false];
+        }
+    } else {
+        // require_project فقط وقتی دسترسی روشن است معنا دارد
+        if (empty($row['enabled']) && empty($row['can_start'])) {
+            return ['ok' => false, 'error' => 'اول دسترسی را روشن کنید.'];
+        }
+        $row['require_project'] = $force !== null ? $force : empty($row['require_project']);
+        $row['can_start'] = true;
+        $row['enabled'] = true;
+    }
+
+    $edges[$key] = [
+        'can_start'       => true,
+        'require_project' => !empty($row['require_project']),
+        'enabled'         => true,
+    ];
+
+    if (!casting_message_access_save(['edges' => $edges, 'customized' => true])) {
+        return ['ok' => false, 'error' => 'ذخیره ناموفق بود.'];
+    }
+
+    return [
+        'ok'              => true,
+        'error'           => '',
+        'enabled'         => true,
+        'require_project' => !empty($edges[$key]['require_project']),
+    ];
+}
+
+/**
  * ذخیره اهداف یک تخصص فرستنده (جایگزینی کامل لبه‌های خروجی)
  *
  * @param list<array{to:string,require_project?:bool,enabled?:bool}>|list<string> $targets

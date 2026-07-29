@@ -1531,4 +1531,96 @@
       if (foot) foot.hidden = true;
     });
   });
+
+  // جدول دسترسی پیام — روشن/خاموش فوری
+  const msgAccessPage = document.querySelector("[data-msg-access-page]");
+  if (msgAccessPage) {
+    const nonce = msgAccessPage.getAttribute("data-toggle-nonce") || "";
+    const errBox = msgAccessPage.querySelector(".msg-access-ajax-error");
+    const okBox = msgAccessPage.querySelector(".msg-access-ajax-ok");
+
+    const setToggleUi = (btn, on, field) => {
+      btn.classList.toggle("is-on", on);
+      btn.classList.toggle("is-off", !on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      const label = btn.querySelector(".msg-toggle-label");
+      if (label) {
+        if (field === "require_project") {
+          label.textContent = on ? "فعال" : "غیرفعال";
+        } else {
+          label.textContent = on ? "روشن" : "خاموش";
+        }
+      }
+    };
+
+    const flash = (ok, text) => {
+      if (errBox) {
+        errBox.hidden = ok;
+        errBox.textContent = ok ? "" : text;
+      }
+      if (okBox) {
+        okBox.hidden = !ok;
+        okBox.textContent = ok ? text : "";
+        if (ok) {
+          window.setTimeout(() => {
+            okBox.hidden = true;
+          }, 1800);
+        }
+      }
+    };
+
+    msgAccessPage.querySelectorAll("[data-msg-toggle]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (btn.disabled || btn.getAttribute("aria-busy") === "true") return;
+        const row = btn.closest("tr");
+        if (!row) return;
+        const from = row.getAttribute("data-from") || "";
+        const to = row.getAttribute("data-to") || "";
+        const field = btn.getAttribute("data-msg-toggle") || "enabled";
+        const currentlyOn = btn.classList.contains("is-on");
+        const nextOn = !currentlyOn;
+
+        btn.setAttribute("aria-busy", "true");
+        const body = new URLSearchParams();
+        body.set("_wpnonce", nonce);
+        body.set("from", from);
+        body.set("to", to);
+        body.set("field", field);
+        body.set("force", nextOn ? "1" : "0");
+
+        try {
+          const res = await fetch("admin-message-access.php?ajax=1", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+            body: body.toString(),
+            credentials: "same-origin",
+          });
+          const data = await res.json();
+          if (!data || !data.ok) {
+            flash(false, (data && data.error) || "ذخیره ناموفق بود.");
+            return;
+          }
+          if (field === "enabled") {
+            const enabled = !!data.enabled;
+            setToggleUi(btn, enabled, "enabled");
+            const reqBtn = row.querySelector('[data-msg-toggle="require_project"]');
+            if (reqBtn) {
+              reqBtn.disabled = !enabled;
+              if (!enabled) {
+                setToggleUi(reqBtn, false, "require_project");
+              }
+            }
+            flash(true, enabled ? "دسترسی روشن شد." : "دسترسی خاموش شد.");
+          } else {
+            setToggleUi(btn, !!data.require_project, "require_project");
+            flash(true, data.require_project ? "محدودیت پروژه فعال شد." : "محدودیت پروژه برداشته شد.");
+          }
+        } catch (e) {
+          flash(false, "خطا در ارتباط با سرور.");
+        } finally {
+          btn.removeAttribute("aria-busy");
+        }
+      });
+    });
+  }
 })();

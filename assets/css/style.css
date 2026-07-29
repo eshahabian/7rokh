@@ -4552,7 +4552,7 @@ a.panel-sidebar-title.is-active {
 
 .msg-access-table th,
 .msg-access-table td {
-  padding: 0.55rem 0.75rem;
+  padding: 0.65rem 0.85rem;
   border-bottom: 1px solid var(--line);
   text-align: right;
   vertical-align: middle;
@@ -4571,9 +4571,79 @@ a.panel-sidebar-title.is-active {
   color: var(--ink-muted);
 }
 
-.msg-access-table input[type="checkbox"] {
-  width: 1.1rem;
-  height: 1.1rem;
+.msg-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 6.5rem;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.msg-toggle-knob {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  flex: 0 0 auto;
+}
+
+.msg-toggle.is-on {
+  flex-direction: row-reverse;
+  border-color: rgba(90, 170, 110, 0.55);
+  background: rgba(90, 170, 110, 0.18);
+  color: #b6e3c0;
+}
+
+.msg-toggle.is-on .msg-toggle-knob {
+  background: #6fbf7f;
+}
+
+.msg-toggle--soft.is-on {
+  border-color: rgba(212, 165, 116, 0.55);
+  background: rgba(212, 165, 116, 0.16);
+  color: var(--accent-strong);
+}
+
+.msg-toggle--soft.is-on .msg-toggle-knob {
+  background: var(--accent-strong);
+}
+
+.msg-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.msg-toggle[aria-busy="true"] {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.panel-owner-tools {
+  margin: 1rem 0 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(212, 165, 116, 0.4);
+  border-radius: 12px;
+  background: rgba(212, 165, 116, 0.08);
+}
+
+.panel-owner-tools h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.panel-owner-tools p {
+  margin: 0 0 0.75rem;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
 }
 
 .admin-receipt-list {
