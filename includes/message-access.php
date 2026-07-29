@@ -357,10 +357,17 @@ function casting_message_access_save(array $payload): bool
         if ($from === '' || $to === '' || $from === $to) {
             continue;
         }
+        // فقط روابط روشن ذخیره می‌شوند
+        if (isset($row['enabled']) && empty($row['enabled'])) {
+            continue;
+        }
+        if (isset($row['can_start']) && empty($row['can_start'])) {
+            continue;
+        }
         $edges[casting_message_access_edge_key($from, $to)] = [
-            'can_start'       => !empty($row['can_start']),
+            'can_start'       => true,
             'require_project' => !empty($row['require_project']),
-            'enabled'         => array_key_exists('enabled', $row) ? !empty($row['enabled']) : true,
+            'enabled'         => true,
         ];
     }
 
@@ -371,7 +378,16 @@ function casting_message_access_save(array $payload): bool
         'updated_at' => current_time('mysql'),
     ];
 
-    return update_option(CASTING_MSG_ACCESS_OPTION, $data, false);
+    $ok = update_option(CASTING_MSG_ACCESS_OPTION, $data, false);
+    if ($ok) {
+        return true;
+    }
+    // اگر مقدار واقعاً همان است، وردپرس false می‌دهد — موفقیت حساب شود
+    $current = get_option(CASTING_MSG_ACCESS_OPTION, null);
+
+    return is_array($current)
+        && !empty($current['customized'])
+        && (($current['edges'] ?? null) == $data['edges']);
 }
 
 function casting_message_access_reset_to_defaults(): bool
@@ -586,9 +602,25 @@ function casting_message_access_targets_for(string $from_spec): array
 }
 
 /**
+ * آیا این لبه الان روشن است؟
+ */
+function casting_message_access_edge_is_on(array $edges, string $key): bool
+{
+    if (!isset($edges[$key]) || !is_array($edges[$key])) {
+        return false;
+    }
+    $row = $edges[$key];
+    if (isset($row['enabled']) && empty($row['enabled'])) {
+        return false;
+    }
+
+    return !empty($row['can_start']);
+}
+
+/**
  * روشن/خاموش کردن یک رابطه from → to (اعمال فوری)
  *
- * @return array{ok:bool,error:string,enabled?:bool,require_project?:bool}
+ * @return array{ok:bool,error:string,enabled?:bool,require_project?:bool,message?:string}
  */
 function casting_message_access_toggle_edge(string $from, string $to, string $field = 'enabled', ?bool $force = null): array
 {
@@ -605,41 +637,45 @@ function casting_message_access_toggle_edge(string $from, string $to, string $fi
     $data = casting_message_access_get();
     $edges = $data['edges'];
     $key = casting_message_access_edge_key($from, $to);
-    $row = $edges[$key] ?? [
-        'can_start'       => true,
-        'require_project' => false,
-        'enabled'         => false,
-    ];
+    $is_on = casting_message_access_edge_is_on($edges, $key);
+    $require_now = $is_on && !empty($edges[$key]['require_project']);
+    $to_label = $labels[$to];
 
-    if ($field === 'enabled' || $field === 'can_start') {
-        $next = $force !== null ? $force : empty($row['enabled']);
-        if ($next) {
-            $row['can_start'] = true;
-            $row['enabled'] = true;
-        } else {
-            // خاموش = حذف دسترسی شروع گفتگو
-            unset($edges[$key]);
-            if (!casting_message_access_save(['edges' => $edges, 'customized' => true])) {
-                return ['ok' => false, 'error' => 'ذخیره ناموفق بود.'];
-            }
+    if ($field === 'require_project') {
+        if (!$is_on) {
+            return ['ok' => false, 'error' => 'اول دسترسی پیام را روشن کنید.', 'enabled' => false, 'require_project' => false];
+        }
+        $next_require = $force !== null ? $force : !$require_now;
+        $edges[$key] = [
+            'can_start'       => true,
+            'require_project' => $next_require,
+            'enabled'         => true,
+        ];
+        if (!casting_message_access_save(['edges' => $edges, 'customized' => true])) {
+            return ['ok' => false, 'error' => 'ذخیره ناموفق بود.'];
+        }
 
-            return ['ok' => true, 'error' => '', 'enabled' => false, 'require_project' => false];
-        }
-    } else {
-        // require_project فقط وقتی دسترسی روشن است معنا دارد
-        if (empty($row['enabled']) && empty($row['can_start'])) {
-            return ['ok' => false, 'error' => 'اول دسترسی را روشن کنید.'];
-        }
-        $row['require_project'] = $force !== null ? $force : empty($row['require_project']);
-        $row['can_start'] = true;
-        $row['enabled'] = true;
+        return [
+            'ok'              => true,
+            'error'           => '',
+            'enabled'         => true,
+            'require_project' => $next_require,
+            'message'         => $next_require
+                ? ('محدودیت پروژه برای «' . $to_label . '» فعال شد.')
+                : ('محدودیت پروژه برای «' . $to_label . '» غیرفعال شد.'),
+        ];
     }
 
-    $edges[$key] = [
-        'can_start'       => true,
-        'require_project' => !empty($row['require_project']),
-        'enabled'         => true,
-    ];
+    $next_on = $force !== null ? $force : !$is_on;
+    if ($next_on) {
+        $edges[$key] = [
+            'can_start'       => true,
+            'require_project' => $require_now,
+            'enabled'         => true,
+        ];
+    } else {
+        unset($edges[$key]);
+    }
 
     if (!casting_message_access_save(['edges' => $edges, 'customized' => true])) {
         return ['ok' => false, 'error' => 'ذخیره ناموفق بود.'];
@@ -648,8 +684,11 @@ function casting_message_access_toggle_edge(string $from, string $to, string $fi
     return [
         'ok'              => true,
         'error'           => '',
-        'enabled'         => true,
-        'require_project' => !empty($edges[$key]['require_project']),
+        'enabled'         => $next_on,
+        'require_project' => $next_on ? $require_now : false,
+        'message'         => $next_on
+            ? ('دسترسی به «' . $to_label . '» روشن شد.')
+            : ('دسترسی به «' . $to_label . '» خاموش شد.'),
     ];
 }
 

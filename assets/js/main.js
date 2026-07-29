@@ -1540,7 +1540,7 @@
     const okBox = msgAccessPage.querySelector(".msg-access-ajax-ok");
 
     const setToggleUi = (btn, on, field) => {
-      btn.classList.toggle("is-on", on);
+      btn.classList.toggle("is-on", !!on);
       btn.classList.toggle("is-off", !on);
       btn.setAttribute("aria-pressed", on ? "true" : "false");
       const label = btn.querySelector(".msg-toggle-label");
@@ -1555,7 +1555,7 @@
 
     const flash = (ok, text) => {
       if (errBox) {
-        errBox.hidden = ok;
+        errBox.hidden = !!ok;
         errBox.textContent = ok ? "" : text;
       }
       if (okBox) {
@@ -1564,7 +1564,7 @@
         if (ok) {
           window.setTimeout(() => {
             okBox.hidden = true;
-          }, 1800);
+          }, 2200);
         }
       }
     };
@@ -1580,6 +1580,16 @@
         const currentlyOn = btn.classList.contains("is-on");
         const nextOn = !currentlyOn;
 
+        // به‌روزرسانی فوری ظاهر دکمه
+        setToggleUi(btn, nextOn, field);
+        if (field === "enabled") {
+          const reqBtn = row.querySelector('[data-msg-toggle="require_project"]');
+          if (reqBtn) {
+            reqBtn.disabled = !nextOn;
+            if (!nextOn) setToggleUi(reqBtn, false, "require_project");
+          }
+        }
+
         btn.setAttribute("aria-busy", "true");
         const body = new URLSearchParams();
         body.set("_wpnonce", nonce);
@@ -1591,31 +1601,51 @@
         try {
           const res = await fetch("admin-message-access.php?ajax=1", {
             method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+              Accept: "application/json",
+            },
             body: body.toString(),
             credentials: "same-origin",
+            cache: "no-store",
           });
-          const data = await res.json();
+          const raw = await res.text();
+          let data = null;
+          try {
+            data = JSON.parse(raw);
+          } catch (parseErr) {
+            setToggleUi(btn, currentlyOn, field);
+            flash(false, "پاسخ سرور نامعتبر بود. صفحه را تازه کنید.");
+            return;
+          }
           if (!data || !data.ok) {
+            setToggleUi(btn, currentlyOn, field);
+            if (field === "enabled") {
+              const reqBtn = row.querySelector('[data-msg-toggle="require_project"]');
+              if (reqBtn) reqBtn.disabled = !currentlyOn;
+            }
             flash(false, (data && data.error) || "ذخیره ناموفق بود.");
             return;
           }
           if (field === "enabled") {
-            const enabled = !!data.enabled;
+            const enabled = data.enabled === true || data.enabled === 1 || data.enabled === "1";
             setToggleUi(btn, enabled, "enabled");
             const reqBtn = row.querySelector('[data-msg-toggle="require_project"]');
             if (reqBtn) {
               reqBtn.disabled = !enabled;
-              if (!enabled) {
-                setToggleUi(reqBtn, false, "require_project");
+              if (!enabled) setToggleUi(reqBtn, false, "require_project");
+              else if (typeof data.require_project !== "undefined") {
+                setToggleUi(reqBtn, !!data.require_project, "require_project");
               }
             }
-            flash(true, enabled ? "دسترسی روشن شد." : "دسترسی خاموش شد.");
+            flash(true, data.message || (enabled ? "دسترسی روشن شد." : "دسترسی خاموش شد."));
           } else {
-            setToggleUi(btn, !!data.require_project, "require_project");
-            flash(true, data.require_project ? "محدودیت پروژه فعال شد." : "محدودیت پروژه برداشته شد.");
+            const reqOn = data.require_project === true || data.require_project === 1 || data.require_project === "1";
+            setToggleUi(btn, reqOn, "require_project");
+            flash(true, data.message || (reqOn ? "محدودیت پروژه فعال شد." : "محدودیت پروژه برداشته شد."));
           }
         } catch (e) {
+          setToggleUi(btn, currentlyOn, field);
           flash(false, "خطا در ارتباط با سرور.");
         } finally {
           btn.removeAttribute("aria-busy");

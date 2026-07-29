@@ -19,27 +19,39 @@ $labels = casting_activity_labels();
 
 // ---- AJAX: روشن/خاموش فوری ----
 if (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1') {
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    nocache_headers();
     header('Content-Type: application/json; charset=utf-8');
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        echo wp_json_encode(['ok' => false, 'error' => 'متد نامعتبر']);
+        echo wp_json_encode(['ok' => false, 'error' => 'متد نامعتبر'], JSON_UNESCAPED_UNICODE);
         exit;
     }
     $nonce = (string) ($_POST['_wpnonce'] ?? '');
     if ($nonce === '' || !wp_verify_nonce($nonce, 'casting_msg_access_toggle')) {
-        echo wp_json_encode(['ok' => false, 'error' => 'نشست منقضی شده. صفحه را تازه کنید.']);
+        echo wp_json_encode(['ok' => false, 'error' => 'نشست منقضی شده. صفحه را تازه کنید.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
     $from = sanitize_key((string) ($_POST['from'] ?? ''));
     $to = sanitize_key((string) ($_POST['to'] ?? ''));
     $field = sanitize_key((string) ($_POST['field'] ?? 'enabled'));
-    $force_raw = $_POST['force'] ?? null;
+    // force را صریح از رشته بخوان — empty('0') در PHP برابر true است و خطرناک است
     $force = null;
-    if ($force_raw === '1' || $force_raw === 1 || $force_raw === true || $force_raw === 'true') {
-        $force = true;
-    } elseif ($force_raw === '0' || $force_raw === 0 || $force_raw === false || $force_raw === 'false') {
-        $force = false;
+    if (array_key_exists('force', $_POST)) {
+        $force_raw = (string) $_POST['force'];
+        if ($force_raw === '1' || strtolower($force_raw) === 'true' || strtolower($force_raw) === 'on') {
+            $force = true;
+        } elseif ($force_raw === '0' || strtolower($force_raw) === 'false' || strtolower($force_raw) === 'off') {
+            $force = false;
+        }
     }
-    $result = casting_message_access_toggle_edge($from, $to, $field === 'require_project' ? 'require_project' : 'enabled', $force);
+    $result = casting_message_access_toggle_edge(
+        $from,
+        $to,
+        $field === 'require_project' ? 'require_project' : 'enabled',
+        $force
+    );
     echo wp_json_encode($result, JSON_UNESCAPED_UNICODE);
     exit;
 }
