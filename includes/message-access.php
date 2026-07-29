@@ -611,18 +611,7 @@ function casting_message_access_allows_start(int $from_id, int $to_id): array
         return ['ok' => false, 'error' => 'برای پیام‌رسانی باید نوع فعالیت در پروفایل مشخص باشد.'];
     }
 
-    // قفل سخت: بازیگر نمی‌تواند اول به کارگردان/تهیه‌کننده/... پیام بدهد
-    if (casting_message_access_is_actor_to_gated_lead($from_id, $to_id)) {
-        if (casting_users_have_message_relationship($from_id, $to_id)) {
-            return ['ok' => true, 'error' => ''];
-        }
-
-        return [
-            'ok'    => false,
-            'error' => 'بازیگر فقط وقتی می‌تواند به کارگردان یا مدیران پروژه پیام بدهد که عضو پروژه باشد، درخواست تأییدشده داشته باشد، یا طرف مقابل اول پیام داده باشد.',
-        ];
-    }
-
+    // منبع حقیقت = جدول ادمین (روشن/خاموش + فقط با پروژه)
     $need_relationship = false;
     $any_edge = false;
     foreach ($from_specs as $from_spec) {
@@ -640,6 +629,7 @@ function casting_message_access_allows_start(int $from_id, int $to_id): array
                 continue;
             }
 
+            // لبه آزاد (بدون نیاز به پروژه) — فوری مجاز
             return ['ok' => true, 'error' => ''];
         }
     }

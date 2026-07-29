@@ -144,7 +144,8 @@ casting_render_flash();
     · تعداد روابط فعال کل: <?= (int) count(array_filter($data['edges'], static fn ($e) => !empty($e['enabled']) && !empty($e['can_start']))) ?>
   </p>
   <p class="field-hint">
-    توجه: حتی اگر «فقط با پروژه» برای بازیگر→کارگردان خاموش باشد، قانون سخت سیستم جلوی شروع گفتگو بدون رابطه را می‌گیرد.
+    برای اجازهٔ آزاد پیام: «دسترسی پیام» را <strong>روشن</strong> و «فقط با پروژه» را <strong>غیرفعال</strong> کنید.
+    اگر دسترسی خاموش باشد، آن نقش در لیست مخاطب طرف مقابل دیده نمی‌شود.
   </p>
   <div class="flash flash-error msg-access-ajax-error" hidden role="alert"></div>
   <div class="flash flash-success msg-access-ajax-ok" hidden role="status"></div>
