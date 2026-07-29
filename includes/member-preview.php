@@ -113,7 +113,7 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
 
     if ($action === 'favorite') {
         if (!casting_user_is_director_role($viewer_id) || casting_get_user_role($member_id) !== 'talent') {
-            return ['ok' => false, 'error' => 'فقط کارگردان می‌تواند به علاقه‌مندی‌ها اضافه کند.'];
+            return ['ok' => false, 'error' => 'فقط کارگردان می‌تواند به لیست کاندیدا اضافه کند.'];
         }
         if (!function_exists('casting_director_get_workspace')) {
             require_once __DIR__ . '/director-workspace.php';
@@ -129,7 +129,7 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
             'ok'        => true,
             'error'     => '',
             'highlight' => !empty($workspace['is_highlight']),
-            'message'   => !empty($workspace['is_highlight']) ? 'به علاقه‌مندی‌ها اضافه شد.' : 'از علاقه‌مندی‌ها حذف شد.',
+            'message'   => !empty($workspace['is_highlight']) ? 'به لیست کاندیدا اضافه شد.' : 'کاندید حذف شد.',
         ];
     }
 
@@ -139,7 +139,7 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
 
     if ($action === 'interest') {
         $message = casting_employer_default_outreach_message($viewer_id);
-        $result = casting_send_talent_request($viewer_id, $member_id, $message, 'دعوت علاقه‌مندی');
+        $result = casting_send_talent_request($viewer_id, $member_id, $message, 'دعوت همکاری');
         if (!$result['ok']) {
             return ['ok' => false, 'error' => (string) ($result['error'] ?? 'ارسال ناموفق بود.')];
         }
@@ -249,7 +249,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
             data-member-preview-action="interest"
             data-member-id="<?= (int) $member_id ?>"
             <?= $chat_ok ? '' : ' disabled' ?>
-          >پیام علاقه‌مندی</button>
+          >ارسال پیام</button>
           <button
             type="button"
             class="btn member-preview-btn member-preview-btn--sms"
@@ -262,7 +262,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
             class="btn member-preview-btn member-preview-btn--favorite<?= $is_favorite ? ' is-active' : '' ?>"
             data-member-preview-action="favorite"
             data-member-id="<?= (int) $member_id ?>"
-          ><?= $is_favorite ? 'حذف از علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها' ?></button>
+          ><?= $is_favorite ? 'حذف کاندید' : 'لیست کاندیدا' ?></button>
         <?php endif; ?>
       </div>
       <?php if ($show_actions && $free_hint !== '') : ?>

@@ -17,6 +17,7 @@ $counts = casting_member_counts();
 
 casting_render_head('خانه', 'page-home');
 casting_render_header('home');
+casting_render_flash();
 ?>
 <main class="wrap hero">
   <div class="hero-copy">

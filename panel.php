@@ -116,7 +116,7 @@ casting_render_flash();
       <span class="panel-stat-icon" aria-hidden="true">♥</span>
       <div>
         <strong><?= (int) $favorites_count ?></strong>
-        <span>علاقمندی های من</span>
+        <span>لیست کاندیدا</span>
       </div>
     </article>
   </section>

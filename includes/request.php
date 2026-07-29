@@ -1174,12 +1174,12 @@ function casting_render_director_send_request_compose(
             </div>
           </form>
         <?php else : ?>
-          <p class="field-hint">هنوز بازیگری را به علاقه‌مندی‌ها اضافه نکرده‌اید. از جستجو پروفایل را باز کنید و «افزودن به علاقه‌مندی‌ها» را بزنید.</p>
+          <p class="field-hint">هنوز بازیگری را به لیست کاندیدا اضافه نکرده‌اید. از جستجو پروفایل را باز کنید و «لیست کاندیدا» را بزنید.</p>
         <?php endif; ?>
 
         <div class="request-compose-search">
           <a class="btn btn-ghost" href="search-users.php">جستجوی بازیگران</a>
-          <a class="btn btn-ghost" href="favorites.php">علاقه‌مندی‌ها</a>
+          <a class="btn btn-ghost" href="favorites.php">لیست کاندیدا</a>
         </div>
       </div>
     </details>

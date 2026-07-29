@@ -530,7 +530,7 @@ function casting_render_director_talent_workspace_panel(int $director_id, int $t
 
         <label class="check-row">
           <input type="checkbox" name="is_highlight" value="1" <?= !empty($workspace['is_highlight']) ? 'checked' : '' ?>>
-          <span>علاقه‌مندی — این کاربر را در لیست علاقه‌مندی‌ها نگه دار</span>
+          <span>کاندیدا — این کاربر را در لیست کاندیدا نگه دار</span>
         </label>
 
         <div class="field">

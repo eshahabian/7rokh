@@ -12,7 +12,6 @@ function casting_gender_labels(): array
     return [
         'female' => 'زن',
         'male'   => 'مرد',
-        'other'  => 'سایر',
     ];
 }
 
@@ -880,17 +879,8 @@ function casting_user_can_upload_portraits(int $user_id): bool
     if ($user_id <= 0) {
         return false;
     }
-    if (casting_user_has_acting_profile($user_id)) {
-        return true;
-    }
-    if (!function_exists('casting_user_is_super_admin')) {
-        require_once __DIR__ . '/admin-access.php';
-    }
-    if (casting_user_is_super_admin($user_id) || casting_user_is_portal_owner($user_id)) {
-        return true;
-    }
 
-    return false;
+    return casting_get_user_role($user_id) !== '';
 }
 
 function casting_profile_shows_portraits(array $activities, int $user_id = 0): bool
@@ -2463,16 +2453,16 @@ function casting_handle_portrait_upload(int $user_id, string $slot): array
 /**
  * @return array{ok:bool,error:string}
  */
-function casting_handle_portrait_uploads(int $user_id, bool $require_all = false): array
+function casting_handle_portrait_uploads(int $user_id, bool $require_all = false, bool $require_one = false): array
 {
     if (!casting_user_can_upload_portraits($user_id)) {
         foreach (array_keys(casting_portrait_slots()) as $slot) {
             if (!empty($_FILES['photo_' . $slot]['name'])) {
-                return ['ok' => false, 'error' => 'بارگذاری عکس فقط برای بازیگران امکان‌پذیر است.'];
+                return ['ok' => false, 'error' => 'بارگذاری عکس پروفایل برای این حساب مجاز نیست.'];
             }
         }
-        if ($require_all) {
-            return ['ok' => false, 'error' => 'بارگذاری عکس فقط برای بازیگران امکان‌پذیر است.'];
+        if ($require_all || $require_one) {
+            return ['ok' => false, 'error' => 'بارگذاری عکس پروفایل برای این حساب مجاز نیست.'];
         }
 
         return ['ok' => true, 'error' => ''];
@@ -2500,8 +2490,12 @@ function casting_handle_portrait_uploads(int $user_id, bool $require_all = false
         }
     }
 
-    if ($require_all && !casting_portraits_complete(casting_load_all_portraits($user_id))) {
+    $portraits = casting_load_all_portraits($user_id);
+    if ($require_all && !casting_portraits_complete($portraits)) {
         return ['ok' => false, 'error' => 'هر سه عکس (کلوزاپ، مدیوم، لانگ) الزامی است.'];
+    }
+    if ($require_one && empty(casting_primary_portrait($portraits)['id'])) {
+        return ['ok' => false, 'error' => 'حداقل یک عکس پروفایل آپلود کنید.'];
     }
 
     return ['ok' => true, 'error' => ''];

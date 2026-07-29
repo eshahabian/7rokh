@@ -21,7 +21,7 @@ function casting_panel_nav_items_desktop(): array
         ['key' => 'my-requests',  'label' => 'دعوت‌های کاربران',         'href' => 'my-requests.php'],
         ['key' => 'search',       'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
         ['key' => 'newest',       'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
-        ['key' => 'favorites',    'label' => 'علاقه‌مندی‌ها',             'href' => 'favorites.php'],
+        ['key' => 'favorites',    'label' => 'لیست کاندیدا',             'href' => 'favorites.php'],
         ['key' => 'blocked',      'label' => 'بلاک‌شده‌های من',          'href' => 'blocked-by-me.php'],
         ['key' => 'premium',      'label' => 'فعال‌سازی',                'href' => 'premium.php'],
         ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],

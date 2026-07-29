@@ -15,14 +15,14 @@ if (!casting_user_is_director_role($user_id)) {
 
 $favorites = casting_director_list_highlighted_talents($user_id);
 
-casting_render_panel_start('علاقه‌مندی‌های من', 'favorites');
+casting_render_panel_start('لیست کاندیدا', 'favorites');
 casting_render_flash();
 ?>
 <section class="dash-card">
-  <h1>علاقه‌مندی‌های من</h1>
-  <p class="meta">کاربرانی که از جستجو یا پیش‌نمایش پروفایل به علاقه‌مندی‌ها اضافه کرده‌اید.</p>
+  <h1>لیست کاندیدا</h1>
+  <p class="meta">کاربرانی که از جستجو یا پیش‌نمایش پروفایل به لیست کاندیدا اضافه کرده‌اید.</p>
   <?php if ($favorites === []) : ?>
-    <p class="empty-state">هنوز کسی را به علاقه‌مندی‌ها اضافه نکرده‌اید. از <a href="search-users.php">جستجوی کاربران</a> پروفایل را باز کنید و «افزودن به علاقه‌مندی‌ها» را بزنید.</p>
+    <p class="empty-state">هنوز کسی را به لیست کاندیدا اضافه نکرده‌اید. از <a href="search-users.php">جستجوی کاربران</a> پروفایل را باز کنید و «لیست کاندیدا» را بزنید.</p>
   <?php else : ?>
     <div class="member-grid">
       <?php foreach ($favorites as $fav) :

@@ -210,8 +210,18 @@ function casting_user_is_employer_account(int $user_id): bool
     return casting_is_employer_role(casting_get_user_role($user_id));
 }
 
+function casting_employer_free_messages_day_key(): string
+{
+    return (string) current_time('Y-m-d');
+}
+
 function casting_employer_free_messages_used(int $user_id): int
 {
+    $day = (string) get_user_meta($user_id, 'casting_employer_free_messages_day', true);
+    if ($day !== casting_employer_free_messages_day_key()) {
+        return 0;
+    }
+
     return max(0, (int) get_user_meta($user_id, 'casting_employer_free_messages_used', true));
 }
 
@@ -232,9 +242,14 @@ function casting_employer_has_free_message_quota(int $user_id): bool
     return casting_employer_free_messages_remaining($user_id) > 0;
 }
 
+function casting_employer_must_use_fixed_outreach(int $user_id): bool
+{
+    return casting_user_is_employer_account($user_id) && casting_user_requires_premium_for_dm($user_id);
+}
+
 function casting_employer_premium_send_error(): string
 {
-    return 'سه پیام رایگان شما تمام شده است. برای ارسال پیام بیشتر، عضویت ویژه فعال کنید.';
+    return 'سه پیام رایگان امروز تمام شده است. برای ارسال پیام بیشتر یا ویرایش متن، عضویت ویژه فعال کنید.';
 }
 
 function casting_employer_free_messages_hint(int $user_id): string
@@ -245,10 +260,11 @@ function casting_employer_free_messages_hint(int $user_id): string
 
     $remaining = casting_employer_free_messages_remaining($user_id);
     if ($remaining <= 0) {
-        return 'پیام رایگان باقی‌مانده: ۰ — برای ادامه، عضویت ویژه لازم است.';
+        return 'پیام رایگان امروز: ۰ از ' . casting_employer_free_dm_limit() . ' — برای ادامه یا تغییر متن، عضویت ویژه لازم است.';
     }
 
-    return 'پیام رایگان باقی‌مانده: ' . $remaining . ' از ' . casting_employer_free_dm_limit();
+    return 'پیام رایگان امروز: ' . $remaining . ' از ' . casting_employer_free_dm_limit()
+        . ' — متن پیام ثابت است؛ برای ویرایش متن، اشتراک ویژه تهیه کنید.';
 }
 
 function casting_employer_default_outreach_message(int $employer_id): string
@@ -267,17 +283,32 @@ function casting_employer_default_outreach_message(int $employer_id): string
         . "از طریق سامانه تخصصی ۷ رخ";
 }
 
+function casting_employer_resolve_outbound_message(int $employer_id, string $message): string
+{
+    if (casting_employer_must_use_fixed_outreach($employer_id)) {
+        return casting_employer_default_outreach_message($employer_id);
+    }
+
+    return $message;
+}
+
 function casting_employer_maybe_consume_free_message(int $user_id): void
 {
     if (!casting_user_is_employer_account($user_id) || !casting_user_requires_premium_for_dm($user_id)) {
         return;
     }
 
-    $used = casting_employer_free_messages_used($user_id);
+    $today = casting_employer_free_messages_day_key();
+    $day = (string) get_user_meta($user_id, 'casting_employer_free_messages_day', true);
+    $used = 0;
+    if ($day === $today) {
+        $used = max(0, (int) get_user_meta($user_id, 'casting_employer_free_messages_used', true));
+    }
     if ($used >= casting_employer_free_dm_limit()) {
         return;
     }
 
+    update_user_meta($user_id, 'casting_employer_free_messages_day', $today);
     update_user_meta($user_id, 'casting_employer_free_messages_used', $used + 1);
 }
 
@@ -715,7 +746,7 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
         return $allow;
     }
 
-    $message = trim(sanitize_textarea_field($message));
+    $message = casting_employer_resolve_outbound_message($sender_id, trim(sanitize_textarea_field($message)));
     if ($message === '') {
         return ['ok' => false, 'error' => 'پیام خالی است.'];
     }

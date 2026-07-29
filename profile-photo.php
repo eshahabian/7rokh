@@ -11,7 +11,7 @@ $profile = casting_get_profile($user_id);
 $error = '';
 
 if (!casting_user_can_upload_portraits($user_id)) {
-    casting_set_flash('error', 'بارگذاری عکس فقط برای بازیگران است.');
+    casting_set_flash('error', 'بارگذاری عکس پروفایل برای این حساب مجاز نیست.');
     casting_redirect('panel.php');
 }
 

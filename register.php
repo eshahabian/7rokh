@@ -176,7 +176,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         casting_delete_registered_user($user_id);
                         $error = $profile_save['error'];
                     } else {
-                        $photo = casting_handle_portrait_uploads($user_id, !$skip_talent_profile);
+                        $photo = casting_handle_portrait_uploads($user_id, !$skip_talent_profile, true);
                         if (!$photo['ok']) {
                             casting_delete_registered_user($user_id);
                             $error = $photo['error'];
@@ -193,9 +193,13 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (function_exists('casting_notify_n8n_registration')) {
                             casting_notify_n8n_registration($user_id);
                         }
+                        if (!empty($_SESSION['casting_flash'])) {
+                            unset($_SESSION['casting_flash']);
+                        }
                         $login = casting_login($email, $password);
                         if ($login['ok']) {
-                            casting_redirect(casting_dashboard_for_role((string) $result['role'], 'welcome=1'));
+                            casting_set_flash('success', 'ثبت‌نام و ورود با موفقیت انجام شد.');
+                            casting_redirect(casting_dashboard_for_role((string) $result['role']));
                         }
                         casting_redirect('login.php?registered=1');
                     }

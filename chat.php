@@ -113,8 +113,12 @@ if ($peer_id > 0) {
 
 $conversations = casting_dm_conversations($my_id);
 $compose_default = '';
-if ($peer_id > 0 && !empty($peer_allow['ok']) && casting_is_employer_role(casting_get_user_role($my_id)) && !$thread) {
-    $compose_default = casting_employer_default_outreach_message($my_id);
+$compose_locked = false;
+if ($peer_id > 0 && !empty($peer_allow['ok']) && casting_is_employer_role(casting_get_user_role($my_id))) {
+    if (casting_employer_must_use_fixed_outreach($my_id) || !$thread) {
+        $compose_default = casting_employer_default_outreach_message($my_id);
+    }
+    $compose_locked = casting_employer_must_use_fixed_outreach($my_id);
 }
 $employer_free_hint = casting_employer_free_messages_hint($my_id);
 
@@ -259,7 +263,12 @@ casting_render_flash();
             <input type="hidden" name="peer_id" value="<?= $peer_id ?>">
             <div class="field">
               <label for="message">پیام شما</label>
-              <textarea id="message" name="message" rows="8" required maxlength="2000" placeholder="پیامتان را بنویسید…"><?= casting_e($compose_default) ?></textarea>
+              <?php if ($compose_locked) : ?>
+                <input type="hidden" name="message" value="<?= casting_e($compose_default) ?>">
+                <textarea id="message" rows="8" maxlength="2000" readonly><?= casting_e($compose_default) ?></textarea>
+              <?php else : ?>
+                <textarea id="message" name="message" rows="8" required maxlength="2000" placeholder="پیامتان را بنویسید…"><?= casting_e($compose_default) ?></textarea>
+              <?php endif; ?>
               <?php if ($employer_free_hint !== '') : ?>
                 <p class="field-hint"><?= casting_e($employer_free_hint) ?></p>
               <?php endif; ?>
