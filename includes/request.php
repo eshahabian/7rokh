@@ -10,7 +10,7 @@ require_once __DIR__ . '/chat.php';
  *
  * @param array{project_type?:string,role_needed?:string,project_city?:string} $extra
  */
-function casting_send_talent_request(int $employer_id, int $talent_id, string $message, string $project = '', array $extra = []): array
+function casting_send_talent_request(int $employer_id, int $talent_id, string $message, string $project = '', array $extra = [], array $options = []): array
 {
     $employer = get_user_by('id', $employer_id);
     $talent = get_user_by('id', $talent_id);
@@ -23,7 +23,15 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
     }
     $to_role = casting_get_user_role($talent_id);
     $from_role = casting_get_user_role($employer_id);
-    if ($to_role === 'talent') {
+    $kind = sanitize_key((string) ($options['kind'] ?? $extra['kind'] ?? 'invitation'));
+    if ($kind === '') {
+        $kind = 'invitation';
+    }
+    if ($kind === 'casting_call') {
+        if ($to_role === '') {
+            return ['ok' => false, 'error' => 'گیرنده برای این نوع فراخوان مجاز نیست.'];
+        }
+    } elseif ($to_role === 'talent') {
         // بازیگر
     } elseif ($to_role === 'director' && $from_role === 'producer') {
         // تهیه‌کننده → کارگردان
@@ -33,65 +41,80 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
     if (casting_users_block_each_other($employer_id, $talent_id)) {
         return ['ok' => false, 'error' => 'به‌دلیل بلاک، ارسال دعوت ممکن نیست.'];
     }
-    $chat_allow = casting_can_start_chat($employer_id, $talent_id);
-    if (!$chat_allow['ok']) {
-        return ['ok' => false, 'error' => $chat_allow['error']];
+    if (empty($options['skip_chat_rules'])) {
+        $chat_allow = casting_can_start_chat($employer_id, $talent_id);
+        if (!$chat_allow['ok']) {
+            return ['ok' => false, 'error' => $chat_allow['error']];
+        }
     }
 
-    $message = casting_employer_resolve_outbound_message($employer_id, sanitize_textarea_field($message));
+    $message = sanitize_textarea_field($message);
+    if (empty($options['preserve_message']) && $kind !== 'casting_call') {
+        $message = casting_employer_resolve_outbound_message($employer_id, $message);
+    }
     $project = sanitize_text_field($project);
     $project_type = sanitize_text_field((string) ($extra['project_type'] ?? ''));
     $role_needed = sanitize_text_field((string) ($extra['role_needed'] ?? ''));
     $project_city = sanitize_text_field((string) ($extra['project_city'] ?? ''));
+    $activity_category = sanitize_key((string) ($extra['activity_category'] ?? ''));
+    $activity_specialty = sanitize_key((string) ($extra['activity_specialty'] ?? ''));
     if ($message === '') {
         return ['ok' => false, 'error' => 'توضیح کوتاه دعوت را بنویسید.'];
     }
-    if (casting_strlen($message) > 2000) {
+    if (casting_strlen($message) > 3000) {
         return ['ok' => false, 'error' => 'توضیح دعوت خیلی بلند است.'];
     }
     if ($project === '') {
-        $project = 'دعوت همکاری';
+        $project = $kind === 'casting_call' ? 'فراخوان کستینگ' : 'دعوت همکاری';
     }
 
-    $last_key = 'casting_req_last_' . $talent_id;
-    $last = (int) get_user_meta($employer_id, $last_key, true);
-    if ($last > 0 && (time() - $last) < 15 * 60) {
-        return ['ok' => false, 'error' => 'به‌تازگی به این هنرمند دعوت داده‌اید. کمی بعد دوباره تلاش کنید.'];
+    if (empty($options['skip_rate_limit'])) {
+        $last_key = 'casting_req_last_' . $talent_id;
+        $last = (int) get_user_meta($employer_id, $last_key, true);
+        if ($last > 0 && (time() - $last) < 15 * 60) {
+            return ['ok' => false, 'error' => 'به‌تازگی به این هنرمند دعوت داده‌اید. کمی بعد دوباره تلاش کنید.'];
+        }
     }
 
     $request = [
-        'id'            => uniqid('req_', true),
-        'employer_id'   => $employer_id,
-        'talent_id'     => $talent_id,
-        'employer'      => $employer->display_name,
-        'employer_role' => casting_role_label(casting_get_user_role($employer_id)),
-        'employer_mail' => $employer->user_email,
-        'talent_name'    => $talent->display_name,
-        'project'       => $project,
-        'project_type'  => $project_type,
-        'role_needed'   => $role_needed,
-        'project_city'  => $project_city,
-        'message'       => $message,
-        'created_at'    => current_time('mysql'),
-        'status'        => 'pending',
-        'reply'         => '',
-        'replied_at'    => '',
-        'seen_at'       => '',
-        'employer_seen_at' => '',
-        'chat_seeded'   => false,
-        'reply_in_chat' => false,
-        'kind'          => 'invitation',
+        'id'                 => uniqid($kind === 'casting_call' ? 'call_' : 'req_', true),
+        'employer_id'        => $employer_id,
+        'talent_id'          => $talent_id,
+        'employer'           => $employer->display_name,
+        'employer_role'      => casting_user_public_role_label($employer_id) ?: casting_role_label(casting_get_user_role($employer_id)),
+        'employer_mail'      => $employer->user_email,
+        'talent_name'         => $talent->display_name,
+        'project'            => $project,
+        'project_type'       => $project_type,
+        'role_needed'        => $role_needed,
+        'project_city'       => $project_city,
+        'activity_category'  => $activity_category,
+        'activity_specialty' => $activity_specialty,
+        'message'            => $message,
+        'created_at'         => current_time('mysql'),
+        'status'             => 'pending',
+        'reply'              => '',
+        'replied_at'         => '',
+        'seen_at'            => '',
+        'employer_seen_at'   => '',
+        'chat_seeded'        => false,
+        'reply_in_chat'      => false,
+        'kind'               => $kind,
     ];
 
     casting_store_request_for_users($request);
-    update_user_meta($employer_id, $last_key, time());
+    if (empty($options['skip_rate_limit'])) {
+        update_user_meta($employer_id, 'casting_req_last_' . $talent_id, time());
+    }
 
-    $mail = casting_mail_talent_request($talent, $employer, $request);
-    if (!$mail['ok']) {
-        return [
-            'ok'      => true,
-            'warning' => 'دعوت ذخیره شد، ولی ارسال ایمیل ناموفق بود. تنظیم SMTP وردپرس را چک کنید.',
-        ];
+    if (empty($options['skip_mail'])) {
+        $mail = casting_mail_talent_request($talent, $employer, $request);
+        if (!$mail['ok']) {
+            return [
+                'ok'      => true,
+                'warning' => 'دعوت ذخیره شد، ولی ارسال ایمیل ناموفق بود. تنظیم SMTP وردپرس را چک کنید.',
+            ];
+        }
     }
 
     return ['ok' => true];
@@ -529,24 +552,34 @@ function casting_mail_talent_request(WP_User $talent, WP_User $employer, array $
     }
 
     $brand = casting_brand();
-    $subject = sprintf('[%s] درخواست همکاری از %s', $brand, $employer->display_name);
+    $is_call = (($request['kind'] ?? '') === 'casting_call');
+    $subject = $is_call
+        ? sprintf('[%s] فراخوان کستینگ از %s', $brand, $employer->display_name)
+        : sprintf('[%s] درخواست همکاری از %s', $brand, $employer->display_name);
     $login_url = casting_url('my-requests.php');
     $lines = [
         'سلام ' . $talent->display_name . '،',
         '',
-        'یک درخواست همکاری جدید در ' . $brand . ' برای شما ثبت شده است.',
+        $is_call
+            ? 'یک فراخوان کستینگ جدید در ' . $brand . ' برای شما ثبت شده است.'
+            : 'یک درخواست همکاری جدید در ' . $brand . ' برای شما ثبت شده است.',
         '',
         'فرستنده: ' . $employer->display_name . ' (' . ($request['employer_role'] ?? 'کارفرما') . ')',
         'ایمیل کارفرما: ' . $employer->user_email,
     ];
     if (!empty($request['project'])) {
-        $lines[] = 'پروژه / نقش: ' . $request['project'];
+        $lines[] = ($is_call ? 'پروژه: ' : 'پروژه / نقش: ') . $request['project'];
+    }
+    if (!empty($request['role_needed'])) {
+        $lines[] = 'نوع فعالیت / تخصص: ' . $request['role_needed'];
     }
     $lines[] = '';
-    $lines[] = 'متن درخواست:';
+    $lines[] = $is_call ? 'متن فراخوان:' : 'متن درخواست:';
     $lines[] = $request['message'];
     $lines[] = '';
-    $lines[] = 'برای قبول یا رد درخواست وارد پنل شوید:';
+    $lines[] = $is_call
+        ? 'برای مشاهده و پاسخ، بخش «فراخوان کستینگ» را در پنل باز کنید:'
+        : 'برای قبول یا رد درخواست وارد پنل شوید:';
     $lines[] = $login_url;
     $lines[] = '';
     $lines[] = '— ' . $brand;
@@ -858,7 +891,7 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
     if ($requests === []) {
         echo $is_archive
             ? '<p class="meta">بایگانی خالی است.</p>'
-            : '<p class="meta">هنوز دعوت همکاری نیامده است.</p>';
+            : '<p class="meta">هنوز فراخوان کستینگی نیامده است.</p>';
         return;
     }
     ?>
@@ -869,6 +902,7 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
           $pending = $status === 'pending';
           $is_unread = !$is_archive && casting_request_is_unread($user_id, $req);
           $is_open = $open_id !== '' && $open_id === $req_id;
+          $is_call = (($req['kind'] ?? '') === 'casting_call');
           $open_url = 'my-requests.php';
           if ($req_id !== '') {
               $open_url .= ($is_archive ? '?view=archive&' : '?') . 'open=' . rawurlencode($req_id);
@@ -881,10 +915,13 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
           $project_type = (string) ($req['project_type'] ?? '');
           $project_type_label = $types[$project_type] ?? $project_type;
           ?>
-        <article class="invitation-card status-<?= casting_e($status) ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_open ? ' is-open' : '' ?><?= $is_archive ? ' is-archived' : '' ?>"<?= $is_open ? ' id="invitation-detail"' : '' ?>>
+        <article class="invitation-card status-<?= casting_e($status) ?><?= $is_call ? ' is-casting-call' : '' ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_open ? ' is-open' : '' ?><?= $is_archive ? ' is-archived' : '' ?>"<?= $is_open ? ' id="invitation-detail"' : '' ?>>
           <div class="invitation-card-main">
             <header class="invitation-card-head">
-              <h3 class="invitation-project"><?= casting_e((string) ($req['project'] ?? 'بدون نام پروژه')) ?></h3>
+              <h3 class="invitation-project">
+                <?php if ($is_call) : ?><span class="req-kind-badge">فراخوان کستینگ</span> <?php endif; ?>
+                <?= casting_e((string) ($req['project'] ?? ($is_call ? 'فراخوان کستینگ' : 'بدون نام پروژه'))) ?>
+              </h3>
               <?php if ($is_unread) : ?>
                 <span class="req-status req-status-new">جدید</span>
               <?php else : ?>
@@ -897,7 +934,7 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
                 <li><strong>نوع پروژه:</strong> <?= casting_e($project_type_label) ?></li>
               <?php endif; ?>
               <?php if (!empty($req['role_needed'])) : ?>
-                <li><strong>نقش / تخصص:</strong> <?= casting_e((string) $req['role_needed']) ?></li>
+                <li><strong><?= $is_call ? 'نوع فعالیت:' : 'نقش / تخصص:' ?></strong> <?= casting_e((string) $req['role_needed']) ?></li>
               <?php endif; ?>
               <?php if (!empty($req['project_city'])) : ?>
                 <li><strong>شهر پروژه:</strong> <?= casting_e((string) $req['project_city']) ?></li>
@@ -920,7 +957,7 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
                   <button class="btn btn-ghost btn-sm" type="submit" name="request_archive_action" value="unarchive">بازگردانی از بایگانی</button>
                 </form>
               <?php else : ?>
-                <form method="post" action="<?= casting_e($form_action) ?>" onsubmit="return confirm('این دعوت به بایگانی منتقل شود؟');">
+                <form method="post" action="<?= casting_e($form_action) ?>" onsubmit="return confirm('این مورد به بایگانی منتقل شود؟');">
                   <?php wp_nonce_field('casting_archive_request'); ?>
                   <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
                   <?php if ($box === 'received') : ?><input type="hidden" name="box" value="received"><?php endif; ?>
@@ -970,7 +1007,7 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
             echo '<p class="meta">بایگانی خالی است.</p>';
         } else {
             ?>
-    <p class="meta">هنوز درخواستی نفرستاده‌اید. از <a href="search-users.php">جستجوی کاربران</a> شروع کنید.</p>
+    <p class="meta">هنوز فراخوانی نفرستاده‌اید. از <a href="search-users.php">جستجوی کاربران</a> یا میز کارگردان شروع کنید.</p>
             <?php
         }
         return;
@@ -981,6 +1018,7 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
           $req_id = (string) ($req['id'] ?? '');
           $status = casting_request_status_key($req);
           $is_unread = !$is_archive && casting_request_is_unread($employer_id, $req);
+          $is_call = (($req['kind'] ?? '') === 'casting_call');
           $open_url = 'my-requests.php';
           if ($req_id !== '') {
               $open_url .= ($is_archive ? '?view=archive&' : '?') . 'open=' . rawurlencode($req_id);
@@ -991,12 +1029,15 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
               $open_url .= (str_contains($open_url, '?') ? '&' : '?') . 'box=sent';
           }
           ?>
-        <article class="request-item status-<?= casting_e($status) ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_archive ? ' is-archived' : '' ?>">
+        <article class="request-item status-<?= casting_e($status) ?><?= $is_call ? ' is-casting-call' : '' ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_archive ? ' is-archived' : '' ?>">
           <?php if (!empty($req['talent_id'])) : ?>
           <a class="request-item-open" href="<?= casting_e($open_url) ?>">
             <header>
               <strong><?= casting_e((string) ($req['talent_name'] ?? 'کاربر')) ?></strong>
               <time><?= casting_e((string) ($req['created_at'] ?? '')) ?></time>
+              <?php if ($is_call) : ?>
+                <span class="req-kind-badge">فراخوان کستینگ</span>
+              <?php endif; ?>
               <?php if ($is_archive && !empty($req['archived_at'])) : ?>
                 <span class="req-archived-at">بایگانی: <?= casting_e((string) $req['archived_at']) ?></span>
               <?php endif; ?>
@@ -1009,9 +1050,12 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
             <?php if (!empty($req['project'])) : ?>
               <p><strong>پروژه:</strong> <?= casting_e((string) $req['project']) ?></p>
             <?php endif; ?>
+            <?php if ($is_call && !empty($req['role_needed'])) : ?>
+              <p><strong>نوع فعالیت:</strong> <?= casting_e((string) $req['role_needed']) ?></p>
+            <?php endif; ?>
             <p><?= nl2br(casting_e(casting_chat_preview((string) ($req['message'] ?? ''), 160))) ?></p>
             <?php if (!empty($req['reply'])) : ?>
-              <p class="request-reply"><strong>پاسخ هنرمند:</strong> <?= nl2br(casting_e((string) $req['reply'])) ?></p>
+              <p class="request-reply"><strong>پاسخ:</strong> <?= nl2br(casting_e((string) $req['reply'])) ?></p>
             <?php endif; ?>
             <span class="request-item-cta">مشاهده و گفتگو ←</span>
           </a>

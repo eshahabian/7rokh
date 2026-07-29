@@ -611,6 +611,19 @@ html[data-theme="day"] .brand-mark-rokh {
   color: var(--accent-strong) !important;
 }
 
+.req-kind-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  vertical-align: middle;
+  color: var(--accent-strong);
+  background: rgba(212, 165, 116, 0.14);
+  border: 1px solid rgba(212, 165, 116, 0.35);
+}
+
 .request-item-open {
   display: block;
   color: inherit;
@@ -5060,6 +5073,57 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
   margin-top: 2rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--line);
+}
+
+.director-call-filters.form-grid {
+  align-items: start;
+}
+
+.director-call-filters > .field > label {
+  min-height: 2.5em;
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 0.35rem;
+}
+
+.director-call-filters > .field > select {
+  width: 100%;
+  min-height: 48px;
+}
+
+.director-call-filters .filter-metric-group {
+  min-width: 0;
+  gap: 0;
+}
+
+.director-call-filters .filter-metric-head {
+  min-height: 2.5em;
+  margin-bottom: 0.35rem;
+  align-items: flex-end;
+}
+
+.director-call-filters .filter-metric-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.director-casting-call .filter-activity-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.director-casting-call .filter-activity-fields .field label {
+  min-height: 2.5em;
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 0.35rem;
+}
+
+.director-casting-call .filter-activity-fields select {
+  width: 100%;
+  min-height: 48px;
 }
 
 .director-call-filters .filter-profile-cluster,

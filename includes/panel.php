@@ -18,7 +18,7 @@ function casting_panel_nav_items_desktop(): array
 {
     return [
         ['key' => 'messages',     'label' => 'پیام کاربران',             'href' => 'chat.php'],
-        ['key' => 'my-requests',  'label' => 'دعوت‌های کاربران',         'href' => 'my-requests.php'],
+        ['key' => 'my-requests',  'label' => 'فراخوان کستینگ',           'href' => 'my-requests.php'],
         ['key' => 'search',       'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
         ['key' => 'newest',       'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
         ['key' => 'favorites',    'label' => 'لیست کاندیدا',             'href' => 'favorites.php'],
@@ -1215,11 +1215,12 @@ function casting_render_member_search_phase2_fields(array $filters): void
 }
 
 /**
- * تخصص هنری + تخصص
+ * فیلدهای نوع فعالیت / تخصص برای جستجو و فراخوان
  *
  * @param array<string, string> $filters
+ * @param array{category?:string,specialty?:string} $labels
  */
-function casting_render_member_search_activity_fields(array $filters): void
+function casting_render_member_search_activity_fields(array $filters, array $labels = []): void
 {
     $categories = casting_activity_categories();
     $category = (string) ($filters['activity_category'] ?? '');
@@ -1233,10 +1234,12 @@ function casting_render_member_search_activity_fields(array $filters): void
     if (!is_string($map_json)) {
         $map_json = '{}';
     }
+    $category_label = (string) ($labels['category'] ?? 'تخصص هنری');
+    $specialty_label = (string) ($labels['specialty'] ?? 'تخصص');
     ?>
     <div class="filter-activity-fields" data-activity-search data-activity-map="<?= casting_e($map_json) ?>">
       <div class="field">
-        <label for="activity_category">تخصص هنری</label>
+        <label for="activity_category"><?= casting_e($category_label) ?></label>
         <select id="activity_category" name="activity_category" data-activity-category>
           <option value=""><?= casting_e(casting_search_filter_none_label()) ?></option>
           <?php foreach ($categories as $key => $cat) : ?>
@@ -1245,7 +1248,7 @@ function casting_render_member_search_activity_fields(array $filters): void
         </select>
       </div>
       <div class="field">
-        <label for="activity_specialty">تخصص</label>
+        <label for="activity_specialty"><?= casting_e($specialty_label) ?></label>
         <select id="activity_specialty" name="activity_specialty" data-activity-specialty <?= $category === '' ? 'disabled' : '' ?>>
           <option value=""><?= casting_e(casting_search_specialty_empty_label($category !== '')) ?></option>
           <?php foreach ($subs as $key => $label) : ?>

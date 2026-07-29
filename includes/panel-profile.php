@@ -461,7 +461,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     <?php $invite_types = casting_invitation_project_type_labels(); ?>
     <div class="bio-block request-box" id="request-box">
       <h3>ارسال دعوت همکاری</h3>
-      <p class="field-hint">این دعوت در بخش «دعوت‌های همکاری» دیده می‌شود و وارد پیام کاربران نمی‌شود.</p>
+      <p class="field-hint">این دعوت در بخش «فراخوان کستینگ» دیده می‌شود و وارد پیام کاربران نمی‌شود.</p>
       <form class="form" method="post" action="member.php?id=<?= $member_id ?>">
         <?php wp_nonce_field('casting_request_' . $member_id); ?>
         <div class="form-grid">

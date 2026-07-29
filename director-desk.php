@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 casting_set_flash(
                     'success',
-                    'فراخوان برای ' . (int) ($result['sent'] ?? 0) . ' بازیگر ارسال شد'
+                    'فراخوان برای ' . (int) ($result['sent'] ?? 0) . ' عضو ارسال شد'
                     . ((int) ($result['matched'] ?? 0) > (int) ($result['sent'] ?? 0)
                         ? ' (از ' . (int) ($result['matched'] ?? 0) . ' نفر منطبق)'
                         : '')

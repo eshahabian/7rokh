@@ -169,19 +169,19 @@ if ($is_director) {
     $archive_count = count(casting_user_archived_requests($user_id));
 }
 
-casting_render_panel_start($role === 'talent' ? 'دعوت‌های همکاری' : 'درخواست‌ها', 'my-requests');
+casting_render_panel_start('فراخوان کستینگ', 'my-requests');
 casting_render_flash();
 ?>
 <section class="dash-card">
-  <h1><?= $role === 'talent' ? 'دعوت‌های همکاری' : 'درخواست‌ها' ?></h1>
+  <h1>فراخوان کستینگ</h1>
   <?php if ($is_director) : ?>
-    <nav class="admin-tabs request-box-tabs" aria-label="نوع درخواست‌ها">
-      <a class="admin-tab <?= $box === 'sent' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'sent')) ?>">دعوت‌های ارسالی</a>
-      <a class="admin-tab <?= $box === 'received' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'received')) ?>">دعوت‌های دریافتی</a>
+    <nav class="admin-tabs request-box-tabs" aria-label="نوع فراخوان‌ها">
+      <a class="admin-tab <?= $box === 'sent' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'sent')) ?>">فراخوان‌های ارسالی</a>
+      <a class="admin-tab <?= $box === 'received' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'received')) ?>">فراخوان‌های دریافتی</a>
     </nav>
   <?php endif; ?>
   <?php if ($role === 'talent' || casting_is_employer_role($role)) : ?>
-    <nav class="admin-tabs request-view-tabs" aria-label="نمایش دعوت‌ها">
+    <nav class="admin-tabs request-view-tabs" aria-label="نمایش فراخوان‌ها">
       <a class="admin-tab <?= $view === 'active' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url('active', $is_director ? $box : 'default')) ?>">فعال</a>
       <a class="admin-tab <?= $view === 'archive' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url('archive', $is_director ? $box : 'default')) ?>">
         بایگانی<?= $archive_count > 0 ? ' (' . $archive_count . ')' : '' ?>
@@ -190,19 +190,19 @@ casting_render_flash();
   <?php endif; ?>
   <?php if ($role === 'talent') : ?>
     <p class="lede"><?= $view === 'archive'
-        ? 'دعوت‌های بایگانی‌شده. از پیام‌های عادی جدا هستند.'
-        : 'دعوت‌های همکاری از پیام‌های عادی جدا هستند. جزئیات هر دعوت را ببینید و پاسخ دهید.' ?></p>
+        ? 'فراخوان‌های بایگانی‌شده. از پیام‌های عادی جدا هستند.'
+        : 'فراخوان‌های کستینگ از پیام‌های عادی جدا هستند. جزئیات هر فراخوان را ببینید و پاسخ دهید.' ?></p>
     <?php casting_render_talent_requests_list($user_id, $requests, 'my-requests.php', $view, 'default', $open_request_id); ?>
   <?php elseif ($is_director) : ?>
     <?php if ($box === 'received') : ?>
       <p class="lede"><?= $view === 'archive'
-          ? 'دعوت‌های دریافتی بایگانی‌شده.'
-          : 'دعوت‌هایی که تهیه‌کنندگان و دیگر کارفرماها برای شما فرستاده‌اند.' ?></p>
+          ? 'فراخوان‌های دریافتی بایگانی‌شده.'
+          : 'فراخوان‌هایی که تهیه‌کنندگان و دیگر کارفرماها برای شما فرستاده‌اند.' ?></p>
       <?php casting_render_talent_requests_list($user_id, $requests, 'my-requests.php', $view, 'received', $open_request_id); ?>
     <?php else : ?>
       <p class="lede"><?= $view === 'archive'
-          ? 'دعوت‌های ارسالی بایگانی‌شده.'
-          : 'دعوت‌های همکاری که برای بازیگران ارسال کرده‌اید (جدا از پیام کاربران).' ?></p>
+          ? 'فراخوان‌های ارسالی بایگانی‌شده.'
+          : 'فراخوان‌های کستینگ که برای اعضا ارسال کرده‌اید (جدا از پیام کاربران).' ?></p>
       <?php if ($view === 'active') :
           $highlighted_talents = casting_director_list_highlighted_talents($user_id);
           if ($compose_error !== '') {
@@ -224,11 +224,11 @@ casting_render_flash();
     <?php endif; ?>
   <?php elseif (casting_is_employer_role($role)) : ?>
     <p class="lede"><?= $view === 'archive'
-        ? 'دعوت‌های بایگانی‌شده.'
-        : 'دعوت‌هایی که برای هنرمندان و بازیگران ارسال کرده‌اید.' ?></p>
+        ? 'فراخوان‌های بایگانی‌شده.'
+        : 'فراخوان‌هایی که برای اعضا ارسال کرده‌اید.' ?></p>
     <?php casting_render_employer_sent_requests_list($user_id, $requests, 'my-requests.php', $view); ?>
   <?php else : ?>
-    <p class="meta">برای این نقش دعوتی ثبت نشده است.</p>
+    <p class="meta">برای این نقش فراخوانی ثبت نشده است.</p>
   <?php endif; ?>
 </section>
 <?php casting_render_panel_end(); ?>
