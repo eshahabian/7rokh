@@ -128,7 +128,7 @@ function casting_render_footer(): void
     <span aria-hidden="true">↑</span>
   </button>
   <?php casting_render_pwa_bootstrap(); ?>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=71" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=72" defer></script>
 </body>
 </html>
 <?php

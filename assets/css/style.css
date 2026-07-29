@@ -4571,6 +4571,27 @@ a.panel-sidebar-title.is-active {
   color: var(--ink-muted);
 }
 
+.msg-access-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem 1.25rem;
+  align-items: end;
+}
+
+.msg-access-guild-head th {
+  position: sticky;
+  top: 2.4rem;
+  z-index: 1;
+  background: color-mix(in srgb, var(--bg-panel) 88%, var(--accent, #8a6a3a) 12%);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+  padding-top: 0.75rem;
+  padding-bottom: 0.55rem;
+}
+
 .msg-toggle {
   display: inline-flex;
   align-items: center;

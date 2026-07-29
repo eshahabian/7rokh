@@ -731,10 +731,6 @@ function casting_message_access_toggle_edge(string $from, string $to, string $fi
             return ['ok' => false, 'error' => 'اول دسترسی پیام را روشن کنید.', 'enabled' => false, 'require_project' => false];
         }
         $next_require = $force !== null ? $force : !$require_now;
-        if (in_array($from, casting_message_access_actor_keys(), true)
-            && in_array($to, casting_message_access_actor_gated_targets(), true)) {
-            $next_require = true;
-        }
         $edges[$key] = [
             'can_start'       => true,
             'require_project' => $next_require,
@@ -756,13 +752,10 @@ function casting_message_access_toggle_edge(string $from, string $to, string $fi
     }
 
     $next_on = $force !== null ? $force : !$is_on;
-    // بازیگر → کارگردان/مدیران: همیشه نیازمند رابطه/پروژه
-    $force_require = in_array($from, casting_message_access_actor_keys(), true)
-        && in_array($to, casting_message_access_actor_gated_targets(), true);
     if ($next_on) {
         $edges[$key] = [
             'can_start'       => true,
-            'require_project' => $force_require || $require_now,
+            'require_project' => $require_now,
             'enabled'         => true,
         ];
     } else {
