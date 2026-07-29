@@ -108,7 +108,7 @@ function casting_render_location_fields(
     ?>
   <div class="<?= casting_e($wrapper_class) ?>" data-location-fields data-location-map="<?= casting_e((string) $json) ?>"<?= $city_allow_all ? ' data-location-city-all="1"' : '' ?>>
     <div class="field">
-      <label for="province">استان</label>
+      <label for="province">استان<?= $required ? ' <span class="req-mark">*</span>' : '' ?></label>
       <select id="province" name="province" data-location-province<?= $req ?>>
         <option value=""><?= casting_e($province_empty) ?></option>
         <?php foreach ($provinces as $key => $label) : ?>
@@ -117,7 +117,7 @@ function casting_render_location_fields(
       </select>
     </div>
     <div class="field">
-      <label for="city">شهر</label>
+      <label for="city">شهر<?= $required ? ' <span class="req-mark">*</span>' : '' ?></label>
       <select id="city" name="city" data-location-city<?= $req ?> <?= $province === '' ? 'disabled' : '' ?>>
         <option value=""><?= casting_e($city_empty) ?></option>
         <?php if ($city_allow_all && $province !== '') : ?>

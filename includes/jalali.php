@@ -200,7 +200,7 @@ function casting_render_jalali_birthday_fields(string $gregorian = '', bool $req
     $req = $required ? 'required' : '';
     ?>
   <div class="field jalali-birth" data-jalali-birth>
-    <span class="jalali-label">تاریخ تولد (شمسی)</span>
+    <span class="jalali-label">تاریخ تولد (شمسی)<?= $required ? ' <span class="req-mark">*</span>' : '' ?></span>
     <div class="jalali-row">
       <label class="sr-only" for="birth_jd">روز</label>
       <select id="birth_jd" name="birth_jd" data-jalali-day <?= $req ?>>

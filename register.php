@@ -13,6 +13,7 @@ require_once __DIR__ . '/includes/layout.php';
 casting_nocache();
 
 $error = '';
+$focus_field = '';
 $password_mismatch = false;
 $name = '';
 $username = '';
@@ -121,22 +122,29 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($password !== $password2) {
             $password_mismatch = true;
+            $focus_field = 'password2';
         } elseif ($birthdate === '' || $age_calc === null) {
             $error = 'تاریخ تولد شمسی را کامل و درست انتخاب کنید.';
+            $focus_field = 'birth_jd';
         } elseif (!array_key_exists($gender, casting_gender_labels())) {
             $error = 'جنسیت را انتخاب کنید.';
+            $focus_field = 'gender';
         } elseif (!$skip_talent_profile && ($health_err = casting_validate_health_fields($health_parsed, true)) !== null) {
             $error = $health_err;
+            $focus_field = 'health_well';
         } elseif (empty($_POST['rules_accepted'])) {
             $error = 'برای ثبت‌نام باید قوانین را مطالعه و تأیید کنید.';
+            $focus_field = 'rules_accepted';
         } elseif (!$skip_talent_profile && !array_key_exists($availability, casting_availability_labels())) {
             $error = 'وضعیت آمادگی برای همکاری را انتخاب کنید.';
+            $focus_field = 'availability';
         } else {
             try {
                 $role = casting_infer_role_from_activities($activities);
                 $result = casting_register_user($name, $username, $email, $password, $role);
                 if (!$result['ok']) {
                     $error = $result['error'];
+                    $focus_field = casting_register_focus_for_error($error);
                 } else {
                     $user_id = (int) $result['user_id'];
                     $profile_save = casting_save_registration_profile($user_id, [
@@ -175,16 +183,19 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!$profile_save['ok']) {
                         casting_delete_registered_user($user_id);
                         $error = $profile_save['error'];
+                        $focus_field = casting_register_focus_for_error($error);
                     } else {
                         $photo = casting_handle_portrait_uploads($user_id, !$skip_talent_profile, true);
                         if (!$photo['ok']) {
                             casting_delete_registered_user($user_id);
                             $error = $photo['error'];
+                            $focus_field = 'photo_medium';
                         } else {
                             $video = casting_handle_video_upload($user_id);
                             if (!$video['ok']) {
                                 casting_delete_registered_user($user_id);
                                 $error = $video['error'];
+                                $focus_field = 'video';
                             }
                         }
                     }
@@ -231,24 +242,24 @@ if ($error !== '') {
     <h1>ثبت‌نام</h1>
     <p class="lede">اطلاعات پایه، عکس و ویدیو را وارد کنید. بعد از ثبت‌نام مستقیم وارد پنل می‌شوید.</p>
 
-    <form class="form" method="post" action="register.php" enctype="multipart/form-data" autocomplete="on" data-talent-profile-toggle>
+    <form class="form" method="post" action="register.php" enctype="multipart/form-data" autocomplete="on" data-talent-profile-toggle data-register-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?>>
       <?php wp_nonce_field('casting_register'); ?>
 
-      <?php casting_render_activity_fields($activities, false); ?>
+      <?php casting_render_activity_fields($activities, true); ?>
 
       <div class="field">
-        <label for="name">نام و نام خانوادگی</label>
+        <label for="name">نام و نام خانوادگی <span class="req-mark">*</span></label>
         <input id="name" name="name" type="text" required autocomplete="name" value="<?= casting_e($name) ?>">
       </div>
 
       <div class="form-grid">
         <div class="field">
-          <label for="username">نام کاربری</label>
+          <label for="username">نام کاربری <span class="req-mark">*</span></label>
           <input id="username" name="username" type="text" required minlength="3" autocomplete="username" pattern="[A-Za-z0-9._\-]+" title="فقط حروف انگلیسی، عدد، نقطه، خط تیره" value="<?= casting_e($username) ?>">
           <p class="field-hint">با همین نام کاربری بعداً وارد می‌شوید</p>
         </div>
         <div class="field">
-          <label for="email">ایمیل</label>
+          <label for="email">ایمیل <span class="req-mark">*</span></label>
           <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($email) ?>">
           <p class="field-hint">برای بازیابی رمز عبور، لینک بازنشانی به همین ایمیل ارسال می‌شود.</p>
         </div>
@@ -256,11 +267,11 @@ if ($error !== '') {
 
       <div class="form-grid">
         <div class="field">
-          <label for="password">رمز عبور (حداقل ۸ کاراکتر)</label>
+          <label for="password">رمز عبور (حداقل ۸ کاراکتر) <span class="req-mark">*</span></label>
           <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password" data-password-source>
         </div>
         <div class="field" data-password-confirm-field<?= $password_mismatch ? ' is-invalid' : '' ?>>
-          <label for="password2">تکرار رمز عبور</label>
+          <label for="password2">تکرار رمز عبور <span class="req-mark">*</span></label>
           <p class="field-inline-error" data-password-mismatch-msg role="alert"<?= $password_mismatch ? '' : ' hidden' ?>>پسورد یکسان نیست</p>
           <input id="password2" name="password2" type="password" required minlength="8" autocomplete="new-password" data-password-confirm<?= $password_mismatch ? ' aria-invalid="true"' : '' ?>>
         </div>
@@ -268,7 +279,7 @@ if ($error !== '') {
 
       <div class="form-grid">
         <div class="field">
-          <label for="mobile">موبایل</label>
+          <label for="mobile">موبایل <span class="req-mark">*</span></label>
           <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($mobile) ?>" placeholder="09121234567" autocomplete="tel-national">
         </div>
         <div class="field">
@@ -288,9 +299,9 @@ if ($error !== '') {
         </select>
       </div>
 
-      <fieldset class="field">
-        <legend>جنسیت</legend>
-        <div class="role-grid role-grid-3">
+      <fieldset class="field" id="gender">
+        <legend>جنسیت <span class="req-mark">*</span></legend>
+        <div class="role-grid role-grid-2">
           <?php foreach (casting_gender_labels() as $key => $label) : ?>
             <label class="role-option">
               <input type="radio" name="gender" value="<?= casting_e($key) ?>" <?= $gender === $key ? 'checked' : '' ?> required>
@@ -301,7 +312,7 @@ if ($error !== '') {
       </fieldset>
 
       <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
-        <legend>رنگ پوست</legend>
+        <legend>رنگ پوست <span class="req-mark" data-talent-required-mark>*</span></legend>
         <div class="role-grid role-grid-3">
           <?php foreach (casting_look_labels() as $key => $label) : ?>
             <label class="role-option">
@@ -324,12 +335,12 @@ if ($error !== '') {
 
       <div class="form-grid" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
         <div class="field">
-          <label for="height">قد (سانتی‌متر)</label>
-          <?php casting_render_body_metric_select('height', 'height', 'height', $height); ?>
+          <label for="height">قد (سانتی‌متر) <span class="req-mark" data-talent-required-mark>*</span></label>
+          <?php casting_render_body_metric_select('height', 'height', 'height', $height, 'انتخاب کنید', true); ?>
         </div>
         <div class="field">
-          <label for="weight">وزن (کیلوگرم)</label>
-          <?php casting_render_body_metric_select('weight', 'weight', 'weight', $weight); ?>
+          <label for="weight">وزن (کیلوگرم) <span class="req-mark" data-talent-required-mark>*</span></label>
+          <?php casting_render_body_metric_select('weight', 'weight', 'weight', $weight, 'انتخاب کنید', true); ?>
         </div>
       </div>
 
@@ -343,7 +354,7 @@ if ($error !== '') {
 
       <div class="form-grid">
         <fieldset class="field">
-          <legend>دارای پروانه فعالیت</legend>
+          <legend>دارای پروانه فعالیت <span class="req-mark">*</span></legend>
           <div class="role-grid role-grid-2">
             <?php foreach (casting_yes_no_labels() as $key => $label) : ?>
               <label class="role-option">
@@ -354,15 +365,16 @@ if ($error !== '') {
           </div>
         </fieldset>
         <div class="field">
-          <label for="experience">سابقه فعالیت (سال)</label>
+          <label for="experience">سابقه فعالیت (سال) <span class="req-mark">*</span></label>
           <input id="experience" name="experience" type="number" min="0" max="60" required value="<?= casting_e($experience !== '' ? $experience : '0') ?>">
         </div>
       </div>
 
-      <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
-        <legend>عکس‌های پروفایل <span class="req-mark" data-talent-required-mark>*</span></legend>
-        <p class="field-hint">هر سه عکس الزامی است: کلوزاپ، مدیوم و لانگ.</p>
-        <?php casting_render_portrait_upload_fields([], true); ?>
+      <fieldset class="field" id="profile-photos">
+        <legend>عکس‌های پروفایل <span class="req-mark">*</span></legend>
+        <p class="field-hint" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>برای بازیگران هر سه عکس الزامی است: کلوزاپ، مدیوم و لانگ.</p>
+        <p class="field-hint" data-non-talent-photo-hint<?= $hide_talent_profile ? '' : ' hidden' ?>>حداقل عکس مدیوم (نیم‌تنه) الزامی است. بقیه اختیاری‌اند.</p>
+        <?php casting_render_portrait_upload_fields([], !$hide_talent_profile, $hide_talent_profile); ?>
       </fieldset>
 
       <div class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
@@ -393,8 +405,8 @@ if ($error !== '') {
       <?php casting_render_skill_fields($skill_items); ?>
       </div>
 
-      <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
-        <legend>وضعیت آمادگی برای همکاری</legend>
+      <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?> id="availability">
+        <legend>وضعیت آمادگی برای همکاری <span class="req-mark" data-talent-required-mark>*</span></legend>
         <div class="role-grid">
           <?php foreach (casting_availability_labels() as $key => $label) : ?>
             <label class="role-option">
@@ -407,8 +419,8 @@ if ($error !== '') {
 
       <div class="field rules-consent-field" data-rules-consent>
         <label class="checkbox-row">
-          <input type="checkbox" name="rules_accepted" value="1" data-rules-consent-checkbox<?= !empty($_POST['rules_accepted']) ? ' checked' : '' ?>>
-          <span>قوانین را مطالعه کرده‌ام و می‌پذیرم. <button type="button" class="link-button" data-rules-lightbox-open>مطالعه قوانین</button></span>
+          <input type="checkbox" name="rules_accepted" value="1" id="rules_accepted" data-rules-consent-checkbox<?= !empty($_POST['rules_accepted']) ? ' checked' : '' ?>>
+          <span>قوانین را مطالعه کرده‌ام و می‌پذیرم. <span class="req-mark">*</span> <button type="button" class="link-button" data-rules-lightbox-open>مطالعه قوانین</button></span>
         </label>
       </div>
 

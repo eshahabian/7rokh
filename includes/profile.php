@@ -1831,9 +1831,9 @@ function casting_portraits_complete(array $portraits): bool
 /**
  * @param array<string, array{id:int,url:string,full:string}> $portraits
  */
-function casting_render_portrait_upload_fields(array $portraits = [], bool $required = false): void
+function casting_render_portrait_upload_fields(array $portraits = [], bool $required = false, bool $require_primary_only = false): void
 {
-    $req = $required ? ' required' : '';
+    $req_all = $required ? ' required' : '';
     $hints = casting_portrait_slot_hints();
     $dims = casting_portrait_display_dimensions();
     ?>
@@ -1841,6 +1841,10 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
     <?php foreach (casting_portrait_slots() as $slot => $label) :
         $field = 'photo_' . $slot;
         $preview = $portraits[$slot]['url'] ?? '';
+        $slot_req = $req_all;
+        if (!$required && $require_primary_only && $slot === 'medium') {
+            $slot_req = ' required';
+        }
         ?>
       <div class="portrait-upload-card">
         <div class="portrait-frame portrait-preview">
@@ -1857,8 +1861,8 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
           <?php endif; ?>
         </div>
         <div class="field">
-          <label for="<?= casting_e($field) ?>"><?= casting_e($label) ?></label>
-          <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp"<?= $req ?>>
+          <label for="<?= casting_e($field) ?>"><?= casting_e($label) ?><?= $slot_req !== '' ? ' <span class="req-mark">*</span>' : '' ?></label>
+          <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp"<?= $slot_req ?><?= $slot === 'medium' ? ' data-portrait-primary' : '' ?>>
           <p class="field-hint"><?= casting_e($hints[$slot] ?? '') ?> · JPG / PNG / WebP — حداکثر ۵ مگابایت</p>
         </div>
       </div>
@@ -1953,6 +1957,41 @@ function casting_normalize_mobile(string $mobile): string
 function casting_normalize_phone(string $phone): string
 {
     return preg_replace('/\D+/', '', $phone) ?? '';
+}
+
+function casting_register_focus_for_error(string $error): string
+{
+    $map = [
+        'نام'              => 'name',
+        'نام کاربری'       => 'username',
+        'ایمیل'            => 'email',
+        'رمز عبور'         => 'password',
+        'موبایل'           => 'mobile',
+        'تلفن ثابت'        => 'phone',
+        'تاریخ تولد'       => 'birth_jd',
+        'جنسیت'            => 'gender',
+        'رنگ پوست'         => 'look',
+        'استان'            => 'province',
+        'شهر'              => 'city',
+        'قد'               => 'height',
+        'وزن'              => 'weight',
+        'سلامت'            => 'health_well',
+        'پروانه'           => 'activity_license',
+        'سابقه'            => 'experience',
+        'آمادگی'           => 'availability',
+        'عکس'              => 'photo_medium',
+        'مهارت'            => 'skill_items',
+        'لهجه'             => 'accent',
+        'تشکل'             => 'artistic_membership',
+        'قوانین'           => 'rules_accepted',
+    ];
+    foreach ($map as $needle => $field) {
+        if (str_contains($error, $needle)) {
+            return $field;
+        }
+    }
+
+    return '';
 }
 
 function casting_save_registration_profile(int $user_id, array $data): array
