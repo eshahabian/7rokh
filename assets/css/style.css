@@ -4504,6 +4504,44 @@ a.panel-sidebar-title.is-active {
   color: var(--accent-strong);
 }
 
+.field-radio-row {
+  border: 0;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.field-radio-row legend {
+  margin-bottom: 0.45rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.radio-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-inline-end: 1rem;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.otp-verify-block {
+  margin: 0 0 1.1rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.otp-actions {
+  margin-top: 0.35rem;
+}
+
+.otp-verified-hint {
+  color: var(--accent-strong) !important;
+  font-weight: 600;
+}
+
 .admin-receipt-list {
   display: flex;
   flex-direction: column;

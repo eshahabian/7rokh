@@ -10,9 +10,12 @@ function casting_rate_limit_config(string $action): array
 {
     $defaults = [
         'login'           => ['max' => 10, 'window' => 900],
+        'login_otp'       => ['max' => 8, 'window' => 900],
         'register'        => ['max' => 3, 'window' => 3600],
+        'otp_send'        => ['max' => 8, 'window' => 3600],
         'forgot_password' => ['max' => 5, 'window' => 3600],
         'contact_send'    => ['max' => 5, 'window' => 3600],
+        'change_phone'    => ['max' => 8, 'window' => 3600],
     ];
 
     return $defaults[$action] ?? ['max' => 10, 'window' => 900];
@@ -83,7 +86,7 @@ function casting_rate_limit_clear(string $action): void
 
 function casting_rate_limit_clear_all(): void
 {
-    foreach (['login', 'register', 'forgot_password', 'contact_send'] as $action) {
+    foreach (['login', 'login_otp', 'register', 'otp_send', 'forgot_password', 'contact_send', 'change_phone'] as $action) {
         casting_rate_limit_clear($action);
     }
 }

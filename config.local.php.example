@@ -1,6 +1,12 @@
 <?php
 /**
- * کپی کنید به config.local.php و رمز ایمیل noreply@7rokh.ir را بگذارید.
+ * کپی کنید به config.local.php و مقادیر را پر کنید.
  * این فایل در git ذخیره نمی‌شود و با deploy خودکار کپی نمی‌شود.
  */
 define('CASTING_SMTP_PASS', 'رمز-ایمیل-noreply-اینجا');
+
+/** کلید API پنل WebOne SMS (از پنل کپی کنید؛ در چت/گیت نگذارید) */
+define('CASTING_SMS_API_KEY', 'کلید-api-اینجا');
+
+/** شماره خط فرستنده برای پیامک متنی (مثلاً لینک بازیابی رمز) */
+define('CASTING_SMS_FROM', '1000xxxx');

@@ -1969,6 +1969,7 @@ function casting_register_focus_for_error(string $error): string
         'ایمیل'            => 'email',
         'رمز عبور'         => 'password',
         'موبایل'           => 'mobile',
+        'کد تأیید'         => 'otp_code',
         'جنسیت'            => 'gender',
         'استان'            => 'province',
         'شهر'              => 'city',

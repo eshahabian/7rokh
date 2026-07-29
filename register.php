@@ -15,6 +15,7 @@ casting_nocache();
 $error = '';
 $focus_field = '';
 $password_mismatch = false;
+$otp_notice = '';
 $name = '';
 $username = '';
 $email = '';
@@ -69,15 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $rate_error = casting_rate_limit_check('register');
-    if ($rate_error !== null) {
-        $error = $rate_error;
-    } else {
     $nonce = (string) ($_POST['_wpnonce'] ?? '');
+    $otp_action = sanitize_key((string) ($_POST['otp_action'] ?? ''));
+    $is_otp_only = $otp_action === 'send' || $otp_action === 'verify';
+
     if ($nonce === '' || !wp_verify_nonce($nonce, 'casting_register')) {
         $error = 'نشست منقضی شده. یک‌بار صفحه را رفرش کنید و دوباره فرم را بفرستید.';
     } else {
-        casting_rate_limit_hit('register');
+        // همیشه مقادیر فرم را برای نمایش مجدد بخوان
         $name = (string) ($_POST['name'] ?? '');
         $username = (string) ($_POST['username'] ?? '');
         $email = (string) ($_POST['email'] ?? '');
@@ -119,110 +119,172 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $age_calc = $birthdate !== '' ? casting_age_from_birthdate($birthdate) : null;
         $age_preview = $age_calc !== null ? (string) $age_calc : '';
         $skip_talent_profile = !casting_activities_need_talent_fields($activities);
+        $mobile_norm = casting_normalize_mobile($mobile);
 
-        if ($password !== $password2) {
-            $password_mismatch = true;
-            $focus_field = 'password2';
-        } elseif ($birthdate === '' || $age_calc === null) {
-            $error = 'تاریخ تولد شمسی را کامل و درست انتخاب کنید.';
-            $focus_field = 'birth_jd';
-        } elseif (!array_key_exists($gender, casting_gender_labels())) {
-            $error = 'جنسیت را انتخاب کنید.';
-            $focus_field = 'gender';
-        } elseif (!$skip_talent_profile && ($health_err = casting_validate_health_fields($health_parsed, true)) !== null) {
-            $error = $health_err;
-            $focus_field = 'health_well';
-        } elseif (empty($_POST['rules_accepted'])) {
-            $error = 'برای ثبت‌نام باید قوانین را مطالعه و تأیید کنید.';
-            $focus_field = 'rules_accepted';
-        } elseif (!$skip_talent_profile && !array_key_exists($availability, casting_availability_labels())) {
-            $error = 'وضعیت آمادگی برای همکاری را انتخاب کنید.';
-            $focus_field = 'availability';
-        } else {
-            try {
-                $role = casting_infer_role_from_activities($activities);
-                $result = casting_register_user($name, $username, $email, $password, $role);
-                if (!$result['ok']) {
-                    $error = $result['error'];
-                    $focus_field = casting_register_focus_for_error($error);
+        if ($is_otp_only) {
+            $rate_error = casting_rate_limit_check('otp_send');
+            if ($rate_error !== null) {
+                $error = $rate_error;
+            } elseif ($mobile_norm === '' || !preg_match('/^09\d{9}$/', $mobile_norm)) {
+                $error = 'شماره موبایل را درست وارد کنید.';
+                $focus_field = 'mobile';
+            } elseif (casting_mobile_is_taken($mobile_norm)) {
+                $error = 'این شماره موبایل قبلاً ثبت شده است.';
+                $focus_field = 'mobile';
+            } elseif ($otp_action === 'send') {
+                casting_rate_limit_hit('otp_send');
+                $send = casting_otp_send('register', $mobile_norm);
+                if (!$send['ok']) {
+                    $error = $send['error'];
                 } else {
-                    $user_id = (int) $result['user_id'];
-                    $profile_save = casting_save_registration_profile($user_id, [
-                        'birthdate'        => $birthdate,
-                        'gender'           => $gender,
-                        'look'             => $look,
-                        'mobile'           => $mobile,
-                        'phone'            => $phone,
-                        'province'         => $province,
-                        'city'             => $city,
-                        'residence'        => $residence,
-                        'experience'       => $experience,
-                        'height'           => $height,
-                        'weight'           => $weight,
-                        'health_well'      => $health_well,
-                        'health_status'    => $health_status,
-                        'artistic_membership' => $artistic_has,
-                        'artistic_orgs'       => $artistic_orgs,
-                        'artistic_other_items'=> $artistic_other,
-                        'activity_license'    => $activity_license,
-                        'work_history'     => $work_history,
-                        'work_credits'     => $work_credits,
-                        'artistic_works'   => $artistic_works,
-                        'education'        => $education,
-                        'education_items'  => $education_items,
-                        'activities'       => $activities,
-                        'skill_items'      => $skill_items,
-                        'language_items'   => $language_items,
-                        'availability'     => $availability,
-                        'eye_color'        => $eye_color,
-                        'hair_color'       => $hair_color,
-                        'accent'           => $accent,
-                        'accent_other'     => $accent_other,
-                        'apparent_age_range' => $apparent_age_range,
-                    ]);
-                    if (!$profile_save['ok']) {
-                        casting_delete_registered_user($user_id);
-                        $error = $profile_save['error'];
-                        $focus_field = casting_register_focus_for_error($error);
-                    } else {
-                        $photo = casting_handle_portrait_uploads($user_id, !$skip_talent_profile, true);
-                        if (!$photo['ok']) {
-                            casting_delete_registered_user($user_id);
-                            $error = $photo['error'];
-                            $focus_field = 'photo_medium';
-                        } else {
-                            $video = casting_handle_video_upload($user_id);
-                            if (!$video['ok']) {
-                                casting_delete_registered_user($user_id);
-                                $error = $video['error'];
-                                $focus_field = 'video';
-                            }
-                        }
-                    }
+                    $otp_notice = 'کد تأیید به موبایل ارسال شد.';
+                }
+            } else {
+                $verify = casting_otp_verify('register', $mobile_norm, (string) ($_POST['otp_code'] ?? ''));
+                if (!$verify['ok']) {
+                    $error = $verify['error'];
+                    $focus_field = 'otp_code';
+                } else {
+                    casting_otp_mark_session_verified('register', $mobile_norm);
+                    $otp_notice = 'موبایل تأیید شد. حالا ثبت‌نام را کامل کنید.';
+                }
+            }
+        } else {
+            $rate_error = casting_rate_limit_check('register');
+            if ($rate_error !== null) {
+                $error = $rate_error;
+            } else {
+                casting_rate_limit_hit('register');
 
-                    if ($error === '') {
-                        if (function_exists('casting_notify_n8n_registration')) {
-                            casting_notify_n8n_registration($user_id);
+                if ($password !== $password2) {
+                    $password_mismatch = true;
+                    $focus_field = 'password2';
+                } elseif ($birthdate === '' || $age_calc === null) {
+                    $error = 'تاریخ تولد شمسی را کامل و درست انتخاب کنید.';
+                    $focus_field = 'birth_jd';
+                } elseif (!array_key_exists($gender, casting_gender_labels())) {
+                    $error = 'جنسیت را انتخاب کنید.';
+                    $focus_field = 'gender';
+                } elseif (!$skip_talent_profile && ($health_err = casting_validate_health_fields($health_parsed, true)) !== null) {
+                    $error = $health_err;
+                    $focus_field = 'health_well';
+                } elseif (empty($_POST['rules_accepted'])) {
+                    $error = 'برای ثبت‌نام باید قوانین را مطالعه و تأیید کنید.';
+                    $focus_field = 'rules_accepted';
+                } elseif (!$skip_talent_profile && !array_key_exists($availability, casting_availability_labels())) {
+                    $error = 'وضعیت آمادگی برای همکاری را انتخاب کنید.';
+                    $focus_field = 'availability';
+                } elseif ($mobile_norm === '' || !preg_match('/^09\d{9}$/', $mobile_norm)) {
+                    $error = 'شماره موبایل را درست وارد کنید.';
+                    $focus_field = 'mobile';
+                } elseif (casting_mobile_is_taken($mobile_norm)) {
+                    $error = 'این شماره موبایل قبلاً ثبت شده است.';
+                    $focus_field = 'mobile';
+                } elseif (!casting_otp_session_is_verified('register', $mobile_norm)) {
+                    $otp_code = (string) ($_POST['otp_code'] ?? '');
+                    if ($otp_code !== '') {
+                        $verify = casting_otp_verify('register', $mobile_norm, $otp_code);
+                        if ($verify['ok']) {
+                            casting_otp_mark_session_verified('register', $mobile_norm);
+                        } else {
+                            $error = $verify['error'];
+                            $focus_field = 'otp_code';
                         }
-                        if (!empty($_SESSION['casting_flash'])) {
-                            unset($_SESSION['casting_flash']);
-                        }
-                        $login = casting_login($email, $password);
-                        if ($login['ok']) {
-                            casting_set_flash('success', 'ثبت‌نام و ورود با موفقیت انجام شد.');
-                            casting_redirect(casting_dashboard_for_role((string) $result['role']));
-                        }
-                        casting_redirect('login.php?registered=1');
+                    } else {
+                        $error = 'ابتدا موبایل را با کد پیامک تأیید کنید.';
+                        $focus_field = 'otp_code';
                     }
                 }
-            } catch (Throwable $e) {
-                $error = 'خطای سرور در ثبت‌نام: ' . $e->getMessage();
+
+                if ($error === '' && !$password_mismatch && casting_otp_session_is_verified('register', $mobile_norm)) {
+                    try {
+                        $role = casting_infer_role_from_activities($activities);
+                        $result = casting_register_user($name, $username, $email, $password, $role);
+                        if (!$result['ok']) {
+                            $error = $result['error'];
+                            $focus_field = casting_register_focus_for_error($error);
+                        } else {
+                            $user_id = (int) $result['user_id'];
+                            $profile_save = casting_save_registration_profile($user_id, [
+                                'birthdate'        => $birthdate,
+                                'gender'           => $gender,
+                                'look'             => $look,
+                                'mobile'           => $mobile_norm,
+                                'phone'            => $phone,
+                                'province'         => $province,
+                                'city'             => $city,
+                                'residence'        => $residence,
+                                'experience'       => $experience,
+                                'height'           => $height,
+                                'weight'           => $weight,
+                                'health_well'      => $health_well,
+                                'health_status'    => $health_status,
+                                'artistic_membership' => $artistic_has,
+                                'artistic_orgs'       => $artistic_orgs,
+                                'artistic_other_items'=> $artistic_other,
+                                'activity_license'    => $activity_license,
+                                'work_history'     => $work_history,
+                                'work_credits'     => $work_credits,
+                                'artistic_works'   => $artistic_works,
+                                'education'        => $education,
+                                'education_items'  => $education_items,
+                                'activities'       => $activities,
+                                'skill_items'      => $skill_items,
+                                'language_items'   => $language_items,
+                                'availability'     => $availability,
+                                'eye_color'        => $eye_color,
+                                'hair_color'       => $hair_color,
+                                'accent'           => $accent,
+                                'accent_other'     => $accent_other,
+                                'apparent_age_range' => $apparent_age_range,
+                            ]);
+                            if (!$profile_save['ok']) {
+                                casting_delete_registered_user($user_id);
+                                $error = $profile_save['error'];
+                                $focus_field = casting_register_focus_for_error($error);
+                            } else {
+                                $photo = casting_handle_portrait_uploads($user_id, !$skip_talent_profile, true);
+                                if (!$photo['ok']) {
+                                    casting_delete_registered_user($user_id);
+                                    $error = $photo['error'];
+                                    $focus_field = 'photo_medium';
+                                } else {
+                                    $video = casting_handle_video_upload($user_id);
+                                    if (!$video['ok']) {
+                                        casting_delete_registered_user($user_id);
+                                        $error = $video['error'];
+                                        $focus_field = 'video';
+                                    }
+                                }
+                            }
+
+                            if ($error === '') {
+                                casting_mark_mobile_verified($user_id, $mobile_norm);
+                                casting_otp_clear_session('register');
+                                if (function_exists('casting_notify_n8n_registration')) {
+                                    casting_notify_n8n_registration($user_id);
+                                }
+                                if (!empty($_SESSION['casting_flash'])) {
+                                    unset($_SESSION['casting_flash']);
+                                }
+                                $login = casting_login($email, $password);
+                                if ($login['ok']) {
+                                    casting_set_flash('success', 'ثبت‌نام و ورود با موفقیت انجام شد.');
+                                    casting_redirect(casting_dashboard_for_role((string) $result['role']));
+                                }
+                                casting_redirect('login.php?registered=1');
+                            }
+                        }
+                    } catch (Throwable $e) {
+                        $error = 'خطای سرور در ثبت‌نام: ' . $e->getMessage();
+                    }
+                }
             }
         }
     }
-    }
 }
 
+$mobile_verified = casting_otp_session_is_verified('register', casting_normalize_mobile($mobile));
 $hide_talent_profile = casting_profile_hides_talent_fields($activities);
 $show_artistic_works = casting_activities_show_artistic_works($activities);
 
@@ -236,11 +298,14 @@ if ($current && casting_get_user_role((int) $current->ID) === '') {
 if ($error !== '') {
     echo '<div class="flash flash-error" role="alert">' . casting_e($error) . '</div>';
 }
+if ($otp_notice !== '') {
+    echo '<div class="flash flash-success" role="alert">' . casting_e($otp_notice) . '</div>';
+}
 ?>
 <main class="wrap panel-page">
   <section class="panel panel-wide">
     <h1>ثبت‌نام</h1>
-    <p class="lede">اطلاعات پایه، عکس و ویدیو را وارد کنید. بعد از ثبت‌نام مستقیم وارد پنل می‌شوید.</p>
+    <p class="lede">اطلاعات پایه، عکس و ویدیو را وارد کنید. قبل از ایجاد حساب، موبایل را با کد پیامک تأیید کنید.</p>
 
     <form class="form" method="post" action="register.php" enctype="multipart/form-data" autocomplete="on" data-talent-profile-toggle data-register-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?>>
       <?php wp_nonce_field('casting_register'); ?>
@@ -281,11 +346,30 @@ if ($error !== '') {
         <div class="field">
           <label for="mobile">موبایل <span class="req-mark">*</span></label>
           <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($mobile) ?>" placeholder="09121234567" autocomplete="tel-national">
+          <?php if ($mobile_verified) : ?>
+            <p class="field-hint otp-verified-hint">موبایل تأیید شد ✓</p>
+          <?php endif; ?>
         </div>
         <div class="field">
           <label for="phone">تلفن ثابت (اختیاری)</label>
           <input id="phone" name="phone" type="tel" inputmode="numeric" value="<?= casting_e($phone) ?>" placeholder="02112345678" autocomplete="tel">
         </div>
+      </div>
+
+      <div class="otp-verify-block">
+        <?php if (!$mobile_verified) : ?>
+          <div class="field">
+            <label for="otp_code">کد تأیید موبایل <span class="req-mark">*</span></label>
+            <input id="otp_code" name="otp_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="۶ رقم پیامک‌شده">
+          </div>
+          <div class="cta-row otp-actions">
+            <button class="btn btn-ghost" type="submit" name="otp_action" value="send" formnovalidate>ارسال کد پیامک</button>
+            <button class="btn btn-ghost" type="submit" name="otp_action" value="verify" formnovalidate>تأیید کد</button>
+          </div>
+          <p class="field-hint">اول «ارسال کد پیامک» را بزنید، کد را وارد کنید و «تأیید کد» را بزنید؛ بعد فرم را کامل و ثبت کنید.</p>
+        <?php else : ?>
+          <input type="hidden" name="otp_code" value="verified">
+        <?php endif; ?>
       </div>
 
       <?php casting_render_jalali_birthday_fields($birthdate, true); ?>

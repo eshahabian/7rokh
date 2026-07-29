@@ -9,41 +9,80 @@ require_once __DIR__ . '/includes/panel.php';
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $error = '';
+$success = '';
 $mobile = casting_normalize_mobile((string) get_user_meta($user_id, 'casting_mobile', true));
+$new_mobile = '';
+$otp_sent = false;
+$step = 'request';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_phone')) {
         $error = 'درخواست نامعتبر است.';
     } else {
-        $mobile = casting_normalize_mobile((string) ($_POST['mobile'] ?? ''));
-        $result = casting_change_phone(
-            $user_id,
-            (string) ($_POST['password'] ?? ''),
-            $mobile
-        );
-        if (!$result['ok']) {
-            $error = $result['error'];
+        $action = sanitize_key((string) ($_POST['phone_action'] ?? 'send'));
+        $new_mobile = casting_normalize_mobile((string) ($_POST['mobile'] ?? ''));
+        $password = (string) ($_POST['password'] ?? '');
+        $rate_error = casting_rate_limit_check('change_phone');
+        if ($rate_error !== null) {
+            $error = $rate_error;
+        } elseif ($action === 'confirm') {
+            $result = casting_change_phone_confirm(
+                $user_id,
+                $password,
+                $new_mobile,
+                (string) ($_POST['otp_code'] ?? '')
+            );
+            if (!$result['ok']) {
+                casting_rate_limit_hit('change_phone');
+                $error = $result['error'];
+                $otp_sent = true;
+                $step = 'confirm';
+            } else {
+                casting_rate_limit_clear('change_phone');
+                casting_set_flash('success', 'شماره تلفن با موفقیت تأیید و ذخیره شد.');
+                casting_redirect('change-phone.php');
+            }
         } else {
-            casting_set_flash('success', 'شماره تلفن با موفقیت تغییر کرد.');
-            casting_redirect('change-phone.php');
+            $result = casting_change_phone_request_otp($user_id, $password, $new_mobile);
+            if (!$result['ok']) {
+                casting_rate_limit_hit('change_phone');
+                $error = $result['error'];
+            } else {
+                casting_rate_limit_hit('otp_send');
+                $success = 'کد تأیید به شماره جدید ارسال شد.';
+                $otp_sent = true;
+                $step = 'confirm';
+            }
         }
     }
 }
+
+$mobile = casting_normalize_mobile((string) get_user_meta($user_id, 'casting_mobile', true));
+$verified = casting_user_mobile_is_verified($user_id);
 
 casting_render_panel_start('تغییر شماره تلفن', 'phone');
 if ($error !== '') {
     echo '<div class="flash flash-error" role="alert">' . casting_e($error) . '</div>';
 }
+if ($success !== '') {
+    echo '<div class="flash flash-success" role="alert">' . casting_e($success) . '</div>';
+}
 casting_render_flash();
 ?>
 <section class="dash-card panel-narrow">
   <h1>تغییر شماره تلفن</h1>
-  <p class="meta">شماره فعلی: <strong dir="ltr"><?= $mobile !== '' ? casting_e($mobile) : '—' ?></strong></p>
+  <p class="meta">
+    شماره فعلی:
+    <strong dir="ltr"><?= $mobile !== '' ? casting_e($mobile) : '—' ?></strong>
+    <?php if ($mobile !== '') : ?>
+      <span class="meta">(<?= $verified ? 'تأییدشده' : 'تأییدنشده' ?>)</span>
+    <?php endif; ?>
+  </p>
   <form class="form" method="post" action="change-phone.php">
     <?php wp_nonce_field('casting_phone'); ?>
     <div class="field">
       <label for="mobile">شماره موبایل جدید</label>
-      <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($mobile) ?>" placeholder="09121234567" autocomplete="tel-national">
+      <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($new_mobile !== '' ? $new_mobile : '') ?>" placeholder="09121234567" autocomplete="tel-national" <?= $otp_sent ? 'readonly' : '' ?>>
     </div>
     <div class="field">
       <label for="password">رمز عبور برای تأیید</label>
@@ -60,7 +99,18 @@ casting_render_flash();
         </button>
       </div>
     </div>
-    <button class="btn btn-primary" type="submit">ذخیره</button>
+    <?php if ($otp_sent || $step === 'confirm') : ?>
+      <div class="field">
+        <label for="otp_code">کد تأیید پیامک‌شده</label>
+        <input id="otp_code" name="otp_code" type="text" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="۶ رقم">
+      </div>
+      <div class="cta-row">
+        <button class="btn btn-primary" type="submit" name="phone_action" value="confirm">تأیید و ذخیره</button>
+        <button class="btn btn-ghost" type="submit" name="phone_action" value="send">ارسال مجدد کد</button>
+      </div>
+    <?php else : ?>
+      <button class="btn btn-primary" type="submit" name="phone_action" value="send">ارسال کد تأیید</button>
+    <?php endif; ?>
   </form>
 </section>
 <?php casting_render_panel_end(); ?>

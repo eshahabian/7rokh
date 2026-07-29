@@ -97,3 +97,18 @@ if (!defined('CASTING_MAIL_FROM')) {
 if (!defined('CASTING_MAIL_FROM_NAME')) {
     define('CASTING_MAIL_FROM_NAME', '۷ رخ');
 }
+
+/**
+ * پیامک WebOne — کلید و خط را در config.local.php بگذارید
+ * @see https://webone-sms.ir/
+ */
+if (!defined('CASTING_SMS_ENABLED')) {
+    define('CASTING_SMS_ENABLED', true);
+}
+if (!defined('CASTING_SMS_API_KEY')) {
+    define('CASTING_SMS_API_KEY', '');
+}
+/** شماره خط فرستنده برای پیامک متنی (لینک بازیابی و …) */
+if (!defined('CASTING_SMS_FROM')) {
+    define('CASTING_SMS_FROM', '');
+}

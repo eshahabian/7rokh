@@ -15,6 +15,7 @@ if ($user && casting_get_user_role((int) $user->ID) !== '') {
 $error = '';
 $success = '';
 $login = '';
+$channel = 'email';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rate_error = casting_rate_limit_check('forgot_password');
@@ -24,7 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'درخواست نامعتبر است. دوباره تلاش کنید.';
     } else {
         $login = (string) ($_POST['login'] ?? '');
-        $result = casting_request_password_reset($login);
+        $channel = ((string) ($_POST['channel'] ?? 'email')) === 'sms' ? 'sms' : 'email';
+        $result = casting_request_password_reset($login, $channel);
         if (!$result['ok']) {
             casting_rate_limit_hit('forgot_password');
             $error = $result['error'];
@@ -49,13 +51,24 @@ casting_render_flash();
 <main class="wrap panel-page">
   <section class="panel">
     <h1>فراموشی رمز عبور</h1>
-    <p class="lede">نام کاربری یا ایمیل حساب خود را وارد کنید تا لینک بازیابی برایتان ارسال شود.</p>
+    <p class="lede">کانال دریافت لینک بازیابی را انتخاب کنید و مشخصات حساب را وارد کنید.</p>
 
     <form class="form" method="post" action="forgot-password.php">
       <?php wp_nonce_field('casting_forgot'); ?>
+      <fieldset class="field field-radio-row">
+        <legend>ارسال لینک از طریق</legend>
+        <label class="radio-inline">
+          <input type="radio" name="channel" value="email" <?= $channel === 'email' ? 'checked' : '' ?>>
+          ایمیل
+        </label>
+        <label class="radio-inline">
+          <input type="radio" name="channel" value="sms" <?= $channel === 'sms' ? 'checked' : '' ?>>
+          پیامک
+        </label>
+      </fieldset>
       <div class="field">
-        <label for="login">نام کاربری یا ایمیل</label>
-        <input id="login" name="login" type="text" required autocomplete="username" value="<?= casting_e($login) ?>">
+        <label for="login">نام کاربری، ایمیل یا موبایل</label>
+        <input id="login" name="login" type="text" required autocomplete="username" value="<?= casting_e($login) ?>" placeholder="نام کاربری / ایمیل / 09xxxxxxxxx">
       </div>
       <button class="btn btn-primary" type="submit">ارسال لینک بازیابی</button>
     </form>
