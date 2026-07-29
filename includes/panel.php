@@ -1643,9 +1643,7 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
       <div class="panel-ad-card-body">
         <h3><?= casting_e($member->display_name) ?></h3>
         <p><?= casting_e($role_label) ?></p>
-        <?php if ($city !== '') : ?>
-          <p class="panel-ad-place"><?= casting_e($city) ?></p>
-        <?php endif; ?>
+        <p class="panel-ad-place"><?= casting_e($city !== '' ? $city : '*') ?></p>
         <a class="btn btn-ghost btn-sm" href="<?= casting_e($href) ?>">مشاهده پروفایل</a>
       </div>
     </article>

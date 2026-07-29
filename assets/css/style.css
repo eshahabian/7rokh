@@ -3315,7 +3315,9 @@ a.panel-sidebar-title.is-active {
 }
 
 .panel-ad-card-body {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   gap: 0.4rem;
   padding: 0.85rem 0.9rem 1rem;
 }
@@ -3333,8 +3335,15 @@ a.panel-sidebar-title.is-active {
   line-height: 1.45;
 }
 
+.panel-ad-card-body > .btn {
+  margin-top: auto;
+  align-self: stretch;
+  text-align: center;
+}
+
 .panel-ad-place {
   font-size: 0.78rem !important;
+  min-height: 1.45em;
 }
 
 .panel-ad-place::before {
