@@ -102,6 +102,7 @@ function casting_role_label(string $role): string
 
 /**
  * برچسب نقش عمومی کاربر برای کارت‌ها، چت، پروفایل و …
+ * اولویت با اولین نوع فعالیت است (مثلاً «بازیگر تئاتر» به‌جای «هنرمند»).
  * مدیر اصلی پورتال همیشه «واحد IT» دیده می‌شود.
  */
 function casting_user_public_role_label(int $user_id): string
@@ -114,6 +115,19 @@ function casting_user_public_role_label(int $user_id): string
     }
     if (function_exists('casting_dm_is_support_peer') && casting_dm_is_support_peer($user_id)) {
         return 'واحد IT';
+    }
+
+    if (!function_exists('casting_user_primary_activity_label')) {
+        $activities_file = __DIR__ . '/activities.php';
+        if (is_file($activities_file)) {
+            require_once $activities_file;
+        }
+    }
+    if (function_exists('casting_user_primary_activity_label')) {
+        $activity = casting_user_primary_activity_label($user_id);
+        if ($activity !== '') {
+            return $activity;
+        }
     }
 
     return casting_role_label(casting_get_user_role($user_id));
