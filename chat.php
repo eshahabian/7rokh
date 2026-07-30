@@ -160,6 +160,9 @@ casting_render_flash();
         <input type="hidden" name="action" value="start">
         <div class="field">
           <label for="peer_id">شروع گفتگوی جدید</label>
+          <?php if ($contacts === []) : ?>
+            <p class="field-hint">فعلاً مخاطب مجازی برای شروع گفتگو ندارید. دسترسی نقش‌ها را در جدول پیام‌رسان بررسی کنید.</p>
+          <?php endif; ?>
           <select id="peer_id" name="peer_id" required <?= $contacts === [] ? 'disabled' : '' ?>>
             <option value="">انتخاب مخاطب…</option>
             <?php foreach ($contacts as $contact) : ?>

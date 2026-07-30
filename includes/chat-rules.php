@@ -130,7 +130,7 @@ function casting_can_start_chat(int $from_id, int $to_id): array
 }
 
 /**
- * ارسال/ادامه گفتگو — فقط جدول دسترسی ادمین (+ رابطه در صورت «فقط با پروژه»).
+ * ارسال/ادامه گفتگو — جدول دسترسی + محدودیت پروژه/رابطه.
  *
  * @return array{ok:bool,error:string}
  */
@@ -140,11 +140,35 @@ function casting_can_users_chat(int $from_id, int $to_id): array
 }
 
 /**
- * دیدن مخاطب / دکمه پیام / باز کردن چت — همان قوانین ارسال.
+ * دیدن در لیست مخاطب / دکمه پیام / باز کردن صفحه چت.
+ * اگر «دسترسی پیام» روشن باشد کافی است؛ محدودیت پروژه فقط هنگام ارسال اعمال می‌شود.
  *
  * @return array{ok:bool,error:string}
  */
 function casting_can_user_open_dm(int $from_id, int $to_id): array
 {
-    return casting_can_start_chat($from_id, $to_id);
+    if ($from_id <= 0 || $to_id <= 0) {
+        return ['ok' => false, 'error' => 'کاربر معتبر نیست.'];
+    }
+    if ($from_id === $to_id) {
+        return ['ok' => false, 'error' => 'نمی‌توانید با خودتان چت کنید.'];
+    }
+    if (casting_users_block_each_other($from_id, $to_id)) {
+        return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
+    }
+    if (casting_user_is_portal_owner($from_id) && casting_get_user_role($to_id) !== '') {
+        return ['ok' => true, 'error' => ''];
+    }
+    if (casting_get_user_role($from_id) === '' || casting_get_user_role($to_id) === '') {
+        return ['ok' => false, 'error' => 'فقط اعضای ۷ رخ می‌توانند چت کنند.'];
+    }
+
+    if (casting_message_access_has_enabled_edge($from_id, $to_id)) {
+        return ['ok' => true, 'error' => ''];
+    }
+
+    return [
+        'ok'    => false,
+        'error' => 'دسترسی پیام برای این نقش‌ها خاموش است.',
+    ];
 }
