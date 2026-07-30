@@ -323,6 +323,30 @@ function casting_dm_has_conversation(int $user_a, int $user_b): bool
 }
 
 /**
+ * آیا sender حداقل یک پیام به recipient فرستاده؟
+ */
+function casting_dm_user_has_sent_to(int $sender_id, int $recipient_id): bool
+{
+    if ($sender_id <= 0 || $recipient_id <= 0 || $sender_id === $recipient_id) {
+        return false;
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $found = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM {$table}
+         WHERE sender_id = %d AND recipient_id = %d
+         LIMIT 1",
+        $sender_id,
+        $recipient_id
+    ));
+
+    return (int) $found > 0;
+}
+
+/**
  * @return array<int, int> peer_id => last_read_message_id
  */
 function casting_dm_read_map(int $user_id): array

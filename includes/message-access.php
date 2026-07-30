@@ -4,8 +4,11 @@ declare(strict_types=1);
 require_once __DIR__ . '/activities.php';
 
 const CASTING_MSG_ACCESS_OPTION = 'casting_message_access_v1';
-/** با افزایش نسخه، ماتریس ذخیره‌شده با پیش‌فرض سلسله‌مراتبی جایگزین می‌شود */
-const CASTING_MSG_ACCESS_VERSION = 2;
+/**
+ * v3: فقط overrideهای کوچک ذخیره می‌شوند (نه کل ماتریس).
+ * خاموش کردن = deny صریح روی پیش‌فرض.
+ */
+const CASTING_MSG_ACCESS_VERSION = 3;
 
 /**
  * مدیران بخش‌ها (ارتباط بین‌بخشی فقط در این سطح)
@@ -336,64 +339,27 @@ function casting_message_access_build_default_edges(): array
 }
 
 /**
- * @return array{version:int,edges:array<string,array{can_start:bool,require_project:bool,enabled:bool}>,customized:bool}
+ * @return array{version:int,edges:array<string,array{can_start:bool,require_project:bool,enabled:bool}>,customized:bool,overrides:array<string,array{enabled:bool,require_project:bool}>}
  */
 function casting_message_access_defaults_payload(): array
 {
     return [
         'version'    => CASTING_MSG_ACCESS_VERSION,
         'edges'      => casting_message_access_build_default_edges(),
+        'overrides'  => [],
         'customized' => false,
     ];
 }
 
 /**
- * داده ذخیره‌شده یا پیش‌فرض
- *
- * @return array{version:int,edges:array<string,array{can_start:bool,require_project:bool,enabled:bool}>,customized:bool}
+ * @param array<string, array{enabled?:bool,require_project?:bool,can_start?:bool}> $overrides
+ * @return array<string, array{enabled:bool,require_project:bool}>
  */
-function casting_message_access_get(): array
+function casting_message_access_normalize_overrides(array $overrides): array
 {
-    $defaults = casting_message_access_defaults_payload();
-    $stored = get_option(CASTING_MSG_ACCESS_OPTION, null);
-    if (!is_array($stored) || empty($stored['edges']) || !is_array($stored['edges'])) {
-        return $defaults;
-    }
-
-    $stored_version = (int) ($stored['version'] ?? 1);
-    // نسخه قدیمی (مثلاً لبه‌های دوطرفهٔ اشتباه بازیگر→کارگردان) را با پیش‌فرض جدید جایگزین کن
-    if ($stored_version < CASTING_MSG_ACCESS_VERSION) {
-        update_option(CASTING_MSG_ACCESS_OPTION, $defaults, false);
-
-        return $defaults;
-    }
-
-    $edges = [];
-    foreach ($stored['edges'] as $key => $row) {
-        if (!is_string($key) || !is_array($row)) {
-            continue;
-        }
-        $edges[$key] = [
-            'can_start'       => !empty($row['can_start']),
-            'require_project' => !empty($row['require_project']),
-            'enabled'         => array_key_exists('enabled', $row) ? !empty($row['enabled']) : true,
-        ];
-    }
-
-    return [
-        'version'    => $stored_version,
-        'edges'      => $edges,
-        'customized' => !empty($stored['customized']),
-    ];
-}
-
-/**
- * @param array{edges?:array<string,array{can_start?:bool,require_project?:bool,enabled?:bool}>,customized?:bool} $payload
- */
-function casting_message_access_save(array $payload): bool
-{
-    $edges = [];
-    foreach (($payload['edges'] ?? []) as $key => $row) {
+    $out = [];
+    $labels = casting_activity_labels();
+    foreach ($overrides as $key => $row) {
         if (!is_string($key) || !str_contains($key, '|') || !is_array($row)) {
             continue;
         }
@@ -403,48 +369,187 @@ function casting_message_access_save(array $payload): bool
         }
         $from = sanitize_key($parts[0]);
         $to = sanitize_key($parts[1]);
-        if ($from === '' || $to === '' || $from === $to) {
+        if ($from === '' || $to === '' || $from === $to || !isset($labels[$from]) || !isset($labels[$to])) {
             continue;
         }
-        // فقط روابط روشن ذخیره می‌شوند
-        if (isset($row['enabled']) && empty($row['enabled'])) {
+        $enabled = array_key_exists('enabled', $row) ? !empty($row['enabled']) : !empty($row['can_start']);
+        $out[casting_message_access_edge_key($from, $to)] = [
+            'enabled'         => $enabled,
+            'require_project' => !empty($row['require_project']),
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * اعمال override روی ماتریس پیش‌فرض
+ *
+ * @param array<string, array{can_start:bool,require_project:bool,enabled:bool}> $defaults
+ * @param array<string, array{enabled:bool,require_project:bool}> $overrides
+ * @return array<string, array{can_start:bool,require_project:bool,enabled:bool}>
+ */
+function casting_message_access_apply_overrides(array $defaults, array $overrides): array
+{
+    $edges = $defaults;
+    foreach ($overrides as $key => $row) {
+        if (empty($row['enabled'])) {
+            unset($edges[$key]);
             continue;
         }
-        if (isset($row['can_start']) && empty($row['can_start'])) {
-            continue;
-        }
-        $edges[casting_message_access_edge_key($from, $to)] = [
+        $edges[$key] = [
             'can_start'       => true,
             'require_project' => !empty($row['require_project']),
             'enabled'         => true,
         ];
     }
 
-    $data = [
+    return $edges;
+}
+
+/**
+ * تبدیل ذخیرهٔ قدیمی (کل edges) به override
+ *
+ * @param array<string, mixed> $stored
+ * @return array<string, array{enabled:bool,require_project:bool}>
+ */
+function casting_message_access_overrides_from_legacy_edges(array $stored): array
+{
+    $defaults = casting_message_access_build_default_edges();
+    $legacy = [];
+    foreach (($stored['edges'] ?? []) as $key => $row) {
+        if (!is_string($key) || !is_array($row)) {
+            continue;
+        }
+        if (isset($row['enabled']) && empty($row['enabled'])) {
+            continue;
+        }
+        if (isset($row['can_start']) && empty($row['can_start'])) {
+            continue;
+        }
+        $legacy[$key] = [
+            'require_project' => !empty($row['require_project']),
+        ];
+    }
+
+    $overrides = [];
+    foreach ($defaults as $key => $row) {
+        if (!isset($legacy[$key])) {
+            // در ذخیرهٔ سفارشی نبود = عمداً خاموش شده
+            if (!empty($stored['customized'])) {
+                $overrides[$key] = ['enabled' => false, 'require_project' => false];
+            }
+            continue;
+        }
+        $req = !empty($legacy[$key]['require_project']);
+        if ($req !== !empty($row['require_project'])) {
+            $overrides[$key] = ['enabled' => true, 'require_project' => $req];
+        }
+    }
+    foreach ($legacy as $key => $row) {
+        if (isset($defaults[$key])) {
+            continue;
+        }
+        $overrides[$key] = [
+            'enabled'         => true,
+            'require_project' => !empty($row['require_project']),
+        ];
+    }
+
+    return casting_message_access_normalize_overrides($overrides);
+}
+
+/**
+ * دادهٔ مؤثر (پیش‌فرض + override) برای UI و چک دسترسی
+ *
+ * @return array{version:int,edges:array<string,array{can_start:bool,require_project:bool,enabled:bool}>,customized:bool,overrides:array<string,array{enabled:bool,require_project:bool}>}
+ */
+function casting_message_access_get(): array
+{
+    $defaults = casting_message_access_defaults_payload();
+    $stored = get_option(CASTING_MSG_ACCESS_OPTION, null);
+    if (!is_array($stored)) {
+        return $defaults;
+    }
+
+    $stored_version = (int) ($stored['version'] ?? 1);
+    $overrides = [];
+
+    if ($stored_version >= 3 && isset($stored['overrides']) && is_array($stored['overrides'])) {
+        $overrides = casting_message_access_normalize_overrides($stored['overrides']);
+    } elseif ($stored_version < 3 && !empty($stored['edges']) && is_array($stored['edges'])) {
+        $overrides = casting_message_access_overrides_from_legacy_edges($stored);
+        // مهاجرت یک‌باره به فرمت کوچک
+        update_option(CASTING_MSG_ACCESS_OPTION, [
+            'version'    => CASTING_MSG_ACCESS_VERSION,
+            'overrides'  => $overrides,
+            'customized' => $overrides !== [],
+            'updated_at' => current_time('mysql'),
+        ], false);
+        wp_cache_delete(CASTING_MSG_ACCESS_OPTION, 'options');
+    }
+
+    $edges = casting_message_access_apply_overrides($defaults['edges'], $overrides);
+
+    return [
         'version'    => CASTING_MSG_ACCESS_VERSION,
         'edges'      => $edges,
-        'customized' => true,
+        'overrides'  => $overrides,
+        'customized' => $overrides !== [],
+    ];
+}
+
+/**
+ * ذخیره فقط overrideها (کوچک و قابل‌اعتماد)
+ *
+ * @param array<string, array{enabled?:bool,require_project?:bool}> $overrides
+ */
+function casting_message_access_save_overrides(array $overrides): bool
+{
+    $overrides = casting_message_access_normalize_overrides($overrides);
+    $data = [
+        'version'    => CASTING_MSG_ACCESS_VERSION,
+        'overrides'  => $overrides,
+        'customized' => $overrides !== [],
         'updated_at' => current_time('mysql'),
     ];
 
     $ok = update_option(CASTING_MSG_ACCESS_OPTION, $data, false);
-    // کش آپشن وردپرس را پاک کن تا خاموش/روشن فوری اعمال شود
     wp_cache_delete(CASTING_MSG_ACCESS_OPTION, 'options');
     wp_cache_delete('alloptions', 'options');
     if ($ok) {
         return true;
     }
-    // اگر مقدار واقعاً همان است، وردپرس false می‌دهد — موفقیت حساب شود
     $current = get_option(CASTING_MSG_ACCESS_OPTION, null);
 
     return is_array($current)
-        && !empty($current['customized'])
-        && (($current['edges'] ?? null) == $data['edges']);
+        && (int) ($current['version'] ?? 0) >= CASTING_MSG_ACCESS_VERSION
+        && (($current['overrides'] ?? null) == $data['overrides']);
+}
+
+/**
+ * @param array{edges?:array<string,array{can_start?:bool,require_project?:bool,enabled?:bool}>,overrides?:array<string,array{enabled?:bool,require_project?:bool}>,customized?:bool} $payload
+ */
+function casting_message_access_save(array $payload): bool
+{
+    if (isset($payload['overrides']) && is_array($payload['overrides'])) {
+        return casting_message_access_save_overrides($payload['overrides']);
+    }
+
+    // سازگاری: اگر edges کامل آمد، به override تبدیل کن
+    return casting_message_access_save_overrides(
+        casting_message_access_overrides_from_legacy_edges([
+            'edges'      => $payload['edges'] ?? [],
+            'customized' => true,
+        ])
+    );
 }
 
 function casting_message_access_reset_to_defaults(): bool
 {
     delete_option(CASTING_MSG_ACCESS_OPTION);
+    wp_cache_delete(CASTING_MSG_ACCESS_OPTION, 'options');
+    wp_cache_delete('alloptions', 'options');
 
     return true;
 }
@@ -457,7 +562,7 @@ function casting_message_access_lookup_edge(string $from, string $to): ?array
     $data = casting_message_access_get();
     $key = casting_message_access_edge_key($from, $to);
     $row = $data['edges'][$key] ?? null;
-    if (!is_array($row)) {
+    if (!is_array($row) || empty($row['enabled']) || empty($row['can_start'])) {
         return null;
     }
 
@@ -465,7 +570,8 @@ function casting_message_access_lookup_edge(string $from, string $to): ?array
 }
 
 /**
- * آیا دو کاربر رابطه مجاز برای پیام پروژه‌محور دارند؟
+ * رابطهٔ پروژه‌محور — گفتگوی یک‌طرفه از طرف بازیگر کافی نیست؛
+ * باید طرف مقابل پیام داده باشد، یا پروژه/درخواست مشترک باشد.
  */
 function casting_users_have_message_relationship(int $user_a, int $user_b): bool
 {
@@ -473,10 +579,11 @@ function casting_users_have_message_relationship(int $user_a, int $user_b): bool
         return false;
     }
 
-    if (!function_exists('casting_dm_has_conversation')) {
+    if (!function_exists('casting_dm_user_has_sent_to')) {
         require_once __DIR__ . '/chat.php';
     }
-    if (casting_dm_has_conversation($user_a, $user_b)) {
+    // طرف مقابل قبلاً به من پیام داده
+    if (casting_dm_user_has_sent_to($user_b, $user_a)) {
         return true;
     }
 
@@ -694,7 +801,7 @@ function casting_message_access_edge_is_on(array $edges, string $key): bool
 }
 
 /**
- * روشن/خاموش کردن یک رابطه from → to (اعمال فوری)
+ * روشن/خاموش کردن یک رابطه from → to (اعمال فوری با override)
  *
  * @return array{ok:bool,error:string,enabled?:bool,require_project?:bool,message?:string}
  */
@@ -711,10 +818,12 @@ function casting_message_access_toggle_edge(string $from, string $to, string $fi
     }
 
     $data = casting_message_access_get();
-    $edges = $data['edges'];
+    $defaults = casting_message_access_build_default_edges();
+    $overrides = $data['overrides'];
     $key = casting_message_access_edge_key($from, $to);
-    $is_on = casting_message_access_edge_is_on($edges, $key);
-    $require_now = $is_on && !empty($edges[$key]['require_project']);
+    $default_row = $defaults[$key] ?? null;
+    $is_on = casting_message_access_edge_is_on($data['edges'], $key);
+    $require_now = $is_on && !empty($data['edges'][$key]['require_project']);
     $to_label = $labels[$to];
 
     if ($field === 'require_project') {
@@ -722,12 +831,17 @@ function casting_message_access_toggle_edge(string $from, string $to, string $fi
             return ['ok' => false, 'error' => 'اول دسترسی پیام را روشن کنید.', 'enabled' => false, 'require_project' => false];
         }
         $next_require = $force !== null ? $force : !$require_now;
-        $edges[$key] = [
-            'can_start'       => true,
-            'require_project' => $next_require,
-            'enabled'         => true,
-        ];
-        if (!casting_message_access_save(['edges' => $edges, 'customized' => true])) {
+        $default_req = $default_row !== null && !empty($default_row['require_project']);
+        if ($default_row !== null && $next_require === $default_req) {
+            // برگشت به پیش‌فرض → override لازم نیست
+            unset($overrides[$key]);
+        } else {
+            $overrides[$key] = [
+                'enabled'         => true,
+                'require_project' => $next_require,
+            ];
+        }
+        if (!casting_message_access_save_overrides($overrides)) {
             return ['ok' => false, 'error' => 'ذخیره ناموفق بود.'];
         }
 
@@ -744,25 +858,46 @@ function casting_message_access_toggle_edge(string $from, string $to, string $fi
 
     $next_on = $force !== null ? $force : !$is_on;
     if ($next_on) {
-        $edges[$key] = [
-            'can_start'       => true,
-            'require_project' => $require_now,
-            'enabled'         => true,
-        ];
+        $req = $require_now;
+        if ($default_row !== null && !isset($overrides[$key])) {
+            $req = !empty($default_row['require_project']);
+        }
+        $default_req = $default_row !== null && !empty($default_row['require_project']);
+        if ($default_row !== null && $req === $default_req) {
+            // روشن و مطابق پیش‌فرض
+            unset($overrides[$key]);
+        } else {
+            $overrides[$key] = [
+                'enabled'         => true,
+                'require_project' => $req,
+            ];
+        }
     } else {
-        unset($edges[$key]);
+        // خاموش: اگر در پیش‌فرض هم نبود، override را پاک کن؛ وگرنه deny صریح
+        if ($default_row === null) {
+            unset($overrides[$key]);
+        } else {
+            $overrides[$key] = [
+                'enabled'         => false,
+                'require_project' => false,
+            ];
+        }
     }
 
-    if (!casting_message_access_save(['edges' => $edges, 'customized' => true])) {
+    if (!casting_message_access_save_overrides($overrides)) {
         return ['ok' => false, 'error' => 'ذخیره ناموفق بود.'];
     }
+
+    $fresh = casting_message_access_get();
+    $fresh_on = casting_message_access_edge_is_on($fresh['edges'], $key);
+    $fresh_req = $fresh_on && !empty($fresh['edges'][$key]['require_project']);
 
     return [
         'ok'              => true,
         'error'           => '',
-        'enabled'         => $next_on,
-        'require_project' => $next_on ? $require_now : false,
-        'message'         => $next_on
+        'enabled'         => $fresh_on,
+        'require_project' => $fresh_req,
+        'message'         => $fresh_on
             ? ('دسترسی به «' . $to_label . '» روشن شد.')
             : ('دسترسی به «' . $to_label . '» خاموش شد.'),
     ];
@@ -780,13 +915,24 @@ function casting_message_access_save_from_specialty(string $from_spec, array $ta
         return false;
     }
 
+    $defaults = casting_message_access_build_default_edges();
     $data = casting_message_access_get();
-    $edges = $data['edges'];
+    $overrides = $data['overrides'];
     $prefix = $from_spec . '|';
-    foreach (array_keys($edges) as $key) {
+
+    // پاک کردن overrideهای خروجی این تخصص
+    foreach (array_keys($overrides) as $key) {
         if (str_starts_with($key, $prefix)) {
-            unset($edges[$key]);
+            unset($overrides[$key]);
         }
+    }
+
+    // همهٔ پیش‌فرض‌های خروجی این تخصص را خاموش فرض کن، بعد فقط انتخاب‌شده‌ها را روشن کن
+    foreach (array_keys($defaults) as $key) {
+        if (!str_starts_with($key, $prefix)) {
+            continue;
+        }
+        $overrides[$key] = ['enabled' => false, 'require_project' => false];
     }
 
     $valid = casting_activity_labels();
@@ -802,15 +948,20 @@ function casting_message_access_save_from_specialty(string $from_spec, array $ta
         } else {
             continue;
         }
-        if ($to === '' || $to === $from_spec || !isset($valid[$to])) {
+        if ($to === '' || $to === $from_spec || !isset($valid[$to]) || !$enabled) {
             continue;
         }
-        $edges[casting_message_access_edge_key($from_spec, $to)] = [
-            'can_start'       => true,
-            'require_project' => $require,
-            'enabled'         => $enabled,
-        ];
+        $key = casting_message_access_edge_key($from_spec, $to);
+        $default_req = isset($defaults[$key]) && !empty($defaults[$key]['require_project']);
+        if (isset($defaults[$key]) && $require === $default_req) {
+            unset($overrides[$key]);
+        } else {
+            $overrides[$key] = [
+                'enabled'         => true,
+                'require_project' => $require,
+            ];
+        }
     }
 
-    return casting_message_access_save(['edges' => $edges, 'customized' => true]);
+    return casting_message_access_save_overrides($overrides);
 }

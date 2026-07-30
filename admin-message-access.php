@@ -144,9 +144,10 @@ casting_render_flash();
     · تعداد روابط فعال کل: <?= (int) count(array_filter($data['edges'], static fn ($e) => !empty($e['enabled']) && !empty($e['can_start']))) ?>
   </p>
   <p class="field-hint">
-    <strong>دسترسی پیام خاموش</strong> = آن نقش دیگر مخاطب را نمی‌بیند و حتی گفتگوی قبلی قفل می‌شود.
-    <strong>فقط با پروژه فعال</strong> = بدون پروژه/درخواست فقط اگر قبلاً گفتگو شروع شده باشد می‌تواند ادامه دهد.
-    برای پیام آزاد: دسترسی روشن + فقط با پروژه غیرفعال.
+    تغییرات فوری ذخیره می‌شود.
+    <strong>دسترسی خاموش</strong> = کاملاً مسدود (حتی اگر قبلاً پیام رد و بدل شده).
+    <strong>فقط با پروژه فعال</strong> = بدون پروژه/درخواست، فقط وقتی طرف مقابل اول پیام داده باشد مجاز است.
+    اگر رفتار عجیب بود، یک‌بار «بازگشت کامل به پیش‌فرض» بزنید و دوباره تنظیم کنید.
   </p>
   <div class="flash flash-error msg-access-ajax-error" hidden role="alert"></div>
   <div class="flash flash-success msg-access-ajax-ok" hidden role="status"></div>
