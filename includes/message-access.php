@@ -749,7 +749,7 @@ function casting_message_access_allows_start(int $from_id, int $to_id): array
         ];
     }
 
-    return ['ok' => false, 'error' => 'طبق جدول دسترسی پیام، امکان شروع گفتگو با این کاربر وجود ندارد.'];
+    return ['ok' => false, 'error' => 'برای پاسخ به این پیام باید اشتراک ویژه خریداری کنید'];
 }
 
 /**

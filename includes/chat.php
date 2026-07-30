@@ -22,7 +22,7 @@ function casting_dm_read_meta_key(): string
 
 function casting_dm_premium_required_notice_message(): string
 {
-    return 'هنرمند گرامی شما یک پیام دارین برای دریافت و یا پاسخ به آن ،عضویت ویژه الزامی است';
+    return 'برای پاسخ به این پیام باید اشتراک ویژه خریداری کنید';
 }
 
 function casting_dm_support_sender_id(): int
@@ -151,10 +151,6 @@ function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
     if (casting_dm_is_support_peer($recipient_id)) {
         return ['ok' => true, 'error' => ''];
     }
-    // پاسخ به پیام دریافتی در گفتگوی باز — بدون نیاز به عضویت ویژه
-    if (casting_dm_is_open_reply_session($sender_id, $recipient_id)) {
-        return ['ok' => true, 'error' => ''];
-    }
     if (!casting_user_requires_premium_for_dm($sender_id)) {
         return ['ok' => true, 'error' => ''];
     }
@@ -187,15 +183,6 @@ function casting_user_needs_premium_to_read_inbox(int $user_id): bool
 
 function casting_dm_thread_locked_for_user(int $user_id, int $peer_id): bool
 {
-    // پیام دریافتی از کارگردان را می‌توان بدون ویژه خواند و پاسخ داد
-    if (casting_dm_is_open_reply_session($user_id, $peer_id)) {
-        return false;
-    }
-    // تاریخچه گفتگوی بسته‌شده را هم نشان بده (بدون ارسال)
-    if (casting_dm_thread_is_closed($user_id, $peer_id) && casting_dm_user_has_sent_to($peer_id, $user_id)) {
-        return false;
-    }
-
     return casting_user_needs_premium_to_read_inbox($user_id) && !casting_dm_is_support_peer($peer_id);
 }
 
