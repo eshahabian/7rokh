@@ -428,6 +428,9 @@ function casting_message_access_save(array $payload): bool
     ];
 
     $ok = update_option(CASTING_MSG_ACCESS_OPTION, $data, false);
+    // کش آپشن وردپرس را پاک کن تا خاموش/روشن فوری اعمال شود
+    wp_cache_delete(CASTING_MSG_ACCESS_OPTION, 'options');
+    wp_cache_delete('alloptions', 'options');
     if ($ok) {
         return true;
     }

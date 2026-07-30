@@ -27,14 +27,13 @@ function casting_chat_specialty_keys(int $user_id): array
 
     $role = casting_get_user_role($user_id);
     if ($role === 'director') {
-        // بدون تخصص ذخیره‌شده: همهٔ انواع کارگردان را برای تطبیق ماتریس در نظر بگیر
-        return casting_message_access_director_keys();
+        return ['director_cinema'];
     }
     if ($role === 'producer') {
         return ['producer'];
     }
     if ($role === 'talent') {
-        return casting_message_access_actor_keys();
+        return ['actor_cinema'];
     }
 
     return ['activity_none'];
@@ -131,49 +130,14 @@ function casting_can_start_chat(int $from_id, int $to_id): array
 }
 
 /**
- * پاسخ به گفتگوی موجود همیشه مجاز است؛ شروع گفتگو تابع قوانین سلسله‌مراتبی است.
+ * ارسال/ادامه گفتگو — تابع جدول دسترسی ادمین.
+ * اگر دسترسی پیام خاموش شود، حتی گفتگوی قبلی هم قفل می‌شود.
+ * اگر «فقط با پروژه» روشن باشد، بدون رابطه فقط پاسخ به گفتگوی موجود مجاز است
+ * (گفتگوی موجود = کارگردان/طرف مقابل قبلاً شروع کرده).
  *
  * @return array{ok:bool,error:string}
  */
 function casting_can_users_chat(int $from_id, int $to_id): array
-{
-    if (!function_exists('casting_dm_has_conversation')) {
-        require_once __DIR__ . '/chat.php';
-    }
-
-    if (casting_user_is_portal_owner($from_id)) {
-        if (casting_users_block_each_other($from_id, $to_id)) {
-            return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
-        }
-        if ($from_id <= 0 || $to_id <= 0 || $from_id === $to_id) {
-            return ['ok' => false, 'error' => 'کاربر معتبر نیست.'];
-        }
-        if (casting_get_user_role($to_id) !== '') {
-            return ['ok' => true, 'error' => ''];
-        }
-    }
-
-    if (casting_dm_has_conversation($from_id, $to_id)) {
-        if (casting_users_block_each_other($from_id, $to_id)) {
-            return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
-        }
-        if ($from_id <= 0 || $to_id <= 0 || $from_id === $to_id) {
-            return ['ok' => false, 'error' => 'کاربر معتبر نیست.'];
-        }
-
-        return ['ok' => true, 'error' => ''];
-    }
-
-    return casting_can_start_chat($from_id, $to_id);
-}
-
-/**
- * دیدن مخاطب / دکمه پیام / باز کردن صفحه چت.
- * اگر در جدول دسترسی لبه روشن باشد دیده می‌شود؛ «فقط با پروژه» فقط ارسال را محدود می‌کند.
- *
- * @return array{ok:bool,error:string}
- */
-function casting_can_user_open_dm(int $from_id, int $to_id): array
 {
     if ($from_id <= 0 || $to_id <= 0) {
         return ['ok' => false, 'error' => 'کاربر معتبر نیست.'];
@@ -184,23 +148,50 @@ function casting_can_user_open_dm(int $from_id, int $to_id): array
     if (casting_users_block_each_other($from_id, $to_id)) {
         return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
     }
-    if (casting_user_is_portal_owner($from_id) && casting_get_user_role($to_id) !== '') {
-        return ['ok' => true, 'error' => ''];
+
+    if (casting_user_is_portal_owner($from_id)) {
+        if (casting_get_user_role($to_id) !== '') {
+            return ['ok' => true, 'error' => ''];
+        }
+
+        return ['ok' => false, 'error' => 'فقط اعضای ۷ رخ می‌توانند چت کنند.'];
     }
-    if (casting_get_user_role($from_id) === '' || casting_get_user_role($to_id) === '') {
+
+    $from_role = casting_get_user_role($from_id);
+    $to_role = casting_get_user_role($to_id);
+    if ($from_role === '' || $to_role === '') {
         return ['ok' => false, 'error' => 'فقط اعضای ۷ رخ می‌توانند چت کنند.'];
     }
 
     if (!function_exists('casting_dm_has_conversation')) {
         require_once __DIR__ . '/chat.php';
     }
-    if (casting_dm_has_conversation($from_id, $to_id)) {
+
+    $has_conversation = casting_dm_has_conversation($from_id, $to_id);
+    $has_edge = casting_message_access_has_enabled_edge($from_id, $to_id);
+
+    // دسترسی پیام در جدول ادمین خاموش است
+    if (!$has_edge) {
+        return [
+            'ok'    => false,
+            'error' => 'دسترسی پیام برای این نقش‌ها خاموش است.',
+        ];
+    }
+
+    // گفتگوی قبلی وجود دارد → پاسخ مجاز (مگر دسترسی خاموش که بالا رد شد)
+    if ($has_conversation) {
         return ['ok' => true, 'error' => ''];
     }
 
-    if (casting_message_access_has_enabled_edge($from_id, $to_id)) {
-        return ['ok' => true, 'error' => ''];
-    }
+    return casting_message_access_allows_start($from_id, $to_id);
+}
 
-    return casting_can_start_chat($from_id, $to_id);
+/**
+ * دیدن مخاطب / دکمه پیام / باز کردن چت — همان قوانین ارسال.
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_can_user_open_dm(int $from_id, int $to_id): array
+{
+    return casting_can_users_chat($from_id, $to_id);
 }
