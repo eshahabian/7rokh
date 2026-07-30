@@ -346,6 +346,128 @@ function casting_dm_user_has_sent_to(int $sender_id, int $recipient_id): bool
     return (int) $found > 0;
 }
 
+function casting_dm_closed_option_key(): string
+{
+    return 'casting_dm_closed_threads';
+}
+
+function casting_dm_thread_pair_key(int $user_a, int $user_b): string
+{
+    $a = min($user_a, $user_b);
+    $b = max($user_a, $user_b);
+
+    return $a . '_' . $b;
+}
+
+/**
+ * @return array<string, array{by:int,at:string}>
+ */
+function casting_dm_closed_threads_map(): array
+{
+    $raw = get_option(casting_dm_closed_option_key(), []);
+    if (!is_array($raw)) {
+        return [];
+    }
+    $out = [];
+    foreach ($raw as $key => $row) {
+        if (!is_string($key) || !is_array($row)) {
+            continue;
+        }
+        $by = (int) ($row['by'] ?? 0);
+        $at = (string) ($row['at'] ?? '');
+        if ($by <= 0) {
+            continue;
+        }
+        $out[$key] = ['by' => $by, 'at' => $at];
+    }
+
+    return $out;
+}
+
+function casting_dm_thread_is_closed(int $user_a, int $user_b): bool
+{
+    if ($user_a <= 0 || $user_b <= 0 || $user_a === $user_b) {
+        return false;
+    }
+    $map = casting_dm_closed_threads_map();
+
+    return isset($map[casting_dm_thread_pair_key($user_a, $user_b)]);
+}
+
+/**
+ * آیا فرستنده می‌تواند بدون پروژه/پیام قبلی گفتگو را شروع کند؟ (مثلاً کارگردان→بازیگر)
+ */
+function casting_message_access_can_initiate_freely(int $from_id, int $to_id): bool
+{
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($from_id)) {
+        return true;
+    }
+    $from_specs = casting_message_access_user_specs($from_id);
+    $to_specs = casting_message_access_user_specs($to_id);
+    foreach ($from_specs as $from_spec) {
+        foreach ($to_specs as $to_spec) {
+            $check = casting_message_access_specialty_allows($from_spec, $to_spec);
+            if (!empty($check['ok']) && empty($check['require_project'])) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function casting_dm_can_close_thread(int $user_id, int $peer_id): bool
+{
+    if ($user_id <= 0 || $peer_id <= 0 || $user_id === $peer_id) {
+        return false;
+    }
+    if (casting_users_block_each_other($user_id, $peer_id)) {
+        return false;
+    }
+    if (!casting_dm_has_conversation($user_id, $peer_id)) {
+        return false;
+    }
+    if (casting_dm_thread_is_closed($user_id, $peer_id)) {
+        return false;
+    }
+
+    return casting_message_access_can_initiate_freely($user_id, $peer_id);
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_dm_close_thread(int $by_user_id, int $peer_id): array
+{
+    if (!casting_dm_can_close_thread($by_user_id, $peer_id)) {
+        return ['ok' => false, 'error' => 'شما مجاز به بستن این گفتگو نیستید.'];
+    }
+    $map = casting_dm_closed_threads_map();
+    $map[casting_dm_thread_pair_key($by_user_id, $peer_id)] = [
+        'by' => $by_user_id,
+        'at' => current_time('mysql'),
+    ];
+    update_option(casting_dm_closed_option_key(), $map, false);
+    wp_cache_delete(casting_dm_closed_option_key(), 'options');
+
+    return ['ok' => true, 'error' => ''];
+}
+
+function casting_dm_reopen_thread(int $user_a, int $user_b): void
+{
+    if ($user_a <= 0 || $user_b <= 0 || $user_a === $user_b) {
+        return;
+    }
+    $map = casting_dm_closed_threads_map();
+    $key = casting_dm_thread_pair_key($user_a, $user_b);
+    if (!isset($map[$key])) {
+        return;
+    }
+    unset($map[$key]);
+    update_option(casting_dm_closed_option_key(), $map, false);
+    wp_cache_delete(casting_dm_closed_option_key(), 'options');
+}
+
 /**
  * @return array<int, int> peer_id => last_read_message_id
  */
@@ -762,6 +884,12 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
     }
     if (casting_strlen($message) > 2000) {
         return ['ok' => false, 'error' => 'پیام حداکثر ۲۰۰۰ کاراکتر باشد.'];
+    }
+
+    // اگر کارگردان (شروع‌کننده آزاد) بعد از بستن دوباره پیام بدهد، گفتگو باز می‌شود
+    if (casting_dm_thread_is_closed($sender_id, $recipient_id)
+        && casting_message_access_can_initiate_freely($sender_id, $recipient_id)) {
+        casting_dm_reopen_thread($sender_id, $recipient_id);
     }
 
     casting_chat_ensure_table();

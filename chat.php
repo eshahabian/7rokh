@@ -40,6 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 casting_redirect('chat.php?with=' . $start_id);
             }
+        } elseif ($action === 'close_thread') {
+            $target = (int) ($_POST['peer_id'] ?? 0);
+            $res = casting_dm_close_thread($my_id, $target);
+            casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'گفتگو بسته شد. طرف مقابل دیگر نمی‌تواند پیام بدهد تا دوباره بازش کنید.' : $res['error']);
+            casting_redirect('chat.php?with=' . $target);
         } elseif ($action === 'respond_request') {
             $req_id = (string) ($_POST['request_id'] ?? '');
             $result = casting_respond_to_request(
@@ -76,6 +81,8 @@ $peer_allow = ['ok' => false, 'error' => ''];
 $is_blocked = false;
 $peer_had_unread = false;
 $thread_locked = false;
+$thread_closed = false;
+$can_close_thread = false;
 
 if ($peer_id > 0) {
     $peer = get_user_by('id', $peer_id);
@@ -84,6 +91,8 @@ if ($peer_id > 0) {
         $peer_id = 0;
     } else {
         $thread_locked = casting_dm_thread_locked_for_user($my_id, $peer_id);
+        $thread_closed = casting_dm_thread_is_closed($my_id, $peer_id);
+        $can_close_thread = casting_dm_can_close_thread($my_id, $peer_id);
         $peer_had_unread = casting_dm_unread_count($my_id, $peer_id) > 0;
         casting_dm_mark_delivered($my_id, $peer_id);
         if (!$thread_locked) {
@@ -193,6 +202,14 @@ casting_render_flash();
           </div>
           <div class="cta-row">
             <a class="btn btn-ghost btn-sm" href="member.php?id=<?= $peer_id ?>">پروفایل</a>
+            <?php if ($can_close_thread) : ?>
+              <form method="post" action="chat.php?with=<?= $peer_id ?>" onsubmit="return confirm('با بستن گفتگو، طرف مقابل دیگر نمی‌تواند پیام بدهد تا دوباره با پیام شما باز شود. ادامه می‌دهید؟');">
+                <?php wp_nonce_field('casting_dm'); ?>
+                <input type="hidden" name="action" value="close_thread">
+                <input type="hidden" name="peer_id" value="<?= $peer_id ?>">
+                <button class="btn btn-reject btn-sm" type="submit">بستن گفتگو</button>
+              </form>
+            <?php endif; ?>
             <?php if ($is_blocked) : ?>
               <form method="post" action="chat.php?with=<?= $peer_id ?>">
                 <?php wp_nonce_field('casting_dm'); ?>
@@ -207,6 +224,16 @@ casting_render_flash();
             <?php endif; ?>
           </div>
         </header>
+
+        <?php if ($thread_closed) : ?>
+          <div class="chat-thread-closed-banner" role="status">
+            <?php if (casting_message_access_can_initiate_freely($my_id, $peer_id)) : ?>
+              <p class="meta">این گفتگو بسته است. با ارسال پیام جدید دوباره باز می‌شود و طرف مقابل می‌تواند پاسخ دهد.</p>
+            <?php else : ?>
+              <p class="meta">این گفتگو توسط طرف مقابل بسته شده است. تا وقتی دوباره پیام ندهند نمی‌توانید پاسخ بدهید.</p>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
 
         <?php if (is_array($active_request) && casting_get_user_role($my_id) === 'talent' && casting_request_status_key($active_request) === 'pending') : ?>
           <div class="chat-request-banner">

@@ -2420,6 +2420,18 @@ legend .req-mark {
   font-size: 0.9rem;
 }
 
+.chat-thread-closed-banner {
+  margin: 0 0 0.85rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--danger, #b33) 35%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger, #b33) 8%, transparent);
+}
+
+.chat-thread-closed-banner .meta {
+  margin: 0;
+}
+
 .chat-empty-main {
   flex: 1;
   display: grid;

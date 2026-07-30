@@ -126,6 +126,22 @@ function casting_can_start_chat(int $from_id, int $to_id): array
         return ['ok' => false, 'error' => 'فقط اعضای ۷ رخ می‌توانند چت کنند.'];
     }
 
+    if (!function_exists('casting_dm_thread_is_closed')) {
+        require_once __DIR__ . '/chat.php';
+    }
+
+    // گفتگوی بسته‌شده: فقط شروع‌کننده آزاد (مثلاً کارگردان) می‌تواند دوباره باز کند
+    if (casting_dm_thread_is_closed($from_id, $to_id)) {
+        if (casting_message_access_can_initiate_freely($from_id, $to_id)) {
+            return ['ok' => true, 'error' => ''];
+        }
+
+        return [
+            'ok'    => false,
+            'error' => 'این گفتگو بسته شده است. فقط طرف مقابل می‌تواند با پیام جدید دوباره آن را باز کند.',
+        ];
+    }
+
     return casting_message_access_allows_start($from_id, $to_id);
 }
 
