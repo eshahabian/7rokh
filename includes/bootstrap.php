@@ -170,6 +170,29 @@ function casting_user_is_portal_owner(int $user_id): bool
     return strtolower((string) $user->user_login) === casting_portal_owner_login();
 }
 
+/**
+ * مدیرانی که جدول دسترسی پیام‌رسان را می‌بینند
+ *
+ * @return list<string>
+ */
+function casting_message_access_manager_logins(): array
+{
+    return ['eshahabian', 'ardavan'];
+}
+
+function casting_user_can_manage_message_access(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return false;
+    }
+
+    return in_array(strtolower((string) $user->user_login), casting_message_access_manager_logins(), true);
+}
+
 function casting_user_can_member_search(int $user_id): bool
 {
     if (casting_user_is_portal_owner($user_id)) {

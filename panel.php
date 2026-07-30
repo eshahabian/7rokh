@@ -38,13 +38,6 @@ if (isset($_GET['welcome'])) {
 casting_render_flash();
 ?>
 <section class="panel-home" aria-label="داشبورد پنل">
-  <?php if (casting_user_is_portal_owner($user_id)) : ?>
-    <aside class="panel-owner-tools">
-      <h2>ابزار مدیر اصلی</h2>
-      <p>جدول دسترسی پیام‌رسان را با دکمه‌های روشن/خاموش مدیریت کنید. تغییرات فوری اعمال می‌شود.</p>
-      <a class="btn btn-primary" href="admin-message-access.php">باز کردن جدول دسترسی پیام</a>
-    </aside>
-  <?php endif; ?>
   <?php
   $promo_slides = [
       ['src' => casting_asset('images/promo-slide-1.png'), 'alt' => 'صحنه فیلم‌برداری و صندلی کارگردان'],

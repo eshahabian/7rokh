@@ -9,8 +9,8 @@ require_once __DIR__ . '/includes/panel.php';
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 
-if (!casting_user_is_portal_owner($user_id)) {
-    wp_die('این بخش فقط برای مدیر اصلی پورتال (eshahabian) است.', 'دسترسی غیرمجاز', ['response' => 403]);
+if (!casting_user_can_manage_message_access($user_id)) {
+    wp_die('دسترسی به این بخش مجاز نیست.', 'دسترسی غیرمجاز', ['response' => 403]);
 }
 
 casting_nocache();
@@ -137,7 +137,6 @@ casting_render_flash();
   <p class="lede">
     برای هر نقش فرستنده مشخص کنید به کدام نقش‌ها می‌تواند پیام بدهد.
     با دکمه <strong>روشن / خاموش</strong> دسترسی فوراً عوض و ذخیره می‌شود.
-    فقط حساب <code>eshahabian</code> این صفحه را می‌بیند.
   </p>
   <p class="meta">
     <?= !empty($data['customized']) ? 'وضعیت: سفارشی‌سازی‌شده' : 'وضعیت: پیش‌فرض سیستم' ?>
