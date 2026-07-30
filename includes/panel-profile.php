@@ -280,7 +280,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         && casting_is_employer_role($viewer_role)
         && function_exists('casting_employer_must_use_fixed_outreach')
         && casting_employer_must_use_fixed_outreach($viewer_id);
-    $chat_allow = !$is_self ? casting_can_users_chat($viewer_id, $member_id) : ['ok' => false];
+    $chat_allow = !$is_self ? casting_can_user_open_dm($viewer_id, $member_id) : ['ok' => false];
     $is_blocked = !$is_self ? casting_is_blocked($viewer_id, $member_id) : false;
     $director_workspace = null;
     $show_director_tools = !$is_self

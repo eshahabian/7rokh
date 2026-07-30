@@ -144,8 +144,9 @@ casting_render_flash();
     · تعداد روابط فعال کل: <?= (int) count(array_filter($data['edges'], static fn ($e) => !empty($e['enabled']) && !empty($e['can_start']))) ?>
   </p>
   <p class="field-hint">
-    برای اجازهٔ آزاد پیام: «دسترسی پیام» را <strong>روشن</strong> و «فقط با پروژه» را <strong>غیرفعال</strong> کنید.
-    اگر دسترسی خاموش باشد، آن نقش در لیست مخاطب طرف مقابل دیده نمی‌شود.
+    «دسترسی پیام = روشن» یعنی آن نقش در لیست مخاطب دیده می‌شود.
+    اگر «فقط با پروژه» هم فعال باشد، تا وقتی پروژه/درخواست/پیام قبلی نباشد نمی‌تواند پیام بفرستد.
+    برای پیام آزاد: دسترسی را روشن و «فقط با پروژه» را غیرفعال کنید.
   </p>
   <div class="flash flash-error msg-access-ajax-error" hidden role="alert"></div>
   <div class="flash flash-success msg-access-ajax-ok" hidden role="status"></div>

@@ -122,7 +122,7 @@ function casting_message_access_add_edges(array &$edges, $froms, $tos, bool $req
 }
 
 /**
- * نقش‌هایی که بازیگر فقط با رابطه/پروژه/پیام قبلی می‌تواند به آن‌ها پیام بدهد
+ * نقش‌هایی که بازیگر در پیش‌فرض سیستم فقط با پروژه/رابطه به آن‌ها پیام می‌دهد
  *
  * @return list<string>
  */
@@ -156,30 +156,6 @@ function casting_message_access_actor_gated_targets(): array
             'promo_manager',
         ]
     )));
-}
-
-/**
- * آیا فرستنده بازیگر/هنرمند است و گیرنده کارگردان/تهیه‌کننده یا نقش گیت‌شده؟
- * این قانون سخت‌گیرانه است و از ماتریس ذخیره‌شده عبور نمی‌کند.
- */
-function casting_message_access_is_actor_to_gated_lead(int $from_id, int $to_id): bool
-{
-    $from_specs = casting_message_access_user_specs($from_id);
-    $to_specs = casting_message_access_user_specs($to_id);
-    $actors = casting_message_access_actor_keys();
-
-    $from_is_actor = array_intersect($from_specs, $actors) !== []
-        || casting_activities_has_acting($from_specs)
-        || casting_get_user_role($from_id) === 'talent';
-    if (!$from_is_actor) {
-        return false;
-    }
-
-    $gated = casting_message_access_actor_gated_targets();
-
-    return array_intersect($to_specs, $gated) !== []
-        || casting_get_user_role($to_id) === 'director'
-        || casting_get_user_role($to_id) === 'producer';
 }
 
 /**
@@ -599,6 +575,28 @@ function casting_message_access_user_specs(int $user_id): array
 }
 
 /**
+ * آیا بین دو تخصص لبهٔ روشن (can_start) وجود دارد؟ — بدون در نظر گرفتن محدودیت پروژه
+ */
+function casting_message_access_has_enabled_edge(int $from_id, int $to_id): bool
+{
+    $from_specs = casting_message_access_user_specs($from_id);
+    $to_specs = casting_message_access_user_specs($to_id);
+    if ($from_specs === [] || $to_specs === []) {
+        return false;
+    }
+    foreach ($from_specs as $from_spec) {
+        foreach ($to_specs as $to_spec) {
+            $row = casting_message_access_lookup_edge($from_spec, $to_spec);
+            if ($row !== null && !empty($row['enabled']) && !empty($row['can_start'])) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
  * بررسی کامل شروع گفتگو بر اساس تخصص‌های دو کاربر
  *
  * @return array{ok:bool,error:string}
@@ -637,11 +635,11 @@ function casting_message_access_allows_start(int $from_id, int $to_id): array
     if ($any_edge && $need_relationship) {
         return [
             'ok'    => false,
-            'error' => 'برای پیام به این کاربر باید عضو پروژه مشترک باشید، درخواست همکاری ثبت شده باشد، یا قبلاً گفتگو شروع شده باشد.',
+            'error' => 'برای پیام به این کاربر باید عضو پروژه مشترک باشید، درخواست همکاری ثبت شده باشد، یا طرف مقابل اول پیام داده باشد.',
         ];
     }
 
-    return ['ok' => false, 'error' => 'طبق قوانین سلسله‌مراتبی پورتال، امکان شروع گفتگو با این کاربر وجود ندارد. ارتباط با بخش‌های دیگر فقط از طریق مدیران همان بخش انجام می‌شود.'];
+    return ['ok' => false, 'error' => 'طبق جدول دسترسی پیام، امکان شروع گفتگو با این کاربر وجود ندارد.'];
 }
 
 /**

@@ -27,13 +27,14 @@ function casting_chat_specialty_keys(int $user_id): array
 
     $role = casting_get_user_role($user_id);
     if ($role === 'director') {
-        return ['director_cinema'];
+        // بدون تخصص ذخیره‌شده: همهٔ انواع کارگردان را برای تطبیق ماتریس در نظر بگیر
+        return casting_message_access_director_keys();
     }
     if ($role === 'producer') {
         return ['producer'];
     }
     if ($role === 'talent') {
-        return ['actor_cinema'];
+        return casting_message_access_actor_keys();
     }
 
     return ['activity_none'];
@@ -160,6 +161,44 @@ function casting_can_users_chat(int $from_id, int $to_id): array
             return ['ok' => false, 'error' => 'کاربر معتبر نیست.'];
         }
 
+        return ['ok' => true, 'error' => ''];
+    }
+
+    return casting_can_start_chat($from_id, $to_id);
+}
+
+/**
+ * دیدن مخاطب / دکمه پیام / باز کردن صفحه چت.
+ * اگر در جدول دسترسی لبه روشن باشد دیده می‌شود؛ «فقط با پروژه» فقط ارسال را محدود می‌کند.
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_can_user_open_dm(int $from_id, int $to_id): array
+{
+    if ($from_id <= 0 || $to_id <= 0) {
+        return ['ok' => false, 'error' => 'کاربر معتبر نیست.'];
+    }
+    if ($from_id === $to_id) {
+        return ['ok' => false, 'error' => 'نمی‌توانید با خودتان چت کنید.'];
+    }
+    if (casting_users_block_each_other($from_id, $to_id)) {
+        return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
+    }
+    if (casting_user_is_portal_owner($from_id) && casting_get_user_role($to_id) !== '') {
+        return ['ok' => true, 'error' => ''];
+    }
+    if (casting_get_user_role($from_id) === '' || casting_get_user_role($to_id) === '') {
+        return ['ok' => false, 'error' => 'فقط اعضای ۷ رخ می‌توانند چت کنند.'];
+    }
+
+    if (!function_exists('casting_dm_has_conversation')) {
+        require_once __DIR__ . '/chat.php';
+    }
+    if (casting_dm_has_conversation($from_id, $to_id)) {
+        return ['ok' => true, 'error' => ''];
+    }
+
+    if (casting_message_access_has_enabled_edge($from_id, $to_id)) {
         return ['ok' => true, 'error' => ''];
     }
 

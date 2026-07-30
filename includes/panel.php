@@ -1713,7 +1713,7 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
           <?php endif; ?>
           <?php if ($profile['city'] !== '') : ?> · <?= casting_e($profile['city']) ?><?php endif; ?>
         </p>
-        <?php if ($viewer_id !== $id && casting_can_users_chat($viewer_id, $id)['ok']) : ?>
+        <?php if ($viewer_id !== $id && casting_can_user_open_dm($viewer_id, $id)['ok']) : ?>
           <a class="btn btn-ghost btn-sm" href="chat.php?with=<?= $id ?>">پیام</a>
         <?php endif; ?>
       </div>

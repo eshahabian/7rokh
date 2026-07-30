@@ -138,22 +138,8 @@ function casting_dm_maybe_send_premium_required_notice(int $recipient_id, int $s
 }
 
 /**
- * @return array{ok:bool,error:string}
- */
-function casting_can_user_open_dm(int $from_id, int $to_id): array
-{
-    if (casting_dm_has_conversation($from_id, $to_id)) {
-        if (casting_users_block_each_other($from_id, $to_id)) {
-            return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
-        }
-
-        return ['ok' => true, 'error' => ''];
-    }
-
-    return casting_can_start_chat($from_id, $to_id);
-}
-
-/**
+ * ارسال پیام: قوانین شروع گفتگو + محدودیت پروژه + ویژه
+ *
  * @return array{ok:bool,error:string}
  */
 function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
@@ -978,7 +964,7 @@ function casting_dm_allowed_contacts(int $user_id): array
 {
     $users = get_users([
         'meta_key' => 'casting_role',
-        'number'   => 500,
+        'number'   => -1,
         'fields'   => ['ID', 'display_name'],
         'orderby'  => 'display_name',
         'order'    => 'ASC',
