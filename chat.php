@@ -227,7 +227,7 @@ casting_render_flash();
 
         <?php if ($thread_closed) : ?>
           <div class="chat-thread-closed-banner" role="status">
-            <?php if (casting_message_access_can_initiate_freely($my_id, $peer_id)) : ?>
+            <?php if (casting_dm_can_reopen_thread($my_id, $peer_id)) : ?>
               <p class="meta">این گفتگو بسته است. با ارسال پیام جدید دوباره باز می‌شود و طرف مقابل می‌تواند پاسخ دهد.</p>
             <?php else : ?>
               <p class="meta">این گفتگو توسط طرف مقابل بسته شده است. تا وقتی دوباره پیام ندهند نمی‌توانید پاسخ بدهید.</p>

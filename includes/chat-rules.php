@@ -130,9 +130,9 @@ function casting_can_start_chat(int $from_id, int $to_id): array
         require_once __DIR__ . '/chat.php';
     }
 
-    // گفتگوی بسته‌شده: فقط شروع‌کننده آزاد (مثلاً کارگردان) می‌تواند دوباره باز کند
+    // گفتگوی بسته‌شده: فقط کسی که حق بازگشایی دارد
     if (casting_dm_thread_is_closed($from_id, $to_id)) {
-        if (casting_message_access_can_initiate_freely($from_id, $to_id)) {
+        if (casting_dm_can_reopen_thread($from_id, $to_id)) {
             return ['ok' => true, 'error' => ''];
         }
 
@@ -140,6 +140,11 @@ function casting_can_start_chat(int $from_id, int $to_id): array
             'ok'    => false,
             'error' => 'این گفتگو بسته شده است. فقط طرف مقابل می‌تواند با پیام جدید دوباره آن را باز کند.',
         ];
+    }
+
+    // طرف مقابل قبلاً پیام داده → اجازه پاسخ (تا وقتی نبسته باشد)
+    if (casting_dm_user_has_sent_to($to_id, $from_id)) {
+        return ['ok' => true, 'error' => ''];
     }
 
     return casting_message_access_allows_start($from_id, $to_id);

@@ -151,6 +151,10 @@ function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
     if (casting_dm_is_support_peer($recipient_id)) {
         return ['ok' => true, 'error' => ''];
     }
+    // پاسخ به پیام دریافتی در گفتگوی باز — بدون نیاز به عضویت ویژه
+    if (casting_dm_is_open_reply_session($sender_id, $recipient_id)) {
+        return ['ok' => true, 'error' => ''];
+    }
     if (!casting_user_requires_premium_for_dm($sender_id)) {
         return ['ok' => true, 'error' => ''];
     }
@@ -183,6 +187,15 @@ function casting_user_needs_premium_to_read_inbox(int $user_id): bool
 
 function casting_dm_thread_locked_for_user(int $user_id, int $peer_id): bool
 {
+    // پیام دریافتی از کارگردان را می‌توان بدون ویژه خواند و پاسخ داد
+    if (casting_dm_is_open_reply_session($user_id, $peer_id)) {
+        return false;
+    }
+    // تاریخچه گفتگوی بسته‌شده را هم نشان بده (بدون ارسال)
+    if (casting_dm_thread_is_closed($user_id, $peer_id) && casting_dm_user_has_sent_to($peer_id, $user_id)) {
+        return false;
+    }
+
     return casting_user_needs_premium_to_read_inbox($user_id) && !casting_dm_is_support_peer($peer_id);
 }
 
@@ -395,12 +408,38 @@ function casting_dm_thread_is_closed(int $user_a, int $user_b): bool
 }
 
 /**
+ * گفتگوی باز که طرف مقابل به من پیام داده — برای پاسخ رایگان بازیگر
+ */
+function casting_dm_is_open_reply_session(int $user_id, int $peer_id): bool
+{
+    if ($user_id <= 0 || $peer_id <= 0 || $user_id === $peer_id) {
+        return false;
+    }
+    if (casting_dm_thread_is_closed($user_id, $peer_id)) {
+        return false;
+    }
+
+    return casting_dm_user_has_sent_to($peer_id, $user_id);
+}
+
+function casting_dm_thread_closed_by(int $user_a, int $user_b): int
+{
+    $map = casting_dm_closed_threads_map();
+    $row = $map[casting_dm_thread_pair_key($user_a, $user_b)] ?? null;
+
+    return is_array($row) ? (int) ($row['by'] ?? 0) : 0;
+}
+
+/**
  * آیا فرستنده می‌تواند بدون پروژه/پیام قبلی گفتگو را شروع کند؟ (مثلاً کارگردان→بازیگر)
  */
 function casting_message_access_can_initiate_freely(int $from_id, int $to_id): bool
 {
     if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($from_id)) {
         return true;
+    }
+    if (!function_exists('casting_message_access_user_specs')) {
+        require_once __DIR__ . '/message-access.php';
     }
     $from_specs = casting_message_access_user_specs($from_id);
     $to_specs = casting_message_access_user_specs($to_id);
@@ -411,6 +450,13 @@ function casting_message_access_can_initiate_freely(int $from_id, int $to_id): b
                 return true;
             }
         }
+    }
+
+    // کارگردان/تهیه‌کننده به هنرمند — حتی اگر لبه آزاد در ماتریس نباشد
+    if (casting_user_is_employer_account($from_id) && casting_get_user_role($to_id) === 'talent') {
+        return casting_message_access_has_enabled_edge($from_id, $to_id)
+            || casting_message_access_has_enabled_edge($to_id, $from_id)
+            || casting_dm_user_has_sent_to($from_id, $to_id);
     }
 
     return false;
@@ -430,8 +476,12 @@ function casting_dm_can_close_thread(int $user_id, int $peer_id): bool
     if (casting_dm_thread_is_closed($user_id, $peer_id)) {
         return false;
     }
+    if (casting_message_access_can_initiate_freely($user_id, $peer_id)) {
+        return true;
+    }
 
-    return casting_message_access_can_initiate_freely($user_id, $peer_id);
+    // کسی که خودش به طرف مقابل پیام داده می‌تواند ببندد
+    return casting_dm_user_has_sent_to($user_id, $peer_id);
 }
 
 /**
@@ -466,6 +516,18 @@ function casting_dm_reopen_thread(int $user_a, int $user_b): void
     unset($map[$key]);
     update_option(casting_dm_closed_option_key(), $map, false);
     wp_cache_delete(casting_dm_closed_option_key(), 'options');
+}
+
+function casting_dm_can_reopen_thread(int $user_id, int $peer_id): bool
+{
+    if (!casting_dm_thread_is_closed($user_id, $peer_id)) {
+        return false;
+    }
+    if (casting_message_access_can_initiate_freely($user_id, $peer_id)) {
+        return true;
+    }
+
+    return casting_dm_thread_closed_by($user_id, $peer_id) === $user_id;
 }
 
 /**
@@ -886,9 +948,9 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
         return ['ok' => false, 'error' => 'پیام حداکثر ۲۰۰۰ کاراکتر باشد.'];
     }
 
-    // اگر کارگردان (شروع‌کننده آزاد) بعد از بستن دوباره پیام بدهد، گفتگو باز می‌شود
+    // اگر بعد از بستن، شروع‌کننده دوباره پیام بدهد، گفتگو باز می‌شود
     if (casting_dm_thread_is_closed($sender_id, $recipient_id)
-        && casting_message_access_can_initiate_freely($sender_id, $recipient_id)) {
+        && casting_dm_can_reopen_thread($sender_id, $recipient_id)) {
         casting_dm_reopen_thread($sender_id, $recipient_id);
     }
 
