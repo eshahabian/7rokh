@@ -22,11 +22,9 @@ function casting_panel_nav_items_desktop(): array
         ['key' => 'search',       'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
         ['key' => 'newest',       'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
         ['key' => 'favorites',    'label' => 'لیست کاندیدا',             'href' => 'favorites.php'],
-        ['key' => 'blocked',      'label' => 'بلاک‌شده‌های من',          'href' => 'blocked-by-me.php'],
         ['key' => 'premium',      'label' => 'فعال‌سازی',                'href' => 'premium.php'],
         ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],
         ['key' => 'desk',         'label' => 'پروژه‌ها',                  'href' => 'director-desk.php'],
-        ['key' => 'password',     'label' => 'تغییر رمز عبور',           'href' => 'change-password.php'],
         ['key' => 'cancel',       'label' => 'انصراف از عضویت',          'href' => 'cancel-membership.php'],
         ['key' => 'logout',       'label' => 'خروج',                     'href' => 'logout.php'],
         ['key' => 'rules',        'label' => 'قوانین',                   'href' => 'rules.php'],
@@ -39,7 +37,6 @@ function casting_panel_nav_items_desktop(): array
         // آیتم‌های قبلی که در لیست درخواستی نبودند — انتها
         ['key' => 'briefs',       'label' => 'تکالیف',                   'href' => 'my-briefs.php'],
         ['key' => 'visitors',     'label' => 'بازدیدکنندگان پروفایل من', 'href' => 'profile-visitors.php'],
-        ['key' => 'photo',        'label' => 'ویرایش تصویر',             'href' => 'profile-photo.php'],
         ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',          'href' => 'transactions.php'],
         ['key' => 'contact',      'label' => 'تماس با ما',               'href' => 'contact.php'],
         ['key' => 'faq',          'label' => 'سوالات متداول',            'href' => 'faq.php'],
@@ -495,14 +492,21 @@ function casting_panel_back_config(?string $active = null): ?array
         'phone',
         'edit-profile',
         'my-profile',
-        'photo',
         'gallery',
         'settings',
         'following',
-        'password',
     ];
     if (in_array($active, $to_panel, true)) {
         return ['href' => 'panel.php', 'label' => 'بازگشت'];
+    }
+
+    $to_settings = [
+        'password',
+        'photo',
+        'blocked',
+    ];
+    if (in_array($active, $to_settings, true)) {
+        return ['href' => 'settings.php', 'label' => 'بازگشت به تنظیمات'];
     }
 
     $parent = casting_panel_nav_highlight_key($active);
