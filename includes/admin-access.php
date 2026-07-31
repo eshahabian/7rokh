@@ -456,7 +456,7 @@ function casting_panel_admin_nav_items(int $user_id): array
         $items[] = ['key' => 'admin-transactions', 'label' => 'تراکنش کاربران', 'href' => 'admin-transactions.php', 'perm' => 'view_transactions'];
     }
     if (casting_user_has_admin_permission($user_id, 'view_user_blocks')) {
-        $items[] = ['key' => 'admin-blocks', 'label' => 'بلاک‌های کاربران', 'href' => 'admin-blocks.php', 'perm' => 'view_user_blocks'];
+        $items[] = ['key' => 'admin-blocks', 'label' => 'کاربران بلاک شده', 'href' => 'admin-blocks.php', 'perm' => 'view_user_blocks'];
     }
     if (casting_user_has_admin_permission($user_id, 'manage_staff')) {
         $items[] = ['key' => 'admin-staff', 'label' => 'دسترسی مدیران', 'href' => 'admin-staff.php', 'perm' => 'manage_staff'];

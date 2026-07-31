@@ -16,6 +16,10 @@ $premium = casting_user_is_premium($user_id);
 $activity = casting_user_primary_activity_label($user_id);
 $photo = (string) ($profile['photo_url'] ?? '');
 if ($photo === '') {
+    $profile_shot = casting_load_portrait($user_id, 'profile');
+    $photo = (string) ($profile_shot['url'] ?? '');
+}
+if ($photo === '') {
     $closeup = casting_load_portrait($user_id, 'closeup');
     $photo = (string) ($closeup['url'] ?? '');
 }

@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $has_file = false;
         if ($is_actor_photos) {
-            foreach (array_keys(casting_portrait_slots()) as $slot) {
+            foreach (array_keys(casting_all_portrait_slots()) as $slot) {
                 if (!empty($_FILES['photo_' . $slot]['name'])) {
                     $has_file = true;
                     break;
@@ -56,7 +56,7 @@ casting_render_panel_start('ویرایش تصویر', 'photo');
 <section class="dash-card panel-wide">
   <?php casting_render_panel_heading('ویرایش تصویر'); ?>
   <?php if ($is_actor_photos) : ?>
-    <p class="lede">سه عکس پروفایل را بارگذاری کنید: کلوزاپ (صورت)، مدیوم (نیم‌تنه)، لانگ (تمام‌قد).</p>
+    <p class="lede">عکس پروفایل (آواتار) و سه شات بازیگری را بارگذاری کنید: کلوزاپ، مدیوم، لانگ.</p>
   <?php else : ?>
     <p class="lede">عکس پروفایل خود را بارگذاری یا به‌روز کنید.</p>
   <?php endif; ?>

@@ -362,12 +362,15 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
     $sidebar_show_views = false;
     if ($user) {
         $sidebar_name = (string) $user->display_name;
-        $closeup = casting_load_portrait($user_id, 'closeup');
-        if (($closeup['url'] ?? '') !== '') {
-            $sidebar_photo = (string) $closeup['url'];
-        } else {
-            $sidebar_profile = casting_get_profile($user_id);
-            $sidebar_photo = (string) ($sidebar_profile['photo_url'] ?? '');
+        $sidebar_profile = casting_get_profile($user_id);
+        $sidebar_photo = (string) ($sidebar_profile['photo_url'] ?? '');
+        if ($sidebar_photo === '') {
+            $profile_shot = casting_load_portrait($user_id, 'profile');
+            $sidebar_photo = (string) ($profile_shot['url'] ?? '');
+        }
+        if ($sidebar_photo === '') {
+            $closeup = casting_load_portrait($user_id, 'closeup');
+            $sidebar_photo = (string) ($closeup['url'] ?? '');
         }
         $sidebar_activities = casting_normalize_activities(
             get_user_meta($user_id, 'casting_activities', true),

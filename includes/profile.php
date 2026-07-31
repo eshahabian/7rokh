@@ -850,7 +850,7 @@ function casting_purge_actor_trait_meta(int $user_id): void
 
 function casting_purge_actor_portrait_meta(int $user_id): void
 {
-    foreach (array_keys(casting_portrait_slots()) as $slot) {
+    foreach (array_keys(casting_all_portrait_slots()) as $slot) {
         $meta_key = casting_portrait_meta_key($slot);
         if ($meta_key !== '') {
             delete_user_meta($user_id, $meta_key);
@@ -1705,6 +1705,8 @@ function casting_age_from_birthdate(string $birthdate): ?int
 }
 
 /**
+ * سه شات بازیگری (الزامی برای مجموعه بازیگر)
+ *
  * @return array<string, string>
  */
 function casting_portrait_slots(): array
@@ -1714,6 +1716,18 @@ function casting_portrait_slots(): array
         'medium'  => 'مدیوم',
         'long'    => 'لانگ',
     ];
+}
+
+/**
+ * همه اسلات‌های تصویری بازیگر: عکس پروفایل + سه شات
+ *
+ * @return array<string, string>
+ */
+function casting_all_portrait_slots(): array
+{
+    return [
+        'profile' => 'عکس پروفایل',
+    ] + casting_portrait_slots();
 }
 
 /**
@@ -1730,6 +1744,7 @@ function casting_portrait_display_dimensions(): array
 function casting_portrait_slot_hints(): array
 {
     return [
+        'profile' => 'عکس اصلی برای آواتار و نمایش در پنل',
         'closeup' => 'نمای نزدیک صورت',
         'medium'  => 'نیم‌تنه یا تا کمر',
         'long'    => 'تمام‌قد',
@@ -1738,7 +1753,7 @@ function casting_portrait_slot_hints(): array
 
 function casting_portrait_meta_key(string $slot): string
 {
-    return array_key_exists($slot, casting_portrait_slots()) ? 'casting_photo_' . $slot . '_id' : '';
+    return array_key_exists($slot, casting_all_portrait_slots()) ? 'casting_photo_' . $slot . '_id' : '';
 }
 
 /**
@@ -1805,7 +1820,7 @@ function casting_load_portrait(int $user_id, string $slot): array
 function casting_load_all_portraits(int $user_id): array
 {
     $out = [];
-    foreach (casting_portrait_slots() as $slot => $label) {
+    foreach (casting_all_portrait_slots() as $slot => $label) {
         unset($label);
         $out[$slot] = casting_load_portrait($user_id, $slot);
     }
@@ -1814,7 +1829,7 @@ function casting_load_all_portraits(int $user_id): array
 
 function casting_primary_portrait(array $portraits): array
 {
-    foreach (['medium', 'closeup', 'long'] as $slot) {
+    foreach (['profile', 'medium', 'closeup', 'long'] as $slot) {
         if (!empty($portraits[$slot]['id'])) {
             return $portraits[$slot];
         }
@@ -1841,21 +1856,24 @@ function casting_portraits_complete(array $portraits): bool
  */
 function casting_render_portrait_upload_fields(array $portraits = [], bool $required = false, bool $require_primary_only = false): void
 {
-    $req_all = $required ? ' required' : '';
     $hints = casting_portrait_slot_hints();
     $dims = casting_portrait_display_dimensions();
     ?>
-  <div class="portrait-upload-grid">
-    <?php foreach (casting_portrait_slots() as $slot => $label) :
+  <div class="portrait-upload-grid portrait-upload-grid--actor">
+    <?php foreach (casting_all_portrait_slots() as $slot => $label) :
         $field = 'photo_' . $slot;
         $preview = $portraits[$slot]['url'] ?? '';
-        $slot_req = $req_all;
+        $is_profile = $slot === 'profile';
+        $slot_req = '';
+        if ($required && !$is_profile) {
+            $slot_req = ' required';
+        }
         if (!$required && $require_primary_only && $slot === 'medium') {
             $slot_req = ' required';
         }
         ?>
-      <div class="portrait-upload-card">
-        <div class="portrait-frame portrait-preview">
+      <div class="portrait-upload-card<?= $is_profile ? ' portrait-upload-card--profile' : '' ?>">
+        <div class="portrait-frame portrait-preview<?= $is_profile ? ' portrait-preview--profile' : '' ?>">
           <?php if ($preview !== '') : ?>
             <img
               src="<?= casting_e($preview) ?>"
@@ -2527,7 +2545,7 @@ function casting_handle_portrait_upload(int $user_id, string $slot): array
 
     $old = (int) get_user_meta($user_id, $meta_key, true);
     update_user_meta($user_id, $meta_key, (int) $attachment_id);
-    if ($slot === 'medium') {
+    if ($slot === 'medium' || $slot === 'profile') {
         update_user_meta($user_id, 'casting_photo_id', (int) $attachment_id);
     }
     if ($old > 0 && $old !== (int) $attachment_id) {
@@ -2543,7 +2561,7 @@ function casting_handle_portrait_upload(int $user_id, string $slot): array
 function casting_handle_portrait_uploads(int $user_id, bool $require_all = false, bool $require_one = false): array
 {
     if (!casting_user_can_upload_portraits($user_id)) {
-        foreach (array_keys(casting_portrait_slots()) as $slot) {
+        foreach (array_keys(casting_all_portrait_slots()) as $slot) {
             if (!empty($_FILES['photo_' . $slot]['name'])) {
                 return ['ok' => false, 'error' => 'بارگذاری عکس پروفایل برای این حساب مجاز نیست.'];
             }
@@ -2555,10 +2573,11 @@ function casting_handle_portrait_uploads(int $user_id, bool $require_all = false
         return ['ok' => true, 'error' => ''];
     }
 
-    $labels = casting_portrait_slots();
+    $labels = casting_all_portrait_slots();
+    $required_slots = casting_portrait_slots();
 
     if ($require_all) {
-        foreach ($labels as $slot => $label) {
+        foreach ($required_slots as $slot => $label) {
             $field = 'photo_' . $slot;
             if (empty($_FILES[$field]['name'])) {
                 $existing = casting_load_portrait($user_id, $slot);

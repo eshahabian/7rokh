@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_unblock) {
     casting_redirect($redirect);
 }
 
-casting_render_panel_start('بلاک‌های کاربران', 'admin-blocks');
+casting_render_panel_start('کاربران بلاک شده', 'admin-blocks');
 casting_render_flash();
 ?>
 <section class="dash-card">

@@ -1235,9 +1235,20 @@ fieldset.field legend {
   max-width: 720px;
 }
 
+.portrait-upload-grid--actor {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 960px;
+}
+
 .portrait-upload-grid--single {
   grid-template-columns: minmax(0, 14rem);
   max-width: 16rem;
+}
+
+.portrait-preview--profile,
+.portrait-upload-card--profile .portrait-frame {
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .portrait-form-feedback {
@@ -1306,6 +1317,11 @@ fieldset.field legend {
   gap: 0.75rem;
   width: 100%;
   max-width: 720px;
+}
+
+.profile-portraits--actor {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 960px;
 }
 
 .profile-portrait-item {
@@ -2706,16 +2722,23 @@ legend .req-mark {
   }
 
   .portrait-upload-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: 100%;
   }
 
-  .profile-portraits {
+  .portrait-upload-grid--actor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-portraits,
+  .profile-portraits--actor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: 100%;
   }
 
-  .panel-photo-slots {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .panel-photo-slots,
+  .panel-photo-slots--actor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: none;
   }
 
@@ -4227,8 +4250,19 @@ a.panel-home-filter-chip:focus-visible {
   max-width: 26rem;
 }
 
+.panel-photo-slots--actor {
+  grid-template-columns: repeat(4, minmax(0, 7.5rem));
+  max-width: 34rem;
+}
+
 .panel-photo-slots--single {
   grid-template-columns: minmax(0, 7.5rem);
+}
+
+.panel-photo-slot--profile .portrait-frame,
+.panel-photo-slot--profile .panel-photo-slot-frame {
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .panel-photo-slot {

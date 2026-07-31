@@ -27,13 +27,13 @@ function casting_render_profile_portraits(array $portraits, bool $actor_set = tr
     }
     $dims = casting_portrait_display_dimensions();
     $slots = $actor_set
-        ? casting_portrait_slots()
+        ? casting_all_portrait_slots()
         : ['medium' => 'عکس پروفایل'];
     ?>
-    <div class="profile-portraits<?= $actor_set ? '' : ' profile-portraits--single' ?>">
+    <div class="profile-portraits<?= $actor_set ? ' profile-portraits--actor' : ' profile-portraits--single' ?>">
       <?php foreach ($slots as $slot => $label) :
           $shot = casting_portrait_shot($portraits, $slot);
-          if ($slot === 'medium' && empty($shot['id']) && function_exists('casting_primary_portrait')) {
+          if ($slot === 'medium' && empty($shot['id']) && function_exists('casting_primary_portrait') && empty($portraits['profile']['id'])) {
               $shot = casting_primary_portrait($portraits);
           }
           $thumb = $shot['url'] !== '' ? $shot['url'] : $shot['full'];
@@ -146,7 +146,7 @@ function casting_profile_completion_items(array $profile, int $user_id = 0): arr
         : !$hide_talent;
 
     if ($show_portraits && $actor_photos) {
-        foreach (casting_portrait_slots() as $slot => $label) {
+        foreach (casting_all_portrait_slots() as $slot => $label) {
             $shot = casting_portrait_shot($profile['portraits'] ?? [], $slot);
             $done = (bool) ($shot['id'] > 0 || $shot['full'] !== '' || $shot['url'] !== '');
             $items[] = [
@@ -231,10 +231,10 @@ function casting_render_panel_completion_card(array $profile, int $user_id = 0):
   <?php if ($show_portraits) :
       $actor_photos = casting_user_uses_actor_portrait_set($user_id);
       $slot_map = $actor_photos
-          ? casting_portrait_slots()
+          ? casting_all_portrait_slots()
           : ['medium' => 'عکس پروفایل'];
       ?>
-  <div class="panel-photo-slots<?= $actor_photos ? '' : ' panel-photo-slots--single' ?>">
+  <div class="panel-photo-slots<?= $actor_photos ? ' panel-photo-slots--actor' : ' panel-photo-slots--single' ?>">
     <?php foreach ($slot_map as $slot => $label) :
         $shot = casting_portrait_shot($profile['portraits'] ?? [], $slot);
         if ($slot === 'medium' && empty($shot['id'])) {
@@ -245,7 +245,7 @@ function casting_render_panel_completion_card(array $profile, int $user_id = 0):
             ? (casting_portrait_slot_hints()[$slot] ?? '')
             : 'یک عکس واضح از خودتان';
         ?>
-      <a class="panel-photo-slot<?= $src === '' ? ' is-empty' : '' ?>" href="profile-photo.php">
+      <a class="panel-photo-slot<?= $src === '' ? ' is-empty' : '' ?><?= $slot === 'profile' ? ' panel-photo-slot--profile' : '' ?>" href="profile-photo.php">
         <?php if ($src !== '') : ?>
           <?php $dims = casting_portrait_display_dimensions(); ?>
           <span class="portrait-frame panel-photo-slot-frame">
