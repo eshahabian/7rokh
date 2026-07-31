@@ -24,13 +24,11 @@ function casting_panel_nav_items_desktop(): array
         ['key' => 'search',       'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
         ['key' => 'newest',       'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
         ['key' => 'favorites',    'label' => 'لیست کاندیدا',             'href' => 'favorites.php'],
-        ['key' => 'following',    'label' => 'دنبال‌شده‌ها',              'href' => 'following.php'],
         ['key' => 'blocked',      'label' => 'بلاک‌شده‌های من',          'href' => 'blocked-by-me.php'],
         ['key' => 'premium',      'label' => 'فعال‌سازی',                'href' => 'premium.php'],
         ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],
         ['key' => 'my-profile',   'label' => 'مشاهده پروفایل کامل',      'href' => 'my-profile.php'],
         ['key' => 'edit-profile', 'label' => 'ویرایش پروفایل من',        'href' => 'edit-profile.php'],
-        ['key' => 'gallery',      'label' => 'گالری من',                 'href' => 'my-gallery.php'],
         ['key' => 'desk',         'label' => 'پروژه‌ها',                  'href' => 'director-desk.php'],
         ['key' => 'password',     'label' => 'تغییر رمز عبور',           'href' => 'change-password.php'],
         ['key' => 'phone',        'label' => 'تغییر شماره تلفن',         'href' => 'change-phone.php'],
@@ -210,14 +208,6 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
         }
         if ($item['key'] === 'favorites' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
             continue;
-        }
-        if ($item['key'] === 'gallery') {
-            if (!function_exists('casting_user_can_manage_gallery')) {
-                require_once __DIR__ . '/user-media.php';
-            }
-            if (!$user || !casting_user_can_manage_gallery((int) $user->ID)) {
-                continue;
-            }
         }
         if ($item['key'] === 'briefs' && (!$user || casting_get_user_role((int) $user->ID) !== 'talent')) {
             continue;

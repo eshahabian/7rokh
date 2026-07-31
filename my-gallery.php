@@ -98,7 +98,6 @@ casting_render_flash();
           $is_video = ($item['media_type'] ?? '') === 'video';
           $status = (string) ($item['status'] ?? 'pending');
           $caption = trim((string) ($item['caption'] ?? ''));
-          $approver = casting_user_media_approver_line($item);
           $is_editing = $edit_id === (int) $item['id'];
           ?>
         <figure class="profile-media-item is-manage">
@@ -111,9 +110,6 @@ casting_render_flash();
             <span class="chip"><?= casting_e(casting_user_media_status_label($status)) ?></span>
             <?php if ($caption !== '') : ?>
               <p class="profile-media-caption-text"><?= nl2br(casting_e($caption)) ?></p>
-            <?php endif; ?>
-            <?php if ($approver !== '') : ?>
-              <p class="meta profile-media-approver"><?= casting_e($approver) ?></p>
             <?php endif; ?>
             <?php if ($status === 'rejected' && trim((string) ($item['reject_reason'] ?? '')) !== '') : ?>
               <span class="meta"><?= casting_e((string) $item['reject_reason']) ?></span>

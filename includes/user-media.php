@@ -507,7 +507,6 @@ function casting_render_public_media_gallery(int $user_id): void
           }
           $is_video = ($item['media_type'] ?? '') === 'video';
           $caption = trim((string) ($item['caption'] ?? ''));
-          $approver = casting_user_media_approver_line($item);
           ?>
         <figure class="profile-media-item<?= $is_video ? ' is-video' : '' ?>">
           <?php if ($is_video) : ?>
@@ -517,14 +516,9 @@ function casting_render_public_media_gallery(int $user_id): void
               <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
             </a>
           <?php endif; ?>
-          <?php if ($caption !== '' || $approver !== '') : ?>
+          <?php if ($caption !== '') : ?>
             <figcaption class="profile-media-caption">
-              <?php if ($caption !== '') : ?>
-                <p><?= nl2br(casting_e($caption)) ?></p>
-              <?php endif; ?>
-              <?php if ($approver !== '') : ?>
-                <p class="meta profile-media-approver"><?= casting_e($approver) ?></p>
-              <?php endif; ?>
+              <p><?= nl2br(casting_e($caption)) ?></p>
             </figcaption>
           <?php endif; ?>
         </figure>

@@ -126,7 +126,6 @@ casting_render_flash();
           }
           $is_video = ($item['media_type'] ?? '') === 'video';
           $caption = trim((string) ($item['caption'] ?? ''));
-          $approver = casting_user_media_approver_line($item);
           ?>
         <figure class="ig-profile-cell<?= $is_video ? ' is-video' : '' ?>">
           <a href="<?= casting_e($url) ?>" target="_blank" rel="noopener">
@@ -137,14 +136,9 @@ casting_render_flash();
               <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
             <?php endif; ?>
           </a>
-          <?php if ($caption !== '' || $approver !== '') : ?>
+          <?php if ($caption !== '') : ?>
             <figcaption class="ig-profile-cell-meta">
-              <?php if ($caption !== '') : ?>
-                <p><?= nl2br(casting_e($caption)) ?></p>
-              <?php endif; ?>
-              <?php if ($approver !== '') : ?>
-                <p class="meta profile-media-approver"><?= casting_e($approver) ?></p>
-              <?php endif; ?>
+              <p><?= nl2br(casting_e($caption)) ?></p>
             </figcaption>
           <?php endif; ?>
         </figure>
