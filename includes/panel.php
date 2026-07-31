@@ -22,11 +22,13 @@ function casting_panel_nav_items_desktop(): array
         ['key' => 'search',       'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
         ['key' => 'newest',       'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
         ['key' => 'favorites',    'label' => 'لیست کاندیدا',             'href' => 'favorites.php'],
+        ['key' => 'following',    'label' => 'دنبال‌شده‌ها',              'href' => 'following.php'],
         ['key' => 'blocked',      'label' => 'بلاک‌شده‌های من',          'href' => 'blocked-by-me.php'],
         ['key' => 'premium',      'label' => 'فعال‌سازی',                'href' => 'premium.php'],
         ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],
         ['key' => 'my-profile',   'label' => 'مشاهده پروفایل من',        'href' => 'my-profile.php'],
         ['key' => 'edit-profile', 'label' => 'ویرایش پروفایل من',        'href' => 'edit-profile.php'],
+        ['key' => 'gallery',      'label' => 'گالری من',                 'href' => 'my-gallery.php'],
         ['key' => 'desk',         'label' => 'پروژه‌ها',                  'href' => 'director-desk.php'],
         ['key' => 'password',     'label' => 'تغییر رمز عبور',           'href' => 'change-password.php'],
         ['key' => 'phone',        'label' => 'تغییر شماره تلفن',         'href' => 'change-phone.php'],
@@ -81,6 +83,8 @@ function casting_panel_nav_highlight_key(string $active): string
         'password'     => 'password',
         'phone'        => 'phone',
         'photo'        => 'photo',
+        'gallery'      => 'gallery',
+        'following'    => 'following',
         'blocked'      => 'blocked',
         'blockers'     => 'blocked',
         'contact'      => 'contact',
@@ -205,6 +209,14 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
         if ($item['key'] === 'favorites' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
             continue;
         }
+        if ($item['key'] === 'gallery') {
+            if (!function_exists('casting_user_can_manage_gallery')) {
+                require_once __DIR__ . '/user-media.php';
+            }
+            if (!$user || !casting_user_can_manage_gallery((int) $user->ID)) {
+                continue;
+            }
+        }
         if ($item['key'] === 'briefs' && (!$user || casting_get_user_role((int) $user->ID) !== 'talent')) {
             continue;
         }
@@ -288,6 +300,12 @@ function casting_panel_menu_badge_count(): int
     if ($unread_peers === 0 && casting_user_has_admin_permission($user_id, 'approve_receipts')) {
         $badge += casting_admin_pending_receipt_count();
     }
+    if ($unread_peers === 0 && casting_user_has_admin_permission($user_id, 'approve_media')) {
+        if (!function_exists('casting_admin_pending_media_count')) {
+            require_once __DIR__ . '/user-media.php';
+        }
+        $badge += casting_admin_pending_media_count();
+    }
 
     return $badge;
 }
@@ -296,6 +314,7 @@ function casting_render_panel_sidebar(string $active): void
 {
     $unread_peers = 0;
     $pending_receipts = 0;
+    $pending_media = 0;
     $unread_contacts = 0;
     $request_count = 0;
     $pending_brief_count = 0;
@@ -327,6 +346,12 @@ function casting_render_panel_sidebar(string $active): void
         }
         if (casting_user_has_admin_permission($user_id, 'approve_receipts')) {
             $pending_receipts = casting_admin_pending_receipt_count();
+        }
+        if (casting_user_has_admin_permission($user_id, 'approve_media')) {
+            if (!function_exists('casting_admin_pending_media_count')) {
+                require_once __DIR__ . '/user-media.php';
+            }
+            $pending_media = casting_admin_pending_media_count();
         }
         if (!function_exists('casting_contact_unread_count_for_user')) {
             require_once __DIR__ . '/contact-messages.php';
@@ -373,6 +398,7 @@ function casting_render_panel_sidebar(string $active): void
         'can_member_search'   => $can_member_search,
         'unread_peers'        => $unread_peers,
         'pending_receipts'    => $pending_receipts,
+        'pending_media'       => $pending_media,
         'unread_contacts'     => $unread_contacts,
         'request_count'       => $request_count,
         'pending_brief_count' => $pending_brief_count,
@@ -437,6 +463,8 @@ function casting_render_panel_sidebar(string $active): void
               <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
               <?php if ($item['key'] === 'admin-receipts' && $pending_receipts > 0) : ?>
                 <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
+              <?php elseif ($item['key'] === 'admin-media' && $pending_media > 0) : ?>
+                <span class="nav-badge" aria-label="<?= casting_e((string) $pending_media) ?> فایل در انتظار"><?= (int) $pending_media ?></span>
               <?php endif; ?>
             </a>
           <?php endforeach; ?>
@@ -1619,10 +1647,13 @@ function casting_home_premium_members(int $limit = 8, int $exclude_id = 0): arra
 }
 
 /**
- * کاشی عضو برای داشبورد پنل
+ * کاشی عضو برای داشبورد پنل — با پیش‌نمایش و دنبال‌کردن
  */
-function casting_render_panel_home_member_tile(WP_User $member, bool $premium_badge = false): void
+function casting_render_panel_home_member_tile(WP_User $member, bool $premium_badge = false, int $viewer_id = 0): void
 {
+    if (!function_exists('casting_follow_can_target')) {
+        require_once __DIR__ . '/follows.php';
+    }
     $id = (int) $member->ID;
     $profile = casting_get_profile($id);
     $photo = (string) ($profile['photo_url'] ?? '');
@@ -1632,19 +1663,33 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
     }
     $city = trim((string) ($profile['city'] ?? ''));
     $role_label = casting_user_public_role_label($id);
-    $href = casting_url('member.php?id=' . $id);
+    $can_follow = $viewer_id > 0 && casting_follow_can_target($viewer_id, $id);
+    $is_following = $can_follow && casting_user_is_following($viewer_id, $id);
     ?>
-    <article class="panel-ad-card">
-      <div class="panel-ad-card-media<?= $photo !== '' ? ' has-photo' : '' ?>"<?= $photo !== '' ? ' style="background-image:url(' . casting_e($photo) . ')"' : '' ?>>
+    <article class="panel-ad-card" data-home-card="<?= $id ?>">
+      <button type="button" class="panel-ad-card-media<?= $photo !== '' ? ' has-photo' : '' ?>" data-member-preview="<?= $id ?>" aria-label="پیش‌نمایش <?= casting_e($member->display_name) ?>"<?= $photo !== '' ? ' style="background-image:url(' . casting_e($photo) . ')"' : '' ?>>
         <?php if ($premium_badge || casting_user_is_premium($id)) : ?>
           <span class="panel-ad-badge">عضو ویژه</span>
         <?php endif; ?>
-      </div>
+      </button>
       <div class="panel-ad-card-body">
-        <h3><?= casting_e($member->display_name) ?></h3>
+        <h3>
+          <button type="button" class="link-button" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button>
+        </h3>
         <p><?= casting_e($role_label) ?></p>
-        <p class="panel-ad-place"><?= casting_e($city !== '' ? $city : '*') ?></p>
-        <a class="btn btn-ghost btn-sm" href="<?= casting_e($href) ?>">مشاهده پروفایل</a>
+        <p class="panel-ad-place"><?= casting_e($city !== '' ? $city : '—') ?></p>
+        <div class="panel-ad-card-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-member-preview="<?= $id ?>">مشاهده</button>
+          <?php if ($can_follow) : ?>
+            <button
+              type="button"
+              class="btn btn-sm<?= $is_following ? ' btn-primary is-following' : ' btn-ghost' ?>"
+              data-follow-toggle="<?= $id ?>"
+              data-following="<?= $is_following ? '1' : '0' ?>"
+              aria-pressed="<?= $is_following ? 'true' : 'false' ?>"
+            ><?= $is_following ? 'دنبال می‌کنید' : 'دنبال کردن' ?></button>
+          <?php endif; ?>
+        </div>
       </div>
     </article>
     <?php
@@ -1655,7 +1700,7 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
  *
  * @param array<int, WP_User> $members
  */
-function casting_render_panel_home_member_row(array $members, bool $premium_badge, string $more_id, int $row_size = 4): void
+function casting_render_panel_home_member_row(array $members, bool $premium_badge, string $more_id, int $row_size = 4, int $viewer_id = 0): void
 {
     if ($members === []) {
         return;
@@ -1666,13 +1711,13 @@ function casting_render_panel_home_member_row(array $members, bool $premium_badg
     ?>
     <div class="panel-ads-grid">
       <?php foreach ($first as $member) : ?>
-        <?php casting_render_panel_home_member_tile($member, $premium_badge); ?>
+        <?php casting_render_panel_home_member_tile($member, $premium_badge, $viewer_id); ?>
       <?php endforeach; ?>
     </div>
     <?php if ($rest !== []) : ?>
       <div class="panel-ads-grid panel-ads-grid-more" id="<?= casting_e($more_id) ?>" hidden>
         <?php foreach ($rest as $member) : ?>
-          <?php casting_render_panel_home_member_tile($member, $premium_badge); ?>
+          <?php casting_render_panel_home_member_tile($member, $premium_badge, $viewer_id); ?>
         <?php endforeach; ?>
       </div>
       <div class="panel-ads-foot">
@@ -1716,6 +1761,25 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
         <?php if ($viewer_id !== $id && casting_can_user_open_dm($viewer_id, $id)['ok']) : ?>
           <a class="btn btn-ghost btn-sm" href="chat.php?with=<?= $id ?>">پیام</a>
         <?php endif; ?>
+        <?php
+        if ($viewer_id > 0 && $viewer_id !== $id) {
+            if (!function_exists('casting_follow_can_target')) {
+                require_once __DIR__ . '/follows.php';
+            }
+            if (casting_follow_can_target($viewer_id, $id)) {
+                $is_following = casting_user_is_following($viewer_id, $id);
+                ?>
+          <button
+            type="button"
+            class="btn btn-sm<?= $is_following ? ' btn-primary is-following' : ' btn-ghost' ?>"
+            data-follow-toggle="<?= $id ?>"
+            data-following="<?= $is_following ? '1' : '0' ?>"
+            aria-pressed="<?= $is_following ? 'true' : 'false' ?>"
+          ><?= $is_following ? 'دنبال می‌کنید' : 'دنبال کردن' ?></button>
+                <?php
+            }
+        }
+        ?>
       </div>
     </article>
     <?php

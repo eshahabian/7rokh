@@ -133,6 +133,23 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
         ];
     }
 
+    if ($action === 'follow') {
+        if (!function_exists('casting_follow_toggle')) {
+            require_once __DIR__ . '/follows.php';
+        }
+        $result = casting_follow_toggle($viewer_id, $member_id);
+        if (!$result['ok']) {
+            return ['ok' => false, 'error' => (string) ($result['error'] ?? 'عملیات ناموفق بود.')];
+        }
+
+        return [
+            'ok'        => true,
+            'error'     => '',
+            'following' => !empty($result['following']),
+            'message'   => (string) ($result['message'] ?? ''),
+        ];
+    }
+
     if (!casting_member_preview_show_employer_actions($viewer_id, $member_id)) {
         return ['ok' => false, 'error' => 'این عملیات برای نقش شما فعال نیست.'];
     }
@@ -196,6 +213,11 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
     $show_actions = casting_member_preview_show_employer_actions($viewer_id, $member_id);
     $can_favorite = casting_user_is_director_role($viewer_id) && $role === 'talent';
     $is_favorite = $can_favorite && casting_member_preview_is_favorite($viewer_id, $member_id);
+    if (!function_exists('casting_follow_can_target')) {
+        require_once __DIR__ . '/follows.php';
+    }
+    $can_follow = casting_follow_can_target($viewer_id, $member_id);
+    $is_following = $can_follow && casting_user_is_following($viewer_id, $member_id);
     $viewer_premium = casting_user_is_premium($viewer_id);
     $free_hint = casting_employer_free_messages_hint($viewer_id);
     $chat_ok = casting_can_user_send_dm($viewer_id, $member_id)['ok'];
@@ -240,8 +262,16 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
       <li><span class="member-preview-icon" aria-hidden="true">📊</span><span>تکمیل پروفایل: <?= (int) $completion ?>٪</span></li>
     </ul>
 
-    <?php if ($show_actions || $can_favorite) : ?>
+    <?php if ($show_actions || $can_favorite || $can_follow) : ?>
       <div class="member-preview-actions">
+        <?php if ($can_follow) : ?>
+          <button
+            type="button"
+            class="btn member-preview-btn member-preview-btn--follow<?= $is_following ? ' is-active' : '' ?>"
+            data-member-preview-action="follow"
+            data-member-id="<?= (int) $member_id ?>"
+          ><?= $is_following ? 'دنبال می‌کنید' : 'دنبال کردن' ?></button>
+        <?php endif; ?>
         <?php if ($show_actions) : ?>
           <button
             type="button"

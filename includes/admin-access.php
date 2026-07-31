@@ -12,6 +12,7 @@ function casting_admin_permission_definitions(): array
 {
     return [
         'approve_receipts'   => 'تأیید فیش واریزی',
+        'approve_media'      => 'تأیید گالری عکس و ویدیو',
         'view_transactions'  => 'مشاهده تراکنش‌های مالی کاربران',
         'unblock_users'      => 'رفع بلاک کاربران',
         'view_user_blocks'   => 'مشاهده بلاک‌های کاربران',
@@ -447,6 +448,9 @@ function casting_panel_admin_nav_items(int $user_id): array
     }
     if (casting_user_has_admin_permission($user_id, 'approve_receipts')) {
         $items[] = ['key' => 'admin-receipts', 'label' => 'تأیید فیش‌ها', 'href' => 'premium.php#admin-receipts', 'perm' => 'approve_receipts'];
+    }
+    if (casting_user_has_admin_permission($user_id, 'approve_media')) {
+        $items[] = ['key' => 'admin-media', 'label' => 'تأیید گالری', 'href' => 'admin-media.php', 'perm' => 'approve_media'];
     }
     if (casting_user_has_admin_permission($user_id, 'view_transactions')) {
         $items[] = ['key' => 'admin-transactions', 'label' => 'تراکنش کاربران', 'href' => 'admin-transactions.php', 'perm' => 'view_transactions'];

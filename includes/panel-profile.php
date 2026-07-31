@@ -347,6 +347,28 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     <div class="profile-info">
       <span class="chip"><?= casting_e(casting_user_profile_chip_label($member_id, $viewer_id)) ?><?php if ($premium) : ?> · ویژه<?php endif; ?></span>
       <h2 class="panel-section-title"><?= casting_e($member->display_name) ?><?php if ($is_self) : ?> <span class="meta">(پروفایل شما)</span><?php endif; ?></h2>
+      <?php
+      if (!$is_self && $viewer_id > 0) {
+          if (!function_exists('casting_follow_can_target')) {
+              require_once __DIR__ . '/follows.php';
+          }
+          if (casting_follow_can_target($viewer_id, $member_id)) {
+              $is_following = casting_user_is_following($viewer_id, $member_id);
+              ?>
+      <div class="profile-follow-row">
+        <button
+          type="button"
+          class="btn btn-sm<?= $is_following ? ' btn-primary is-following' : ' btn-ghost' ?>"
+          data-follow-toggle="<?= (int) $member_id ?>"
+          data-following="<?= $is_following ? '1' : '0' ?>"
+          aria-pressed="<?= $is_following ? 'true' : 'false' ?>"
+        ><?= $is_following ? 'دنبال می‌کنید' : 'دنبال کردن' ?></button>
+        <span class="meta"><?= (int) casting_followers_count($member_id) ?> دنبال‌کننده</span>
+      </div>
+              <?php
+          }
+      }
+      ?>
       <?php if (!$is_self) : ?>
         <div class="block-user-section">
           <?php if ($is_blocked) : ?>
@@ -479,6 +501,13 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
       <?php endif; ?>
     </div>
   </div>
+
+  <?php
+  if (!function_exists('casting_render_public_media_gallery')) {
+      require_once __DIR__ . '/user-media.php';
+  }
+  casting_render_public_media_gallery($member_id);
+  ?>
 
   <?php if ($profile['bio'] !== '') : ?>
     <div class="bio-block<?= $director_section_class('bio') ?>"><h3>درباره</h3><p><?= nl2br(casting_e($profile['bio'])) ?></p></div>

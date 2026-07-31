@@ -1340,7 +1340,7 @@
           window.location.href = data.redirect;
           return;
         }
-        if (action === "favorite") {
+        if (action === "favorite" || action === "follow") {
           await openMemberPreview(memberId);
         } else if (data.message) {
           window.alert(data.message);
@@ -1658,4 +1658,44 @@
       });
     });
   }
+  // Follow / unfollow (panel cards, profile, search cards)
+  document.addEventListener("click", async (event) => {
+    const btn = event.target.closest("[data-follow-toggle]");
+    if (!btn) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const cfg = window.CASTING_FOLLOW || {};
+    const userId = btn.getAttribute("data-follow-toggle");
+    if (!userId || !cfg.url || !cfg.nonce || btn.disabled) return;
+    btn.disabled = true;
+    try {
+      const body = new URLSearchParams();
+      body.set("_wpnonce", cfg.nonce);
+      body.set("user_id", userId);
+      const res = await fetch(cfg.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+        body: body.toString(),
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!data?.ok) {
+        window.alert(data?.error || "عملیات ناموفق بود.");
+        return;
+      }
+      const following = !!data.following;
+      document.querySelectorAll(`[data-follow-toggle="${userId}"]`).forEach((el) => {
+        el.setAttribute("data-following", following ? "1" : "0");
+        el.setAttribute("aria-pressed", following ? "true" : "false");
+        el.textContent = following ? "دنبال می‌کنید" : "دنبال کردن";
+        el.classList.toggle("btn-primary", following);
+        el.classList.toggle("is-following", following);
+        el.classList.toggle("btn-ghost", !following);
+      });
+    } catch (_err) {
+      window.alert("خطا در انجام عملیات.");
+    } finally {
+      btn.disabled = false;
+    }
+  });
 })();
