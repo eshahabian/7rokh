@@ -3224,12 +3224,18 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   font-size: 0.85rem;
 }
 
-.panel-section-back a {
+.panel-section-back .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.panel-section-back a:not(.btn) {
   color: var(--ink-muted);
   text-decoration: none;
 }
 
-.panel-section-back a:hover {
+.panel-section-back a:not(.btn):hover {
   color: var(--accent-strong);
 }
 
@@ -3254,11 +3260,15 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
 .ig-profile-header {
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);
+  grid-template-areas:
+    "avatar main"
+    "actions actions";
   gap: 1.5rem 2rem;
   align-items: start;
 }
 
 .ig-profile-avatar {
+  grid-area: avatar;
   position: relative;
   width: 150px;
   height: 150px;
@@ -3290,6 +3300,7 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
 }
 
 .ig-profile-main {
+  grid-area: main;
   min-width: 0;
   display: grid;
   gap: 0.85rem;
@@ -3353,14 +3364,22 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
 }
 
 .ig-profile-actions {
+  grid-area: actions;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
   gap: 0.45rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.15rem;
 }
 
 .ig-profile-actions .btn {
+  flex: 0 0 auto;
   padding: 0.45rem 0.85rem;
   font-size: 0.86rem;
+  white-space: nowrap;
 }
 
 .ig-profile-action-badge {
@@ -3524,7 +3543,7 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   }
 
   .ig-profile-actions .btn {
-    flex: 1 1 calc(50% - 0.45rem);
+    flex: 0 0 auto;
     text-align: center;
   }
 }

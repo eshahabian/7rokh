@@ -481,10 +481,30 @@ function casting_render_panel_start(string $title, string $active, string $body_
 }
 
 /**
- * لینک بازگشت به هاب والد برای صفحات فرعی
+ * لینک بازگشت به هاب والد / پنل کاربری برای صفحات فرعی
  */
 function casting_render_panel_section_back(string $active): void
 {
+    $to_panel = [
+        'messages',
+        'phone',
+        'edit-profile',
+        'my-profile',
+        'photo',
+        'gallery',
+        'settings',
+        'following',
+        'password',
+    ];
+    if (in_array($active, $to_panel, true)) {
+        ?>
+    <p class="panel-section-back">
+      <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('panel.php')) ?>" data-panel-back>← بازگشت</a>
+    </p>
+        <?php
+        return;
+    }
+
     $parent = casting_panel_nav_highlight_key($active);
     if ($parent === $active) {
         return;
@@ -493,6 +513,7 @@ function casting_render_panel_section_back(string $active): void
     $hubs = [
         'membership' => ['label' => 'عضویت و اعتبار', 'href' => 'membership.php'],
         'settings'   => ['label' => 'تنظیمات', 'href' => 'settings.php'],
+        'panel'      => ['label' => 'پنل کاربری', 'href' => 'panel.php'],
     ];
     if (!isset($hubs[$parent])) {
         return;
@@ -501,7 +522,7 @@ function casting_render_panel_section_back(string $active): void
     $hub = $hubs[$parent];
     ?>
     <p class="panel-section-back">
-      <a href="<?= casting_e(casting_url($hub['href'])) ?>">بازگشت به <?= casting_e($hub['label']) ?></a>
+      <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url($hub['href'])) ?>" data-panel-back>← بازگشت به <?= casting_e($hub['label']) ?></a>
     </p>
     <?php
 }

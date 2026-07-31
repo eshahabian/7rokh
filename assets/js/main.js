@@ -1221,6 +1221,24 @@
     );
   });
 
+  document.addEventListener("click", (event) => {
+    const back = event.target.closest("[data-panel-back]");
+    if (!back || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    const ref = document.referrer;
+    if (!ref) return;
+    try {
+      const prev = new URL(ref);
+      if (prev.origin === window.location.origin && prev.href !== window.location.href) {
+        event.preventDefault();
+        window.history.back();
+      }
+    } catch (err) {
+      /* fallback: follow href */
+    }
+  });
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closePortraitLightbox();
   });

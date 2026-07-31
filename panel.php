@@ -92,24 +92,24 @@ casting_render_flash();
           <p class="ig-profile-bio"><?= nl2br(casting_e($bio)) ?></p>
         <?php endif; ?>
       </div>
+    </div>
 
-      <div class="ig-profile-actions">
-        <a class="btn btn-primary" href="<?= casting_e(casting_url('edit-profile.php')) ?>">ویرایش پروفایل</a>
-        <a class="btn btn-ghost ig-profile-action-badge" href="<?= casting_e(casting_url('chat.php')) ?>">
-          پیام کاربران
-          <?php if ($unread_messages > 0) : ?>
-            <span class="nav-badge" aria-label="<?= casting_e((string) $unread_messages) ?> پیام جدید"><?= (int) $unread_messages ?></span>
-          <?php endif; ?>
-        </a>
-        <a class="btn btn-ghost" href="<?= casting_e(casting_url('change-phone.php')) ?>">تغییر شماره تلفن</a>
-        <?php if ($can_photos) : ?>
-          <a class="btn btn-ghost" href="<?= casting_e(casting_url('profile-photo.php')) ?>">تغییر عکس</a>
+    <div class="ig-profile-actions">
+      <a class="btn btn-primary" href="<?= casting_e(casting_url('edit-profile.php')) ?>">ویرایش پروفایل</a>
+      <a class="btn btn-ghost ig-profile-action-badge" href="<?= casting_e(casting_url('chat.php')) ?>">
+        پیام کاربران
+        <?php if ($unread_messages > 0) : ?>
+          <span class="nav-badge" aria-label="<?= casting_e((string) $unread_messages) ?> پیام جدید"><?= (int) $unread_messages ?></span>
         <?php endif; ?>
-        <?php if ($can_gallery) : ?>
-          <a class="btn btn-ghost" href="<?= casting_e(casting_url('my-gallery.php')) ?>">افزودن پست</a>
-        <?php endif; ?>
-        <a class="btn btn-ghost" href="<?= casting_e(casting_url('settings.php')) ?>">تنظیمات</a>
-      </div>
+      </a>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('change-phone.php')) ?>">تغییر شماره تلفن</a>
+      <?php if ($can_photos) : ?>
+        <a class="btn btn-ghost" href="<?= casting_e(casting_url('profile-photo.php')) ?>">تغییر عکس</a>
+      <?php endif; ?>
+      <?php if ($can_gallery) : ?>
+        <a class="btn btn-ghost" href="<?= casting_e(casting_url('my-gallery.php')) ?>">افزودن پست</a>
+      <?php endif; ?>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('settings.php')) ?>">تنظیمات</a>
     </div>
   </header>
 
