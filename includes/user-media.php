@@ -15,7 +15,8 @@ function casting_user_media_install(): void
     global $wpdb;
     $table = casting_user_media_table();
     $charset = $wpdb->get_charset_collate();
-    $sql = "CREATE TABLE IF NOT EXISTS {$table} (
+    // dbDelta بهتر است بدون IF NOT EXISTS کار کند تا ستون‌های جدید اضافه شوند
+    $sql = "CREATE TABLE {$table} (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         user_id BIGINT UNSIGNED NOT NULL,
         attachment_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
@@ -27,7 +28,7 @@ function casting_user_media_install(): void
         created_at DATETIME NOT NULL,
         reviewed_at DATETIME NULL,
         reviewed_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
-        PRIMARY KEY (id),
+        PRIMARY KEY  (id),
         KEY user_id (user_id),
         KEY status (status),
         KEY user_status (user_id, status),
@@ -36,14 +37,46 @@ function casting_user_media_install(): void
     ) {$charset};";
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
+    casting_user_media_ensure_columns();
     update_option('casting_user_media_db_version', '2');
+}
+
+/**
+ * اطمینان از وجود ستون‌های لازم (برای جداول قدیمی قبل از کپشن)
+ */
+function casting_user_media_ensure_columns(): void
+{
+    global $wpdb;
+    $table = casting_user_media_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists !== $table) {
+        return;
+    }
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $columns = $wpdb->get_col("DESCRIBE `{$table}`", 0);
+    if (!is_array($columns)) {
+        $columns = [];
+    }
+    if (!in_array('caption', $columns, true)) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN caption TEXT NULL AFTER media_type");
+    }
+    if (!in_array('reviewed_by', $columns, true)) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN reviewed_by BIGINT UNSIGNED NOT NULL DEFAULT 0");
+    }
 }
 
 function casting_user_media_ensure_table(): void
 {
-    if ((string) get_option('casting_user_media_db_version', '') !== '2') {
+    $ver = (string) get_option('casting_user_media_db_version', '');
+    if ($ver !== '2') {
         casting_user_media_install();
+        return;
     }
+    // حتی اگر نسخه ۲ باشد، ستون کپشن را چک کن (نصب ناقص قبلی)
+    casting_user_media_ensure_columns();
 }
 
 function casting_user_can_manage_gallery(int $user_id): bool
@@ -236,6 +269,7 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
     if (!casting_user_can_manage_gallery($user_id)) {
         return ['ok' => false, 'error' => 'گالری فقط برای بازیگران فعال است.'];
     }
+    casting_user_media_ensure_table();
     if (!in_array($media_type, ['photo', 'video'], true)) {
         return ['ok' => false, 'error' => 'نوع فایل نامعتبر است.'];
     }
@@ -248,9 +282,21 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
 
     casting_require_media_includes();
     $file = $_FILES[$field];
+    $ftype = (string) ($file['type'] ?? '');
+    // بعضی مرورگرها type خالی یا octet-stream می‌فرستند
+    if ($ftype === '' || $ftype === 'application/octet-stream') {
+        $check = wp_check_filetype_and_ext(
+            (string) ($file['tmp_name'] ?? ''),
+            (string) ($file['name'] ?? '')
+        );
+        if (!empty($check['type'])) {
+            $ftype = (string) $check['type'];
+            $_FILES[$field]['type'] = $ftype;
+        }
+    }
     if ($media_type === 'photo') {
         $allowed = ['image/jpeg', 'image/png', 'image/webp'];
-        if (!in_array((string) ($file['type'] ?? ''), $allowed, true)) {
+        if (!in_array($ftype, $allowed, true)) {
             return ['ok' => false, 'error' => 'فقط عکس JPG، PNG یا WebP مجاز است.'];
         }
         if ((int) $file['size'] > 5 * 1024 * 1024) {
@@ -258,7 +304,7 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
         }
     } else {
         $allowed = ['video/mp4', 'video/webm', 'video/quicktime'];
-        if (!in_array((string) ($file['type'] ?? ''), $allowed, true)) {
+        if (!in_array($ftype, $allowed, true)) {
             return ['ok' => false, 'error' => 'فقط ویدیو MP4، WebM یا MOV مجاز است.'];
         }
         if ((int) $file['size'] > 40 * 1024 * 1024) {
@@ -276,8 +322,7 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
     casting_user_media_ensure_table();
     global $wpdb;
     $table = casting_user_media_table();
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $ok = $wpdb->insert($table, [
+    $row = [
         'user_id'       => $user_id,
         'attachment_id' => (int) $attachment_id,
         'media_type'    => $media_type,
@@ -285,12 +330,26 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
         'status'        => 'pending',
         'sort_order'    => 0,
         'created_at'    => current_time('mysql'),
-    ], ['%d', '%d', '%s', '%s', '%s', '%d', '%s']);
+    ];
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $ok = $wpdb->insert($table, $row, ['%d', '%d', '%s', '%s', '%s', '%d', '%s']);
+
+    // اگر هنوز ستون caption نباشد، بدون آن دوباره تلاش کن
+    if ($ok === false && is_string($wpdb->last_error) && str_contains($wpdb->last_error, 'caption')) {
+        casting_user_media_ensure_columns();
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $ok = $wpdb->insert($table, $row, ['%d', '%d', '%s', '%s', '%s', '%d', '%s']);
+    }
 
     if ($ok === false) {
         wp_delete_attachment((int) $attachment_id, true);
+        $detail = trim((string) $wpdb->last_error);
+        $msg = 'ثبت فایل ناموفق بود.';
+        if ($detail !== '') {
+            $msg .= ' (' . $detail . ')';
+        }
 
-        return ['ok' => false, 'error' => 'ثبت فایل ناموفق بود.'];
+        return ['ok' => false, 'error' => $msg];
     }
 
     return ['ok' => true, 'error' => '', 'id' => (int) $wpdb->insert_id];
