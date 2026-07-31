@@ -3165,31 +3165,36 @@ a.panel-sidebar-title.is-active {
 }
 
 .panel-home-greeting {
-  padding: 0.15rem 0.15rem 0.35rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  box-sizing: border-box;
 }
 
 .panel-home-greeting-eyebrow {
-  margin: 0 0 0.45rem;
-  font-size: 0.82rem;
+  margin: 0 0 0.3rem;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
-  color: var(--muted, #6b7280);
+  opacity: 0.85;
+  color: inherit;
 }
 
 .panel-home-greeting-title {
-  margin: 0 0 0.45rem;
+  margin: 0 0 0.3rem;
   font-family: var(--display);
-  font-size: clamp(1.2rem, 2.4vw, 1.65rem);
+  font-size: clamp(0.95rem, 1.8vw, 1.1rem);
   font-weight: 700;
   line-height: 1.45;
-  color: var(--text, #1a1d24);
+  color: inherit;
 }
 
 .panel-home-greeting-sub {
   margin: 0;
   max-width: 42rem;
-  color: var(--muted, #5c6570);
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  opacity: 0.9;
+  color: inherit;
 }
 
 .panel-promo-banner {

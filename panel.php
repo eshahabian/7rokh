@@ -39,7 +39,7 @@ casting_render_flash();
 $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (string) ($profile['gender'] ?? ''));
 ?>
 <section class="panel-home" aria-label="داشبورد پنل">
-  <header class="panel-home-greeting">
+  <header class="panel-home-greeting flash flash-success" role="status">
     <p class="panel-home-greeting-eyebrow"><?= casting_brand_html() ?></p>
     <h2 class="panel-home-greeting-title"><?= casting_e($welcome['headline']) ?></h2>
     <p class="panel-home-greeting-sub"><?= casting_brandify($welcome['subline']) ?></p>
