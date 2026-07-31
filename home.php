@@ -11,6 +11,7 @@ require_once __DIR__ . '/includes/visitors.php';
 require_once __DIR__ . '/includes/chat.php';
 require_once __DIR__ . '/includes/director-workspace.php';
 require_once __DIR__ . '/includes/follows.php';
+require_once __DIR__ . '/includes/feed.php';
 
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
@@ -86,6 +87,10 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
   </section>
 
   <?php casting_render_panel_home_quick_filters($can_search); ?>
+
+  <?php casting_render_home_opportunities_section($user_id); ?>
+
+  <?php casting_render_home_following_feed_section($user_id); ?>
 
   <section class="panel-stat-grid" aria-label="خلاصه وضعیت">
     <article class="panel-stat-card">

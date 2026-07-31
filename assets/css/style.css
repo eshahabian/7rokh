@@ -3496,7 +3496,7 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   display: flex;
   flex-direction: column;
   margin: 0;
-  overflow: hidden;
+  overflow: visible;
   background: var(--bg-elevated);
   border-radius: 6px;
   border: 1px solid var(--line);
@@ -3798,6 +3798,14 @@ a.panel-home-filter-chip:focus-visible {
   gap: 0.9rem;
 }
 
+.panel-ads-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
 .panel-ads-head h2 {
   margin: 0;
   font-size: 1.1rem;
@@ -3808,6 +3816,177 @@ a.panel-home-filter-chip:focus-visible {
   content: "★";
   margin-inline-end: 0.4rem;
   color: var(--accent-strong);
+}
+
+/* Home opportunities + following feed */
+.home-opportunity-list,
+.home-following-feed {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.home-opportunity-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-panel);
+}
+
+.home-opportunity-card.is-unread {
+  border-color: rgba(212, 165, 116, 0.55);
+  box-shadow: 0 0 0 1px rgba(212, 165, 116, 0.18);
+}
+
+.home-opportunity-body {
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+.home-opportunity-body h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.home-opportunity-body .meta,
+.home-opportunity-status {
+  margin: 0.2rem 0 0;
+  font-size: 0.86rem;
+  color: var(--ink-muted);
+}
+
+.home-opportunity-actions {
+  flex: 0 0 auto;
+}
+
+.home-feed-followers-hint {
+  margin: 0;
+}
+
+.home-feed-post {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-panel);
+  overflow: hidden;
+  display: grid;
+  gap: 0;
+}
+
+.home-feed-post-head {
+  padding: 0.75rem 0.9rem 0.55rem;
+}
+
+.home-feed-author {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+  text-decoration: none;
+}
+
+.home-feed-post-media {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.home-feed-post-media img,
+.home-feed-post-media video {
+  display: block;
+  width: 100%;
+  max-height: 28rem;
+  object-fit: cover;
+}
+
+.home-feed-caption {
+  margin: 0;
+  padding: 0.65rem 0.9rem 0.25rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.media-engage {
+  padding: 0.55rem 0.9rem 0.85rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ig-profile-cell .media-engage,
+.profile-media-item .media-engage {
+  padding: 0.45rem 0.55rem 0.65rem;
+  background: var(--bg-panel);
+}
+
+.media-engage-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.media-engage-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.35rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.media-engage-like.is-liked {
+  color: #e35d6a;
+}
+
+.media-engage-label {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
+.media-engage-comment-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+
+.media-engage-comments {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+}
+
+.media-engage-comments li {
+  line-height: 1.45;
+}
+
+.media-engage-comments strong {
+  margin-inline-end: 0.35rem;
+}
+
+.media-engage-form {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.media-engage-form input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font: inherit;
 }
 
 .panel-ads-grid {

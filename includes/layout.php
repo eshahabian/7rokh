@@ -133,8 +133,12 @@ function casting_render_footer(): void
       url: <?= wp_json_encode(casting_url('follow-toggle.php')) ?>,
       nonce: <?= wp_json_encode(wp_create_nonce('casting_follow')) ?>
     };
+    window.CASTING_MEDIA_ENGAGE = {
+      url: <?= wp_json_encode(casting_url('media-engage.php')) ?>,
+      nonce: <?= wp_json_encode(wp_create_nonce('casting_media_engage')) ?>
+    };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=75" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=76" defer></script>
 </body>
 </html>
 <?php

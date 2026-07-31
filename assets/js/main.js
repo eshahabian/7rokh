@@ -1716,4 +1716,97 @@
       btn.disabled = false;
     }
   });
+
+  // Media like / comment
+  const mediaEngageCfg = () => window.CASTING_MEDIA_ENGAGE || {};
+
+  document.addEventListener("click", async (event) => {
+    const likeBtn = event.target.closest("[data-media-like]");
+    if (!likeBtn || likeBtn.disabled) return;
+    event.preventDefault();
+    const cfg = mediaEngageCfg();
+    const mediaId = likeBtn.getAttribute("data-media-like");
+    if (!mediaId || !cfg.url || !cfg.nonce) return;
+    likeBtn.disabled = true;
+    try {
+      const body = new URLSearchParams();
+      body.set("_wpnonce", cfg.nonce);
+      body.set("engage_action", "like");
+      body.set("media_id", mediaId);
+      const res = await fetch(cfg.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+        body: body.toString(),
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!data?.ok) {
+        window.alert(data?.error || "لایک ثبت نشد.");
+        return;
+      }
+      const liked = !!data.liked;
+      const wrap = likeBtn.closest("[data-media-engage]");
+      likeBtn.classList.toggle("is-liked", liked);
+      likeBtn.setAttribute("aria-pressed", liked ? "true" : "false");
+      const icon = likeBtn.querySelector("span[aria-hidden]");
+      if (icon) icon.textContent = liked ? "♥" : "♡";
+      const countEl = wrap?.querySelector("[data-like-count]") || likeBtn.querySelector("[data-like-count]");
+      if (countEl) countEl.textContent = String(data.count ?? 0);
+    } catch (_err) {
+      window.alert("خطا در ارتباط با سرور.");
+    } finally {
+      likeBtn.disabled = false;
+    }
+  });
+
+  document.addEventListener("submit", async (event) => {
+    const form = event.target.closest("[data-media-comment-form]");
+    if (!form) return;
+    event.preventDefault();
+    const cfg = mediaEngageCfg();
+    const mediaId = form.getAttribute("data-media-comment-form");
+    const input = form.querySelector('input[name="body"]');
+    const bodyText = (input?.value || "").trim();
+    if (!mediaId || !cfg.url || !cfg.nonce || !bodyText) return;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+    try {
+      const body = new URLSearchParams();
+      body.set("_wpnonce", cfg.nonce);
+      body.set("engage_action", "comment");
+      body.set("media_id", mediaId);
+      body.set("body", bodyText);
+      const res = await fetch(cfg.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+        body: body.toString(),
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!data?.ok) {
+        window.alert(data?.error || "کامنت ثبت نشد.");
+        return;
+      }
+      if (input) input.value = "";
+      const wrap = form.closest("[data-media-engage]");
+      const list = wrap?.querySelector("[data-media-comments]");
+      if (list && data.comment) {
+        const li = document.createElement("li");
+        const strong = document.createElement("strong");
+        strong.textContent = data.comment.name || "کاربر";
+        const span = document.createElement("span");
+        span.textContent = data.comment.body || "";
+        li.appendChild(strong);
+        li.appendChild(document.createTextNode(" "));
+        li.appendChild(span);
+        list.appendChild(li);
+      }
+      const countEl = wrap?.querySelector("[data-comment-count]");
+      if (countEl) countEl.textContent = String(data.count ?? 0);
+    } catch (_err) {
+      window.alert("خطا در ارتباط با سرور.");
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  });
 })();

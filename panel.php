@@ -8,6 +8,7 @@ require_once __DIR__ . '/includes/panel.php';
 require_once __DIR__ . '/includes/panel-profile.php';
 require_once __DIR__ . '/includes/follows.php';
 require_once __DIR__ . '/includes/user-media.php';
+require_once __DIR__ . '/includes/media-engagement.php';
 
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
@@ -154,6 +155,7 @@ casting_render_flash();
               <p><?= nl2br(casting_e($caption)) ?></p>
             </figcaption>
           <?php endif; ?>
+          <?php casting_render_media_engagement((int) ($item['id'] ?? 0), $user_id, false); ?>
         </figure>
       <?php endforeach; ?>
     </div>

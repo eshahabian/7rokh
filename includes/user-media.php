@@ -626,6 +626,9 @@ function casting_user_media_thumb_url(array $row): string
  */
 function casting_render_public_media_gallery(int $user_id): void
 {
+    if (!function_exists('casting_render_media_engagement')) {
+        require_once __DIR__ . '/media-engagement.php';
+    }
     $items = casting_user_media_public($user_id);
     if ($items === []) {
         return;
@@ -656,6 +659,10 @@ function casting_render_public_media_gallery(int $user_id): void
               <p><?= nl2br(casting_e($caption)) ?></p>
             </figcaption>
           <?php endif; ?>
+          <?php
+          $viewer = casting_current_user();
+          casting_render_media_engagement((int) ($item['id'] ?? 0), $viewer ? (int) $viewer->ID : 0, false);
+          ?>
         </figure>
       <?php endforeach; ?>
     </div>
