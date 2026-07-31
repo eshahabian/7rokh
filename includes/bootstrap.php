@@ -262,11 +262,11 @@ function casting_require_login(string $portal): WP_User
     $role = casting_get_user_role((int) $user->ID);
     if ($portal === 'talent' && $role !== 'talent') {
         casting_set_flash('error', 'این بخش فقط برای هنرمندان است.');
-        casting_redirect(casting_is_employer_role($role) ? 'panel.php' : 'login.php');
+        casting_redirect(casting_is_employer_role($role) ? 'home.php' : 'login.php');
     }
     if ($portal === 'employer' && !casting_is_employer_role($role)) {
         casting_set_flash('error', 'این بخش فقط برای کارگردان و تهیه‌کننده است.');
-        casting_redirect($role === 'talent' ? 'panel.php' : 'login.php');
+        casting_redirect($role === 'talent' ? 'home.php' : 'login.php');
     }
 
     return $user;

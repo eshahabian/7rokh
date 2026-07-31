@@ -56,10 +56,10 @@ $current = casting_current_user();
 if ($current) {
     $existing_role = casting_get_user_role((int) $current->ID);
     if ($existing_role === 'talent') {
-        casting_redirect('panel.php');
+        casting_redirect('home.php');
     }
     if (casting_is_employer_role($existing_role)) {
-        casting_redirect('panel.php');
+        casting_redirect('home.php');
     }
 }
 
