@@ -281,7 +281,7 @@ function casting_sync_portal_owner_activities(int $user_id): void
     update_user_meta($user_id, 'casting_activities', $activities);
 }
 
-function casting_user_primary_activity_label(int $user_id): string
+function casting_user_primary_activity_key(int $user_id): string
 {
     if ($user_id <= 0) {
         return '';
@@ -308,7 +308,98 @@ function casting_user_primary_activity_label(int $user_id): string
     }
     $labels = casting_activity_labels_for_user($user_id);
 
-    return (string) ($labels[$first] ?? '');
+    return isset($labels[$first]) ? $first : '';
+}
+
+function casting_user_primary_activity_label(int $user_id): string
+{
+    $key = casting_user_primary_activity_key($user_id);
+    if ($key === '') {
+        return '';
+    }
+    $labels = casting_activity_labels_for_user($user_id);
+
+    return (string) ($labels[$key] ?? '');
+}
+
+/**
+ * عنوان محترمانه تخصص برای خوش‌آمدگویی (مثلاً «کارگردان محترم سینما»)
+ */
+function casting_activity_honorific_phrase(string $specialty_key, string $label = '', string $gender = ''): string
+{
+    $honor = $gender === 'female' ? 'محترمه' : 'محترم';
+    $labels = casting_activity_labels();
+    if ($label === '') {
+        $label = (string) ($labels[$specialty_key] ?? '');
+    }
+    $clean = trim((string) preg_replace('/\s*\([^)]*\)/u', '', $label));
+    $clean = preg_replace('/\s+/u', ' ', $clean) ?? $clean;
+    if ($clean === '') {
+        return '';
+    }
+
+    if (preg_match('/^(دستیار\s+(?:اول|دوم|سوم))\s+(.+)$/u', $clean, $m)) {
+        return $m[1] . ' ' . $honor . ' ' . $m[2];
+    }
+    if (preg_match('/^(\S+)\s+(.+)$/u', $clean, $m)) {
+        return $m[1] . ' ' . $honor . ' ' . $m[2];
+    }
+
+    return $clean . ' ' . $honor;
+}
+
+/**
+ * متن خوش‌آمد پنل بر اساس نام و نوع فعالیت
+ *
+ * @return array{headline:string, subline:string}
+ */
+function casting_panel_home_welcome(int $user_id, string $display_name = '', string $gender = ''): array
+{
+    $name = trim($display_name);
+    if ($name === '') {
+        $user = get_user_by('id', $user_id);
+        $name = $user instanceof WP_User ? trim((string) $user->display_name) : '';
+    }
+    if ($name === '') {
+        $name = 'همکار گرامی';
+    }
+    if ($gender === '') {
+        $gender = (string) get_user_meta($user_id, 'casting_gender', true);
+    }
+
+    $key = casting_user_primary_activity_key($user_id);
+    $label = $key !== '' ? casting_user_primary_activity_label($user_id) : '';
+    $honorific = $key !== '' ? casting_activity_honorific_phrase($key, $label, $gender) : '';
+
+    if ($honorific !== '') {
+        $headline = $name . '، ' . $honorific . '، خوش آمدید';
+    } else {
+        $headline = $name . ' عزیز، خوش آمدید';
+    }
+
+    $category = $key !== '' ? casting_activity_category_for_specialty($key) : '';
+    $sublines = [
+        'acting'     => 'به خانهٔ حرفه‌ای بازیگران خوش آمدید؛ اینجا مسیر دیده شدن و پیشنهاد نقش آغاز می‌شود.',
+        'directing'  => 'به فضای حرفه‌ای کارگردانی خوش آمدید؛ استعدادها و پروژه‌ها از همین‌جا به هم می‌رسند.',
+        'production' => 'به جمع عوامل تهیه و تولید خوش آمدید؛ هماهنگی پروژه از اینجا ساده‌تر است.',
+        'writing'    => 'به خانهٔ نویسندگان و فیلمنامه‌نویسان خوش آمدید؛ روایت شما اینجا شنیده می‌شود.',
+        'camera'     => 'به جمع عوامل تصویر خوش آمدید؛ نگاه حرفه‌ای شما در این فضا دیده می‌شود.',
+        'sound'      => 'به جمع عوامل صدا خوش آمدید؛ دقت و سلیقهٔ شنیداری‌تان اینجا قدر می‌بیند.',
+        'post'       => 'به فضای تدوین و پس‌تولید خوش آمدید؛ جزئیات نهایی اثر از اینجا شکل می‌گیرد.',
+        'art'        => 'به جمع طراحان هنری خوش آمدید؛ زیبایی بصری پروژه از نگاه شما آغاز می‌شود.',
+        'lighting'   => 'به جمع عوامل نور خوش آمدید؛ فضا و حس صحنه با کار شما جان می‌گیرد.',
+        'music'      => 'به جمع اهالی موسیقی خوش آمدید؛ احساس اثر با صدای شما کامل می‌شود.',
+        'promo'      => 'به فضای رسانه و تبلیغات خوش آمدید؛ دیده شدن اثر از اینجا قوت می‌گیرد.',
+        'set_crew'   => 'به جمع عوامل صحنه خوش آمدید؛ نظم و دقت شما ستون هر تولید است.',
+        'other'      => 'به جمع حرفه‌ای‌های صنعت تصویر خوش آمدید؛ همکاری درست از همین‌جا شکل می‌گیرد.',
+    ];
+    $brand = function_exists('casting_brand') ? casting_brand() : '۷ رخ';
+    $subline = $sublines[$category] ?? ('به ' . $brand . ' خوش آمدید؛ خانهٔ حرفه‌ای سینما و تئاتر.');
+
+    return [
+        'headline' => $headline,
+        'subline'  => $subline,
+    ];
 }
 
 function casting_user_profile_chip_label(int $user_id, int $viewer_id = 0): string
