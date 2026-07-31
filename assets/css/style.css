@@ -3956,12 +3956,18 @@ a.panel-home-filter-chip:focus-visible {
   padding: 0.55rem 0.9rem 0.85rem;
   display: grid;
   gap: 0.45rem;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .ig-profile-cell .media-engage,
-.profile-media-item .media-engage {
-  padding: 0.45rem 0.55rem 0.65rem;
-  background: var(--bg-panel);
+.profile-media-item .media-engage,
+.home-feed-post .media-engage {
+  padding: 0.45rem 0.55rem 0.7rem;
+  background: transparent;
+  border-top: 1px solid var(--line);
 }
 
 .media-engage-actions {
@@ -4018,19 +4024,35 @@ a.panel-home-filter-chip:focus-visible {
 
 .media-engage-form {
   display: flex;
-  gap: 0.45rem;
+  gap: 0.35rem;
   align-items: center;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .media-engage-form input {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0.4rem 0.55rem;
+  width: auto;
+  padding: 0.35rem 0.5rem;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--bg-elevated);
   color: var(--ink);
   font: inherit;
+  font-size: 0.82rem;
+  box-sizing: border-box;
+}
+
+.media-engage-form .media-engage-submit,
+.media-engage-form .btn {
+  flex: 0 0 auto;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .panel-ads-grid {

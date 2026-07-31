@@ -284,7 +284,7 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
       <?php if ($viewer_id > 0) : ?>
         <form class="media-engage-form" data-media-comment-form="<?= (int) $media_id ?>">
           <input type="text" name="body" maxlength="400" placeholder="کامنت بنویسید…" required autocomplete="off">
-          <button class="btn btn-ghost btn-sm" type="submit">ارسال</button>
+          <button class="btn btn-ghost media-engage-submit" type="submit">ارسال</button>
         </form>
       <?php endif; ?>
     <?php endif; ?>
