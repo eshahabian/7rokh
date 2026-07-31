@@ -2813,6 +2813,40 @@ function casting_touch_last_active(int $user_id): void
     update_user_meta($user_id, 'casting_last_active', current_time('mysql'));
 }
 
+/** آنلاین اگر در ۱۵ دقیقه اخیر فعالیت داشته باشد. */
+function casting_member_is_online(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    $last = (string) get_user_meta($user_id, 'casting_last_active', true);
+    if ($last === '') {
+        return false;
+    }
+    $ts = strtotime($last);
+
+    return $ts !== false && (time() - $ts) <= 15 * MINUTE_IN_SECONDS;
+}
+
+/**
+ * چراغ وضعیت آنلاین/آفلاین روی عکس پروفایل (مثل اینستاگرام).
+ *
+ * @param 'sm'|'md'|'lg' $size
+ */
+function casting_render_presence_dot(int $user_id, string $size = 'md'): void
+{
+    if ($user_id <= 0) {
+        return;
+    }
+    $online = casting_member_is_online($user_id);
+    $label = $online ? 'آنلاین' : 'آفلاین';
+    $size = in_array($size, ['sm', 'md', 'lg'], true) ? $size : 'md';
+    $mod = $online ? 'presence-dot--online' : 'presence-dot--offline';
+    ?>
+    <span class="presence-dot presence-dot--<?= casting_e($size) ?> <?= casting_e($mod) ?>" title="<?= casting_e($label) ?>" aria-label="<?= casting_e($label) ?>"></span>
+    <?php
+}
+
 function casting_require_casting_user(): WP_User
 {
     $user = casting_current_user();

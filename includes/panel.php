@@ -425,11 +425,14 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
         </div>
         <?php if ($user) : ?>
           <div class="panel-sidebar-identity">
-            <?php if ($sidebar_photo !== '') : ?>
-              <img class="panel-sidebar-avatar" src="<?= casting_e($sidebar_photo) ?>" alt="" width="40" height="40">
-            <?php else : ?>
-              <span class="panel-sidebar-avatar panel-sidebar-avatar--empty" aria-hidden="true">?</span>
-            <?php endif; ?>
+            <div class="panel-sidebar-avatar-wrap">
+              <?php if ($sidebar_photo !== '') : ?>
+                <img class="panel-sidebar-avatar" src="<?= casting_e($sidebar_photo) ?>" alt="" width="40" height="40">
+              <?php else : ?>
+                <span class="panel-sidebar-avatar panel-sidebar-avatar--empty" aria-hidden="true">?</span>
+              <?php endif; ?>
+              <?php casting_render_presence_dot((int) $user->ID, 'sm'); ?>
+            </div>
             <div class="panel-sidebar-identity-text">
               <p class="panel-sidebar-display-name"><?= casting_e($sidebar_name) ?></p>
               <p class="panel-sidebar-user-meta">
@@ -1671,6 +1674,7 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
         <?php if ($premium_badge || casting_user_is_premium($id)) : ?>
           <span class="panel-ad-badge">عضو ویژه</span>
         <?php endif; ?>
+        <?php casting_render_presence_dot($id, 'md'); ?>
       </button>
       <div class="panel-ad-card-body">
         <h3>
@@ -1744,6 +1748,7 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
         <?php else : ?>
           <span class="photo-placeholder">بدون عکس</span>
         <?php endif; ?>
+        <?php casting_render_presence_dot($id, 'md'); ?>
         <?php if ($viewed) : ?>
           <?php casting_render_director_viewed_badge(true); ?>
         <?php endif; ?>

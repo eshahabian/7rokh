@@ -25,17 +25,6 @@ function casting_format_jalali_datetime_compact(string $mysql): string
         : sprintf('%d/%02d/%02d', $jy, $jm, $jd);
 }
 
-function casting_member_is_online(int $user_id): bool
-{
-    $last = (string) get_user_meta($user_id, 'casting_last_active', true);
-    if ($last === '') {
-        return false;
-    }
-    $ts = strtotime($last);
-
-    return $ts !== false && (time() - $ts) <= 15 * MINUTE_IN_SECONDS;
-}
-
 function casting_member_preview_visit_count(int $member_id): int
 {
     $log = get_user_meta($member_id, 'casting_profile_visitors', true);
@@ -235,9 +224,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
         <?php else : ?>
           <span class="member-preview-avatar member-preview-avatar--empty">?</span>
         <?php endif; ?>
-        <?php if ($online) : ?>
-          <span class="member-preview-online" title="آنلاین"></span>
-        <?php endif; ?>
+        <?php casting_render_presence_dot($member_id, 'md'); ?>
       </div>
       <div class="member-preview-head-text">
         <h2 class="member-preview-title" id="member-preview-title"><?= casting_e((string) $member->display_name) ?></h2>
@@ -245,9 +232,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
         <?php if ($membership_code !== '') : ?>
           <p class="member-preview-code">کد کاربری: <span dir="ltr"><?= casting_e($membership_code) ?></span></p>
         <?php endif; ?>
-        <?php if ($online) : ?>
-          <p class="member-preview-status member-preview-status--online">آنلاین</p>
-        <?php endif; ?>
+        <p class="member-preview-status<?= $online ? ' member-preview-status--online' : ' member-preview-status--offline' ?>"><?= $online ? 'آنلاین' : 'آفلاین' ?></p>
       </div>
     </header>
 

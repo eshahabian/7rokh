@@ -743,6 +743,7 @@ function casting_render_chat_avatar(int $user_id, string $name, bool $has_unread
   <?php else : ?>
     <span class="chat-avatar-fallback" aria-hidden="true"><?= $initial ?></span>
   <?php endif; ?>
+  <?php casting_render_presence_dot($user_id, 'sm'); ?>
 </span>
     <?php
 }

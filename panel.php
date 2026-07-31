@@ -45,8 +45,9 @@ casting_render_flash();
       <?php if ($photo !== '') : ?>
         <img src="<?= casting_e($photo) ?>" alt="<?= casting_e((string) $user->display_name) ?>">
       <?php else : ?>
-        <span aria-hidden="true"><?= casting_e(function_exists('mb_substr') ? mb_substr((string) $user->display_name, 0, 1, 'UTF-8') : substr((string) $user->display_name, 0, 1)) ?></span>
+        <span class="ig-profile-avatar-fallback" aria-hidden="true"><?= casting_e(function_exists('mb_substr') ? mb_substr((string) $user->display_name, 0, 1, 'UTF-8') : substr((string) $user->display_name, 0, 1)) ?></span>
       <?php endif; ?>
+      <?php casting_render_presence_dot($user_id, 'lg'); ?>
     </div>
 
     <div class="ig-profile-main">

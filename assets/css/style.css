@@ -1477,6 +1477,7 @@ fieldset.field legend {
   border-radius: 999px;
   object-fit: cover;
   border: 2px solid rgba(212, 165, 116, 0.35);
+  display: block;
 }
 
 .member-preview-avatar--empty {
@@ -1487,14 +1488,66 @@ fieldset.field legend {
   font-size: 1.5rem;
 }
 
-.member-preview-online {
+/* Instagram-style online/offline light on profile photos */
+.presence-dot {
   position: absolute;
-  right: 2px;
+  z-index: 3;
+  box-sizing: border-box;
+  border-radius: 999px;
+  pointer-events: none;
+  inset-inline-end: 2%;
+  bottom: 2%;
+  border: 2px solid var(--bg, #0f0f0f);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.presence-dot--sm {
+  width: 11px;
+  height: 11px;
+  border-width: 2px;
+  inset-inline-end: 0;
+  bottom: 0;
+}
+
+.presence-dot--md {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+
+.presence-dot--lg {
+  width: 22px;
+  height: 22px;
+  border-width: 3px;
+  inset-inline-end: 8px;
+  bottom: 8px;
+}
+
+.presence-dot--online {
+  background: #1cd14f;
+}
+
+.presence-dot--offline {
+  background: #b0b0b0;
+}
+
+[data-theme="day"] .presence-dot {
+  border-color: #fff;
+}
+
+[data-theme="day"] .presence-dot--offline {
+  background: #d0d0d0;
+}
+
+.member-preview-online {
+  /* legacy alias */
+  position: absolute;
+  inset-inline-end: 2px;
   bottom: 2px;
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: #3ecf7a;
+  background: #1cd14f;
   border: 2px solid var(--bg-elevated);
 }
 
@@ -1517,7 +1570,11 @@ fieldset.field legend {
 }
 
 .member-preview-status--online {
-  color: #3ecf7a;
+  color: #1cd14f;
+}
+
+.member-preview-status--offline {
+  color: var(--ink-muted);
 }
 
 .member-preview-facts {
@@ -2324,13 +2381,14 @@ legend .req-mark {
 }
 
 .chat-avatar {
+  position: relative;
   display: block;
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 999px;
-  overflow: hidden;
+  overflow: visible;
   border: 2px solid transparent;
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
   flex-shrink: 0;
 }
 
@@ -2339,18 +2397,23 @@ legend .req-mark {
   box-shadow: 0 0 0 2px rgba(224, 122, 106, 0.25);
 }
 
-.chat-avatar img {
+.chat-avatar img,
+.chat-avatar-fallback {
   width: 100%;
   height: 100%;
+  border-radius: 999px;
   object-fit: cover;
   display: block;
+  overflow: hidden;
+}
+
+.chat-avatar img {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .chat-avatar-fallback {
   display: grid;
   place-items: center;
-  width: 100%;
-  height: 100%;
   font-weight: 700;
   color: var(--accent-strong);
   background: var(--accent-dim);
@@ -2958,8 +3021,15 @@ a.panel-sidebar-title.is-active {
   margin-top: 0.55rem;
 }
 
-.panel-sidebar-avatar {
+.panel-sidebar-avatar-wrap {
+  position: relative;
   flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+}
+
+.panel-sidebar-avatar {
+  display: block;
   width: 40px;
   height: 40px;
   border-radius: 999px;
@@ -3183,12 +3253,12 @@ a.panel-sidebar-title.is-active {
 }
 
 .ig-profile-avatar {
+  position: relative;
   width: 150px;
   height: 150px;
   border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid rgba(212, 175, 106, 0.45);
-  background: var(--bg-elevated);
+  overflow: visible;
+  background: transparent;
   display: grid;
   place-items: center;
   font-size: 2.6rem;
@@ -3196,10 +3266,20 @@ a.panel-sidebar-title.is-active {
   color: var(--accent-strong);
 }
 
-.ig-profile-avatar img {
+.ig-profile-avatar img,
+.ig-profile-avatar-fallback {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   object-fit: cover;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(212, 175, 106, 0.45);
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.ig-profile-avatar img {
   display: block;
 }
 
@@ -3406,6 +3486,14 @@ a.panel-sidebar-title.is-active {
     width: 88px;
     height: 88px;
     font-size: 1.7rem;
+  }
+
+  .ig-profile-avatar .presence-dot--lg {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+    inset-inline-end: 4px;
+    bottom: 4px;
   }
 
   .ig-profile-stats {
@@ -3661,6 +3749,11 @@ a.panel-home-filter-chip:focus-visible {
     linear-gradient(20deg, #1a2030, #2a3344);
   background-size: cover;
   background-position: center;
+}
+
+.panel-ad-card-media .presence-dot {
+  inset-inline-end: 8px;
+  bottom: 8px;
 }
 
 .panel-ad-card-media.has-photo {
@@ -4270,14 +4363,22 @@ a.panel-home-filter-chip:focus-visible {
 
 .member-card-photo {
   display: block;
+  position: relative;
   aspect-ratio: 3 / 4;
   background: rgba(0, 0, 0, 0.25);
+  overflow: visible;
 }
 
 .member-card-photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+.member-card-photo .presence-dot {
+  inset-inline-end: 8px;
+  bottom: 8px;
 }
 
 .member-card-body {
