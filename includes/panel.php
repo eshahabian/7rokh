@@ -25,7 +25,6 @@ function casting_panel_nav_items_desktop(): array
         ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],
         ['key' => 'desk',         'label' => 'پروژه‌ها',                  'href' => 'director-desk.php'],
         ['key' => 'cancel',       'label' => 'انصراف از عضویت',          'href' => 'cancel-membership.php'],
-        ['key' => 'logout',       'label' => 'خروج',                     'href' => 'logout.php'],
         ['key' => 'rules',        'label' => 'قوانین',                   'href' => 'rules.php'],
         [
             'key'      => 'news',
@@ -39,6 +38,7 @@ function casting_panel_nav_items_desktop(): array
         ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',          'href' => 'transactions.php'],
         ['key' => 'contact',      'label' => 'تماس با ما',               'href' => 'contact.php'],
         ['key' => 'faq',          'label' => 'سوالات متداول',            'href' => 'faq.php'],
+        ['key' => 'logout',       'label' => 'خروج',                     'href' => 'logout.php'],
     ];
 }
 
@@ -407,9 +407,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
           <a
             class="panel-sidebar-title panel-sidebar-title-desktop panel-sidebar-home<?= in_array($active, ['panel', 'home'], true) ? ' is-active' : '' ?>"
             href="<?= casting_e(casting_url($active === 'home' ? 'home.php' : 'panel.php')) ?>"
-          ><?= casting_e($sidebar_page_title) ?><?php if ($active === 'panel' && $sidebar_primary_activity !== '') : ?>
-            <span class="panel-sidebar-activity"> · <?= casting_e($sidebar_primary_activity) ?></span>
-          <?php endif; ?><?php if ($panel_premium_until !== null && $user) : ?>
+          ><?= casting_e($sidebar_page_title) ?><?php if ($panel_premium_until !== null && $user) : ?>
             <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
               <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
             </span>
@@ -428,7 +426,12 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
               <?php casting_render_presence_dot((int) $user->ID, 'sm'); ?>
             </div>
             <div class="panel-sidebar-identity-text">
-              <p class="panel-sidebar-display-name"><?= casting_e($sidebar_name) ?></p>
+              <p class="panel-sidebar-display-name">
+                <?= casting_e($sidebar_name) ?>
+                <?php if ($sidebar_primary_activity !== '') : ?>
+                  <span class="panel-sidebar-activity"> · <?= casting_e($sidebar_primary_activity) ?></span>
+                <?php endif; ?>
+              </p>
               <p class="panel-sidebar-user-meta">
                 <span class="panel-sidebar-login">@<?= casting_e((string) $user->user_login) ?></span>
                 <?php if ($panel_membership_number !== '') : ?>
