@@ -332,7 +332,11 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     ?>
 <section class="dash-card profile-view">
   <?php if (!$embedded) : ?>
-    <a class="back-link" href="<?= $is_self ? 'panel.php' : 'search-users.php' ?>">← بازگشت</a>
+    <?php if ($is_self && function_exists('casting_render_panel_heading')) : ?>
+      <?php casting_render_panel_heading('پروفایل من'); ?>
+    <?php else : ?>
+      <a class="back-link" href="<?= $is_self ? 'panel.php' : 'search-users.php' ?>">← بازگشت</a>
+    <?php endif; ?>
   <?php endif; ?>
 
   <div class="profile-hero<?= $embedded ? ' profile-hero--panel' : '' ?>">
@@ -618,13 +622,23 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 {
     $hide_talent_profile = casting_profile_hides_talent_fields($profile['activities'] ?? [], $user_id);
     $talent_hidden = $hide_talent_profile ? ' hidden' : '';
-    ?>
-<details class="dash-card panel-profile-edit panel-edit-details" id="edit-profile"<?= $open ? ' open' : '' ?>>
+    if ($open) {
+        ?>
+<section class="dash-card panel-profile-edit" id="edit-profile">
+  <?php casting_render_panel_heading('ویرایش پروفایل'); ?>
+  <div class="panel-edit-body">
+        <?php
+    } else {
+        ?>
+<details class="dash-card panel-profile-edit panel-edit-details" id="edit-profile">
   <summary class="panel-edit-summary">
     <h2 class="panel-section-title">ویرایش پروفایل</h2>
     <span class="panel-edit-toggle">باز / بسته</span>
   </summary>
   <div class="panel-edit-body">
+        <?php
+    }
+    ?>
   <p class="lede">نوع فعالیت و اطلاعات پروفایل را می‌توانید تغییر دهید.<?php if (casting_profile_shows_portraits($profile['activities'] ?? [], $user_id)) : ?> برای <?= casting_user_uses_actor_portrait_set($user_id) ? 'عکس‌ها' : 'عکس پروفایل' ?> به <a href="profile-photo.php">ویرایش تصویر</a> بروید.<?php endif; ?></p>
 
   <form class="form" method="post" action="edit-profile.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
@@ -799,6 +813,10 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <button class="btn btn-primary" type="submit">ذخیره پروفایل</button>
   </form>
   </div>
+<?php if ($open) : ?>
+</section>
+<?php else : ?>
 </details>
+<?php endif; ?>
     <?php
 }
