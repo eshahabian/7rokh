@@ -35,7 +35,7 @@ if ($error !== '') {
 casting_render_flash();
 ?>
 <section class="dash-card panel-narrow">
-  <h1>تغییر رمز عبور</h1>
+  <?php casting_render_panel_heading('تغییر رمز عبور'); ?>
   <form class="form" method="post" action="change-password.php">
     <?php wp_nonce_field('casting_password'); ?>
     <div class="field">

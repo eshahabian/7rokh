@@ -138,7 +138,7 @@ if ($error !== '') {
 casting_render_flash();
 ?>
 <section class="dash-card chat-card">
-  <h1>پیام کاربران</h1>
+  <?php casting_render_panel_heading('پیام کاربران'); ?>
   <p class="meta">پیام خصوصی · در صورت مزاحمت می‌توانید کاربر را بلاک کنید.</p>
   <?php if ($employer_free_hint !== '') : ?>
     <p class="meta chat-employer-quota"><?= casting_e($employer_free_hint) ?></p>

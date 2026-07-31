@@ -57,7 +57,7 @@ casting_render_panel_start('تنظیمات', 'settings');
 casting_render_flash();
 ?>
 <section class="dash-card">
-  <h1>تنظیمات</h1>
+  <?php casting_render_panel_heading('تنظیمات'); ?>
   <p class="meta">امنیت حساب، تصاویر، بلاک‌ها و راهنماها در این صفحه جمع شده‌اند.</p>
   <?php casting_render_panel_hub_tiles($tiles); ?>
 </section>

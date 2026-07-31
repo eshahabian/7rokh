@@ -70,7 +70,7 @@ if ($success !== '') {
 casting_render_flash();
 ?>
 <section class="dash-card panel-narrow">
-  <h1>تغییر شماره تلفن</h1>
+  <?php casting_render_panel_heading('تغییر شماره تلفن'); ?>
   <p class="meta">
     شماره فعلی:
     <strong dir="ltr"><?= $mobile !== '' ? casting_e($mobile) : '—' ?></strong>

@@ -61,7 +61,7 @@ casting_render_panel_start('گالری من', 'gallery');
 casting_render_flash();
 ?>
 <section class="dash-card">
-  <h1>گالری من</h1>
+  <?php casting_render_panel_heading('گالری من'); ?>
   <p class="lede">عکس و ویدیو را با کپشن بفرستید. تا تأیید مدیر برای دیگران دیده نمی‌شود. ویرایش هم دوباره نیاز به تأیید دارد.</p>
 
   <form class="form" method="post" enctype="multipart/form-data" action="my-gallery.php">

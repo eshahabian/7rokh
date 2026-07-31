@@ -3219,6 +3219,31 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   background: var(--accent-dim);
 }
 
+.panel-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin: 0 0 0.35rem;
+  flex-wrap: wrap;
+}
+
+.panel-page-heading-title,
+.dash-card .panel-page-heading h1,
+.dash-card .panel-page-heading h2 {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  line-height: 1.3;
+}
+
+.panel-page-heading-back {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
 .panel-section-back {
   margin: 0 0 0.85rem;
   font-size: 0.85rem;

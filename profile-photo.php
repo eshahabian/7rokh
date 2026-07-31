@@ -54,7 +54,7 @@ $is_actor_photos = casting_user_uses_actor_portrait_set($user_id);
 casting_render_panel_start('ویرایش تصویر', 'photo');
 ?>
 <section class="dash-card panel-wide">
-  <h1>ویرایش تصویر</h1>
+  <?php casting_render_panel_heading('ویرایش تصویر'); ?>
   <?php if ($is_actor_photos) : ?>
     <p class="lede">سه عکس پروفایل را بارگذاری کنید: کلوزاپ (صورت)، مدیوم (نیم‌تنه)، لانگ (تمام‌قد).</p>
   <?php else : ?>

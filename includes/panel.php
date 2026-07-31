@@ -471,20 +471,25 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
 
 function casting_render_panel_start(string $title, string $active, string $body_class = 'page-panel'): void
 {
+    $GLOBALS['casting_panel_active'] = $active;
     $menu_badge = casting_panel_menu_badge_count();
     casting_render_head($title, $body_class . ' has-panel-drawer');
     casting_render_header($active === 'home' ? 'home' : 'panel', true, $menu_badge);
     echo '<main class="wrap panel-shell">';
     casting_render_panel_sidebar($active, $title);
     echo '<div class="panel-content">';
-    casting_render_panel_section_back($active);
 }
 
 /**
- * لینک بازگشت به هاب والد / پنل کاربری برای صفحات فرعی
+ * @return array{href:string,label:string}|null
  */
-function casting_render_panel_section_back(string $active): void
+function casting_panel_back_config(?string $active = null): ?array
 {
+    $active = $active ?? (string) ($GLOBALS['casting_panel_active'] ?? '');
+    if ($active === '') {
+        return null;
+    }
+
     $to_panel = [
         'messages',
         'phone',
@@ -497,17 +502,12 @@ function casting_render_panel_section_back(string $active): void
         'password',
     ];
     if (in_array($active, $to_panel, true)) {
-        ?>
-    <p class="panel-section-back">
-      <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('panel.php')) ?>" data-panel-back>← بازگشت</a>
-    </p>
-        <?php
-        return;
+        return ['href' => 'panel.php', 'label' => 'بازگشت'];
     }
 
     $parent = casting_panel_nav_highlight_key($active);
     if ($parent === $active) {
-        return;
+        return null;
     }
 
     $hubs = [
@@ -516,15 +516,44 @@ function casting_render_panel_section_back(string $active): void
         'panel'      => ['label' => 'پنل کاربری', 'href' => 'panel.php'],
     ];
     if (!isset($hubs[$parent])) {
-        return;
+        return null;
     }
 
-    $hub = $hubs[$parent];
+    return [
+        'href'  => $hubs[$parent]['href'],
+        'label' => 'بازگشت به ' . $hubs[$parent]['label'],
+    ];
+}
+
+/**
+ * عنوان صفحه داخل کارت + دکمه بازگشت سمت چپ (روبروی عنوان)
+ */
+function casting_render_panel_heading(string $title, string $tag = 'h1'): void
+{
+    $tag = $tag === 'h2' ? 'h2' : 'h1';
+    $back = casting_panel_back_config();
     ?>
-    <p class="panel-section-back">
-      <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url($hub['href'])) ?>" data-panel-back>← بازگشت به <?= casting_e($hub['label']) ?></a>
-    </p>
+  <div class="panel-page-heading">
+    <<?= $tag ?> class="panel-page-heading-title"><?= casting_e($title) ?></<?= $tag ?>>
+    <?php if ($back !== null) :
+        $href = (string) $back['href'];
+        if ($href !== '' && !str_starts_with($href, 'http')) {
+            $href = casting_url($href);
+        }
+        ?>
+      <a class="btn btn-ghost btn-sm panel-page-heading-back" href="<?= casting_e($href) ?>" data-panel-back>← <?= casting_e((string) $back['label']) ?></a>
+    <?php endif; ?>
+  </div>
     <?php
+}
+
+/**
+ * @deprecated از casting_render_panel_heading استفاده کنید
+ */
+function casting_render_panel_section_back(string $active): void
+{
+    // دیگر بیرون از کارت رندر نمی‌شود؛ عنوان صفحه از casting_render_panel_heading استفاده کند.
+    unset($active);
 }
 
 function casting_render_panel_end(): void
