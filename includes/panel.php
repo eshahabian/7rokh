@@ -18,8 +18,6 @@ function casting_panel_nav_items_desktop(): array
 {
     return [
         ['key' => 'home',         'label' => 'خانه',                     'href' => 'home.php'],
-        ['key' => 'panel',        'label' => 'پروفایل من',               'href' => 'panel.php'],
-        ['key' => 'messages',     'label' => 'پیام کاربران',             'href' => 'chat.php'],
         ['key' => 'my-requests',  'label' => 'فراخوان کستینگ',           'href' => 'my-requests.php'],
         ['key' => 'search',       'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
         ['key' => 'newest',       'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
@@ -27,11 +25,8 @@ function casting_panel_nav_items_desktop(): array
         ['key' => 'blocked',      'label' => 'بلاک‌شده‌های من',          'href' => 'blocked-by-me.php'],
         ['key' => 'premium',      'label' => 'فعال‌سازی',                'href' => 'premium.php'],
         ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],
-        ['key' => 'my-profile',   'label' => 'مشاهده پروفایل کامل',      'href' => 'my-profile.php'],
-        ['key' => 'edit-profile', 'label' => 'ویرایش پروفایل من',        'href' => 'edit-profile.php'],
         ['key' => 'desk',         'label' => 'پروژه‌ها',                  'href' => 'director-desk.php'],
         ['key' => 'password',     'label' => 'تغییر رمز عبور',           'href' => 'change-password.php'],
-        ['key' => 'phone',        'label' => 'تغییر شماره تلفن',         'href' => 'change-phone.php'],
         ['key' => 'cancel',       'label' => 'انصراف از عضویت',          'href' => 'cancel-membership.php'],
         ['key' => 'logout',       'label' => 'خروج',                     'href' => 'logout.php'],
         ['key' => 'rules',        'label' => 'قوانین',                   'href' => 'rules.php'],
@@ -81,7 +76,7 @@ function casting_panel_nav_highlight_key(string $active): string
         'transactions' => 'transactions',
         'cancel'       => 'cancel',
         'password'     => 'password',
-        'phone'        => 'phone',
+        'phone'        => 'panel',
         'photo'        => 'photo',
         'gallery'      => 'gallery',
         'following'    => 'following',
@@ -91,7 +86,9 @@ function casting_panel_nav_highlight_key(string $active): string
         'faq'          => 'faq',
         'rules'        => 'rules',
         'newest'       => 'newest',
-        'my-profile'   => 'my-profile',
+        'my-profile'   => 'panel',
+        'edit-profile' => 'panel',
+        'messages'     => 'panel',
         'news'         => 'news',
     ];
 
@@ -226,13 +223,7 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
         ?>
           <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= ($is_external || $item['key'] !== 'logout') ? ' target="_blank" rel="noopener"' : '' ?>>
             <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
-            <?php if ($item['key'] === 'messages' && $unread_peers > 0) : ?>
-              <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
-            <?php elseif ($item['key'] === 'panel' && $panel_premium_until !== null && $user) : ?>
-              <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
-                <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
-              </span>
-            <?php elseif ($item['key'] === 'membership' && $panel_premium_until !== null && $user) : ?>
+            <?php if ($item['key'] === 'membership' && $panel_premium_until !== null && $user) : ?>
               <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
                 <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
               </span>
@@ -424,7 +415,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
           <button type="button" class="panel-drawer-close" aria-label="بستن منو" data-panel-drawer-close>&times;</button>
         </div>
         <?php if ($user) : ?>
-          <div class="panel-sidebar-identity">
+          <a class="panel-sidebar-identity" href="<?= casting_e(casting_url('panel.php')) ?>">
             <div class="panel-sidebar-avatar-wrap">
               <?php if ($sidebar_photo !== '') : ?>
                 <img class="panel-sidebar-avatar" src="<?= casting_e($sidebar_photo) ?>" alt="" width="40" height="40">
@@ -442,7 +433,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
                 <?php endif; ?>
               </p>
             </div>
-          </div>
+          </a>
           <?php if ($sidebar_show_views) : ?>
             <p class="panel-sidebar-views" title="بازدید پروفایل شما">
               <span>امروز: <?= (int) $sidebar_views['day'] ?></span>
