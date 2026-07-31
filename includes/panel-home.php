@@ -41,12 +41,7 @@ function casting_render_panel_home_quick_filters(bool $can_search): void
     $filters = casting_panel_home_quick_filters();
     ?>
   <nav class="panel-home-filters" aria-label="میانبر تخصص‌ها">
-    <div class="panel-home-filters-head">
-      <h2 class="panel-home-filters-title">جستجوی سریع</h2>
-      <?php if ($can_search) : ?>
-        <a class="panel-home-filters-more" href="<?= casting_e(casting_url('search-users.php')) ?>">فیلتر کامل</a>
-      <?php endif; ?>
-    </div>
+    <h2 class="panel-home-filters-title">جستجوی سریع</h2>
     <div class="panel-home-filter-chips" role="list">
       <?php foreach ($filters as $chip) : ?>
         <?php if ($can_search) : ?>

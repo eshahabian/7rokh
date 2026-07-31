@@ -3202,23 +3202,10 @@ a.panel-sidebar-title.is-active {
   gap: 0.65rem;
 }
 
-.panel-home-filters-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
 .panel-home-filters-title {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-}
-
-.panel-home-filters-more {
-  font-size: 0.85rem;
-  color: var(--accent-strong);
-  text-decoration: none;
 }
 
 .panel-home-filter-chips {
