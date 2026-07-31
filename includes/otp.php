@@ -3,6 +3,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/sms.php';
 
+/**
+ * آیا تأیید کد پیامک موبایل در ثبت‌نام فعال است؟
+ * فلگ: CASTING_MOBILE_OTP_ENABLED در config.php
+ */
+function casting_mobile_otp_enabled(): bool
+{
+    return defined('CASTING_MOBILE_OTP_ENABLED') && CASTING_MOBILE_OTP_ENABLED;
+}
+
 /** مدت اعتبار کد (ثانیه) */
 function casting_otp_ttl(): int
 {

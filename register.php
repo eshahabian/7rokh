@@ -120,8 +120,12 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $age_preview = $age_calc !== null ? (string) $age_calc : '';
         $skip_talent_profile = !casting_activities_need_talent_fields($activities);
         $mobile_norm = casting_normalize_mobile($mobile);
+        $otp_enabled = casting_mobile_otp_enabled();
 
         if ($is_otp_only) {
+            if (!$otp_enabled) {
+                $error = 'تأیید موبایل موقتاً غیرفعال است؛ مستقیم ثبت‌نام را کامل کنید.';
+            } else {
             $rate_error = casting_rate_limit_check('otp_send');
             if ($rate_error !== null) {
                 $error = $rate_error;
@@ -152,6 +156,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $otp_notice = 'موبایل تأیید شد. حالا ثبت‌نام را کامل کنید.';
                 }
             }
+            }
         } else {
             $rate_error = casting_rate_limit_check('register');
             if ($rate_error !== null) {
@@ -181,7 +186,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif (casting_mobile_is_taken($mobile_norm)) {
                     $error = 'این شماره موبایل قبلاً ثبت شده است.';
                     $focus_field = 'mobile';
-                } elseif (!casting_otp_session_is_verified('register', $mobile_norm)) {
+                } elseif ($otp_enabled && !casting_otp_session_is_verified('register', $mobile_norm)) {
                     $otp_code = (string) ($_POST['otp_code'] ?? '');
                     if ($otp_code !== '') {
                         $verify = casting_otp_verify('register', $mobile_norm, $otp_code);
@@ -197,7 +202,8 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                if ($error === '' && !$password_mismatch && casting_otp_session_is_verified('register', $mobile_norm)) {
+                $otp_ok = !$otp_enabled || casting_otp_session_is_verified('register', $mobile_norm);
+                if ($error === '' && !$password_mismatch && $otp_ok) {
                     try {
                         $role = casting_infer_role_from_activities($activities);
                         $result = casting_register_user($name, $username, $email, $password, $role);
@@ -292,7 +298,8 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$mobile_verified = casting_otp_session_is_verified('register', casting_normalize_mobile($mobile));
+$otp_enabled = casting_mobile_otp_enabled();
+$mobile_verified = $otp_enabled && casting_otp_session_is_verified('register', casting_normalize_mobile($mobile));
 $hide_talent_profile = casting_profile_hides_talent_fields($activities);
 $show_artistic_works = casting_activities_show_artistic_works($activities);
 
@@ -313,7 +320,9 @@ if ($otp_notice !== '') {
 <main class="wrap panel-page">
   <section class="panel panel-wide">
     <h1>ثبت‌نام</h1>
-    <p class="lede">اطلاعات پایه، عکس و ویدیو را وارد کنید. قبل از ایجاد حساب، موبایل را با کد پیامک تأیید کنید.</p>
+    <p class="lede"><?= $otp_enabled
+        ? 'اطلاعات پایه، عکس و ویدیو را وارد کنید. قبل از ایجاد حساب، موبایل را با کد پیامک تأیید کنید.'
+        : 'اطلاعات پایه، عکس و ویدیو را وارد کنید و ثبت‌نام را کامل کنید.' ?></p>
 
     <form class="form" method="post" action="register.php" enctype="multipart/form-data" autocomplete="on" data-talent-profile-toggle data-register-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?>>
       <?php wp_nonce_field('casting_register'); ?>
@@ -364,6 +373,7 @@ if ($otp_notice !== '') {
         </div>
       </div>
 
+      <?php if ($otp_enabled) : ?>
       <div class="otp-verify-block">
         <?php if (!$mobile_verified) : ?>
           <div class="field">
@@ -379,6 +389,7 @@ if ($otp_notice !== '') {
           <input type="hidden" name="otp_code" value="verified">
         <?php endif; ?>
       </div>
+      <?php endif; ?>
 
       <?php casting_render_jalali_birthday_fields($birthdate, true); ?>
       <div class="field">

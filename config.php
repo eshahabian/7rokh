@@ -102,6 +102,13 @@ if (!defined('CASTING_MAIL_FROM_NAME')) {
  * پیامک WebOne — کلید و خط را در config.local.php بگذارید
  * @see https://webone-sms.ir/
  */
+/**
+ * تأیید OTP موبایل در ثبت‌نام — موقت false (برای کار روی پنل).
+ * برای بازگردانی: true کنید. کد UI/منطق پاک نشده است.
+ */
+if (!defined('CASTING_MOBILE_OTP_ENABLED')) {
+    define('CASTING_MOBILE_OTP_ENABLED', false);
+}
 if (!defined('CASTING_SMS_ENABLED')) {
     define('CASTING_SMS_ENABLED', true);
 }
