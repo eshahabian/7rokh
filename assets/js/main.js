@@ -1060,22 +1060,27 @@
         }
       });
 
-      form.querySelectorAll("[data-talent-required-mark]").forEach((mark) => {
-        mark.hidden = hideTalentFields;
-      });
-
-      const nonTalentPhotoHint = form.querySelector("[data-non-talent-photo-hint]");
-      if (nonTalentPhotoHint) {
-        nonTalentPhotoHint.hidden = !hideTalentFields;
+      const nonTalentPhoto = form.querySelector("[data-non-talent-profile-photo]");
+      if (nonTalentPhoto) {
+        nonTalentPhoto.hidden = !hideTalentFields;
+        nonTalentPhoto.querySelectorAll("input, select, textarea, button").forEach((el) => {
+          if (hideTalentFields) {
+            if (el.dataset.talentWasRequired === "1" || el.hasAttribute("data-profile-photo-single")) {
+              el.required = true;
+            }
+            el.disabled = false;
+          } else {
+            if (el.required) {
+              el.dataset.talentWasRequired = "1";
+              el.required = false;
+            }
+            el.disabled = true;
+          }
+        });
       }
 
-      form.querySelectorAll("#profile-photos input[type='file']").forEach((input) => {
-        const isPrimary = input.hasAttribute("data-portrait-primary");
-        if (hideTalentFields) {
-          input.required = isPrimary;
-        } else {
-          input.required = true;
-        }
+      form.querySelectorAll("[data-talent-required-mark]").forEach((mark) => {
+        mark.hidden = hideTalentFields;
       });
 
       form.querySelectorAll("[data-director-profile-field]").forEach((wrap) => {

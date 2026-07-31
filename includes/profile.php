@@ -883,13 +883,21 @@ function casting_user_can_upload_portraits(int $user_id): bool
     return casting_get_user_role($user_id) !== '';
 }
 
+/**
+ * بازیگر (یا «هیچ‌کدام») → سه شات کلوزاپ/مدیوم/لانگ؛ بقیه → یک عکس پروفایل
+ */
+function casting_user_uses_actor_portrait_set(int $user_id): bool
+{
+    return casting_user_has_acting_profile($user_id);
+}
+
 function casting_profile_shows_portraits(array $activities, int $user_id = 0): bool
 {
-    if (!casting_profile_hides_talent_fields($activities, $user_id)) {
-        return true;
+    if ($user_id > 0) {
+        return casting_user_can_upload_portraits($user_id);
     }
 
-    return casting_user_can_upload_portraits($user_id);
+    return casting_activities_need_talent_fields($activities) || $activities !== [];
 }
 
 function casting_user_has_actor_only_profile_meta(int $user_id): bool
@@ -1862,11 +1870,47 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
         </div>
         <div class="field">
           <label for="<?= casting_e($field) ?>"><?= casting_e($label) ?><?= $slot_req !== '' ? ' <span class="req-mark">*</span>' : '' ?></label>
-          <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp"<?= $slot_req ?><?= $slot === 'medium' ? ' data-portrait-primary' : '' ?>>
+          <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp"<?= $slot_req ?>>
           <p class="field-hint"><?= casting_e($hints[$slot] ?? '') ?> · JPG / PNG / WebP — حداکثر ۵ مگابایت</p>
         </div>
       </div>
     <?php endforeach; ?>
+  </div>
+    <?php
+}
+
+/**
+ * یک عکس پروفایل (برای غیر‌بازیگر) — روی اسلات medium ذخیره می‌شود
+ *
+ * @param array<string, array{id:int,url:string,full:string}> $portraits
+ */
+function casting_render_single_profile_photo_field(array $portraits = [], bool $required = false, string $input_id = 'photo_medium'): void
+{
+    $preview = (string) (($portraits['medium']['url'] ?? '') ?: ($portraits['medium']['full'] ?? ''));
+    $dims = casting_portrait_display_dimensions();
+    $req = $required ? ' required' : '';
+    ?>
+  <div class="portrait-upload-grid portrait-upload-grid--single">
+    <div class="portrait-upload-card">
+      <div class="portrait-frame portrait-preview">
+        <?php if ($preview !== '') : ?>
+          <img
+            src="<?= casting_e($preview) ?>"
+            alt="عکس پروفایل"
+            width="<?= (int) $dims['width'] ?>"
+            height="<?= (int) $dims['height'] ?>"
+            decoding="async"
+          >
+        <?php else : ?>
+          <div class="photo-placeholder portrait-frame-empty">بدون عکس</div>
+        <?php endif; ?>
+      </div>
+      <div class="field">
+        <label for="<?= casting_e($input_id) ?>">عکس پروفایل<?= $required ? ' <span class="req-mark">*</span>' : '' ?></label>
+        <input id="<?= casting_e($input_id) ?>" name="photo_medium" type="file" accept="image/jpeg,image/png,image/webp"<?= $req ?> data-profile-photo-single>
+        <p class="field-hint">یک عکس واضح از خودتان · JPG / PNG / WebP — حداکثر ۵ مگابایت</p>
+      </div>
+    </div>
   </div>
     <?php
 }
@@ -2714,7 +2758,7 @@ function casting_profile_complete(array $profile): bool
         return false;
     }
     if (casting_profile_hides_talent_fields($profile['activities'] ?? [])) {
-        return true;
+        return !empty(casting_primary_portrait($profile['portraits'] ?? [])['id']);
     }
 
     return casting_portraits_complete($profile['portraits'] ?? []);

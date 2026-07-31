@@ -20,13 +20,22 @@ function casting_panel_render_section(int $user_id, callable $render, string $se
     }
 }
 
-function casting_render_profile_portraits(array $portraits): void
+function casting_render_profile_portraits(array $portraits, bool $actor_set = true): void
 {
+    if (!function_exists('casting_portrait_slots')) {
+        require_once __DIR__ . '/profile.php';
+    }
     $dims = casting_portrait_display_dimensions();
+    $slots = $actor_set
+        ? casting_portrait_slots()
+        : ['medium' => 'عکس پروفایل'];
     ?>
-    <div class="profile-portraits">
-      <?php foreach (casting_portrait_slots() as $slot => $label) :
+    <div class="profile-portraits<?= $actor_set ? '' : ' profile-portraits--single' ?>">
+      <?php foreach ($slots as $slot => $label) :
           $shot = casting_portrait_shot($portraits, $slot);
+          if ($slot === 'medium' && empty($shot['id']) && function_exists('casting_primary_portrait')) {
+              $shot = casting_primary_portrait($portraits);
+          }
           $thumb = $shot['url'] !== '' ? $shot['url'] : $shot['full'];
           $full = $shot['full'] !== '' ? $shot['full'] : $thumb;
           ?>
@@ -132,18 +141,32 @@ function casting_profile_completion_items(array $profile, int $user_id = 0): arr
     $hints = casting_portrait_slot_hints();
     $hide_talent = casting_profile_hides_talent_fields($profile['activities'] ?? [], $user_id);
     $show_portraits = casting_profile_shows_portraits($profile['activities'] ?? [], $user_id);
+    $actor_photos = $user_id > 0
+        ? casting_user_uses_actor_portrait_set($user_id)
+        : !$hide_talent;
 
-    foreach (casting_portrait_slots() as $slot => $label) {
-        if (!$show_portraits) {
-            break;
+    if ($show_portraits && $actor_photos) {
+        foreach (casting_portrait_slots() as $slot => $label) {
+            $shot = casting_portrait_shot($profile['portraits'] ?? [], $slot);
+            $done = (bool) ($shot['id'] > 0 || $shot['full'] !== '' || $shot['url'] !== '');
+            $items[] = [
+                'label' => 'عکس ' . $label,
+                'done'  => $done,
+                'href'  => 'profile-photo.php',
+                'hint'  => $hints[$slot] ?? '',
+            ];
         }
-        $shot = casting_portrait_shot($profile['portraits'] ?? [], $slot);
+    } elseif ($show_portraits) {
+        $shot = casting_portrait_shot($profile['portraits'] ?? [], 'medium');
+        if (empty($shot['id']) && function_exists('casting_primary_portrait')) {
+            $shot = casting_primary_portrait($profile['portraits'] ?? []);
+        }
         $done = (bool) ($shot['id'] > 0 || $shot['full'] !== '' || $shot['url'] !== '');
         $items[] = [
-            'label' => 'عکس ' . $label,
+            'label' => 'عکس پروفایل',
             'done'  => $done,
             'href'  => 'profile-photo.php',
-            'hint'  => $hints[$slot] ?? '',
+            'hint'  => 'یک عکس واضح از خودتان',
         ];
     }
 
@@ -205,12 +228,22 @@ function casting_render_panel_completion_card(array $profile, int $user_id = 0):
     </div>
   </div>
 
-  <?php if ($show_portraits) : ?>
-  <div class="panel-photo-slots">
-    <?php foreach (casting_portrait_slots() as $slot => $label) :
+  <?php if ($show_portraits) :
+      $actor_photos = casting_user_uses_actor_portrait_set($user_id);
+      $slot_map = $actor_photos
+          ? casting_portrait_slots()
+          : ['medium' => 'عکس پروفایل'];
+      ?>
+  <div class="panel-photo-slots<?= $actor_photos ? '' : ' panel-photo-slots--single' ?>">
+    <?php foreach ($slot_map as $slot => $label) :
         $shot = casting_portrait_shot($profile['portraits'] ?? [], $slot);
+        if ($slot === 'medium' && empty($shot['id'])) {
+            $shot = casting_primary_portrait($profile['portraits'] ?? []);
+        }
         $src = $shot['url'] !== '' ? $shot['url'] : $shot['full'];
-        $hint = casting_portrait_slot_hints()[$slot] ?? '';
+        $hint = $actor_photos
+            ? (casting_portrait_slot_hints()[$slot] ?? '')
+            : 'یک عکس واضح از خودتان';
         ?>
       <a class="panel-photo-slot<?= $src === '' ? ' is-empty' : '' ?>" href="profile-photo.php">
         <?php if ($src !== '') : ?>
@@ -264,6 +297,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     $profile = casting_get_profile($member_id);
     $hide_talent_details = casting_profile_hides_talent_fields($profile['activities'] ?? [], $member_id);
     $show_portraits = casting_profile_shows_portraits($profile['activities'] ?? [], $member_id);
+    $actor_photos = casting_user_uses_actor_portrait_set($member_id);
     $genders = casting_gender_labels();
     $provinces = casting_province_labels();
     $availability_labels = casting_availability_labels();
@@ -307,7 +341,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
       <?php if ($show_director_tools && !empty($director_workspace['viewed'])) : ?>
         <?php casting_render_director_viewed_badge(true, 'director-viewed-badge--profile'); ?>
       <?php endif; ?>
-      <?php casting_render_profile_portraits($profile['portraits']); ?>
+      <?php casting_render_profile_portraits($profile['portraits'], $actor_photos); ?>
     </div>
     <?php endif; ?>
     <div class="profile-info">
@@ -338,7 +372,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
       <?php elseif ($embedded) : ?>
         <div class="cta-row profile-panel-actions">
           <?php if ($show_portraits) : ?>
-          <a class="btn btn-primary" href="profile-photo.php">ویرایش عکس‌ها</a>
+          <a class="btn btn-primary" href="profile-photo.php"><?= $actor_photos ? 'ویرایش عکس‌ها' : 'ویرایش عکس پروفایل' ?></a>
           <?php endif; ?>
           <a class="btn btn-ghost" href="#edit-profile">ویرایش اطلاعات</a>
         </div>
@@ -558,7 +592,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <span class="panel-edit-toggle">باز / بسته</span>
   </summary>
   <div class="panel-edit-body">
-  <p class="lede">نوع فعالیت و اطلاعات پروفایل را می‌توانید تغییر دهید.<?php if (casting_profile_shows_portraits($profile['activities'] ?? [], $user_id)) : ?> برای عکس‌ها به <a href="profile-photo.php">ویرایش تصویر</a> بروید.<?php endif; ?></p>
+  <p class="lede">نوع فعالیت و اطلاعات پروفایل را می‌توانید تغییر دهید.<?php if (casting_profile_shows_portraits($profile['activities'] ?? [], $user_id)) : ?> برای <?= casting_user_uses_actor_portrait_set($user_id) ? 'عکس‌ها' : 'عکس پروفایل' ?> به <a href="profile-photo.php">ویرایش تصویر</a> بروید.<?php endif; ?></p>
 
   <form class="form" method="post" action="edit-profile.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
     <?php wp_nonce_field('casting_profile'); ?>

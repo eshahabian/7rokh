@@ -244,11 +244,11 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $error = $profile_save['error'];
                                 $focus_field = casting_register_focus_for_error($error);
                             } else {
-                                $photo = casting_handle_portrait_uploads($user_id, !$skip_talent_profile, true);
+                                $photo = casting_handle_portrait_uploads($user_id, !$skip_talent_profile, $skip_talent_profile);
                                 if (!$photo['ok']) {
                                     casting_delete_registered_user($user_id);
                                     $error = $photo['error'];
-                                    $focus_field = 'photo_medium';
+                                    $focus_field = $skip_talent_profile ? 'photo_medium_single' : 'photo_closeup';
                                 } else {
                                     $video = casting_handle_video_upload($user_id);
                                     if (!$video['ok']) {
@@ -462,11 +462,16 @@ if ($otp_notice !== '') {
         </div>
       </div>
 
-      <fieldset class="field" id="profile-photos">
-        <legend>عکس‌های پروفایل <span class="req-mark">*</span></legend>
-        <p class="field-hint" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>برای بازیگران هر سه عکس الزامی است: کلوزاپ، مدیوم و لانگ.</p>
-        <p class="field-hint" data-non-talent-photo-hint<?= $hide_talent_profile ? '' : ' hidden' ?>>حداقل عکس مدیوم (نیم‌تنه) الزامی است. بقیه اختیاری‌اند.</p>
-        <?php casting_render_portrait_upload_fields([], !$hide_talent_profile, $hide_talent_profile); ?>
+      <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?> id="profile-photos-actor">
+        <legend>عکس‌های پروفایل <span class="req-mark" data-talent-required-mark>*</span></legend>
+        <p class="field-hint">هر سه عکس الزامی است: کلوزاپ، مدیوم و لانگ.</p>
+        <?php casting_render_portrait_upload_fields([], true); ?>
+      </fieldset>
+
+      <fieldset class="field" data-non-talent-profile-photo<?= $hide_talent_profile ? '' : ' hidden' ?> id="profile-photo-single">
+        <legend>عکس پروفایل <span class="req-mark">*</span></legend>
+        <p class="field-hint">یک عکس واضح از خودتان بارگذاری کنید.</p>
+        <?php casting_render_single_profile_photo_field([], true, 'photo_medium_single'); ?>
       </fieldset>
 
       <div class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
