@@ -507,6 +507,10 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
       require_once __DIR__ . '/user-media.php';
   }
   casting_render_public_media_gallery($member_id);
+  if (!function_exists('casting_user_has_admin_permission')) {
+      require_once __DIR__ . '/admin-access.php';
+  }
+  casting_render_admin_approved_media_section($member_id);
   ?>
 
   <?php if ($profile['bio'] !== '') : ?>

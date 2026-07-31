@@ -312,7 +312,7 @@ function casting_panel_menu_badge_count(): int
     return $badge;
 }
 
-function casting_render_panel_sidebar(string $active): void
+function casting_render_panel_sidebar(string $active, string $page_title = ''): void
 {
     $unread_peers = 0;
     $pending_receipts = 0;
@@ -365,6 +365,14 @@ function casting_render_panel_sidebar(string $active): void
     }
     $can_member_search = $user && casting_user_can_member_search((int) $user->ID);
     $admin_nav = $user ? casting_panel_admin_nav_items((int) $user->ID) : [];
+    $sidebar_page_title = trim($page_title);
+    if ($sidebar_page_title === '') {
+        $sidebar_page_title = $active === 'home' ? 'خانه' : 'پنل کاربری';
+    }
+    // عنوان‌های ترکیبی document title مثل «خانه · بازیگر» → فقط بخش صفحه
+    if (str_contains($sidebar_page_title, ' · ')) {
+        $sidebar_page_title = trim(explode(' · ', $sidebar_page_title, 2)[0]);
+    }
     $sidebar_photo = '';
     $sidebar_name = '';
     $sidebar_primary_activity = '';
@@ -413,9 +421,9 @@ function casting_render_panel_sidebar(string $active): void
       <div class="panel-sidebar-head">
         <div class="panel-drawer-head-row">
           <a
-            class="panel-sidebar-title panel-sidebar-title-desktop panel-sidebar-home<?= $active === 'panel' ? ' is-active' : '' ?>"
-            href="<?= casting_e(casting_url('panel.php')) ?>"
-          >پنل کاربری<?php if ($sidebar_primary_activity !== '') : ?>
+            class="panel-sidebar-title panel-sidebar-title-desktop panel-sidebar-home<?= in_array($active, ['panel', 'home'], true) ? ' is-active' : '' ?>"
+            href="<?= casting_e(casting_url($active === 'home' ? 'home.php' : 'panel.php')) ?>"
+          ><?= casting_e($sidebar_page_title) ?><?php if ($active === 'panel' && $sidebar_primary_activity !== '') : ?>
             <span class="panel-sidebar-activity"> · <?= casting_e($sidebar_primary_activity) ?></span>
           <?php endif; ?><?php if ($panel_premium_until !== null && $user) : ?>
             <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
@@ -483,7 +491,7 @@ function casting_render_panel_start(string $title, string $active, string $body_
     casting_render_head($title, $body_class . ' has-panel-drawer');
     casting_render_header($active === 'home' ? 'home' : 'panel', true, $menu_badge);
     echo '<main class="wrap panel-shell">';
-    casting_render_panel_sidebar($active);
+    casting_render_panel_sidebar($active, $title);
     echo '<div class="panel-content">';
     casting_render_panel_section_back($active);
 }

@@ -74,6 +74,15 @@ casting_render_flash();
               <?= casting_e(casting_user_media_status_label((string) ($item['status'] ?? ''))) ?> ·
               <?= casting_e((string) ($item['created_at'] ?? '')) ?>
             </p>
+            <?php if (trim((string) ($item['caption'] ?? '')) !== '') : ?>
+              <p><?= nl2br(casting_e((string) $item['caption'])) ?></p>
+            <?php endif; ?>
+            <?php
+            $approver_line = casting_user_media_approver_line($item);
+            if ($approver_line !== '') :
+                ?>
+              <p class="meta profile-media-approver"><?= casting_e($approver_line) ?></p>
+            <?php endif; ?>
             <?php if (($item['status'] ?? '') === 'pending') : ?>
               <div class="cta-row">
                 <form method="post" action="admin-media.php">

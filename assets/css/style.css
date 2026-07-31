@@ -2674,7 +2674,7 @@ legend .req-mark {
 .panel-shell {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
   padding: 2rem 0 4rem;
@@ -2911,14 +2911,18 @@ body.panel-menu-open .panel-menu-toggle-icon span:nth-child(3) {
 .panel-sidebar-title {
   margin: 0 0 0.35rem;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  line-height: 1.45;
   color: var(--accent-strong);
+  white-space: nowrap;
 }
 
 a.panel-sidebar-title {
   display: inline-flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 0.45rem;
+  max-width: 100%;
   text-decoration: none;
   color: var(--accent-strong);
 }
@@ -3318,11 +3322,21 @@ a.panel-sidebar-title.is-active {
 
 .ig-profile-cell {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.ig-profile-cell > a {
+  position: relative;
   display: block;
   aspect-ratio: 1;
   overflow: hidden;
   background: #111;
-  border-radius: 4px;
 }
 
 .ig-profile-cell img,
@@ -3331,6 +3345,46 @@ a.panel-sidebar-title.is-active {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.ig-profile-cell-meta {
+  padding: 0.45rem 0.55rem 0.55rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.ig-profile-cell-meta p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.profile-media-caption {
+  padding: 0.45rem 0.55rem 0.6rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.profile-media-caption p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.profile-media-approver,
+.profile-media-caption-text {
+  margin: 0.2rem 0;
+}
+
+.profile-media-approver {
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+}
+
+.gallery-edit-form {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
 }
 
 .ig-profile-cell-badge {

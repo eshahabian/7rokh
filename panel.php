@@ -125,18 +125,34 @@ casting_render_flash();
               continue;
           }
           $is_video = ($item['media_type'] ?? '') === 'video';
+          $caption = trim((string) ($item['caption'] ?? ''));
+          $approver = casting_user_media_approver_line($item);
           ?>
-        <a class="ig-profile-cell<?= $is_video ? ' is-video' : '' ?>" href="<?= casting_e($url) ?>" target="_blank" rel="noopener">
-          <?php if ($is_video) : ?>
-            <video src="<?= casting_e($url) ?>" muted preload="metadata" playsinline<?= $thumb !== '' && $thumb !== $url ? ' poster="' . casting_e($thumb) . '"' : '' ?>></video>
-            <span class="ig-profile-cell-badge" aria-hidden="true">▶</span>
-          <?php else : ?>
-            <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
+        <figure class="ig-profile-cell<?= $is_video ? ' is-video' : '' ?>">
+          <a href="<?= casting_e($url) ?>" target="_blank" rel="noopener">
+            <?php if ($is_video) : ?>
+              <video src="<?= casting_e($url) ?>" muted preload="metadata" playsinline<?= $thumb !== '' && $thumb !== $url ? ' poster="' . casting_e($thumb) . '"' : '' ?>></video>
+              <span class="ig-profile-cell-badge" aria-hidden="true">▶</span>
+            <?php else : ?>
+              <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
+            <?php endif; ?>
+          </a>
+          <?php if ($caption !== '' || $approver !== '') : ?>
+            <figcaption class="ig-profile-cell-meta">
+              <?php if ($caption !== '') : ?>
+                <p><?= nl2br(casting_e($caption)) ?></p>
+              <?php endif; ?>
+              <?php if ($approver !== '') : ?>
+                <p class="meta profile-media-approver"><?= casting_e($approver) ?></p>
+              <?php endif; ?>
+            </figcaption>
           <?php endif; ?>
-        </a>
+        </figure>
       <?php endforeach; ?>
     </div>
   <?php endif; ?>
+
+  <?php casting_render_admin_approved_media_section($user_id); ?>
 </section>
 <?php
 casting_render_panel_end();
