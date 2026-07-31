@@ -50,6 +50,41 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
     <p class="panel-home-greeting-sub"><?= casting_brandify($welcome['subline']) ?></p>
   </header>
 
+  <?php
+  $promo_slides = [
+      ['src' => casting_asset('images/promo-slide-1.png'), 'alt' => 'صحنه فیلم‌برداری و صندلی کارگردان'],
+      ['src' => casting_asset('images/promo-slide-2.png'), 'alt' => 'دوربین سینمایی و تجهیزات تولید'],
+      ['src' => casting_asset('images/promo-slide-3.png'), 'alt' => 'سالن سینما و پرده نمایش'],
+      ['src' => casting_asset('images/promo-slide-4.png'), 'alt' => 'دوربین سینمایی روی سه‌پایه در استودیو'],
+      ['src' => casting_asset('images/promo-slide-5.png'), 'alt' => 'میز گریم و آینه پشت صحنه'],
+      ['src' => casting_asset('images/promo-slide-6.png'), 'alt' => 'میکروفون بوم و صحنه فیلم‌برداری'],
+  ];
+  ?>
+  <section class="panel-promo-banner" aria-label="محل نمایش تبلیغات اعضای ویژه" data-promo-slider>
+    <div class="panel-promo-slides">
+      <?php foreach ($promo_slides as $i => $slide) : ?>
+        <figure class="panel-promo-slide<?= $i === 0 ? ' is-active' : '' ?>">
+          <img src="<?= casting_e($slide['src']) ?>" alt="<?= casting_e($slide['alt']) ?>" width="1280" height="720" decoding="<?= $i === 0 ? 'sync' : 'async' ?>">
+        </figure>
+      <?php endforeach; ?>
+    </div>
+    <div class="panel-promo-banner-copy">
+      <h1>محل نمایش تبلیغات اعضای ویژه</h1>
+      <p>اینجا بهترین مکان برای دیده شدن استعداد شماست</p>
+    </div>
+    <div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدهای تبلیغات">
+      <?php foreach ($promo_slides as $i => $slide) : ?>
+        <button
+          type="button"
+          class="<?= $i === 0 ? 'is-active' : '' ?>"
+          aria-label="اسلاید <?= (int) ($i + 1) ?>"
+          aria-selected="<?= $i === 0 ? 'true' : 'false' ?>"
+          data-promo-dot="<?= (int) $i ?>"
+        ></button>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
   <?php casting_render_panel_home_quick_filters($can_search); ?>
 
   <section class="panel-stat-grid" aria-label="خلاصه وضعیت">
@@ -127,41 +162,6 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
     <?php else : ?>
       <?php casting_render_panel_home_member_row($newest_members, false, 'panel-newest-more', 4, $user_id); ?>
     <?php endif; ?>
-  </section>
-
-  <?php
-  $promo_slides = [
-      ['src' => casting_asset('images/promo-slide-1.png'), 'alt' => 'صحنه فیلم‌برداری و صندلی کارگردان'],
-      ['src' => casting_asset('images/promo-slide-2.png'), 'alt' => 'دوربین سینمایی و تجهیزات تولید'],
-      ['src' => casting_asset('images/promo-slide-3.png'), 'alt' => 'سالن سینما و پرده نمایش'],
-      ['src' => casting_asset('images/promo-slide-4.png'), 'alt' => 'دوربین سینمایی روی سه‌پایه در استودیو'],
-      ['src' => casting_asset('images/promo-slide-5.png'), 'alt' => 'میز گریم و آینه پشت صحنه'],
-      ['src' => casting_asset('images/promo-slide-6.png'), 'alt' => 'میکروفون بوم و صحنه فیلم‌برداری'],
-  ];
-  ?>
-  <section class="panel-promo-banner" aria-label="محل نمایش تبلیغات اعضای ویژه" data-promo-slider>
-    <div class="panel-promo-slides">
-      <?php foreach ($promo_slides as $i => $slide) : ?>
-        <figure class="panel-promo-slide<?= $i === 0 ? ' is-active' : '' ?>">
-          <img src="<?= casting_e($slide['src']) ?>" alt="<?= casting_e($slide['alt']) ?>" width="1280" height="720" decoding="<?= $i === 0 ? 'sync' : 'async' ?>">
-        </figure>
-      <?php endforeach; ?>
-    </div>
-    <div class="panel-promo-banner-copy">
-      <h1>محل نمایش تبلیغات اعضای ویژه</h1>
-      <p>اینجا بهترین مکان برای دیده شدن استعداد شماست</p>
-    </div>
-    <div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدهای تبلیغات">
-      <?php foreach ($promo_slides as $i => $slide) : ?>
-        <button
-          type="button"
-          class="<?= $i === 0 ? 'is-active' : '' ?>"
-          aria-label="اسلاید <?= (int) ($i + 1) ?>"
-          aria-selected="<?= $i === 0 ? 'true' : 'false' ?>"
-          data-promo-dot="<?= (int) $i ?>"
-        ></button>
-      <?php endforeach; ?>
-    </div>
   </section>
 
   <?php if (!$complete) : ?>
