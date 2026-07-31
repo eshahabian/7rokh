@@ -112,8 +112,6 @@ casting_render_flash();
       <?php if ($can_gallery) : ?>
         <a class="btn btn-primary" href="<?= casting_e(casting_url('my-gallery.php')) ?>">اولین پست را اضافه کنید</a>
         <p class="meta">پس از تأیید مدیر، پست در پروفایل دیده می‌شود.</p>
-      <?php else : ?>
-        <p class="meta">گالری پست برای بازیگران فعال است.</p>
       <?php endif; ?>
     </div>
   <?php else : ?>

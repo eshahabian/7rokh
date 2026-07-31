@@ -73,6 +73,9 @@ casting_render_flash();
               <?= ($is_video ? 'ویدیو' : 'عکس') ?> ·
               <?= casting_e(casting_user_media_status_label((string) ($item['status'] ?? ''))) ?> ·
               <?= casting_e((string) ($item['created_at'] ?? '')) ?>
+              <?php if (($item['status'] ?? '') === 'pending' && !empty($item['is_resubmit'])) : ?>
+                · <span class="chip">ویرایش مجدد</span>
+              <?php endif; ?>
             </p>
             <?php if (trim((string) ($item['caption'] ?? '')) !== '') : ?>
               <p><?= nl2br(casting_e((string) $item['caption'])) ?></p>

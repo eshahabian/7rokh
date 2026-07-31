@@ -23,6 +23,7 @@ function casting_user_media_install(): void
         media_type VARCHAR(16) NOT NULL DEFAULT 'photo',
         caption TEXT NULL,
         status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        is_resubmit TINYINT(1) NOT NULL DEFAULT 0,
         sort_order INT NOT NULL DEFAULT 0,
         reject_reason TEXT NULL,
         created_at DATETIME NOT NULL,
@@ -38,7 +39,7 @@ function casting_user_media_install(): void
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
     casting_user_media_ensure_columns();
-    update_option('casting_user_media_db_version', '2');
+    update_option('casting_user_media_db_version', '3');
 }
 
 /**
@@ -66,16 +67,20 @@ function casting_user_media_ensure_columns(): void
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN reviewed_by BIGINT UNSIGNED NOT NULL DEFAULT 0");
     }
+    if (!in_array('is_resubmit', $columns, true)) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN is_resubmit TINYINT(1) NOT NULL DEFAULT 0 AFTER status");
+    }
 }
 
 function casting_user_media_ensure_table(): void
 {
     $ver = (string) get_option('casting_user_media_db_version', '');
-    if ($ver !== '2') {
+    if ($ver !== '3') {
         casting_user_media_install();
         return;
     }
-    // حتی اگر نسخه ۲ باشد، ستون کپشن را چک کن (نصب ناقص قبلی)
+    // حتی اگر نسخه ۳ باشد، ستون‌ها را چک کن (نصب ناقص قبلی)
     casting_user_media_ensure_columns();
 }
 
@@ -84,11 +89,25 @@ function casting_user_can_manage_gallery(int $user_id): bool
     if ($user_id <= 0) {
         return false;
     }
-    if (casting_get_user_role($user_id) !== 'talent') {
-        return false;
+
+    // همه اعضای پورتال (بازیگر، کارگردان، مدیر و …)
+    if (casting_get_user_role($user_id) !== '') {
+        return true;
+    }
+    if (!function_exists('casting_user_is_super_admin')) {
+        $admin = __DIR__ . '/admin-access.php';
+        if (is_file($admin)) {
+            require_once $admin;
+        }
+    }
+    if (function_exists('casting_user_is_super_admin') && casting_user_is_super_admin($user_id)) {
+        return true;
+    }
+    if (function_exists('casting_user_is_portal_staff') && casting_user_is_portal_staff($user_id)) {
+        return true;
     }
 
-    return casting_user_uses_actor_portrait_set($user_id);
+    return false;
 }
 
 function casting_user_media_status_label(string $status): string
@@ -202,9 +221,10 @@ function casting_admin_list_media(string $status = 'pending', int $limit = 80): 
             $limit
         ), ARRAY_A);
     } else {
+        // جدیدترین‌ها اول — تا ویرایش‌های مجدد هم دیده شوند
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$table} WHERE status = %s ORDER BY id ASC LIMIT %d",
+            "SELECT * FROM {$table} WHERE status = %s ORDER BY id DESC LIMIT %d",
             $status,
             $limit
         ), ARRAY_A);
@@ -267,7 +287,7 @@ function casting_user_media_approver_line(array $row): string
 function casting_user_media_submit_upload(int $user_id, string $field, string $media_type, string $caption = ''): array
 {
     if (!casting_user_can_manage_gallery($user_id)) {
-        return ['ok' => false, 'error' => 'گالری فقط برای بازیگران فعال است.'];
+        return ['ok' => false, 'error' => 'برای افزودن پست باید عضو پورتال باشید.'];
     }
     casting_user_media_ensure_table();
     if (!in_array($media_type, ['photo', 'video'], true)) {
@@ -363,7 +383,7 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
 function casting_user_media_edit_own(int $user_id, int $media_id, string $caption, string $file_field = ''): array
 {
     if (!casting_user_can_manage_gallery($user_id)) {
-        return ['ok' => false, 'error' => 'گالری فقط برای بازیگران فعال است.'];
+        return ['ok' => false, 'error' => 'برای افزودن پست باید عضو پورتال باشید.'];
     }
     casting_user_media_ensure_table();
     global $wpdb;
@@ -411,28 +431,71 @@ function casting_user_media_edit_own(int $user_id, int $media_id, string $captio
         $new_attachment = (int) $uploaded;
     }
 
-    $update = [
-        'caption'       => casting_user_media_sanitize_caption($caption),
-        'status'        => 'pending',
-        'reviewed_at'   => null,
-        'reviewed_by'   => 0,
-        'reject_reason' => null,
-    ];
-    $formats = ['%s', '%s', '%s', '%d', '%s'];
+    $caption_clean = casting_user_media_sanitize_caption($caption);
+
     if ($new_attachment > 0) {
-        $update['attachment_id'] = $new_attachment;
-        $formats[] = '%d';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $ok = $wpdb->query($wpdb->prepare(
+            "UPDATE {$table}
+             SET caption = %s,
+                 attachment_id = %d,
+                 status = 'pending',
+                 is_resubmit = 1,
+                 reviewed_at = NULL,
+                 reviewed_by = 0,
+                 reject_reason = NULL
+             WHERE id = %d AND user_id = %d",
+            $caption_clean,
+            $new_attachment,
+            $media_id,
+            $user_id
+        ));
+    } else {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $ok = $wpdb->query($wpdb->prepare(
+            "UPDATE {$table}
+             SET caption = %s,
+                 status = 'pending',
+                 is_resubmit = 1,
+                 reviewed_at = NULL,
+                 reviewed_by = 0,
+                 reject_reason = NULL
+             WHERE id = %d AND user_id = %d",
+            $caption_clean,
+            $media_id,
+            $user_id
+        ));
     }
 
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $ok = $wpdb->update($table, $update, ['id' => $media_id], $formats, ['%d']);
     if ($ok === false) {
         if ($new_attachment > 0) {
             wp_delete_attachment($new_attachment, true);
         }
+        $detail = trim((string) $wpdb->last_error);
+        $msg = 'ذخیره ویرایش ناموفق بود.';
+        if ($detail !== '') {
+            $msg .= ' (' . $detail . ')';
+        }
 
-        return ['ok' => false, 'error' => 'ذخیره ویرایش ناموفق بود.'];
+        return ['ok' => false, 'error' => $msg];
     }
+
+    // اطمینان: بعد از ویرایش حتماً pending باشد
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $status_now = (string) $wpdb->get_var($wpdb->prepare(
+        "SELECT status FROM {$table} WHERE id = %d AND user_id = %d",
+        $media_id,
+        $user_id
+    ));
+    if ($status_now !== 'pending') {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$table} SET status = 'pending', is_resubmit = 1, reviewed_at = NULL, reviewed_by = 0 WHERE id = %d AND user_id = %d",
+            $media_id,
+            $user_id
+        ));
+    }
+
     if ($new_attachment > 0 && $attachment_id > 0 && $attachment_id !== $new_attachment) {
         wp_delete_attachment($attachment_id, true);
     }
@@ -481,12 +544,18 @@ function casting_approve_user_media(int $media_id, int $admin_id): array
         return ['ok' => false, 'error' => 'مورد پیدا نشد.'];
     }
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $wpdb->update($table, [
-        'status'      => 'approved',
-        'reviewed_at' => current_time('mysql'),
-        'reviewed_by' => $admin_id,
-        'reject_reason' => null,
-    ], ['id' => $media_id], ['%s', '%s', '%d', '%s'], ['%d']);
+    $wpdb->query($wpdb->prepare(
+        "UPDATE {$table}
+         SET status = 'approved',
+             is_resubmit = 0,
+             reviewed_at = %s,
+             reviewed_by = %d,
+             reject_reason = NULL
+         WHERE id = %d",
+        current_time('mysql'),
+        $admin_id,
+        $media_id
+    ));
 
     return ['ok' => true, 'error' => ''];
 }
@@ -505,12 +574,19 @@ function casting_reject_user_media(int $media_id, int $admin_id, string $reason 
         return ['ok' => false, 'error' => 'مورد پیدا نشد.'];
     }
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $wpdb->update($table, [
-        'status'        => 'rejected',
-        'reviewed_at'   => current_time('mysql'),
-        'reviewed_by'   => $admin_id,
-        'reject_reason' => sanitize_textarea_field($reason),
-    ], ['id' => $media_id], ['%s', '%s', '%d', '%s'], ['%d']);
+    $wpdb->query($wpdb->prepare(
+        "UPDATE {$table}
+         SET status = 'rejected',
+             is_resubmit = 0,
+             reviewed_at = %s,
+             reviewed_by = %d,
+             reject_reason = %s
+         WHERE id = %d",
+        current_time('mysql'),
+        $admin_id,
+        sanitize_textarea_field($reason),
+        $media_id
+    ));
 
     return ['ok' => true, 'error' => ''];
 }
