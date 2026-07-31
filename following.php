@@ -14,6 +14,11 @@ $ids = $tab === 'followers'
     ? casting_list_follower_ids($user_id, 100)
     : casting_list_following_ids($user_id, 100);
 
+$new_followers = casting_new_followers_count($user_id);
+if ($tab === 'followers') {
+    casting_mark_followers_seen($user_id);
+}
+
 casting_render_panel_start($tab === 'followers' ? 'دنبال‌کننده‌ها' : 'دنبال‌شده‌ها', 'following');
 casting_render_flash();
 ?>
@@ -21,7 +26,12 @@ casting_render_flash();
   <?php casting_render_panel_heading($tab === 'followers' ? 'دنبال‌کننده‌ها' : 'دنبال‌شده‌ها'); ?>
   <div class="admin-tabs" role="tablist">
     <a class="admin-tab<?= $tab === 'following' ? ' is-active' : '' ?>" href="following.php?tab=following">دنبال‌شده‌ها (<?= (int) casting_following_count($user_id) ?>)</a>
-    <a class="admin-tab<?= $tab === 'followers' ? ' is-active' : '' ?>" href="following.php?tab=followers">دنبال‌کننده‌ها (<?= (int) casting_followers_count($user_id) ?>)</a>
+    <a class="admin-tab<?= $tab === 'followers' ? ' is-active' : '' ?>" href="following.php?tab=followers">
+      دنبال‌کننده‌ها (<?= (int) casting_followers_count($user_id) ?>)
+      <?php if ($new_followers > 0 && $tab !== 'followers') : ?>
+        <span class="nav-badge"><?= (int) $new_followers ?></span>
+      <?php endif; ?>
+    </a>
   </div>
 
   <?php if ($ids === []) : ?>

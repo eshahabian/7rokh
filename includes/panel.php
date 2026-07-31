@@ -1809,7 +1809,7 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
       </button>
       <div class="member-card-body">
         <h3><button type="button" class="link-button member-card-name" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button></h3>
-        <p class="meta">
+        <p class="meta member-card-meta">
           <?= casting_e(casting_user_public_role_label($id)) ?>
           <?php if ($premium) : ?><span class="chip chip-premium">ویژه</span><?php endif; ?>
           <?php if ($director_score > 0) : ?>
@@ -1817,28 +1817,34 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
           <?php endif; ?>
           <?php if ($profile['city'] !== '') : ?> · <?= casting_e($profile['city']) ?><?php endif; ?>
         </p>
-        <?php if ($viewer_id !== $id && casting_can_user_open_dm($viewer_id, $id)['ok']) : ?>
-          <a class="btn btn-ghost btn-sm" href="chat.php?with=<?= $id ?>">پیام</a>
-        <?php endif; ?>
         <?php
+        $can_dm = $viewer_id !== $id && casting_can_user_open_dm($viewer_id, $id)['ok'];
+        $can_follow_btn = false;
+        $is_following = false;
         if ($viewer_id > 0 && $viewer_id !== $id) {
             if (!function_exists('casting_follow_can_target')) {
                 require_once __DIR__ . '/follows.php';
             }
-            if (casting_follow_can_target($viewer_id, $id)) {
-                $is_following = casting_user_is_following($viewer_id, $id);
-                ?>
-          <button
-            type="button"
-            class="btn btn-sm<?= $is_following ? ' btn-primary is-following' : ' btn-ghost' ?>"
-            data-follow-toggle="<?= $id ?>"
-            data-following="<?= $is_following ? '1' : '0' ?>"
-            aria-pressed="<?= $is_following ? 'true' : 'false' ?>"
-          ><?= $is_following ? 'دنبال می‌کنید' : 'دنبال کردن' ?></button>
-                <?php
-            }
+            $can_follow_btn = casting_follow_can_target($viewer_id, $id);
+            $is_following = $can_follow_btn && casting_user_is_following($viewer_id, $id);
         }
-        ?>
+        if ($can_dm || $can_follow_btn) :
+            ?>
+        <div class="member-card-actions">
+          <?php if ($can_follow_btn) : ?>
+            <button
+              type="button"
+              class="btn btn-sm<?= $is_following ? ' btn-primary is-following' : ' btn-ghost' ?>"
+              data-follow-toggle="<?= $id ?>"
+              data-following="<?= $is_following ? '1' : '0' ?>"
+              aria-pressed="<?= $is_following ? 'true' : 'false' ?>"
+            ><?= $is_following ? 'دنبال می‌کنید' : 'دنبال کردن' ?></button>
+          <?php endif; ?>
+          <?php if ($can_dm) : ?>
+            <a class="btn btn-ghost btn-sm member-card-msg" href="chat.php?with=<?= $id ?>" title="پیام" aria-label="پیام به <?= casting_e($member->display_name) ?>">پیام</a>
+          <?php endif; ?>
+        </div>
+        <?php endif; ?>
       </div>
     </article>
     <?php

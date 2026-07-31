@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=108">
+  <link rel="stylesheet" href="<?= $css ?>?v=109">
   <script>
     (function () {
       try {
@@ -78,6 +78,13 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
 {
     $user = casting_current_user();
     $role = $user ? casting_get_user_role((int) $user->ID) : '';
+    $new_followers = 0;
+    if ($user && $role !== '') {
+        if (!function_exists('casting_new_followers_count')) {
+            require_once __DIR__ . '/follows.php';
+        }
+        $new_followers = casting_new_followers_count((int) $user->ID);
+    }
     ?>
   <header class="site-header<?= $panel_menu ? ' site-header--panel' : '' ?>">
     <div class="site-header-bar">
@@ -90,7 +97,12 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت <?= casting_brand_html() ?></a>
       <?php if ($role !== '') : ?>
         <a href="home.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
-        <a href="panel.php" class="<?= $active === 'panel' ? 'is-active' : '' ?>">پنل کاربری</a>
+        <a href="<?= casting_e(casting_url($new_followers > 0 ? 'following.php?tab=followers' : 'panel.php')) ?>" class="<?= $active === 'panel' || $active === 'following' ? 'is-active' : '' ?><?= $new_followers > 0 ? ' has-notify' : '' ?>">
+          پنل کاربری
+          <?php if ($new_followers > 0) : ?>
+            <span class="nav-badge" aria-label="<?= (int) $new_followers ?> دنبال‌کننده جدید"><?= (int) $new_followers ?></span>
+          <?php endif; ?>
+        </a>
         <a href="logout.php">خروج</a>
       <?php else : ?>
         <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>

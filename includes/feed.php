@@ -195,22 +195,37 @@ function casting_render_feed_media_card(array $item, int $viewer_id): void
 function casting_render_home_following_feed_section(int $user_id): void
 {
     $posts = casting_following_media_feed($user_id, 10);
-    $recent_followers = casting_recent_followers_for($user_id, 3);
+    $new_count = casting_new_followers_count($user_id);
+    $recent_followers = $new_count > 0
+        ? casting_new_followers_list($user_id, 5)
+        : casting_recent_followers_for($user_id, 3);
+    $has_new = $new_count > 0;
     ?>
-  <section class="panel-ads-section home-feed-section" aria-labelledby="home-following-feed-title">
+  <section class="panel-ads-section home-feed-section<?= $has_new ? ' home-feed-section--notify' : '' ?>" aria-labelledby="home-following-feed-title">
     <header class="panel-ads-head">
-      <h2 id="home-following-feed-title">از دنبال‌شده‌ها</h2>
+      <h2 id="home-following-feed-title">
+        <?php if ($has_new) : ?>
+          <a class="home-feed-notify-link" href="<?= casting_e(casting_url('following.php?tab=followers')) ?>">از دنبال‌شده‌ها</a>
+          <span class="nav-badge" aria-label="<?= (int) $new_count ?> دنبال‌کننده جدید"><?= (int) $new_count ?></span>
+        <?php else : ?>
+          از دنبال‌شده‌ها
+        <?php endif; ?>
+      </h2>
       <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('following.php?tab=following')) ?>">دنبال‌شده‌ها</a>
     </header>
     <?php if ($recent_followers !== []) : ?>
-      <p class="home-feed-followers-hint meta">
-        دنبال‌کننده‌های تازه:
+      <p class="home-feed-followers-hint meta<?= $has_new ? ' is-new' : '' ?>">
+        <?php if ($has_new) : ?>
+          <a href="<?= casting_e(casting_url('following.php?tab=followers')) ?>">دنبال‌کننده‌های جدید:</a>
+        <?php else : ?>
+          دنبال‌کننده‌های تازه:
+        <?php endif; ?>
         <?php
         $names = [];
         foreach ($recent_followers as $f) {
-            $names[] = '<button type="button" class="link-button" data-member-preview="' . (int) $f['follower_id'] . '">' . casting_e($f['name']) . '</button>';
+            $names[] = '<a href="' . casting_e(casting_url('following.php?tab=followers')) . '">' . casting_e($f['name']) . '</a>';
         }
-        echo implode(' · ', $names);
+        echo ' ' . implode(' · ', $names);
         ?>
       </p>
     <?php endif; ?>

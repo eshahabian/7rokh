@@ -114,6 +114,97 @@ function casting_follow_toggle(int $follower_id, int $followed_id): array
     ];
 }
 
+function casting_followers_seen_meta_key(): string
+{
+    return 'casting_followers_seen_at';
+}
+
+function casting_followers_seen_at(int $user_id): string
+{
+    if ($user_id <= 0) {
+        return '';
+    }
+
+    return trim((string) get_user_meta($user_id, casting_followers_seen_meta_key(), true));
+}
+
+function casting_mark_followers_seen(int $user_id): void
+{
+    if ($user_id <= 0) {
+        return;
+    }
+    update_user_meta($user_id, casting_followers_seen_meta_key(), current_time('mysql'));
+}
+
+/** تعداد دنبال‌کننده‌های جدید از آخرین بازدید صفحهٔ دنبال‌کننده‌ها */
+function casting_new_followers_count(int $user_id): int
+{
+    if ($user_id <= 0) {
+        return 0;
+    }
+    casting_follows_ensure_table();
+    global $wpdb;
+    $table = casting_follows_table();
+    $seen = casting_followers_seen_at($user_id);
+    if ($seen === '') {
+        // هنوز صفحه‌ای ندیده — فقط فالوهای ۴۸ ساعت اخیر را جدید حساب کن
+        $since = gmdate('Y-m-d H:i:s', current_time('timestamp') - 2 * DAY_IN_SECONDS);
+    } else {
+        $since = $seen;
+    }
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    return (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$table} WHERE followed_id = %d AND created_at > %s",
+        $user_id,
+        $since
+    ));
+}
+
+/**
+ * @return list<array{follower_id:int,created_at:string,name:string}>
+ */
+function casting_new_followers_list(int $user_id, int $limit = 5): array
+{
+    if ($user_id <= 0) {
+        return [];
+    }
+    casting_follows_ensure_table();
+    global $wpdb;
+    $table = casting_follows_table();
+    $limit = max(1, min(20, $limit));
+    $seen = casting_followers_seen_at($user_id);
+    if ($seen === '') {
+        $since = gmdate('Y-m-d H:i:s', current_time('timestamp') - 2 * DAY_IN_SECONDS);
+    } else {
+        $since = $seen;
+    }
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $rows = $wpdb->get_results($wpdb->prepare(
+        "SELECT follower_id, created_at FROM {$table} WHERE followed_id = %d AND created_at > %s ORDER BY id DESC LIMIT %d",
+        $user_id,
+        $since,
+        $limit
+    ), ARRAY_A);
+    if (!is_array($rows)) {
+        return [];
+    }
+    $out = [];
+    foreach ($rows as $row) {
+        $fid = (int) ($row['follower_id'] ?? 0);
+        $user = $fid > 0 ? get_user_by('id', $fid) : null;
+        if (!$user) {
+            continue;
+        }
+        $out[] = [
+            'follower_id' => $fid,
+            'created_at'  => (string) ($row['created_at'] ?? ''),
+            'name'        => (string) $user->display_name,
+        ];
+    }
+
+    return $out;
+}
+
 function casting_followers_count(int $user_id): int
 {
     if ($user_id <= 0) {
