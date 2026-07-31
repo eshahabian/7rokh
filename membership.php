@@ -33,13 +33,14 @@ $tiles = [
     ],
 ];
 
-if (!$is_director) {
-    $tiles[] = [
-        'title' => 'انصراف از عضویت',
-        'desc'  => 'درخواست لغو حساب کاربری',
-        'href'  => 'cancel-membership.php',
-    ];
-}
+// موقتاً مخفی — صفحه cancel-membership.php حفظ شده است
+// if (!$is_director) {
+//     $tiles[] = [
+//         'title' => 'انصراف از عضویت',
+//         'desc'  => 'درخواست لغو حساب کاربری',
+//         'href'  => 'cancel-membership.php',
+//     ];
+// }
 
 casting_render_panel_start('عضویت و اعتبار', 'membership');
 casting_render_flash();

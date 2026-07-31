@@ -206,6 +206,10 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
         if ($item['key'] === 'briefs' && (!$user || casting_get_user_role((int) $user->ID) !== 'talent')) {
             continue;
         }
+        // موقتاً مخفی — صفحه cancel-membership.php حفظ شده است
+        if ($item['key'] === 'cancel') {
+            continue;
+        }
         if ($user && casting_user_is_director_role((int) $user->ID)
             && in_array($item['key'], casting_panel_nav_keys_hidden_for_director(), true)) {
             if ($item['key'] === 'photo' && casting_user_can_upload_portraits((int) $user->ID)) {
