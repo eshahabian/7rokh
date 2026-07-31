@@ -3312,6 +3312,7 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
     "avatar main"
     "actions actions";
   gap: 1.5rem 2rem;
+  row-gap: 1.75rem;
   align-items: start;
 }
 
@@ -3419,8 +3420,11 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   justify-content: flex-start;
   gap: 0.45rem;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 0.15rem;
+  padding: 0.5rem 0.1rem 0.35rem;
+  margin-top: 0.15rem;
+  box-sizing: border-box;
 }
 
 .ig-profile-actions .btn {
@@ -3428,6 +3432,10 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   padding: 0.45rem 0.85rem;
   font-size: 0.86rem;
   white-space: nowrap;
+}
+
+.ig-profile-actions .btn:hover {
+  transform: translateY(-1px);
 }
 
 .ig-profile-action-badge {
