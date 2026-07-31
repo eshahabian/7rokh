@@ -29,17 +29,19 @@ function casting_user_media_install(): void
         created_at DATETIME NOT NULL,
         reviewed_at DATETIME NULL,
         reviewed_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        deleted_at DATETIME NULL,
         PRIMARY KEY  (id),
         KEY user_id (user_id),
         KEY status (status),
         KEY user_status (user_id, status),
         KEY media_type (media_type),
-        KEY reviewed_by (reviewed_by)
+        KEY reviewed_by (reviewed_by),
+        KEY deleted_at (deleted_at)
     ) {$charset};";
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
     casting_user_media_ensure_columns();
-    update_option('casting_user_media_db_version', '3');
+    update_option('casting_user_media_db_version', '4');
 }
 
 /**
@@ -71,17 +73,21 @@ function casting_user_media_ensure_columns(): void
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN is_resubmit TINYINT(1) NOT NULL DEFAULT 0 AFTER status");
     }
+    if (!in_array('deleted_at', $columns, true)) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN deleted_at DATETIME NULL AFTER reviewed_by");
+    }
 }
 
 function casting_user_media_ensure_table(): void
 {
     $ver = (string) get_option('casting_user_media_db_version', '');
-    if ($ver !== '3') {
+    if ($ver !== '4') {
         casting_user_media_install();
-        return;
+    } else {
+        casting_user_media_ensure_columns();
     }
-    // حتی اگر نسخه ۳ باشد، ستون‌ها را چک کن (نصب ناقص قبلی)
-    casting_user_media_ensure_columns();
+    casting_user_media_purge_expired_deleted();
 }
 
 function casting_user_can_manage_gallery(int $user_id): bool
@@ -118,8 +124,53 @@ function casting_user_media_status_label(string $status): string
     if ($status === 'rejected') {
         return 'رد شده';
     }
+    if ($status === 'deleted') {
+        return 'حذف‌شده توسط کاربر';
+    }
 
     return 'در انتظار تأیید';
+}
+
+/**
+ * پاکسازی پست‌هایی که کاربر حذف کرده و بیش از ۳۰ روز از حذف گذشته
+ */
+function casting_user_media_purge_expired_deleted(): void
+{
+    global $wpdb;
+    $table = casting_user_media_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists !== $table) {
+        return;
+    }
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $columns = $wpdb->get_col("DESCRIBE `{$table}`", 0);
+    if (!is_array($columns) || !in_array('deleted_at', $columns, true)) {
+        return;
+    }
+    $cutoff = gmdate('Y-m-d H:i:s', current_time('timestamp') - 30 * DAY_IN_SECONDS);
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $rows = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, attachment_id FROM {$table}
+         WHERE status = 'deleted' AND deleted_at IS NOT NULL AND deleted_at < %s
+         LIMIT 50",
+        $cutoff
+    ), ARRAY_A);
+    if (!is_array($rows) || $rows === []) {
+        return;
+    }
+    foreach ($rows as $row) {
+        $id = (int) ($row['id'] ?? 0);
+        $attachment_id = (int) ($row['attachment_id'] ?? 0);
+        if ($id <= 0) {
+            continue;
+        }
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->delete($table, ['id' => $id], ['%d']);
+        if ($attachment_id > 0) {
+            wp_delete_attachment($attachment_id, true);
+        }
+    }
 }
 
 function casting_user_media_max_pending(int $user_id): int
@@ -173,7 +224,10 @@ function casting_user_media_list(int $user_id, string $status = '', int $limit =
     } else {
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$table} WHERE user_id = %d ORDER BY FIELD(status,'pending','approved','rejected'), sort_order ASC, id DESC LIMIT %d",
+            "SELECT * FROM {$table}
+             WHERE user_id = %d AND status <> 'deleted'
+             ORDER BY FIELD(status,'pending','approved','rejected'), sort_order ASC, id DESC
+             LIMIT %d",
             $user_id,
             $limit
         ), ARRAY_A);
@@ -513,7 +567,7 @@ function casting_user_media_delete_own(int $user_id, int $media_id): array
     $table = casting_user_media_table();
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $row = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$table} WHERE id = %d AND user_id = %d",
+        "SELECT * FROM {$table} WHERE id = %d AND user_id = %d AND status <> 'deleted'",
         $media_id,
         $user_id
     ), ARRAY_A);
@@ -521,6 +575,25 @@ function casting_user_media_delete_own(int $user_id, int $media_id): array
         return ['ok' => false, 'error' => 'مورد پیدا نشد.'];
     }
     $attachment_id = (int) ($row['attachment_id'] ?? 0);
+    $status = (string) ($row['status'] ?? '');
+    $reviewed_by = (int) ($row['reviewed_by'] ?? 0);
+
+    // پست تأییدشده توسط مدیر: یک ماه در پروفایل ادمین بماند، بعد پاک شود
+    if ($status === 'approved' && $reviewed_by > 0) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$table}
+             SET status = 'deleted', deleted_at = %s
+             WHERE id = %d AND user_id = %d",
+            current_time('mysql'),
+            $media_id,
+            $user_id
+        ));
+
+        return ['ok' => true, 'error' => ''];
+    }
+
+    // بقیه (در انتظار / ردشده): حذف کامل
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $wpdb->delete($table, ['id' => $media_id], ['%d']);
     if ($attachment_id > 0) {
@@ -550,7 +623,8 @@ function casting_approve_user_media(int $media_id, int $admin_id): array
              is_resubmit = 0,
              reviewed_at = %s,
              reviewed_by = %d,
-             reject_reason = NULL
+             reject_reason = NULL,
+             deleted_at = NULL
          WHERE id = %d",
         current_time('mysql'),
         $admin_id,
@@ -684,10 +758,20 @@ function casting_user_media_approved_by(int $admin_id, int $limit = 40): array
     global $wpdb;
     $table = casting_user_media_table();
     $limit = max(1, min(100, $limit));
+    $cutoff = gmdate('Y-m-d H:i:s', current_time('timestamp') - 30 * DAY_IN_SECONDS);
+    // تأییدشده‌های فعال + حذف‌شده‌های کاربر تا ۳۰ روز برای آرشیو پروفایل ادمین
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $rows = $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM {$table} WHERE reviewed_by = %d AND status = 'approved' ORDER BY reviewed_at DESC, id DESC LIMIT %d",
+        "SELECT * FROM {$table}
+         WHERE reviewed_by = %d
+           AND (
+             status = 'approved'
+             OR (status = 'deleted' AND deleted_at IS NOT NULL AND deleted_at >= %s)
+           )
+         ORDER BY COALESCE(deleted_at, reviewed_at) DESC, id DESC
+         LIMIT %d",
         $admin_id,
+        $cutoff,
         $limit
     ), ARRAY_A);
 
@@ -710,7 +794,7 @@ function casting_render_admin_approved_media_section(int $admin_id): void
     ?>
   <section class="profile-media-gallery profile-media-gallery--approvals" aria-label="پست‌های تأییدشده">
     <h3 class="panel-section-title">تأییدهای <?= casting_e($approver !== '' ? $approver : 'مدیر') ?></h3>
-    <p class="meta">پست‌هایی که این مدیر تأیید و منتشر کرده است.</p>
+    <p class="meta">پست‌هایی که این مدیر تأیید کرده؛ اگر کاربر حذف کند تا یک ماه اینجا می‌ماند.</p>
     <div class="profile-media-grid">
       <?php foreach ($items as $item) :
           $url = casting_user_media_url($item);
@@ -720,8 +804,9 @@ function casting_render_admin_approved_media_section(int $admin_id): void
           }
           $owner = get_user_by('id', (int) ($item['user_id'] ?? 0));
           $caption = trim((string) ($item['caption'] ?? ''));
+          $is_deleted = (($item['status'] ?? '') === 'deleted');
           ?>
-        <figure class="profile-media-item">
+        <figure class="profile-media-item<?= $is_deleted ? ' is-user-deleted' : '' ?>">
           <a href="<?= casting_e($url) ?>" target="_blank" rel="noopener">
             <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
           </a>
@@ -732,7 +817,11 @@ function casting_render_admin_approved_media_section(int $admin_id): void
             <?php if ($caption !== '') : ?>
               <p><?= nl2br(casting_e($caption)) ?></p>
             <?php endif; ?>
-            <p class="meta profile-media-approver"><?= casting_e(casting_user_media_approver_line($item)) ?></p>
+            <?php if ($is_deleted) : ?>
+              <p class="meta profile-media-deleted">حذف‌شده توسط کاربر · تا یک ماه در آرشیو ادمین</p>
+            <?php else : ?>
+              <p class="meta profile-media-approver"><?= casting_e(casting_user_media_approver_line($item)) ?></p>
+            <?php endif; ?>
           </figcaption>
         </figure>
       <?php endforeach; ?>

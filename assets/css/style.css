@@ -3552,6 +3552,20 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   font-size: 0.78rem;
 }
 
+.profile-media-item.is-user-deleted {
+  opacity: 0.72;
+}
+
+.profile-media-item.is-user-deleted img {
+  filter: grayscale(0.35);
+}
+
+.profile-media-deleted {
+  color: var(--danger, #c45c5c);
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
 .gallery-edit-form {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
