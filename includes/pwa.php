@@ -20,7 +20,7 @@ function casting_pwa_start_url(): string
 {
     $user = casting_current_user();
     if ($user && casting_get_user_role((int) $user->ID) !== '') {
-        return casting_url('panel.php');
+        return casting_url('home.php');
     }
 
     return casting_url('index.php');

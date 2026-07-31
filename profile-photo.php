@@ -13,7 +13,7 @@ $is_actor_photos = casting_user_uses_actor_portrait_set($user_id);
 
 if (!casting_user_can_upload_portraits($user_id)) {
     casting_set_flash('error', 'بارگذاری عکس پروفایل برای این حساب مجاز نیست.');
-    casting_redirect('panel.php');
+    casting_redirect('home.php');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

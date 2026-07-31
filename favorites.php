@@ -10,7 +10,7 @@ $user_id = (int) $user->ID;
 
 if (!casting_user_is_director_role($user_id)) {
     casting_set_flash('error', 'این بخش فقط برای کارگردان‌هاست.');
-    casting_redirect('panel.php');
+    casting_redirect('home.php');
 }
 
 $favorites = casting_director_list_highlighted_talents($user_id);

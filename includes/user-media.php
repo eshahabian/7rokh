@@ -128,6 +128,21 @@ function casting_user_media_list(int $user_id, string $status = '', int $limit =
     return is_array($rows) ? $rows : [];
 }
 
+function casting_user_media_public_count(int $user_id): int
+{
+    if ($user_id <= 0) {
+        return 0;
+    }
+    casting_user_media_ensure_table();
+    global $wpdb;
+    $table = casting_user_media_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    return (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$table} WHERE user_id = %d AND status = 'approved'",
+        $user_id
+    ));
+}
+
 /**
  * @return list<array<string, mixed>>
  */

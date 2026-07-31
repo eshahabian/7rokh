@@ -99,7 +99,8 @@ function casting_delete_registered_user(int $user_id): void
  */
 function casting_dashboard_for_role(string $role, string $query = ''): string
 {
-    $page = 'panel.php';
+    unset($role);
+    $page = 'home.php';
     if ($query !== '') {
         return $page . (str_contains($query, '?') ? $query : '?' . ltrim($query, '?'));
     }

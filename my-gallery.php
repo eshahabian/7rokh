@@ -11,7 +11,7 @@ $user_id = (int) $user->ID;
 
 if (!casting_user_can_manage_gallery($user_id)) {
     casting_set_flash('error', 'گالری فقط برای بازیگران فعال است.');
-    casting_redirect('panel.php');
+    casting_redirect('home.php');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

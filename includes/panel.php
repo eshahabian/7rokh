@@ -17,6 +17,8 @@ require_once __DIR__ . '/layout.php';
 function casting_panel_nav_items_desktop(): array
 {
     return [
+        ['key' => 'home',         'label' => 'خانه',                     'href' => 'home.php'],
+        ['key' => 'panel',        'label' => 'پروفایل من',               'href' => 'panel.php'],
         ['key' => 'messages',     'label' => 'پیام کاربران',             'href' => 'chat.php'],
         ['key' => 'my-requests',  'label' => 'فراخوان کستینگ',           'href' => 'my-requests.php'],
         ['key' => 'search',       'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
@@ -26,7 +28,7 @@ function casting_panel_nav_items_desktop(): array
         ['key' => 'blocked',      'label' => 'بلاک‌شده‌های من',          'href' => 'blocked-by-me.php'],
         ['key' => 'premium',      'label' => 'فعال‌سازی',                'href' => 'premium.php'],
         ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],
-        ['key' => 'my-profile',   'label' => 'مشاهده پروفایل من',        'href' => 'my-profile.php'],
+        ['key' => 'my-profile',   'label' => 'مشاهده پروفایل کامل',      'href' => 'my-profile.php'],
         ['key' => 'edit-profile', 'label' => 'ویرایش پروفایل من',        'href' => 'edit-profile.php'],
         ['key' => 'gallery',      'label' => 'گالری من',                 'href' => 'my-gallery.php'],
         ['key' => 'desk',         'label' => 'پروژه‌ها',                  'href' => 'director-desk.php'],
@@ -479,7 +481,7 @@ function casting_render_panel_start(string $title, string $active, string $body_
 {
     $menu_badge = casting_panel_menu_badge_count();
     casting_render_head($title, $body_class . ' has-panel-drawer');
-    casting_render_header('panel', true, $menu_badge);
+    casting_render_header($active === 'home' ? 'home' : 'panel', true, $menu_badge);
     echo '<main class="wrap panel-shell">';
     casting_render_panel_sidebar($active);
     echo '<div class="panel-content">';

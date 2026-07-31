@@ -9,7 +9,7 @@ $user = casting_current_user();
 if ($user) {
     $role = casting_get_user_role((int) $user->ID);
     if ($role !== '') {
-        casting_redirect('panel.php');
+        casting_redirect('home.php');
     }
 }
 

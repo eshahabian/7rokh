@@ -16,7 +16,7 @@ if (!casting_user_can_member_search($user_id)) {
         exit;
     }
     casting_set_flash('error', 'جستجوی کاربران برای کارگردان‌ها یا اعضای دارای اشتراک ویژه فعال است.');
-    casting_redirect('panel.php');
+    casting_redirect('home.php');
 }
 
 $filters = casting_parse_member_search_filters($_GET);
