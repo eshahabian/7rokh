@@ -354,8 +354,10 @@ if ($otp_notice !== '') {
         </div>
         <div class="field" data-password-confirm-field<?= $password_mismatch ? ' is-invalid' : '' ?>>
           <label for="password2">تکرار رمز عبور <span class="req-mark">*</span></label>
-          <p class="field-inline-error" data-password-mismatch-msg role="alert"<?= $password_mismatch ? '' : ' hidden' ?>>پسورد یکسان نیست</p>
-          <input id="password2" name="password2" type="password" required minlength="8" autocomplete="new-password" data-password-confirm<?= $password_mismatch ? ' aria-invalid="true"' : '' ?>>
+          <div class="field-control field-control--password-confirm">
+            <input id="password2" name="password2" type="password" required minlength="8" autocomplete="new-password" data-password-confirm<?= $password_mismatch ? ' aria-invalid="true"' : '' ?>>
+            <span class="field-inline-error" data-password-mismatch-msg role="alert"<?= $password_mismatch ? '' : ' hidden' ?>>پسورد یکسان نیست</span>
+          </div>
         </div>
       </div>
 

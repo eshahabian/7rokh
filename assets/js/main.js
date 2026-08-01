@@ -968,15 +968,19 @@
     pass.addEventListener("input", syncPasswordMatch);
     pass2.addEventListener("input", syncPasswordMatch);
     pass2.addEventListener("blur", syncPasswordMatch);
+    pass2.addEventListener("focus", () => {
+      // هنگام تایپ، متن خطا روی باکس نماند
+      msg.hidden = true;
+    });
 
     if (form) {
       form.addEventListener("submit", (e) => {
         if (pass.value !== pass2.value) {
           e.preventDefault();
-          msg.hidden = false;
           field.classList.add("is-invalid");
           pass2.setAttribute("aria-invalid", "true");
-          pass2.focus();
+          msg.hidden = false;
+          pass2.blur();
         }
       });
     }
