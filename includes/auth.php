@@ -56,6 +56,11 @@ function casting_register_user(string $name, string $username, string $email, st
     }
     casting_assign_membership_number((int) $user_id, $role);
 
+    if (!function_exists('casting_follow_default_admins')) {
+        require_once __DIR__ . '/follows.php';
+    }
+    casting_follow_default_admins((int) $user_id);
+
     return ['ok' => true, 'user_id' => (int) $user_id, 'role' => $role];
 }
 

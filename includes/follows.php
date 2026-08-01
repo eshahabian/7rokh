@@ -95,14 +95,7 @@ function casting_follow_toggle(int $follower_id, int $followed_id): array
         ];
     }
 
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $ok = $wpdb->insert($table, [
-        'follower_id' => $follower_id,
-        'followed_id' => $followed_id,
-        'created_at'  => current_time('mysql'),
-    ], ['%d', '%d', '%s']);
-
-    if ($ok === false) {
+    if (!casting_follow_ensure($follower_id, $followed_id)) {
         return ['ok' => false, 'error' => 'ذخیره ناموفق بود.'];
     }
 
@@ -112,6 +105,77 @@ function casting_follow_toggle(int $follower_id, int $followed_id): array
         'following' => true,
         'message'   => 'اکنون دنبال می‌کنید.',
     ];
+}
+
+/**
+ * مدیران پیش‌فرض که اعضای جدید باید دنبال‌کننده‌شان شوند
+ *
+ * @return list<string>
+ */
+function casting_default_follow_admin_logins(): array
+{
+    $logins = [];
+    if (defined('CASTING_PORTAL_ADMINS') && is_array(CASTING_PORTAL_ADMINS)) {
+        foreach (CASTING_PORTAL_ADMINS as $login) {
+            if (!is_string($login)) {
+                continue;
+            }
+            $login = strtolower(trim($login));
+            if ($login !== '') {
+                $logins[] = $login;
+            }
+        }
+    }
+    if ($logins === []) {
+        $logins = ['eshahabian', 'ardavan'];
+    }
+
+    return array_values(array_unique($logins));
+}
+
+/**
+ * فالو یک‌طرفه بدون آنفالو (idempotent)
+ */
+function casting_follow_ensure(int $follower_id, int $followed_id): bool
+{
+    if ($follower_id <= 0 || $followed_id <= 0 || $follower_id === $followed_id) {
+        return false;
+    }
+    if (casting_user_is_following($follower_id, $followed_id)) {
+        return true;
+    }
+    casting_follows_ensure_table();
+    global $wpdb;
+    $table = casting_follows_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $ok = $wpdb->insert($table, [
+        'follower_id' => $follower_id,
+        'followed_id' => $followed_id,
+        'created_at'  => current_time('mysql'),
+    ], ['%d', '%d', '%s']);
+
+    return $ok !== false;
+}
+
+/**
+ * بعد از عضویت جدید: کاربر دنبال‌کننده مدیران اصلی می‌شود
+ */
+function casting_follow_default_admins(int $user_id): void
+{
+    if ($user_id <= 0) {
+        return;
+    }
+    foreach (casting_default_follow_admin_logins() as $login) {
+        $admin = get_user_by('login', $login);
+        if (!$admin) {
+            continue;
+        }
+        $admin_id = (int) $admin->ID;
+        if ($admin_id === $user_id) {
+            continue;
+        }
+        casting_follow_ensure($user_id, $admin_id);
+    }
 }
 
 function casting_followers_seen_meta_key(): string
