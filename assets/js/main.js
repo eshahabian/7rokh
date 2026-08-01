@@ -968,10 +968,6 @@
     pass.addEventListener("input", syncPasswordMatch);
     pass2.addEventListener("input", syncPasswordMatch);
     pass2.addEventListener("blur", syncPasswordMatch);
-    pass2.addEventListener("focus", () => {
-      // هنگام تایپ، متن خطا روی باکس نماند
-      msg.hidden = true;
-    });
 
     if (form) {
       form.addEventListener("submit", (e) => {
@@ -980,7 +976,7 @@
           field.classList.add("is-invalid");
           pass2.setAttribute("aria-invalid", "true");
           msg.hidden = false;
-          pass2.blur();
+          pass2.focus();
         }
       });
     }
