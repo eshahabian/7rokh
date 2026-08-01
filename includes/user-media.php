@@ -201,6 +201,16 @@ function casting_admin_pending_media_count(): int
     return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'pending'");
 }
 
+function casting_admin_deleted_media_count(): int
+{
+    casting_user_media_ensure_table();
+    casting_user_media_purge_expired_deleted();
+    global $wpdb;
+    $table = casting_user_media_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'deleted'");
+}
+
 /**
  * @return list<array<string, mixed>>
  */
@@ -265,13 +275,23 @@ function casting_user_media_public(int $user_id, int $limit = 24): array
 function casting_admin_list_media(string $status = 'pending', int $limit = 80): array
 {
     casting_user_media_ensure_table();
+    if ($status === 'deleted') {
+        casting_user_media_purge_expired_deleted();
+    }
     global $wpdb;
     $table = casting_user_media_table();
     $limit = max(1, min(200, $limit));
     if ($status === 'all') {
+        // «همه» بدون آرشیو حذف‌شدهٔ کاربر — آن‌ها تب جدا دارند
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$table} ORDER BY id DESC LIMIT %d",
+            "SELECT * FROM {$table} WHERE status <> 'deleted' ORDER BY id DESC LIMIT %d",
+            $limit
+        ), ARRAY_A);
+    } elseif ($status === 'deleted') {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table} WHERE status = 'deleted' ORDER BY deleted_at DESC, id DESC LIMIT %d",
             $limit
         ), ARRAY_A);
     } else {
@@ -576,10 +596,9 @@ function casting_user_media_delete_own(int $user_id, int $media_id): array
     }
     $attachment_id = (int) ($row['attachment_id'] ?? 0);
     $status = (string) ($row['status'] ?? '');
-    $reviewed_by = (int) ($row['reviewed_by'] ?? 0);
 
-    // پست تأییدشده توسط مدیر: یک ماه در پروفایل ادمین بماند، بعد پاک شود
-    if ($status === 'approved' && $reviewed_by > 0) {
+    // پست تأییدشده: یک ماه در آرشیو ادمین (تأیید گالری → حذف‌شده) بماند
+    if ($status === 'approved') {
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $wpdb->query($wpdb->prepare(
             "UPDATE {$table}
@@ -647,6 +666,7 @@ function casting_reject_user_media(int $media_id, int $admin_id, string $reason 
     if (!is_array($row)) {
         return ['ok' => false, 'error' => 'مورد پیدا نشد.'];
     }
+    $reason_clean = sanitize_textarea_field($reason);
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $wpdb->query($wpdb->prepare(
         "UPDATE {$table}
@@ -658,11 +678,171 @@ function casting_reject_user_media(int $media_id, int $admin_id, string $reason 
          WHERE id = %d",
         current_time('mysql'),
         $admin_id,
-        sanitize_textarea_field($reason),
+        $reason_clean,
         $media_id
     ));
 
+    $row['reject_reason'] = $reason_clean;
+    $row['status'] = 'rejected';
+    casting_notify_user_media_rejected($row, $admin_id);
+
     return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * انتشار مجدد پست حذف‌شده توسط کاربر (برگرداندن به پروفایل عمومی)
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_restore_deleted_user_media(int $media_id, int $admin_id): array
+{
+    casting_user_media_ensure_table();
+    global $wpdb;
+    $table = casting_user_media_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $media_id), ARRAY_A);
+    if (!is_array($row)) {
+        return ['ok' => false, 'error' => 'مورد پیدا نشد.'];
+    }
+    if (($row['status'] ?? '') !== 'deleted') {
+        return ['ok' => false, 'error' => 'این پست در آرشیو حذف‌شده نیست.'];
+    }
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $ok = $wpdb->query($wpdb->prepare(
+        "UPDATE {$table}
+         SET status = 'approved',
+             deleted_at = NULL,
+             is_resubmit = 0,
+             reviewed_at = %s,
+             reviewed_by = %d,
+             reject_reason = NULL
+         WHERE id = %d AND status = 'deleted'",
+        current_time('mysql'),
+        $admin_id,
+        $media_id
+    ));
+    if ($ok === false) {
+        return ['ok' => false, 'error' => 'انتشار مجدد ناموفق بود.'];
+    }
+
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * آرشیو دائم: حذف کامل از آرشیو یک‌ماهه ادمین
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_archive_deleted_user_media(int $media_id): array
+{
+    casting_user_media_ensure_table();
+    global $wpdb;
+    $table = casting_user_media_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $media_id), ARRAY_A);
+    if (!is_array($row)) {
+        return ['ok' => false, 'error' => 'مورد پیدا نشد.'];
+    }
+    if (($row['status'] ?? '') !== 'deleted') {
+        return ['ok' => false, 'error' => 'این پست در آرشیو حذف‌شده نیست.'];
+    }
+    $attachment_id = (int) ($row['attachment_id'] ?? 0);
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->delete($table, ['id' => $media_id], ['%d']);
+    if ($attachment_id > 0) {
+        wp_delete_attachment($attachment_id, true);
+    }
+
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * پیام به کاربر وقتی پست گالری رد می‌شود تا بتواند ویرایش کند
+ */
+function casting_notify_user_media_rejected(array $row, int $admin_id): void
+{
+    $user_id = (int) ($row['user_id'] ?? 0);
+    $media_id = (int) ($row['id'] ?? 0);
+    if ($user_id <= 0 || $media_id <= 0) {
+        return;
+    }
+
+    $edit_url = casting_url('my-gallery.php?edit=' . $media_id);
+    $reason = trim((string) ($row['reject_reason'] ?? ''));
+    $kind = (($row['media_type'] ?? '') === 'video') ? 'ویدیو' : 'عکس';
+    $lines = [
+        'پست گالری شما (' . $kind . ') برای انتشار تأیید نشد.',
+    ];
+    if ($reason !== '') {
+        $lines[] = 'دلیل رد: ' . $reason;
+    }
+    $lines[] = 'می‌توانید همان پست را در «گالری من» ببینید، ویرایش کنید و دوباره برای تأیید بفرستید:';
+    $lines[] = $edit_url;
+    $message = implode("\n", $lines);
+
+    update_user_meta($user_id, 'casting_gallery_reject_notice', [
+        'media_id'   => $media_id,
+        'reason'     => $reason,
+        'notified_at'=> current_time('mysql'),
+        'admin_id'   => $admin_id,
+    ]);
+
+    if (!function_exists('casting_dm_insert_raw')) {
+        require_once __DIR__ . '/chat.php';
+    }
+    $sender_id = 0;
+    if (function_exists('casting_dm_support_sender_id')) {
+        $sender_id = casting_dm_support_sender_id();
+    }
+    if ($sender_id <= 0) {
+        $sender_id = $admin_id;
+    }
+    if ($sender_id > 0 && $sender_id !== $user_id) {
+        casting_dm_insert_raw($sender_id, $user_id, $message, '', false, false);
+    }
+}
+
+function casting_user_rejected_media_count(int $user_id): int
+{
+    if ($user_id <= 0) {
+        return 0;
+    }
+    casting_user_media_ensure_table();
+    global $wpdb;
+    $table = casting_user_media_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    return (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$table} WHERE user_id = %d AND status = 'rejected'",
+        $user_id
+    ));
+}
+
+/**
+ * @return array{media_id:int,reason:string,notified_at:string,admin_id:int}|null
+ */
+function casting_user_gallery_reject_notice(int $user_id): ?array
+{
+    if ($user_id <= 0) {
+        return null;
+    }
+    $raw = get_user_meta($user_id, 'casting_gallery_reject_notice', true);
+    if (!is_array($raw) || (int) ($raw['media_id'] ?? 0) <= 0) {
+        return null;
+    }
+
+    return [
+        'media_id'    => (int) $raw['media_id'],
+        'reason'      => (string) ($raw['reason'] ?? ''),
+        'notified_at' => (string) ($raw['notified_at'] ?? ''),
+        'admin_id'    => (int) ($raw['admin_id'] ?? 0),
+    ];
+}
+
+function casting_clear_user_gallery_reject_notice(int $user_id): void
+{
+    if ($user_id > 0) {
+        delete_user_meta($user_id, 'casting_gallery_reject_notice');
+    }
 }
 
 function casting_user_media_url(array $row): string

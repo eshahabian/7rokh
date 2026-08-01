@@ -35,6 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $file_field = 'edit_video';
         }
         $res = casting_user_media_edit_own($user_id, $media_id, $caption, $file_field);
+        if ($res['ok']) {
+            casting_clear_user_gallery_reject_notice($user_id);
+        }
         casting_set_flash(
             $res['ok'] ? 'success' : 'error',
             $res['ok'] ? 'ویرایش ذخیره شد و دوباره برای تأیید مدیر ارسال شد.' : $res['error']
@@ -57,12 +60,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $items = casting_user_media_list($user_id, '', 80);
 $edit_id = (int) ($_GET['edit'] ?? 0);
+$reject_notice = casting_user_gallery_reject_notice($user_id);
+$rejected_count = casting_user_rejected_media_count($user_id);
+
+if ($edit_id > 0 || ($reject_notice && (int) $reject_notice['media_id'] === $edit_id)) {
+    casting_clear_user_gallery_reject_notice($user_id);
+    $reject_notice = null;
+}
+
 casting_render_panel_start('گالری من', 'gallery');
 casting_render_flash();
 ?>
 <section class="dash-card">
   <?php casting_render_panel_heading('گالری من'); ?>
   <p class="lede">عکس و ویدیو را با کپشن بفرستید. تا تأیید مدیر برای دیگران دیده نمی‌شود. ویرایش هم دوباره نیاز به تأیید دارد.</p>
+
+  <?php if ($rejected_count > 0) : ?>
+    <div class="flash flash-error gallery-reject-banner" role="status">
+      <?= (int) $rejected_count ?> پست رد شده دارید.
+      آن را در لیست پایین ببینید، اصلاح کنید و دوباره برای تأیید بفرستید.
+      <?php if ($reject_notice && (int) $reject_notice['media_id'] > 0 && $edit_id <= 0) : ?>
+        <a class="btn btn-ghost btn-sm" href="my-gallery.php?edit=<?= (int) $reject_notice['media_id'] ?>">مشاهده و ویرایش</a>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
 
   <form class="form" method="post" enctype="multipart/form-data" action="my-gallery.php">
     <?php wp_nonce_field('casting_gallery'); ?>
@@ -99,20 +120,23 @@ casting_render_flash();
           $status = (string) ($item['status'] ?? 'pending');
           $caption = trim((string) ($item['caption'] ?? ''));
           $is_editing = $edit_id === (int) $item['id'];
+          $is_rejected = $status === 'rejected';
           ?>
-        <figure class="profile-media-item is-manage">
+        <figure class="profile-media-item is-manage<?= $is_rejected ? ' is-rejected' : '' ?><?= $is_editing ? ' is-editing' : '' ?>"<?= $is_editing ? ' id="gallery-edit-focus"' : '' ?>>
           <?php if ($is_video && $url !== '') : ?>
             <video src="<?= casting_e($url) ?>" controls preload="metadata" playsinline></video>
           <?php elseif ($thumb !== '' || $url !== '') : ?>
             <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
           <?php endif; ?>
           <figcaption>
-            <span class="chip"><?= casting_e(casting_user_media_status_label($status)) ?></span>
+            <span class="chip<?= $is_rejected ? ' chip-danger' : '' ?>"><?= casting_e(casting_user_media_status_label($status)) ?></span>
             <?php if ($caption !== '') : ?>
               <p class="profile-media-caption-text"><?= nl2br(casting_e($caption)) ?></p>
             <?php endif; ?>
-            <?php if ($status === 'rejected' && trim((string) ($item['reject_reason'] ?? '')) !== '') : ?>
-              <span class="meta"><?= casting_e((string) $item['reject_reason']) ?></span>
+            <?php if ($is_rejected && trim((string) ($item['reject_reason'] ?? '')) !== '') : ?>
+              <span class="meta gallery-reject-reason">دلیل رد: <?= casting_e((string) $item['reject_reason']) ?></span>
+            <?php elseif ($is_rejected) : ?>
+              <span class="meta gallery-reject-reason">این پست رد شده؛ می‌توانید ویرایش و دوباره ارسال کنید.</span>
             <?php endif; ?>
 
             <?php if ($is_editing) : ?>
@@ -140,7 +164,9 @@ casting_render_flash();
               </form>
             <?php else : ?>
               <div class="cta-row">
-                <a class="btn btn-ghost btn-sm" href="my-gallery.php?edit=<?= (int) $item['id'] ?>">ویرایش</a>
+                <a class="btn <?= $is_rejected ? 'btn-primary' : 'btn-ghost' ?> btn-sm" href="my-gallery.php?edit=<?= (int) $item['id'] ?>">
+                  <?= $is_rejected ? 'اصلاح و ارسال مجدد' : 'ویرایش' ?>
+                </a>
                 <form method="post" action="my-gallery.php" onsubmit="return confirm('این پست حذف شود؟');">
                   <?php wp_nonce_field('casting_gallery'); ?>
                   <input type="hidden" name="gallery_action" value="delete">
@@ -155,4 +181,14 @@ casting_render_flash();
     </div>
   <?php endif; ?>
 </section>
+<?php if ($edit_id > 0) : ?>
+<script>
+  (function () {
+    var el = document.getElementById('gallery-edit-focus');
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  })();
+</script>
+<?php endif; ?>
 <?php casting_render_panel_end(); ?>

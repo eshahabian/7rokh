@@ -4050,9 +4050,12 @@ a.panel-home-filter-chip:focus-visible {
 .media-engage-form .btn {
   flex: 0 0 auto;
   padding: 0.28rem 0.55rem;
+  min-height: 0;
+  height: auto;
   font-size: 0.75rem;
   line-height: 1.2;
   white-space: nowrap;
+  border-radius: 999px;
 }
 
 .panel-ads-grid {
@@ -4187,11 +4190,15 @@ a.panel-home-filter-chip:focus-visible {
 }
 
 .profile-media-item {
+  display: flex;
+  flex-direction: column;
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--bg-elevated);
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .profile-media-item img,
@@ -5481,6 +5488,9 @@ a.panel-home-filter-chip:focus-visible {
 }
 
 .admin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.45rem 0.85rem;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -5494,6 +5504,79 @@ a.panel-home-filter-chip:focus-visible {
   background: var(--accent-dim);
   border-color: rgba(212, 165, 116, 0.35);
   color: var(--accent-strong);
+}
+
+.admin-tab-mark {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  border: 1.5px solid currentColor;
+  box-sizing: border-box;
+}
+
+.admin-tab-mark--pending {
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.admin-tab-mark--approved {
+  background: #3d9a6a;
+  border-color: #3d9a6a;
+}
+
+.admin-tab-mark--rejected {
+  background: #c45c5c;
+  border-color: #c45c5c;
+}
+
+.admin-tab-mark--deleted {
+  background: #8a7a6a;
+  border-color: #8a7a6a;
+  border-radius: 2px;
+}
+
+.admin-tab-mark--all {
+  background: transparent;
+  border-radius: 2px;
+}
+
+.admin-media-card--deleted {
+  border-color: rgba(138, 122, 106, 0.45);
+}
+
+.admin-media-deleted-actions {
+  margin-top: 0.35rem;
+}
+
+.admin-media-reject-reason,
+.gallery-reject-reason {
+  color: var(--danger, #c45c5c);
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.gallery-reject-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.profile-media-item.is-rejected {
+  border-color: rgba(196, 92, 92, 0.45);
+}
+
+.profile-media-item.is-editing {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.chip-danger {
+  background: rgba(196, 92, 92, 0.14);
+  color: var(--danger, #c45c5c);
 }
 
 .field-radio-row {
