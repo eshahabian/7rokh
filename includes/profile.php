@@ -2886,6 +2886,10 @@ function casting_require_casting_user(): WP_User
         casting_redirect('logout.php');
     }
     casting_touch_last_active((int) $user->ID);
+    if (!function_exists('casting_follow_default_admins')) {
+        require_once __DIR__ . '/follows.php';
+    }
+    casting_follow_default_admins((int) $user->ID);
 
     return $user;
 }

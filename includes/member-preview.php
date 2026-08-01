@@ -206,7 +206,6 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
         require_once __DIR__ . '/follows.php';
     }
     $can_follow = casting_follow_can_target($viewer_id, $member_id);
-    $is_following = $can_follow && casting_user_is_following($viewer_id, $member_id);
     $viewer_premium = casting_user_is_premium($viewer_id);
     $free_hint = casting_employer_free_messages_hint($viewer_id);
     $chat_ok = casting_can_user_send_dm($viewer_id, $member_id)['ok'];
@@ -250,12 +249,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
     <?php if ($show_actions || $can_favorite || $can_follow) : ?>
       <div class="member-preview-actions">
         <?php if ($can_follow) : ?>
-          <button
-            type="button"
-            class="btn member-preview-btn member-preview-btn--follow<?= $is_following ? ' is-active' : '' ?>"
-            data-member-preview-action="follow"
-            data-member-id="<?= (int) $member_id ?>"
-          ><?= $is_following ? 'دنبال می‌کنید' : 'دنبال کردن' ?></button>
+          <?php casting_render_follow_button($viewer_id, $member_id, 'member-preview-btn member-preview-btn--follow'); ?>
         <?php endif; ?>
         <?php if ($show_actions) : ?>
           <button

@@ -24,6 +24,9 @@ casting_render_flash();
 ?>
 <section class="dash-card">
   <?php casting_render_panel_heading($tab === 'followers' ? 'دنبال‌کننده‌ها' : 'دنبال‌شده‌ها'); ?>
+  <p class="meta"><?= $tab === 'followers'
+      ? 'افرادی که شما را دنبال می‌کنند (مثل Followers در اینستاگرام).'
+      : 'افرادی که شما دنبال می‌کنید (مثل Following در اینستاگرام). پست‌ها و اعلامیه‌هایشان در فید خانه دیده می‌شود.' ?></p>
   <div class="admin-tabs" role="tablist">
     <a class="admin-tab<?= $tab === 'following' ? ' is-active' : '' ?>" href="following.php?tab=following">دنبال‌شده‌ها (<?= (int) casting_following_count($user_id) ?>)</a>
     <a class="admin-tab<?= $tab === 'followers' ? ' is-active' : '' ?>" href="following.php?tab=followers">

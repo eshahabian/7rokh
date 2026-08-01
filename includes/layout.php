@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=112">
+  <link rel="stylesheet" href="<?= $css ?>?v=113">
   <script>
     (function () {
       try {
@@ -155,7 +155,7 @@ function casting_render_footer(): void
       nonce: <?= wp_json_encode(wp_create_nonce('casting_media_engage')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=79" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=80" defer></script>
 </body>
 </html>
 <?php

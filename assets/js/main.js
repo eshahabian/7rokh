@@ -1682,9 +1682,13 @@
     if (!btn) return;
     event.preventDefault();
     event.stopPropagation();
+    if (btn.disabled || btn.getAttribute("data-follow-locked") === "1") {
+      window.alert("دنبال کردن مدیران سایت الزامی است و قابل لغو نیست.");
+      return;
+    }
     const cfg = window.CASTING_FOLLOW || {};
     const userId = btn.getAttribute("data-follow-toggle");
-    if (!userId || !cfg.url || !cfg.nonce || btn.disabled) return;
+    if (!userId || !cfg.url || !cfg.nonce) return;
     btn.disabled = true;
     try {
       const body = new URLSearchParams();
@@ -1702,18 +1706,29 @@
         return;
       }
       const following = !!data.following;
+      const locked = !!data.locked;
       document.querySelectorAll(`[data-follow-toggle="${userId}"]`).forEach((el) => {
         el.setAttribute("data-following", following ? "1" : "0");
+        el.setAttribute("data-follow-locked", locked ? "1" : "0");
         el.setAttribute("aria-pressed", following ? "true" : "false");
-        el.textContent = following ? "دنبال می‌کنید" : "دنبال کردن";
-        el.classList.toggle("btn-primary", following);
+        el.textContent = locked ? "دنبال‌شده" : following ? "دنبال نکردن" : "دنبال کردن";
+        el.classList.toggle("btn-primary", !following && !locked);
         el.classList.toggle("is-following", following);
-        el.classList.toggle("btn-ghost", !following);
+        el.classList.toggle("is-follow-locked", locked);
+        el.classList.toggle("btn-ghost", following || locked);
+        el.disabled = locked;
+        if (locked) {
+          el.setAttribute("title", "دنبال کردن مدیران سایت الزامی است");
+        } else {
+          el.removeAttribute("title");
+        }
       });
     } catch (_err) {
       window.alert("خطا در انجام عملیات.");
     } finally {
-      btn.disabled = false;
+      if (btn.getAttribute("data-follow-locked") !== "1") {
+        btn.disabled = false;
+      }
     }
   });
 

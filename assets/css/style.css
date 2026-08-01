@@ -5153,11 +5153,10 @@ a.panel-home-filter-chip:focus-visible {
   margin: 0 0 0.75rem;
 }
 
-.btn-sm {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.85rem;
-  min-width: auto;
-  min-height: 0;
+.btn.is-follow-locked,
+button.is-follow-locked {
+  opacity: 0.85;
+  cursor: not-allowed;
 }
 
 .checkbox-row {

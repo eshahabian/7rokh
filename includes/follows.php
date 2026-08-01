@@ -69,7 +69,7 @@ function casting_user_is_following(int $follower_id, int $followed_id): bool
 }
 
 /**
- * @return array{ok:bool,error:string,following?:bool,message?:string}
+ * @return array{ok:bool,error:string,following?:bool,message?:string,locked?:bool}
  */
 function casting_follow_toggle(int $follower_id, int $followed_id): array
 {
@@ -81,6 +81,14 @@ function casting_follow_toggle(int $follower_id, int $followed_id): array
     $table = casting_follows_table();
 
     if (casting_user_is_following($follower_id, $followed_id)) {
+        if (casting_follow_target_is_required($followed_id)) {
+            return [
+                'ok'        => false,
+                'error'     => 'دنبال کردن مدیران سایت الزامی است و قابل لغو نیست.',
+                'following' => true,
+                'locked'    => true,
+            ];
+        }
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $wpdb->delete($table, [
             'follower_id' => $follower_id,
@@ -104,7 +112,71 @@ function casting_follow_toggle(int $follower_id, int $followed_id): array
         'error'     => '',
         'following' => true,
         'message'   => 'اکنون دنبال می‌کنید.',
+        'locked'    => casting_follow_target_is_required($followed_id),
     ];
+}
+
+/**
+ * آیا این کاربر از مدیران الزامی برای فالو است؟ (eshahabian / ardavan)
+ */
+function casting_follow_target_is_required(int $followed_id): bool
+{
+    if ($followed_id <= 0) {
+        return false;
+    }
+    $user = get_user_by('id', $followed_id);
+    if (!$user) {
+        return false;
+    }
+
+    return in_array(strtolower((string) $user->user_login), casting_default_follow_admin_logins(), true);
+}
+
+function casting_follow_button_label(bool $is_following, bool $locked = false): string
+{
+    if ($locked) {
+        return 'دنبال‌شده';
+    }
+
+    return $is_following ? 'دنبال نکردن' : 'دنبال کردن';
+}
+
+/**
+ * دکمه فالو/آنفالو — برای مدیران الزامی قفل است
+ */
+function casting_render_follow_button(int $viewer_id, int $target_id, string $extra_class = 'btn-sm'): void
+{
+    if ($viewer_id <= 0 || $target_id <= 0 || $viewer_id === $target_id) {
+        return;
+    }
+    if (!casting_follow_can_target($viewer_id, $target_id)) {
+        return;
+    }
+    if (casting_follow_target_is_required($target_id)) {
+        casting_follow_ensure($viewer_id, $target_id);
+    }
+    $is_following = casting_user_is_following($viewer_id, $target_id);
+    $locked = $is_following && casting_follow_target_is_required($target_id);
+    $label = casting_follow_button_label($is_following, $locked);
+    $classes = trim('btn ' . $extra_class);
+    if ($locked) {
+        $classes .= ' btn-ghost is-following is-follow-locked';
+    } elseif ($is_following) {
+        $classes .= ' btn-ghost is-following';
+    } else {
+        $classes .= ' btn-primary';
+    }
+    ?>
+<button
+  type="button"
+  class="<?= casting_e($classes) ?>"
+  data-follow-toggle="<?= (int) $target_id ?>"
+  data-following="<?= $is_following ? '1' : '0' ?>"
+  data-follow-locked="<?= $locked ? '1' : '0' ?>"
+  aria-pressed="<?= $is_following ? 'true' : 'false' ?>"
+  <?= $locked ? ' disabled title="دنبال کردن مدیران سایت الزامی است"' : '' ?>
+><?= casting_e($label) ?></button>
+    <?php
 }
 
 /**
