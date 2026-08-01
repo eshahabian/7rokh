@@ -130,14 +130,16 @@ casting_render_flash();
           <?php endif; ?>
           <figcaption>
             <span class="chip<?= $is_rejected ? ' chip-danger' : '' ?>"><?= casting_e(casting_user_media_status_label($status)) ?></span>
-            <?php if ($caption !== '') : ?>
-              <p class="profile-media-caption-text"><?= nl2br(casting_e($caption)) ?></p>
-            <?php endif; ?>
-            <?php if ($is_rejected && trim((string) ($item['reject_reason'] ?? '')) !== '') : ?>
-              <span class="meta gallery-reject-reason">دلیل رد: <?= casting_e((string) $item['reject_reason']) ?></span>
-            <?php elseif ($is_rejected) : ?>
-              <span class="meta gallery-reject-reason">این پست رد شده؛ می‌توانید ویرایش و دوباره ارسال کنید.</span>
-            <?php endif; ?>
+            <div class="profile-media-caption-slot">
+              <?php if ($caption !== '') : ?>
+                <p class="profile-media-caption-text"><?= nl2br(casting_e($caption)) ?></p>
+              <?php endif; ?>
+              <?php if ($is_rejected && trim((string) ($item['reject_reason'] ?? '')) !== '') : ?>
+                <span class="meta gallery-reject-reason">دلیل رد: <?= casting_e((string) $item['reject_reason']) ?></span>
+              <?php elseif ($is_rejected) : ?>
+                <span class="meta gallery-reject-reason">این پست رد شده؛ می‌توانید ویرایش و دوباره ارسال کنید.</span>
+              <?php endif; ?>
+            </div>
 
             <?php if ($is_editing) : ?>
               <form class="form gallery-edit-form" method="post" enctype="multipart/form-data" action="my-gallery.php">
@@ -163,7 +165,7 @@ casting_render_flash();
                 </div>
               </form>
             <?php else : ?>
-              <div class="cta-row">
+              <div class="cta-row gallery-manage-actions">
                 <a class="btn <?= $is_rejected ? 'btn-primary' : 'btn-ghost' ?> btn-sm" href="my-gallery.php?edit=<?= (int) $item['id'] ?>">
                   <?= $is_rejected ? 'اصلاح و ارسال مجدد' : 'ویرایش' ?>
                 </a>

@@ -13,7 +13,7 @@ function casting_base_path(): string
 
 function casting_pwa_theme_color(): string
 {
-    return '#0c0e12';
+    return '#ebe6da';
 }
 
 function casting_pwa_start_url(): string

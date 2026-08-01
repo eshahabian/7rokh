@@ -58,11 +58,11 @@
     });
   });
 
-  let storedTheme = "night";
+  let storedTheme = "day";
   try {
-    storedTheme = localStorage.getItem(THEME_KEY) || "night";
+    storedTheme = localStorage.getItem(THEME_KEY) || "day";
   } catch (err) {}
-  applyTheme(storedTheme === "day" ? "day" : "night");
+  applyTheme(storedTheme === "night" ? "night" : "day");
 
   const brandifyTextNodes = (root) => {
     if (!root) return;
@@ -1720,6 +1720,140 @@
   // Media like / comment
   const mediaEngageCfg = () => window.CASTING_MEDIA_ENGAGE || {};
 
+  const buildCommentLi = (comment) => {
+    const li = document.createElement("li");
+    const strong = document.createElement("strong");
+    strong.textContent = comment?.name || "کاربر";
+    const span = document.createElement("span");
+    span.textContent = comment?.body || "";
+    li.appendChild(strong);
+    li.appendChild(document.createTextNode(" "));
+    li.appendChild(span);
+    return li;
+  };
+
+  const refreshCommentPreview = (wrap) => {
+    if (!wrap) return;
+    const preview = wrap.querySelector("[data-media-comments]");
+    const full = wrap.querySelector("[data-media-comments-full]");
+    if (!preview || !full) return;
+    const items = Array.from(full.querySelectorAll("li"));
+    preview.innerHTML = "";
+    items.slice(0, 2).forEach((li) => preview.appendChild(li.cloneNode(true)));
+    const countEl = wrap.querySelector("[data-comment-count]");
+    const count = Number(countEl?.textContent || items.length || 0);
+    const needMore = count > 2 || items.length > 2;
+    let moreBtn = wrap.querySelector(":scope > [data-post-expand]");
+    if (needMore && !moreBtn) {
+      moreBtn = document.createElement("button");
+      moreBtn.type = "button";
+      moreBtn.className = "link-button media-engage-more";
+      moreBtn.setAttribute("data-post-expand", "");
+      moreBtn.textContent = "بیشتر…";
+      const form = wrap.querySelector(".media-engage-form");
+      if (form) wrap.insertBefore(moreBtn, form);
+      else wrap.appendChild(moreBtn);
+    } else if (moreBtn) {
+      moreBtn.hidden = !needMore;
+    }
+  };
+
+  let postLightboxSource = null;
+  let postLightboxEngage = null;
+  const postLightbox = document.querySelector("[data-post-lightbox]");
+  if (postLightbox && postLightbox.parentElement !== document.body) {
+    document.body.appendChild(postLightbox);
+  }
+  const postLightboxPanel = postLightbox?.querySelector(".post-lightbox-panel");
+  const postLightboxBody = postLightbox?.querySelector("[data-post-lightbox-body]");
+
+  const closePostLightbox = () => {
+    if (!postLightbox || !postLightbox.classList.contains("is-open")) return;
+    if (postLightboxEngage && postLightboxSource) {
+      postLightboxSource.appendChild(postLightboxEngage);
+      refreshCommentPreview(postLightboxEngage);
+    }
+    postLightboxEngage = null;
+    postLightboxSource = null;
+    if (postLightboxBody) postLightboxBody.innerHTML = "";
+    postLightbox.classList.remove("is-open");
+    postLightbox.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  };
+
+  const openPostLightbox = (trigger) => {
+    if (!postLightbox || !postLightboxBody) return;
+    const root = trigger.closest(".ig-profile-cell, .profile-media-item, .home-feed-post");
+    if (!root) return;
+    closePostLightbox();
+
+    const mediaHost =
+      root.querySelector(".home-feed-post-media") ||
+      root.querySelector(":scope > a") ||
+      root.querySelector("img, video");
+    const captionEl =
+      root.querySelector(".ig-profile-cell-meta > p") ||
+      root.querySelector(".home-feed-caption") ||
+      root.querySelector(".profile-media-caption-text") ||
+      root.querySelector(".profile-media-caption p");
+    const engage = root.querySelector("[data-media-engage]");
+
+    postLightboxBody.innerHTML = "";
+    const mediaWrap = document.createElement("div");
+    mediaWrap.className = "post-lightbox-media";
+    if (mediaHost) {
+      const cloneSource = mediaHost.matches("img, video") ? mediaHost : mediaHost.querySelector("img, video");
+      if (cloneSource) {
+        mediaWrap.appendChild(cloneSource.cloneNode(true));
+      }
+    }
+    postLightboxBody.appendChild(mediaWrap);
+
+    if (captionEl && (captionEl.textContent || "").trim()) {
+      const caption = document.createElement("p");
+      caption.className = "post-lightbox-caption";
+      caption.innerHTML = captionEl.innerHTML;
+      postLightboxBody.appendChild(caption);
+    }
+
+    if (engage) {
+      postLightboxSource = engage.parentElement;
+      postLightboxEngage = engage;
+      const full = engage.querySelector("[data-media-comments-full]");
+      const preview = engage.querySelector("[data-media-comments]");
+      if (full && preview) {
+        preview.innerHTML = full.innerHTML;
+      }
+      postLightboxBody.appendChild(engage);
+    }
+
+    postLightbox.classList.add("is-open");
+    postLightbox.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    postLightboxPanel?.scrollTo(0, 0);
+  };
+
+  document.addEventListener("click", (event) => {
+    const expand = event.target.closest("[data-post-expand]");
+    if (expand) {
+      event.preventDefault();
+      openPostLightbox(expand);
+      return;
+    }
+    if (event.target.closest("[data-post-lightbox-close]")) {
+      event.preventDefault();
+      closePostLightbox();
+      return;
+    }
+    if (postLightbox?.classList.contains("is-open") && !event.target.closest(".post-lightbox-panel")) {
+      closePostLightbox();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closePostLightbox();
+  });
+
   document.addEventListener("click", async (event) => {
     const likeBtn = event.target.closest("[data-media-like]");
     if (!likeBtn || likeBtn.disabled) return;
@@ -1789,17 +1923,15 @@
       }
       if (input) input.value = "";
       const wrap = form.closest("[data-media-engage]");
-      const list = wrap?.querySelector("[data-media-comments]");
-      if (list && data.comment) {
-        const li = document.createElement("li");
-        const strong = document.createElement("strong");
-        strong.textContent = data.comment.name || "کاربر";
-        const span = document.createElement("span");
-        span.textContent = data.comment.body || "";
-        li.appendChild(strong);
-        li.appendChild(document.createTextNode(" "));
-        li.appendChild(span);
-        list.appendChild(li);
+      const full = wrap?.querySelector("[data-media-comments-full]");
+      if (full && data.comment) {
+        full.appendChild(buildCommentLi(data.comment));
+      }
+      if (postLightbox?.classList.contains("is-open") && wrap) {
+        const preview = wrap.querySelector("[data-media-comments]");
+        if (preview && full) preview.innerHTML = full.innerHTML;
+      } else {
+        refreshCommentPreview(wrap);
       }
       const countEl = wrap?.querySelector("[data-comment-count]");
       if (countEl) countEl.textContent = String(data.count ?? 0);

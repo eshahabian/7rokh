@@ -908,10 +908,17 @@ function casting_render_public_media_gallery(int $user_id): void
               <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
             </a>
           <?php endif; ?>
-          <?php if ($caption !== '') : ?>
-            <figcaption class="profile-media-caption">
+          <?php if ($caption !== '') :
+              $caption_long = (function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 70;
+              ?>
+            <figcaption class="profile-media-caption<?= $caption_long ? ' is-clamped' : '' ?>">
               <p><?= nl2br(casting_e($caption)) ?></p>
+              <?php if ($caption_long) : ?>
+                <button type="button" class="link-button media-engage-more" data-post-expand>بیشتر…</button>
+              <?php endif; ?>
             </figcaption>
+          <?php else : ?>
+            <figcaption class="profile-media-caption profile-media-caption--empty" aria-hidden="true"></figcaption>
           <?php endif; ?>
           <?php
           $viewer = casting_current_user();

@@ -575,6 +575,10 @@ function casting_render_panel_end(): void
         require_once __DIR__ . '/member-preview.php';
     }
     casting_render_member_preview_lightbox_shell();
+    if (!function_exists('casting_render_post_lightbox_shell')) {
+        require_once __DIR__ . '/media-engagement.php';
+    }
+    casting_render_post_lightbox_shell();
     echo '</div></main>';
     casting_render_footer();
 }

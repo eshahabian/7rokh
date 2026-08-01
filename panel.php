@@ -151,9 +151,14 @@ casting_render_flash();
             <?php endif; ?>
           </a>
           <?php if ($caption !== '') : ?>
-            <figcaption class="ig-profile-cell-meta">
+            <figcaption class="ig-profile-cell-meta<?= (function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 70 ? ' is-clamped' : '' ?>">
               <p><?= nl2br(casting_e($caption)) ?></p>
+              <?php if ((function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 70) : ?>
+                <button type="button" class="link-button media-engage-more" data-post-expand>بیشتر…</button>
+              <?php endif; ?>
             </figcaption>
+          <?php else : ?>
+            <figcaption class="ig-profile-cell-meta ig-profile-cell-meta--empty" aria-hidden="true"></figcaption>
           <?php endif; ?>
           <?php casting_render_media_engagement((int) ($item['id'] ?? 0), $user_id, false); ?>
         </figure>

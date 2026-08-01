@@ -184,8 +184,13 @@ function casting_render_feed_media_card(array $item, int $viewer_id): void
         </a>
       <?php endif; ?>
     </div>
-    <?php if ($caption !== '') : ?>
-      <p class="home-feed-caption"><?= nl2br(casting_e($caption)) ?></p>
+    <?php if ($caption !== '') :
+        $caption_long = (function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 90;
+        ?>
+      <p class="home-feed-caption<?= $caption_long ? ' is-clamped' : '' ?>"><?= nl2br(casting_e($caption)) ?></p>
+      <?php if ($caption_long) : ?>
+        <button type="button" class="link-button media-engage-more" data-post-expand>بیشتر…</button>
+      <?php endif; ?>
     <?php endif; ?>
     <?php casting_render_media_engagement($id, $viewer_id, false); ?>
   </article>

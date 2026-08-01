@@ -3489,6 +3489,7 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.35rem;
+  align-items: stretch;
 }
 
 .ig-profile-cell {
@@ -3496,10 +3497,12 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   display: flex;
   flex-direction: column;
   margin: 0;
-  overflow: visible;
+  overflow: hidden;
   background: var(--bg-elevated);
   border-radius: 6px;
   border: 1px solid var(--line);
+  min-width: 0;
+  height: 100%;
 }
 
 .ig-profile-cell > a {
@@ -3508,6 +3511,7 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   aspect-ratio: 1;
   overflow: hidden;
   background: #111;
+  flex: 0 0 auto;
 }
 
 .ig-profile-cell img,
@@ -3519,9 +3523,23 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
 }
 
 .ig-profile-cell-meta {
-  padding: 0.45rem 0.55rem 0.55rem;
+  padding: 0.45rem 0.55rem 0.15rem;
   display: grid;
   gap: 0.2rem;
+  flex: 0 0 auto;
+  min-height: 2.6em;
+}
+
+.ig-profile-cell-meta--empty {
+  min-height: 2.6em;
+  padding: 0;
+}
+
+.ig-profile-cell-meta.is-clamped > p {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .ig-profile-cell-meta p {
@@ -3534,6 +3552,20 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   padding: 0.45rem 0.55rem 0.6rem;
   display: grid;
   gap: 0.25rem;
+  min-height: 2.6em;
+  flex: 0 0 auto;
+}
+
+.profile-media-caption--empty {
+  min-height: 2.6em;
+  padding: 0;
+}
+
+.profile-media-caption.is-clamped > p {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .profile-media-caption p {
@@ -3912,6 +3944,18 @@ a.panel-home-filter-chip:focus-visible {
   vertical-align: middle;
 }
 
+.home-feed-caption.is-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.home-feed-post > .media-engage-more {
+  margin: -0.15rem 0.9rem 0.35rem;
+  font-size: 0.82rem;
+}
+
 .home-feed-post {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -3954,7 +3998,8 @@ a.panel-home-filter-chip:focus-visible {
 
 .media-engage {
   padding: 0.55rem 0.9rem 0.85rem;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.45rem;
   box-sizing: border-box;
   width: 100%;
@@ -3968,12 +4013,15 @@ a.panel-home-filter-chip:focus-visible {
   padding: 0.45rem 0.55rem 0.7rem;
   background: transparent;
   border-top: 1px solid var(--line);
+  flex: 1 1 auto;
+  margin-top: auto;
 }
 
 .media-engage-actions {
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  flex: 0 0 auto;
 }
 
 .media-engage-like {
@@ -4014,12 +4062,25 @@ a.panel-home-filter-chip:focus-visible {
   font-size: 0.88rem;
 }
 
+.media-engage-comments.is-preview {
+  max-height: 3.4em;
+  overflow: hidden;
+}
+
 .media-engage-comments li {
   line-height: 1.45;
 }
 
 .media-engage-comments strong {
   margin-inline-end: 0.35rem;
+}
+
+.media-engage-more {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  padding: 0;
+  min-height: 1.25em;
+  flex: 0 0 auto;
 }
 
 .media-engage-form {
@@ -4030,6 +4091,8 @@ a.panel-home-filter-chip:focus-visible {
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  margin-top: auto;
+  flex: 0 0 auto;
 }
 
 .media-engage-form input {
@@ -4056,6 +4119,90 @@ a.panel-home-filter-chip:focus-visible {
   line-height: 1.2;
   white-space: nowrap;
   border-radius: 999px;
+}
+
+.post-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1rem, 4vw, 2rem);
+  background: rgba(0, 0, 0, 0.72);
+  cursor: zoom-out;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.post-lightbox.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.post-lightbox-panel {
+  width: min(560px, calc(100vw - 2rem));
+  max-height: min(88vh, 820px);
+  overflow: auto;
+  padding: 1rem 1.1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  cursor: default;
+  -webkit-overflow-scrolling: touch;
+  flex: 0 1 auto;
+}
+
+.post-lightbox-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.post-lightbox-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.post-lightbox-body {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.post-lightbox-media img,
+.post-lightbox-media video {
+  display: block;
+  width: 100%;
+  max-height: 48vh;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #111;
+}
+
+.post-lightbox-caption {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.post-lightbox .media-engage {
+  border-top: 1px solid var(--line);
+  padding-top: 0.65rem;
+}
+
+.post-lightbox .media-engage-comments.is-preview {
+  max-height: none;
+  overflow: visible;
+}
+
+.post-lightbox .media-engage-more {
+  display: none;
 }
 
 .panel-ads-grid {
@@ -4187,6 +4334,11 @@ a.panel-home-filter-chip:focus-visible {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 0.75rem;
+  align-items: stretch;
+}
+
+.profile-media-grid--manage {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
 .profile-media-item {
@@ -4199,6 +4351,7 @@ a.panel-home-filter-chip:focus-visible {
   background: var(--bg-elevated);
   box-sizing: border-box;
   min-width: 0;
+  height: 100%;
 }
 
 .profile-media-item img,
@@ -4208,6 +4361,7 @@ a.panel-home-filter-chip:focus-visible {
   aspect-ratio: 1;
   object-fit: cover;
   background: #111;
+  flex: 0 0 auto;
 }
 
 .profile-media-item.is-video video {
@@ -4215,9 +4369,27 @@ a.panel-home-filter-chip:focus-visible {
 }
 
 .profile-media-item.is-manage figcaption {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   gap: 0.4rem;
   padding: 0.55rem 0.65rem 0.7rem;
+  min-width: 0;
+}
+
+.profile-media-item.is-manage .profile-media-caption-slot {
+  flex: 1 1 auto;
+  min-height: 3.2em;
+}
+
+.profile-media-item.is-manage .gallery-manage-actions,
+.profile-media-item.is-manage > figcaption > .cta-row {
+  margin-top: auto;
+  padding-top: 0.2rem;
+}
+
+.profile-media-item.is-manage .cta-row .btn {
+  min-height: 0;
 }
 
 .admin-media-list {
@@ -4935,6 +5107,7 @@ a.panel-home-filter-chip:focus-visible {
   padding: 0.35rem 0.75rem;
   font-size: 0.85rem;
   min-width: auto;
+  min-height: 0;
 }
 
 .checkbox-row {

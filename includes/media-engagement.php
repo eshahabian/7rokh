@@ -252,7 +252,10 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
     $likes = casting_media_like_count($media_id);
     $comments = casting_media_comment_count($media_id);
     $liked = $viewer_id > 0 && casting_media_user_liked($media_id, $viewer_id);
-    $list = $compact ? [] : casting_media_list_comments($media_id, 20);
+    $list = $compact ? [] : casting_media_list_comments($media_id, 40);
+    $preview_limit = 2;
+    $preview = array_slice($list, 0, $preview_limit);
+    $show_more = !$compact && ($comments > $preview_limit || count($list) > $preview_limit);
     ?>
   <div class="media-engage" data-media-engage="<?= (int) $media_id ?>">
     <div class="media-engage-actions">
@@ -273,7 +276,15 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
       </span>
     </div>
     <?php if (!$compact) : ?>
-      <ul class="media-engage-comments" data-media-comments="<?= (int) $media_id ?>">
+      <ul class="media-engage-comments is-preview" data-media-comments="<?= (int) $media_id ?>">
+        <?php foreach ($preview as $c) : ?>
+          <li>
+            <strong><?= casting_e($c['name']) ?></strong>
+            <span><?= nl2br(casting_e($c['body'])) ?></span>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+      <ul class="media-engage-comments media-engage-comments--full" data-media-comments-full="<?= (int) $media_id ?>" hidden>
         <?php foreach ($list as $c) : ?>
           <li>
             <strong><?= casting_e($c['name']) ?></strong>
@@ -281,6 +292,9 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
           </li>
         <?php endforeach; ?>
       </ul>
+      <?php if ($show_more) : ?>
+        <button type="button" class="link-button media-engage-more" data-post-expand>بیشتر…</button>
+      <?php endif; ?>
       <?php if ($viewer_id > 0) : ?>
         <form class="media-engage-form" data-media-comment-form="<?= (int) $media_id ?>">
           <input type="text" name="body" maxlength="400" placeholder="کامنت بنویسید…" required autocomplete="off">
@@ -289,5 +303,25 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
       <?php endif; ?>
     <?php endif; ?>
   </div>
+    <?php
+}
+
+function casting_render_post_lightbox_shell(): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    ?>
+<div class="post-lightbox" data-post-lightbox aria-hidden="true">
+  <div class="post-lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="post-lightbox-title">
+    <div class="post-lightbox-head">
+      <h2 class="post-lightbox-title" id="post-lightbox-title">پست</h2>
+      <button type="button" class="btn btn-ghost btn-sm post-lightbox-close" data-post-lightbox-close>بستن</button>
+    </div>
+    <div class="post-lightbox-body" data-post-lightbox-body></div>
+  </div>
+</div>
     <?php
 }

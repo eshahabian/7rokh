@@ -25,14 +25,19 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=109">
+  <link rel="stylesheet" href="<?= $css ?>?v=110">
   <script>
     (function () {
       try {
-        if (localStorage.getItem('casting_theme') === 'day') {
+        var theme = localStorage.getItem('casting_theme');
+        if (theme === 'night') {
+          document.documentElement.removeAttribute('data-theme');
+        } else {
           document.documentElement.setAttribute('data-theme', 'day');
         }
-      } catch (e) {}
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'day');
+      }
     })();
   </script>
 </head>
@@ -45,8 +50,8 @@ function casting_render_theme_toggle(): void
 {
     ?>
       <div class="nav-theme theme-toggle" role="group" aria-label="انتخاب روز یا شب">
-        <button type="button" class="theme-toggle-btn is-active" data-theme-pick="night">شب</button>
-        <button type="button" class="theme-toggle-btn" data-theme-pick="day">روز</button>
+        <button type="button" class="theme-toggle-btn" data-theme-pick="night">شب</button>
+        <button type="button" class="theme-toggle-btn is-active" data-theme-pick="day">روز</button>
       </div>
     <?php
 }
@@ -150,7 +155,7 @@ function casting_render_footer(): void
       nonce: <?= wp_json_encode(wp_create_nonce('casting_media_engage')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=76" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=77" defer></script>
 </body>
 </html>
 <?php
