@@ -1311,9 +1311,18 @@
         credentials: "same-origin",
         headers: { Accept: "application/json" },
       });
-      const data = await res.json();
-      if (!data?.ok || !data.html) {
-        memberPreviewBody.innerHTML = '<p class="empty-state">بارگذاری پروفایل ناموفق بود.</p>';
+      const raw = await res.text();
+      let data = null;
+      try {
+        data = JSON.parse(raw);
+      } catch (_parseErr) {
+        data = null;
+      }
+      if (!res.ok || !data?.ok || !data.html) {
+        const msg =
+          (data && data.error) ||
+          (res.status === 403 ? "دسترسی به این پروفایل مجاز نیست." : "بارگذاری پروفایل ناموفق بود.");
+        memberPreviewBody.innerHTML = `<p class="empty-state">${msg}</p>`;
       } else {
         memberPreviewBody.innerHTML = data.html;
       }
@@ -1368,6 +1377,10 @@
       } finally {
         actionBtn.disabled = false;
       }
+      return;
+    }
+
+    if (event.target.closest("[data-follow-toggle]")) {
       return;
     }
 

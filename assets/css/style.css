@@ -734,6 +734,15 @@ html[data-theme="day"] .brand-mark-rokh {
   transition: transform 0.2s var(--ease), background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
+.btn-sm {
+  min-height: 0;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  gap: 0.25rem;
+}
+
 .btn:hover {
   transform: translateY(-1px);
 }
@@ -4349,13 +4358,22 @@ a.panel-home-filter-chip:focus-visible {
 
 .panel-ad-card-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  flex-wrap: nowrap;
+  flex-direction: row;
+  align-items: center;
+  justify-content: stretch;
+  gap: 0.3rem;
   margin-top: auto;
 }
 
 .panel-ad-card-actions .btn {
-  flex: 1 1 auto;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.22rem 0.4rem;
+  font-size: 0.7rem;
+  line-height: 1.15;
+  white-space: nowrap;
   text-align: center;
 }
 
@@ -5033,6 +5051,11 @@ a.panel-home-filter-chip:focus-visible {
 .member-card-actions .btn {
   flex: 1 1 0;
   min-width: 0;
+  min-height: 0;
+  padding: 0.28rem 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
   justify-content: center;
 }
 

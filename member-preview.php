@@ -26,6 +26,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if ($member_id <= 0 || !casting_member_preview_can_view($viewer_id, $member_id)) {
     http_response_code(403);
+    if (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo wp_json_encode(['ok' => false, 'error' => 'دسترسی به این پروفایل مجاز نیست.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     header('Content-Type: text/plain; charset=utf-8');
     echo 'دسترسی مجاز نیست.';
     exit;

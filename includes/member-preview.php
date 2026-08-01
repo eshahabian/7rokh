@@ -56,15 +56,19 @@ function casting_member_preview_can_view(int $viewer_id, int $member_id): bool
     if (casting_get_user_role($member_id) === '') {
         return false;
     }
+    if (casting_get_user_role($viewer_id) === '') {
+        return false;
+    }
     $profile = casting_get_profile($member_id);
     if (!$profile['visible']) {
         return false;
     }
-    if (function_exists('casting_user_can_member_search') && casting_user_can_member_search($viewer_id)) {
-        return true;
+    // پیش‌نمایش پروفایل عمومی است؛ محدودیت پیام فقط روی دکمهٔ چت اعمال می‌شود
+    if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($viewer_id, $member_id)) {
+        return false;
     }
 
-    return casting_can_users_chat($viewer_id, $member_id)['ok'];
+    return true;
 }
 
 function casting_member_preview_show_employer_actions(int $viewer_id, int $member_id): bool
