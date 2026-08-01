@@ -5011,6 +5011,35 @@ a.panel-home-filter-chip:focus-visible {
   margin-inline-start: 0.35rem;
 }
 
+.chip-official {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--accent-strong);
+  background: var(--accent-dim);
+  border: 1px solid rgba(154, 104, 40, 0.28);
+  vertical-align: middle;
+}
+
+.member-preview-head-text .chip-official {
+  margin: 0.2rem 0 0.35rem;
+}
+
+.panel-ad-card-body h3 .chip-official,
+.member-card-body h3 .chip-official {
+  margin-inline-start: 0.4rem;
+  vertical-align: middle;
+}
+
+.profile-info > .chip-official {
+  margin-inline-start: 0.35rem;
+}
+
 .premium-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

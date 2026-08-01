@@ -350,6 +350,12 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     <?php endif; ?>
     <div class="profile-info">
       <span class="chip"><?= casting_e(casting_user_profile_chip_label($member_id, $viewer_id)) ?><?php if ($premium) : ?> · ویژه<?php endif; ?></span>
+      <?php
+      if (!function_exists('casting_render_official_page_badge')) {
+          require_once __DIR__ . '/follows.php';
+      }
+      casting_render_official_page_badge($member_id);
+      ?>
       <h2 class="panel-section-title"><?= casting_e($member->display_name) ?><?php if ($is_self) : ?> <span class="meta">(پروفایل شما)</span><?php endif; ?></h2>
       <?php
       if (!$is_self && $viewer_id > 0) {

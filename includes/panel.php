@@ -1736,6 +1736,7 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
       <div class="panel-ad-card-body">
         <h3>
           <button type="button" class="link-button" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button>
+          <?php casting_render_official_page_badge($id); ?>
         </h3>
         <p><?= casting_e($role_label) ?></p>
         <p class="panel-ad-place"><?= casting_e($city !== '' ? $city : '—') ?></p>
@@ -1805,7 +1806,12 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
         <?php endif; ?>
       </button>
       <div class="member-card-body">
-        <h3><button type="button" class="link-button member-card-name" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button></h3>
+        <h3><button type="button" class="link-button member-card-name" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button><?php
+        if (!function_exists('casting_render_official_page_badge')) {
+            require_once __DIR__ . '/follows.php';
+        }
+        casting_render_official_page_badge($id);
+        ?></h3>
         <p class="meta member-card-meta">
           <?= casting_e(casting_user_public_role_label($id)) ?>
           <?php if ($premium) : ?><span class="chip chip-premium">ویژه</span><?php endif; ?>

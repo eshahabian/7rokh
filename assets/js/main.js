@@ -1683,7 +1683,7 @@
     event.preventDefault();
     event.stopPropagation();
     if (btn.disabled || btn.getAttribute("data-follow-locked") === "1") {
-      window.alert("دنبال کردن مدیران سایت الزامی است و قابل لغو نیست.");
+      window.alert("صفحه رسمی مدیران — دنبال کردن الزامی است و قابل لغو نیست.");
       return;
     }
     const cfg = window.CASTING_FOLLOW || {};
@@ -1718,7 +1718,7 @@
         el.classList.toggle("btn-ghost", following || locked);
         el.disabled = locked;
         if (locked) {
-          el.setAttribute("title", "دنبال کردن مدیران سایت الزامی است");
+          el.setAttribute("title", "صفحه رسمی مدیران — دنبال کردن الزامی است");
         } else {
           el.removeAttribute("title");
         }

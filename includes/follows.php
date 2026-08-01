@@ -142,6 +142,19 @@ function casting_follow_button_label(bool $is_following, bool $locked = false): 
 }
 
 /**
+ * برچسب «صفحه رسمی» برای مدیران الزامی
+ */
+function casting_render_official_page_badge(int $user_id): void
+{
+    if (!casting_follow_target_is_required($user_id)) {
+        return;
+    }
+    ?>
+<span class="chip chip-official" title="اعلامیه‌ها و پست‌های این صفحه برای همه اعضا نمایش داده می‌شود">صفحه رسمی</span>
+    <?php
+}
+
+/**
  * دکمه فالو/آنفالو — برای مدیران الزامی قفل است
  */
 function casting_render_follow_button(int $viewer_id, int $target_id, string $extra_class = 'btn-sm'): void
@@ -174,7 +187,7 @@ function casting_render_follow_button(int $viewer_id, int $target_id, string $ex
   data-following="<?= $is_following ? '1' : '0' ?>"
   data-follow-locked="<?= $locked ? '1' : '0' ?>"
   aria-pressed="<?= $is_following ? 'true' : 'false' ?>"
-  <?= $locked ? ' disabled title="دنبال کردن مدیران سایت الزامی است"' : '' ?>
+  <?= $locked ? ' disabled title="صفحه رسمی مدیران — دنبال کردن الزامی است"' : '' ?>
 ><?= casting_e($label) ?></button>
     <?php
 }

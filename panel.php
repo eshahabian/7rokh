@@ -65,6 +65,7 @@ casting_render_flash();
         <?php if ($premium) : ?>
           <span class="chip chip-premium">ویژه</span>
         <?php endif; ?>
+        <?php casting_render_official_page_badge($user_id); ?>
       </div>
 
       <ul class="ig-profile-stats">

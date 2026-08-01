@@ -227,6 +227,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
       </div>
       <div class="member-preview-head-text">
         <h2 class="member-preview-title" id="member-preview-title"><?= casting_e((string) $member->display_name) ?></h2>
+        <?php casting_render_official_page_badge($member_id); ?>
         <p class="member-preview-role"><?= casting_e($role_label) ?></p>
         <?php if ($membership_code !== '') : ?>
           <p class="member-preview-code">کد کاربری: <span dir="ltr"><?= casting_e($membership_code) ?></span></p>
