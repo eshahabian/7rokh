@@ -151,6 +151,9 @@ function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
     if (casting_dm_is_support_peer($recipient_id)) {
         return ['ok' => true, 'error' => ''];
     }
+    if (function_exists('casting_user_is_public_support_contact') && casting_user_is_public_support_contact($recipient_id)) {
+        return ['ok' => true, 'error' => ''];
+    }
     if (!casting_user_requires_premium_for_dm($sender_id)) {
         return ['ok' => true, 'error' => ''];
     }

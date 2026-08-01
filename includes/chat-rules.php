@@ -120,6 +120,11 @@ function casting_can_start_chat(int $from_id, int $to_id): array
         }
     }
 
+    // همه اعضا می‌توانند به مدیران رسمی (eshahabian / ardavan) پیام بدهند
+    if (casting_user_is_public_support_contact($to_id)) {
+        return ['ok' => true, 'error' => ''];
+    }
+
     $from_role = casting_get_user_role($from_id);
     $to_role = casting_get_user_role($to_id);
     if ($from_role === '' || $to_role === '') {
@@ -180,6 +185,10 @@ function casting_can_user_open_dm(int $from_id, int $to_id): array
     if (casting_user_is_portal_owner($from_id) && casting_get_user_role($to_id) !== '') {
         return ['ok' => true, 'error' => ''];
     }
+    // مدیران رسمی برای همه قابل پیام هستند
+    if (casting_user_is_public_support_contact($to_id) && casting_get_user_role($from_id) !== '') {
+        return ['ok' => true, 'error' => ''];
+    }
     if (casting_get_user_role($from_id) === '' || casting_get_user_role($to_id) === '') {
         return ['ok' => false, 'error' => 'فقط اعضای ۷ رخ می‌توانند چت کنند.'];
     }
@@ -190,6 +199,60 @@ function casting_can_user_open_dm(int $from_id, int $to_id): array
 
     return [
         'ok'    => false,
-        'error' => 'دسترسی پیام برای این نقش‌ها خاموش است.',
+        'error' => 'طبق جدول دسترسی پیام‌رسان، امکان ارسال پیام نیست.',
     ];
+}
+
+/**
+ * مدیران رسمی سایت که همه اعضا می‌توانند به آن‌ها پیام بدهند
+ * (همان حساب‌های صفحه رسمی / فالو الزامی)
+ */
+function casting_user_is_public_support_contact(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
+    if (function_exists('casting_dm_is_support_peer') && casting_dm_is_support_peer($user_id)) {
+        return true;
+    }
+    if (!function_exists('casting_follow_target_is_required')) {
+        $follows = __DIR__ . '/follows.php';
+        if (is_file($follows)) {
+            require_once $follows;
+        }
+    }
+    if (function_exists('casting_follow_target_is_required')) {
+        return casting_follow_target_is_required($user_id);
+    }
+
+    return false;
+}
+
+/**
+ * دکمه پیام روی کارت — اگر دسترسی نباشد غیرفعال نشان داده می‌شود (مخفی نمی‌شود)
+ */
+function casting_render_member_message_button(int $viewer_id, int $target_id, string $display_name = ''): void
+{
+    if ($viewer_id <= 0 || $target_id <= 0 || $viewer_id === $target_id) {
+        return;
+    }
+    $allow = casting_can_user_open_dm($viewer_id, $target_id);
+    $label = 'پیام';
+    $aria = $display_name !== '' ? ('پیام به ' . $display_name) : 'پیام';
+    if (!empty($allow['ok'])) {
+        ?>
+<a class="btn btn-ghost btn-sm member-card-msg" href="chat.php?with=<?= (int) $target_id ?>" title="<?= casting_e($aria) ?>" aria-label="<?= casting_e($aria) ?>"><?= casting_e($label) ?></a>
+        <?php
+        return;
+    }
+    $reason = trim((string) ($allow['error'] ?? ''));
+    if ($reason === '') {
+        $reason = 'طبق جدول دسترسی پیام‌رسان، امکان ارسال پیام نیست.';
+    }
+    ?>
+<button type="button" class="btn btn-ghost btn-sm member-card-msg is-disabled" disabled title="<?= casting_e($reason) ?>" aria-label="<?= casting_e($reason) ?>"><?= casting_e($label) ?></button>
+    <?php
 }

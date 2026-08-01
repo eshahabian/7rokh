@@ -1734,11 +1734,13 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
         <?php casting_render_presence_dot($id, 'md'); ?>
       </button>
       <div class="panel-ad-card-body">
+        <div class="member-card-badge-row">
+          <?php casting_render_official_page_badge($id); ?>
+        </div>
         <h3>
           <button type="button" class="link-button" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button>
-          <?php casting_render_official_page_badge($id); ?>
         </h3>
-        <p><?= casting_e($role_label) ?></p>
+        <p class="member-card-role"><?= casting_e($role_label !== '' ? $role_label : '—') ?></p>
         <p class="panel-ad-place"><?= casting_e($city !== '' ? $city : '—') ?></p>
         <div class="panel-ad-card-actions">
           <button type="button" class="btn btn-ghost btn-sm" data-member-preview="<?= $id ?>">مشاهده</button>
@@ -1786,14 +1788,27 @@ function casting_render_panel_home_member_row(array $members, bool $premium_badg
 function casting_render_member_card(WP_User $member, int $viewer_id, ?array $director_flags = null, float $director_score = 0): void
 {
     $id = (int) $member->ID;
-    $role = casting_get_user_role($id);
     $profile = casting_get_profile($id);
     $premium = casting_user_is_premium($id);
     $photo = $profile['photo_url'] !== '' ? $profile['photo_url'] : '';
     $viewed = !empty($director_flags['viewed']);
     $highlight = !empty($director_flags['is_highlight']);
+    $city = trim((string) ($profile['city'] ?? ''));
+    $role_label = casting_user_public_role_label($id);
+    if ($role_label === '') {
+        $role_label = '—';
+    }
+    if (!function_exists('casting_follow_can_target')) {
+        require_once __DIR__ . '/follows.php';
+    }
+    if (!function_exists('casting_render_member_message_button')) {
+        require_once __DIR__ . '/chat-rules.php';
+    }
+    $can_follow_btn = $viewer_id > 0 && $viewer_id !== $id && casting_follow_can_target($viewer_id, $id);
+    $show_actions = $viewer_id > 0 && $viewer_id !== $id;
+    $is_official = function_exists('casting_follow_target_is_required') && casting_follow_target_is_required($id);
     ?>
-    <article class="member-card<?= $highlight ? ' member-card--highlight' : '' ?>" data-member-preview="<?= $id ?>">
+    <article class="member-card<?= $highlight ? ' member-card--highlight' : '' ?><?= $is_official ? ' member-card--official' : '' ?>" data-member-preview="<?= $id ?>">
       <button type="button" class="member-card-photo" data-member-preview="<?= $id ?>" aria-label="نمایش پروفایل <?= casting_e($member->display_name) ?>">
         <?php if ($photo !== '') : ?>
           <img src="<?= casting_e($photo) ?>" alt="">
@@ -1806,38 +1821,28 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
         <?php endif; ?>
       </button>
       <div class="member-card-body">
-        <h3><button type="button" class="link-button member-card-name" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button><?php
-        if (!function_exists('casting_render_official_page_badge')) {
-            require_once __DIR__ . '/follows.php';
-        }
-        casting_render_official_page_badge($id);
-        ?></h3>
+        <div class="member-card-badge-row">
+          <?php casting_render_official_page_badge($id); ?>
+        </div>
+        <h3>
+          <button type="button" class="link-button member-card-name" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button>
+        </h3>
         <p class="meta member-card-meta">
-          <?= casting_e(casting_user_public_role_label($id)) ?>
+          <span class="member-card-role"><?= casting_e($role_label) ?></span>
           <?php if ($premium) : ?><span class="chip chip-premium">ویژه</span><?php endif; ?>
           <?php if ($director_score > 0) : ?>
             <span class="director-score-pill" title="بهترین امتیاز شما">★ <?= casting_e(casting_director_format_score($director_score)) ?></span>
           <?php endif; ?>
-          <?php if ($profile['city'] !== '') : ?> · <?= casting_e($profile['city']) ?><?php endif; ?>
+          <span class="member-card-city"><?= casting_e($city !== '' ? $city : '—') ?></span>
         </p>
-        <?php
-        $can_dm = $viewer_id !== $id && casting_can_user_open_dm($viewer_id, $id)['ok'];
-        $can_follow_btn = false;
-        if ($viewer_id > 0 && $viewer_id !== $id) {
-            if (!function_exists('casting_follow_can_target')) {
-                require_once __DIR__ . '/follows.php';
-            }
-            $can_follow_btn = casting_follow_can_target($viewer_id, $id);
-        }
-        if ($can_dm || $can_follow_btn) :
-            ?>
+        <?php if ($show_actions) : ?>
         <div class="member-card-actions">
           <?php if ($can_follow_btn) : ?>
             <?php casting_render_follow_button($viewer_id, $id, 'btn-sm'); ?>
+          <?php else : ?>
+            <span class="member-card-action-spacer" aria-hidden="true"></span>
           <?php endif; ?>
-          <?php if ($can_dm) : ?>
-            <a class="btn btn-ghost btn-sm member-card-msg" href="chat.php?with=<?= $id ?>" title="پیام" aria-label="پیام به <?= casting_e($member->display_name) ?>">پیام</a>
-          <?php endif; ?>
+          <?php casting_render_member_message_button($viewer_id, $id, (string) $member->display_name); ?>
         </div>
         <?php endif; ?>
       </div>

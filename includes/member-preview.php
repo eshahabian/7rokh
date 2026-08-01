@@ -209,6 +209,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
     $viewer_premium = casting_user_is_premium($viewer_id);
     $free_hint = casting_employer_free_messages_hint($viewer_id);
     $chat_ok = casting_can_user_send_dm($viewer_id, $member_id)['ok'];
+    $chat_open = casting_can_user_open_dm($viewer_id, $member_id);
     $age_label = ($profile['age'] ?? '') !== '' ? (string) $profile['age'] . ' ساله' : '—';
     $city_label = (string) ($profile['city'] ?? '');
     if ($city_label === '' && ($profile['province'] ?? '') !== '') {
@@ -226,8 +227,10 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
         <?php casting_render_presence_dot($member_id, 'md'); ?>
       </div>
       <div class="member-preview-head-text">
+        <div class="member-card-badge-row">
+          <?php casting_render_official_page_badge($member_id); ?>
+        </div>
         <h2 class="member-preview-title" id="member-preview-title"><?= casting_e((string) $member->display_name) ?></h2>
-        <?php casting_render_official_page_badge($member_id); ?>
         <p class="member-preview-role"><?= casting_e($role_label) ?></p>
         <?php if ($membership_code !== '') : ?>
           <p class="member-preview-code">کد کاربری: <span dir="ltr"><?= casting_e($membership_code) ?></span></p>
@@ -247,19 +250,24 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
       <li><span class="member-preview-icon" aria-hidden="true">📊</span><span>تکمیل پروفایل: <?= (int) $completion ?>٪</span></li>
     </ul>
 
-    <?php if ($show_actions || $can_favorite || $can_follow) : ?>
+    <?php if ($show_actions || $can_favorite || $can_follow || $viewer_id !== $member_id) : ?>
       <div class="member-preview-actions">
         <?php if ($can_follow) : ?>
           <?php casting_render_follow_button($viewer_id, $member_id, 'member-preview-btn member-preview-btn--follow'); ?>
         <?php endif; ?>
+        <?php if ($viewer_id !== $member_id) : ?>
+          <?php if (!empty($chat_open['ok'])) : ?>
+            <a class="btn member-preview-btn member-preview-btn--interest" href="chat.php?with=<?= (int) $member_id ?>">ارسال پیام</a>
+          <?php else : ?>
+            <button
+              type="button"
+              class="btn member-preview-btn member-preview-btn--interest is-disabled"
+              disabled
+              title="<?= casting_e((string) ($chat_open['error'] ?? 'طبق جدول دسترسی پیام‌رسان، امکان ارسال پیام نیست.')) ?>"
+            >ارسال پیام</button>
+          <?php endif; ?>
+        <?php endif; ?>
         <?php if ($show_actions) : ?>
-          <button
-            type="button"
-            class="btn member-preview-btn member-preview-btn--interest"
-            data-member-preview-action="interest"
-            data-member-id="<?= (int) $member_id ?>"
-            <?= $chat_ok ? '' : ' disabled' ?>
-          >ارسال پیام</button>
           <button
             type="button"
             class="btn member-preview-btn member-preview-btn--sms"

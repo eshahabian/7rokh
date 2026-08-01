@@ -362,14 +362,18 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           if (!function_exists('casting_follow_can_target')) {
               require_once __DIR__ . '/follows.php';
           }
-          if (casting_follow_can_target($viewer_id, $member_id)) {
-              ?>
+          if (!function_exists('casting_render_member_message_button')) {
+              require_once __DIR__ . '/chat-rules.php';
+          }
+          ?>
       <div class="profile-follow-row">
-        <?php casting_render_follow_button($viewer_id, $member_id, 'btn-sm'); ?>
+        <?php if (casting_follow_can_target($viewer_id, $member_id)) : ?>
+          <?php casting_render_follow_button($viewer_id, $member_id, 'btn-sm'); ?>
+        <?php endif; ?>
+        <?php casting_render_member_message_button($viewer_id, $member_id, (string) $member->display_name); ?>
         <span class="meta"><?= (int) casting_followers_count($member_id) ?> دنبال‌کننده</span>
       </div>
-              <?php
-          }
+          <?php
       }
       ?>
       <?php if (!$is_self) : ?>
@@ -378,6 +382,8 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
             <div class="cta-row">
               <?php if ($chat_allow['ok']) : ?>
                 <a class="btn btn-primary" href="chat.php?with=<?= $member_id ?>">پیام به این کاربر</a>
+              <?php else : ?>
+                <button type="button" class="btn btn-primary is-disabled" disabled title="<?= casting_e((string) ($chat_allow['error'] ?? 'امکان پیام نیست')) ?>">پیام به این کاربر</button>
               <?php endif; ?>
               <form method="post" action="member.php?id=<?= $member_id ?>" style="display:inline">
                 <?php wp_nonce_field('casting_block'); ?>
