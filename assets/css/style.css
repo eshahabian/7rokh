@@ -401,10 +401,6 @@ html[data-theme="day"] .brand-mark-rokh {
   margin: 1.5rem auto 0;
 }
 
-.page-home .enamad-seal {
-  padding: 0.55rem clamp(1.25rem, 4vw, 3rem) 0.25rem;
-}
-
 .page-home .site-footer {
   padding-top: 1rem;
   padding-bottom: 1rem;
@@ -1253,21 +1249,27 @@ fieldset.field legend {
   text-align: center;
 }
 
-.enamad-seal {
+.site-footer-inner {
   display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
   align-items: center;
-  padding: 1.25rem clamp(1.25rem, 4vw, 3rem) 0.5rem;
+  justify-content: center;
+  gap: 0.85rem 1.25rem;
 }
 
-.enamad-seal a {
-  display: inline-block;
+.site-footer-inner p {
+  margin: 0;
+}
+
+.enamad-seal {
+  display: inline-flex;
+  align-items: center;
   line-height: 0;
 }
 
 .enamad-seal img {
   display: block;
-  width: 88px;
+  width: 72px;
   height: auto;
   max-width: 100%;
 }

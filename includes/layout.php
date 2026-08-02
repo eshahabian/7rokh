@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=118">
+  <link rel="stylesheet" href="<?= $css ?>?v=119">
   <script>
     (function () {
       try {
@@ -139,7 +139,12 @@ function casting_render_footer(): void
 {
     ?>
   <footer class="site-footer">
-    <p><?= casting_brand_html() ?> — پورتال استعداد و بازیگری</p>
+    <div class="site-footer-inner">
+      <p><?= casting_brand_html() ?> — پورتال استعداد و بازیگری</p>
+      <a class="enamad-seal" referrerpolicy="origin" target="_blank" rel="noopener noreferrer" href="https://trustseal.enamad.ir/?id=4302477&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS" aria-label="نماد اعتماد الکترونیکی">
+        <img referrerpolicy="origin" src="https://trustseal.enamad.ir/logo.aspx?id=4302477&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS" alt="نماد اعتماد الکترونیکی" style="cursor:pointer" code="s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS">
+      </a>
+    </div>
   </footer>
   <button type="button" class="scroll-top" data-scroll-top aria-label="بازگشت به بالای صفحه">
     <span aria-hidden="true">↑</span>
