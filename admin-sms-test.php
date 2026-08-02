@@ -19,6 +19,7 @@ $error = '';
 $success = '';
 $test_mobile = casting_normalize_mobile((string) get_user_meta($user_id, 'casting_mobile', true));
 $mode = 'otp';
+$last_ref = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_sms_test')) {
@@ -29,23 +30,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($test_mobile === '' || !preg_match('/^09\d{9}$/', $test_mobile)) {
             $error = 'شماره موبایل معتبر وارد کنید.';
         } elseif (!casting_sms_is_configured()) {
-            $error = 'CASTING_SMS_API_KEY در config.local.php تنظیم نشده است.';
+            $error = 'CASTING_SMS_API_KEY در config.local.php روی سرور تنظیم نشده است.';
         } elseif ($mode === 'otp') {
             $result = casting_otp_send('admin_test', $test_mobile);
+            $debug = casting_sms_last_debug();
+            $last_ref = is_array($debug) ? (string) ($debug['ref_id'] ?? '') : '';
             if (!$result['ok']) {
                 $error = $result['error'];
             } else {
-                $success = 'کد OTP تست به ' . $test_mobile . ' ارسال شد.';
+                $success = 'کد OTP تست به ' . $test_mobile . ' ارسال شد.'
+                    . ($last_ref !== '' ? ' (refId: ' . $last_ref . ')' : '');
             }
         } else {
             $result = casting_sms_send_text(
                 $test_mobile,
                 'تست پیامک متنی پورتال ' . casting_brand() . ' — ' . current_time('mysql')
             );
+            $last_ref = (string) ($result['ref_id'] ?? '');
             if (!$result['ok']) {
                 $error = $result['error'];
             } else {
-                $success = 'پیامک متنی تست به ' . $test_mobile . ' ارسال شد.';
+                $success = 'پیامک متنی تست به ' . $test_mobile . ' ارسال شد.'
+                    . ($last_ref !== '' ? ' (refId: ' . $last_ref . ')' : '');
             }
         }
     }
@@ -57,6 +63,7 @@ $otp_sender = casting_sms_otp_sender();
 $api_base = casting_sms_api_base();
 $pattern_id = defined('CASTING_SMS_OTP_PATTERN_ID') ? trim((string) CASTING_SMS_OTP_PATTERN_ID) : '';
 $credit_info = casting_sms_is_configured() ? casting_sms_get_credit() : ['ok' => false, 'error' => 'کلید تنظیم نشده'];
+$debug = casting_sms_last_debug();
 
 casting_render_panel_start('تست پیامک', 'admin-sms');
 if ($error !== '') {
@@ -69,17 +76,17 @@ casting_render_flash();
 ?>
 <section class="dash-card panel-wide">
   <h1>تست پیامک WebOne</h1>
-  <p class="lede">طبق مستند RestDocument v1.4 — قبل از استفاده عمومی، OTP و پیامک متنی را اینجا چک کنید. کلید فقط در config.local.php باشد.</p>
+  <p class="lede">اگر سایت «موفق» نشان داد ولی پیامک نیامد، بلوک «آخرین پاسخ API» را ببینید و همان را بفرستید.</p>
 
   <dl class="admin-mail-status">
     <dt>API Base</dt>
     <dd><code dir="ltr"><?= casting_e($api_base) ?></code></dd>
     <dt>CASTING_SMS_API_KEY</dt>
-    <dd><?= $api_set ? '✓ تنظیم شده' : '✗ خالی است' ?></dd>
+    <dd><?= $api_set ? '✓ تنظیم شده' : '✗ خالی است — روی سرور در config.local.php بگذارید' ?></dd>
     <dt>CASTING_SMS_FROM</dt>
-    <dd><?= $from !== '' ? '<code dir="ltr">' . casting_e($from) . '</code>' : '✗ خالی — برای لینک بازیابی لازم است' ?></dd>
+    <dd><?= $from !== '' ? '<code dir="ltr">' . casting_e($from) . '</code>' : '✗ خالی — برای پیامک متنی لازم است' ?></dd>
     <dt>OTP Sender</dt>
-    <dd><code dir="ltr"><?= casting_e($otp_sender) ?></code></dd>
+    <dd><?= $otp_sender !== '' ? '<code dir="ltr">' . casting_e($otp_sender) . '</code>' : 'پیش‌فرض SmartOTP (بدون OTPSender)' ?></dd>
     <dt>OTP Pattern</dt>
     <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code> (الگو)' : 'SmartOTP' ?></dd>
     <dt>مانده اعتبار</dt>
@@ -92,9 +99,23 @@ casting_render_flash();
     ?></dd>
     <dt>ارسال فعال</dt>
     <dd><?= casting_sms_is_configured() ? '✓ بله' : '✗ خیر' ?></dd>
-    <dt>OTP ثبت‌نام</dt>
-    <dd><?= casting_mobile_otp_enabled() ? '✓ روشن' : '✗ خاموش (CASTING_MOBILE_OTP_ENABLED)' ?></dd>
   </dl>
+
+  <?php if (is_array($debug)) : ?>
+    <details class="dash-card" open style="margin:1rem 0;padding:1rem;">
+      <summary><strong>آخرین پاسخ API</strong></summary>
+      <p class="meta" dir="ltr"><?= casting_e((string) ($debug['at'] ?? '')) ?> · HTTP <?= (int) ($debug['http'] ?? 0) ?> · <?= !empty($debug['ok']) ? 'ok' : 'fail' ?></p>
+      <p class="meta" dir="ltr"><?= casting_e((string) ($debug['url'] ?? '')) ?></p>
+      <?php if (!empty($debug['parsed_error'])) : ?>
+        <p class="flash flash-error"><?= casting_e((string) $debug['parsed_error']) ?></p>
+      <?php endif; ?>
+      <pre dir="ltr" style="white-space:pre-wrap;overflow:auto;max-height:280px;font-size:0.8rem;"><?= casting_e(wp_json_encode([
+          'request' => $debug['request'] ?? null,
+          'body'    => $debug['body'] ?? null,
+          'ref_id'  => $debug['ref_id'] ?? null,
+      ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)) ?></pre>
+    </details>
+  <?php endif; ?>
 
   <form class="form" method="post" action="admin-sms-test.php">
     <?php wp_nonce_field('casting_sms_test'); ?>

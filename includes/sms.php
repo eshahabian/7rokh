@@ -5,10 +5,8 @@ declare(strict_types=1);
  * ارسال پیامک از طریق WebOne SMS
  *
  * پنل: https://webone-sms.ir
- * Base API (مستند v1.4): https://api.payamakapi.ir/api/v1
+ * Endpoint عملیاتی (درایور رسمی/تست‌شده): https://rest.payamakapi.ir/api/v1/
  * هدر الزامی: X-API-KEY
- *
- * @see RestDocument.V1.4
  */
 
 function casting_sms_is_configured(): bool
@@ -21,15 +19,12 @@ function casting_sms_is_configured(): bool
     return $key !== '';
 }
 
-/**
- * آدرس پایه وب‌سرویس — قابلOverride با CASTING_SMS_API_BASE
- */
 function casting_sms_api_base(): string
 {
     $base = defined('CASTING_SMS_API_BASE') ? trim((string) CASTING_SMS_API_BASE) : '';
     if ($base === '') {
-        // مستند رسمی WebOne RestDocument v1.4
-        $base = 'https://api.payamakapi.ir/api/v1/';
+        // endpoint عملیاتی WebOne (نه فقط متن PDF)
+        $base = 'https://rest.payamakapi.ir/api/v1/';
     }
     if ($base !== '' && substr($base, -1) !== '/') {
         $base .= '/';
@@ -38,18 +33,56 @@ function casting_sms_api_base(): string
     return $base;
 }
 
-/**
- * خط فرستنده OTP — طبق مستند: شماره خط یا "Auto"
- */
 function casting_sms_otp_sender(): string
 {
     $sender = defined('CASTING_SMS_OTP_SENDER') ? trim((string) CASTING_SMS_OTP_SENDER) : '';
 
-    return $sender !== '' ? $sender : 'Auto';
+    return $sender;
 }
 
 /**
- * @return array{ok:bool,error:string,code?:int,raw?:mixed,ref_id?:string}
+ * true فقط وقتی مقدار واقعاً موفق باشد (نه رشتهٔ غیرخالی تصادفی)
+ */
+function casting_sms_is_truthy_success(mixed $value): bool
+{
+    if ($value === true || $value === 1 || $value === '1') {
+        return true;
+    }
+    if (is_string($value) && strtolower(trim($value)) === 'true') {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * آخرین پاسخ API برای دیباگ ادمین (بدون کلید)
+ *
+ * @param array<string,mixed>|null $payload
+ */
+function casting_sms_remember_last(array $payload): void
+{
+    if (!function_exists('set_transient')) {
+        return;
+    }
+    set_transient('casting_sms_last_debug', $payload, 30 * MINUTE_IN_SECONDS);
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function casting_sms_last_debug(): ?array
+{
+    if (!function_exists('get_transient')) {
+        return null;
+    }
+    $data = get_transient('casting_sms_last_debug');
+
+    return is_array($data) ? $data : null;
+}
+
+/**
+ * @return array{ok:bool,error:string,code?:int,raw?:mixed,ref_id?:string,http?:int}
  */
 function casting_sms_request(string $endpoint, array $body): array
 {
@@ -71,51 +104,107 @@ function casting_sms_request(string $endpoint, array $body): array
     ]);
 
     if (is_wp_error($response)) {
-        return ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
+        $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
+        casting_sms_remember_last([
+            'at'       => current_time('mysql'),
+            'url'      => $url,
+            'endpoint' => $endpoint,
+            'request'  => $body,
+            'error'    => $out['error'],
+        ]);
+
+        return $out;
     }
 
     $http = (int) wp_remote_retrieve_response_code($response);
     $raw_body = (string) wp_remote_retrieve_body($response);
     $data = json_decode($raw_body, true);
-    if (!is_array($data)) {
-        return [
+
+    $debug = [
+        'at'       => current_time('mysql'),
+        'url'      => $url,
+        'endpoint' => $endpoint,
+        'request'  => $body,
+        'http'     => $http,
+        'body'     => is_array($data) ? $data : mb_substr($raw_body, 0, 800),
+    ];
+
+    if ($http < 200 || $http >= 300) {
+        $out = [
             'ok'    => false,
             'error' => 'پاسخ نامعتبر از پنل پیامک (HTTP ' . $http . ').',
-            'raw'   => $raw_body,
+            'http'  => $http,
+            'raw'   => is_array($data) ? $data : $raw_body,
         ];
+        $debug['ok'] = false;
+        $debug['parsed_error'] = $out['error'];
+        casting_sms_remember_last($debug);
+
+        return $out;
     }
 
-    $succeeded = !empty($data['succeeded']) || !empty($data['Succeeded']);
-    $result_code = array_key_exists('resultCode', $data)
-        ? (int) $data['resultCode']
-        : (array_key_exists('ResultCode', $data) ? (int) $data['ResultCode'] : null);
-    $ref_id = (string) ($data['refId'] ?? $data['RefId'] ?? '');
+    if (!is_array($data)) {
+        $out = [
+            'ok'    => false,
+            'error' => 'پاسخ JSON نامعتبر از پنل پیامک (HTTP ' . $http . ').',
+            'http'  => $http,
+            'raw'   => $raw_body,
+        ];
+        $debug['ok'] = false;
+        $debug['parsed_error'] = $out['error'];
+        casting_sms_remember_last($debug);
 
-    // موفق: Succeeded=true یا resultCode=0 (مستند v1.4)
-    if ($succeeded || $result_code === 0) {
-        return [
+        return $out;
+    }
+
+    $succeeded_raw = $data['succeeded'] ?? $data['Succeeded'] ?? null;
+    $succeeded = casting_sms_is_truthy_success($succeeded_raw);
+    $has_code = array_key_exists('resultCode', $data) || array_key_exists('ResultCode', $data);
+    $result_code = $has_code
+        ? (int) ($data['resultCode'] ?? $data['ResultCode'])
+        : null;
+    $ref_id = trim((string) ($data['refId'] ?? $data['RefId'] ?? ''));
+
+    // موفق فقط وقتی succeeded=true و (اگر کد آمده) resultCode=0
+    $ok = $succeeded && ($result_code === null || $result_code === 0);
+    // اگر کد خطا غیرصفر باشد حتی با succeeded عجیب، ناموفق
+    if ($result_code !== null && $result_code !== 0) {
+        $ok = false;
+    }
+
+    if ($ok) {
+        $out = [
             'ok'     => true,
             'error'  => '',
             'code'   => 0,
             'raw'    => $data,
             'ref_id' => $ref_id,
+            'http'   => $http,
         ];
+        $debug['ok'] = true;
+        $debug['ref_id'] = $ref_id;
+        casting_sms_remember_last($debug);
+
+        return $out;
     }
 
     $code = $result_code ?? -1;
-
-    return [
+    $out = [
         'ok'     => false,
         'error'  => casting_sms_error_message($code),
         'code'   => $code,
         'raw'    => $data,
         'ref_id' => $ref_id,
+        'http'   => $http,
     ];
+    $debug['ok'] = false;
+    $debug['parsed_error'] = $out['error'];
+    casting_sms_remember_last($debug);
+
+    return $out;
 }
 
 /**
- * مانده اعتبار (ریال) — GET SMS/GetCredit
- *
  * @return array{ok:bool,error:string,credit?:float}
  */
 function casting_sms_get_credit(): array
@@ -155,24 +244,22 @@ function casting_sms_get_credit(): array
         return ['ok' => true, 'error' => '', 'credit' => (float) $raw_body];
     }
 
-    return ['ok' => false, 'error' => 'پاسخ اعتبار نامعتبر بود.', 'raw' => $raw_body];
+    return ['ok' => false, 'error' => 'پاسخ اعتبار نامعتبر بود.'];
 }
 
-/**
- * کدهای خطا طبق RestDocument WebOne v1.4
- */
 function casting_sms_error_message(int $code): string
 {
+    // کدها مطابق پاسخ واقعی rest.payamakapi.ir / درایور WebOne
     $map = [
         0  => 'ارسال با موفقیت انجام شد.',
         1  => 'کلید API یا نام کاربری/رمز نامعتبر است.',
         2  => 'حساب پیامک مسدود شده است.',
-        3  => 'شماره فرستنده نامعتبر است.',
-        4  => 'محدودیت ارسال روزانه.',
+        3  => 'محدودیت ارسال روزانه.',
+        4  => 'شماره فرستنده نامعتبر است.',
         5  => 'تعداد گیرندگان بیش از حد مجاز است (حداکثر ۱۰۰).',
         6  => 'خط فرستنده غیرفعال است.',
         7  => 'متن پیامک شامل کلمات فیلترشده است.',
-        8  => 'اعتبار پنل کافی نیست (حداقل ۵۰ هزار تومان شارژ لازم است).',
+        8  => 'اعتبار پنل کافی نیست.',
         9  => 'سامانه پیامک در حال به‌روزرسانی است.',
         10 => 'وب‌سرویس پیامک غیرفعال است.',
         12 => 'تعداد شماره و متن در ارسال متناظر باید یکسان باشد.',
@@ -191,9 +278,7 @@ function casting_sms_error_message(int $code): string
 }
 
 /**
- * ارسال کد OTP — ترجیح: SmartOTP؛ در صورت تنظیم PatternId از الگوی پنل
- *
- * @return array{ok:bool,error:string}
+ * @return array{ok:bool,error:string,ref_id?:string}
  */
 function casting_sms_send_otp(string $mobile, string $message, string $otp_code = ''): array
 {
@@ -224,31 +309,42 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
         }
         $result = casting_sms_request('SMS/Send', [
             'From'                 => $from,
-            'ToNumber'             => $mobile,
+            'ToNumbers'            => [$mobile],
             'PatternId'            => $pattern_id,
             'PatternParameterData' => [
                 $param_key => $otp_code,
             ],
         ]);
 
-        return ['ok' => $result['ok'], 'error' => $result['error']];
+        return [
+            'ok'     => $result['ok'],
+            'error'  => $result['error'],
+            'ref_id' => (string) ($result['ref_id'] ?? ''),
+        ];
     }
 
-    // SmartOTP — مستند: OTPSender (یا Auto) + ToNumber + Content
-    $result = casting_sms_request('SMS/SmartOTP', [
-        'OTPSender' => casting_sms_otp_sender(),
-        'ToNumber'  => $mobile,
-        'Content'   => $message,
-    ]);
+    // SmartOTP — مثل درایور رسمی: فقط ToNumber + Content
+    // OTPSender فقط اگر در کانفیگ صریحاً ست شده باشد
+    $payload = [
+        'ToNumber' => $mobile,
+        'Content'  => $message,
+    ];
+    $otp_sender = casting_sms_otp_sender();
+    if ($otp_sender !== '') {
+        $payload['OTPSender'] = $otp_sender;
+    }
 
-    return ['ok' => $result['ok'], 'error' => $result['error']];
+    $result = casting_sms_request('SMS/SmartOTP', $payload);
+
+    return [
+        'ok'     => $result['ok'],
+        'error'  => $result['error'],
+        'ref_id' => (string) ($result['ref_id'] ?? ''),
+    ];
 }
 
 /**
- * ارسال پیامک متنی (مثلاً لینک بازیابی رمز)
- * مستند: From + ToNumber (تکی) یا ToNumbers (گروهی) + Content
- *
- * @return array{ok:bool,error:string}
+ * @return array{ok:bool,error:string,ref_id?:string}
  */
 function casting_sms_send_text(string $mobile, string $message): array
 {
@@ -270,11 +366,16 @@ function casting_sms_send_text(string $mobile, string $message): array
         return ['ok' => false, 'error' => 'متن پیامک خالی است.'];
     }
 
+    // ToNumbers مطابق درایور رسمی WebOne
     $result = casting_sms_request('SMS/Send', [
-        'From'     => $from,
-        'ToNumber' => $mobile,
-        'Content'  => $message,
+        'From'      => $from,
+        'ToNumbers' => [$mobile],
+        'Content'   => $message,
     ]);
 
-    return ['ok' => $result['ok'], 'error' => $result['error']];
+    return [
+        'ok'     => $result['ok'],
+        'error'  => $result['error'],
+        'ref_id' => (string) ($result['ref_id'] ?? ''),
+    ];
 }

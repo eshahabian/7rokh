@@ -14,19 +14,14 @@ define('CASTING_SMS_API_KEY', 'کلید-api-اینجا');
 /** شماره خط فرستنده برای پیامک متنی (مثلاً لینک بازیابی رمز) */
 define('CASTING_SMS_FROM', '1000xxxx');
 
-/** فرستنده OTP — معمولاً Auto کافی است؛ یا شماره خط OTP */
-define('CASTING_SMS_OTP_SENDER', 'Auto');
+/**
+ * اختیاری: فرستنده OTP (مثلاً Auto یا شماره خط OTP)
+ * اگر خالی باشد، SmartOTP فقط با ToNumber+Content ارسال می‌شود.
+ */
+// define('CASTING_SMS_OTP_SENDER', 'Auto');
 
 /** فعال‌سازی تأیید موبایل در ثبت‌نام (بعد از تست موفق) */
 // define('CASTING_MOBILE_OTP_ENABLED', true);
 
-/**
- * اگر به‌جای SmartOTP از الگوی پنل استفاده می‌کنید:
- * define('CASTING_SMS_OTP_PATTERN_ID', '12345');
- * define('CASTING_SMS_OTP_PATTERN_PARAM', 'ParameterValue');
- */
-
-/**
- * اگر api.payamakapi.ir جواب نداد، این را امتحان کنید:
- * define('CASTING_SMS_API_BASE', 'https://rest.payamakapi.ir/api/v1/');
- */
+/** اگر لازم شد آدرس API را عوض کنید (پیش‌فرض rest.payamakapi.ir است) */
+// define('CASTING_SMS_API_BASE', 'https://rest.payamakapi.ir/api/v1/');
