@@ -43,4 +43,9 @@ casting_render_flash();
     </div>
   </div>
 </main>
+<aside class="enamad-seal" aria-label="نماد اعتماد الکترونیکی">
+  <a referrerpolicy="origin" target="_blank" rel="noopener noreferrer" href="https://trustseal.enamad.ir/?id=4302477&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS">
+    <img referrerpolicy="origin" src="https://trustseal.enamad.ir/logo.aspx?id=4302477&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS" alt="نماد اعتماد الکترونیکی" width="125" height="136" style="cursor:pointer" code="s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS">
+  </a>
+</aside>
 <?php casting_render_footer(); ?>

@@ -1224,6 +1224,25 @@ fieldset.field legend {
   text-align: center;
 }
 
+.enamad-seal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.25rem clamp(1.25rem, 4vw, 3rem) 0.5rem;
+}
+
+.enamad-seal a {
+  display: inline-block;
+  line-height: 0;
+}
+
+.enamad-seal img {
+  display: block;
+  width: 88px;
+  height: auto;
+  max-width: 100%;
+}
+
 .panel-wide {
   width: min(720px, 100%);
 }
