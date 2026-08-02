@@ -53,6 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $api_set = defined('CASTING_SMS_API_KEY') && trim((string) CASTING_SMS_API_KEY) !== '';
 $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
+$otp_sender = casting_sms_otp_sender();
+$api_base = casting_sms_api_base();
+$pattern_id = defined('CASTING_SMS_OTP_PATTERN_ID') ? trim((string) CASTING_SMS_OTP_PATTERN_ID) : '';
+$credit_info = casting_sms_is_configured() ? casting_sms_get_credit() : ['ok' => false, 'error' => 'کلید تنظیم نشده'];
 
 casting_render_panel_start('تست پیامک', 'admin-sms');
 if ($error !== '') {
@@ -65,15 +69,31 @@ casting_render_flash();
 ?>
 <section class="dash-card panel-wide">
   <h1>تست پیامک WebOne</h1>
-  <p class="lede">قبل از استفاده عمومی، OTP و پیامک متنی را اینجا چک کنید. کلید فقط در config.local.php باشد.</p>
+  <p class="lede">طبق مستند RestDocument v1.4 — قبل از استفاده عمومی، OTP و پیامک متنی را اینجا چک کنید. کلید فقط در config.local.php باشد.</p>
 
   <dl class="admin-mail-status">
+    <dt>API Base</dt>
+    <dd><code dir="ltr"><?= casting_e($api_base) ?></code></dd>
     <dt>CASTING_SMS_API_KEY</dt>
     <dd><?= $api_set ? '✓ تنظیم شده' : '✗ خالی است' ?></dd>
     <dt>CASTING_SMS_FROM</dt>
-    <dd><?= $from !== '' ? '<code>' . casting_e($from) . '</code>' : '✗ خالی — برای لینک بازیابی لازم است' ?></dd>
+    <dd><?= $from !== '' ? '<code dir="ltr">' . casting_e($from) . '</code>' : '✗ خالی — برای لینک بازیابی لازم است' ?></dd>
+    <dt>OTP Sender</dt>
+    <dd><code dir="ltr"><?= casting_e($otp_sender) ?></code></dd>
+    <dt>OTP Pattern</dt>
+    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code> (الگو)' : 'SmartOTP' ?></dd>
+    <dt>مانده اعتبار</dt>
+    <dd><?php
+    if (!empty($credit_info['ok'])) {
+        echo '<code dir="ltr">' . casting_e(number_format((float) $credit_info['credit'], 0)) . '</code> ریال';
+    } else {
+        echo '✗ ' . casting_e((string) ($credit_info['error'] ?? 'نامشخص'));
+    }
+    ?></dd>
     <dt>ارسال فعال</dt>
     <dd><?= casting_sms_is_configured() ? '✓ بله' : '✗ خیر' ?></dd>
+    <dt>OTP ثبت‌نام</dt>
+    <dd><?= casting_mobile_otp_enabled() ? '✓ روشن' : '✗ خاموش (CASTING_MOBILE_OTP_ENABLED)' ?></dd>
   </dl>
 
   <form class="form" method="post" action="admin-sms-test.php">

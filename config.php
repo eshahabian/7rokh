@@ -99,8 +99,15 @@ if (!defined('CASTING_MAIL_FROM_NAME')) {
 }
 
 /**
- * پیامک WebOne — کلید و خط را در config.local.php بگذارید
- * @see https://webone-sms.ir/
+ * پیامک WebOne — کلید و خط را فقط در config.local.php بگذارید
+ * پنل: https://webone-sms.ir
+ * API: https://api.payamakapi.ir/api/v1  (مستند RestDocument v1.4)
+ *
+ * در پنل WebOne حتماً:
+ * 1) API Key بسازید (منوی وب‌سرویس)
+ * 2) IP سرور سایت را در «آی‌پی‌های مجاز» ثبت کنید
+ * 3) خط OTP را فعال کنید (برای SmartOTP)
+ * 4) برای پیامک متنی، شماره فرستنده (From) را از پنل بردارید
  */
 /**
  * تأیید OTP موبایل در ثبت‌نام — موقت false (برای کار روی پنل).
@@ -118,4 +125,23 @@ if (!defined('CASTING_SMS_API_KEY')) {
 /** شماره خط فرستنده برای پیامک متنی (لینک بازیابی و …) */
 if (!defined('CASTING_SMS_FROM')) {
     define('CASTING_SMS_FROM', '');
+}
+/** فرستنده OTP — "Auto" یا شماره خط OTP (مستند SmartOTP) */
+if (!defined('CASTING_SMS_OTP_SENDER')) {
+    define('CASTING_SMS_OTP_SENDER', 'Auto');
+}
+/**
+ * اختیاری: اگر به‌جای SmartOTP از الگوی پنل استفاده می‌کنید، PatternId را بگذارید.
+ * خالی = SmartOTP
+ */
+if (!defined('CASTING_SMS_OTP_PATTERN_ID')) {
+    define('CASTING_SMS_OTP_PATTERN_ID', '');
+}
+/** نام پارامتر الگو — پیش‌فرض ParameterValue طبق مستند */
+if (!defined('CASTING_SMS_OTP_PATTERN_PARAM')) {
+    define('CASTING_SMS_OTP_PATTERN_PARAM', 'ParameterValue');
+}
+/** اختیاری: override آدرس API — پیش‌فرض api.payamakapi.ir */
+if (!defined('CASTING_SMS_API_BASE')) {
+    define('CASTING_SMS_API_BASE', 'https://api.payamakapi.ir/api/v1/');
 }

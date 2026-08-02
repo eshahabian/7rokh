@@ -2,11 +2,31 @@
 /**
  * کپی کنید به config.local.php و مقادیر را پر کنید.
  * این فایل در git ذخیره نمی‌شود و با deploy خودکار کپی نمی‌شود.
+ *
+ * WebOne SMS — پنل: https://webone-sms.ir
+ * در پنل: API Key + IP مجاز سرور + خط OTP + شماره فرستنده
  */
 define('CASTING_SMTP_PASS', 'رمز-ایمیل-noreply-اینجا');
 
-/** کلید API پنل WebOne SMS (از پنل کپی کنید؛ در چت/گیت نگذارید) */
+/** کلید API از منوی وب‌سرویس پنل WebOne */
 define('CASTING_SMS_API_KEY', 'کلید-api-اینجا');
 
 /** شماره خط فرستنده برای پیامک متنی (مثلاً لینک بازیابی رمز) */
 define('CASTING_SMS_FROM', '1000xxxx');
+
+/** فرستنده OTP — معمولاً Auto کافی است؛ یا شماره خط OTP */
+define('CASTING_SMS_OTP_SENDER', 'Auto');
+
+/** فعال‌سازی تأیید موبایل در ثبت‌نام (بعد از تست موفق) */
+// define('CASTING_MOBILE_OTP_ENABLED', true);
+
+/**
+ * اگر به‌جای SmartOTP از الگوی پنل استفاده می‌کنید:
+ * define('CASTING_SMS_OTP_PATTERN_ID', '12345');
+ * define('CASTING_SMS_OTP_PATTERN_PARAM', 'ParameterValue');
+ */
+
+/**
+ * اگر api.payamakapi.ir جواب نداد، این را امتحان کنید:
+ * define('CASTING_SMS_API_BASE', 'https://rest.payamakapi.ir/api/v1/');
+ */
