@@ -158,7 +158,7 @@ function casting_render_footer(): void
       nonce: <?= wp_json_encode(wp_create_nonce('casting_media_engage')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=83" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=84" defer></script>
 </body>
 </html>
 <?php

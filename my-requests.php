@@ -42,7 +42,10 @@ $compose_project_city = '';
 $compose_message = '';
 $compose_talent_id = 0;
 $compose_error = '';
-$open_request_id = isset($_GET['open']) ? sanitize_text_field((string) $_GET['open']) : '';
+$open_request_id = '';
+if (isset($_GET['open'])) {
+    $open_request_id = casting_request_id_from_open_token(sanitize_text_field((string) $_GET['open']));
+}
 
 if ($is_director && $box === 'sent' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_collaboration_request'])) {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_send_request')) {

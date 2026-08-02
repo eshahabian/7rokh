@@ -5,6 +5,60 @@ require_once __DIR__ . '/blocks.php';
 require_once __DIR__ . '/chat-rules.php';
 require_once __DIR__ . '/chat.php';
 
+/** شناسه بدون نقطه — نقطه‌ی uniqid روی بعضی سرورها URL را خراب می‌کند */
+function casting_request_new_id(string $prefix = 'req_'): string
+{
+    $prefix = preg_replace('/[^a-z0-9_]/i', '', $prefix) ?: 'req_';
+
+    return $prefix . str_replace('.', '', uniqid('', true));
+}
+
+/** توکن امن برای ?open= (بدون نقطه و کاراکتر خاص) */
+function casting_request_open_token(string $request_id): string
+{
+    $request_id = trim($request_id);
+    if ($request_id === '') {
+        return '';
+    }
+
+    return rtrim(strtr(base64_encode($request_id), '+/', '-_'), '=');
+}
+
+function casting_request_id_from_open_token(string $token): string
+{
+    $token = trim($token);
+    if ($token === '') {
+        return '';
+    }
+    // سازگاری با لینک‌های قدیمی که خودِ id را می‌فرستادند
+    if (str_starts_with($token, 'call_') || str_starts_with($token, 'req_')) {
+        return $token;
+    }
+    $b64 = strtr($token, '-_', '+/');
+    $pad = strlen($b64) % 4;
+    if ($pad > 0) {
+        $b64 .= str_repeat('=', 4 - $pad);
+    }
+    $decoded = base64_decode($b64, true);
+
+    return is_string($decoded) && $decoded !== '' ? $decoded : '';
+}
+
+/**
+ * لینک باز کردن جزئیات فراخوان
+ *
+ * @param array<string, string> $extra
+ */
+function casting_request_open_url(string $request_id, array $extra = []): string
+{
+    $query = $extra;
+    if ($request_id !== '') {
+        $query['open'] = casting_request_open_token($request_id);
+    }
+
+    return 'my-requests.php' . ($query !== [] ? '?' . http_build_query($query) : '');
+}
+
 /**
  * ارسال دعوت همکاری کارفرما به هنرمند (جدا از پیام عادی)
  *
@@ -78,7 +132,7 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
     }
 
     $request = [
-        'id'                 => uniqid($kind === 'casting_call' ? 'call_' : 'req_', true),
+        'id'                 => casting_request_new_id($kind === 'casting_call' ? 'call_' : 'req_'),
         'employer_id'        => $employer_id,
         'talent_id'          => $talent_id,
         'employer'           => $employer->display_name,
@@ -904,19 +958,20 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
           $is_unread = !$is_archive && casting_request_is_unread($user_id, $req);
           $is_open = $open_id !== '' && $open_id === $req_id;
           $is_call = (($req['kind'] ?? '') === 'casting_call');
-          $open_url = 'my-requests.php';
-          if ($req_id !== '') {
-              $open_url .= ($is_archive ? '?view=archive&' : '?') . 'open=' . rawurlencode($req_id);
-          } elseif ($is_archive) {
-              $open_url .= '?view=archive';
+          $extra_q = [];
+          if ($is_archive) {
+              $extra_q['view'] = 'archive';
           }
           if ($box === 'received') {
-              $open_url .= (str_contains($open_url, '?') ? '&' : '?') . 'box=received';
+              $extra_q['box'] = 'received';
           }
+          $open_url = casting_request_open_url($req_id, $extra_q);
+          $close_url = casting_request_open_url('', $extra_q);
+          $reply_field_id = 'reply-' . substr(md5($req_id), 0, 12);
           $project_type = (string) ($req['project_type'] ?? '');
           $project_type_label = $types[$project_type] ?? $project_type;
           ?>
-        <article class="invitation-card status-<?= casting_e($status) ?><?= $is_call ? ' is-casting-call' : '' ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_open ? ' is-open' : '' ?><?= $is_archive ? ' is-archived' : '' ?>"<?= $is_open ? ' id="invitation-detail"' : '' ?>>
+        <article class="invitation-card status-<?= casting_e($status) ?><?= $is_call ? ' is-casting-call' : '' ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_open ? ' is-open' : '' ?><?= $is_archive ? ' is-archived' : '' ?>" data-invitation-card<?= $is_open ? ' id="invitation-detail"' : '' ?>>
           <div class="invitation-card-main">
             <header class="invitation-card-head">
               <h3 class="invitation-project">
@@ -942,13 +997,20 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
               <?php endif; ?>
               <li><strong>تاریخ ارسال:</strong> <time><?= casting_e((string) ($req['created_at'] ?? '')) ?></time></li>
             </ul>
-            <p class="invitation-excerpt"><?= nl2br(casting_e(casting_chat_preview((string) ($req['message'] ?? ''), $is_open ? 2000 : 160))) ?></p>
+            <p class="invitation-excerpt" data-invitation-excerpt-short<?= $is_open ? ' hidden' : '' ?>><?= nl2br(casting_e(casting_chat_preview((string) ($req['message'] ?? ''), 160))) ?></p>
+            <p class="invitation-excerpt invitation-excerpt-full" data-invitation-excerpt-full<?= $is_open ? '' : ' hidden' ?>><?= nl2br(casting_e((string) ($req['message'] ?? ''))) ?></p>
             <div class="invitation-card-actions">
-              <?php if (!$is_open) : ?>
-                <a class="btn btn-ghost btn-sm" href="<?= casting_e($open_url) ?>#invitation-detail">مشاهده جزئیات</a>
-              <?php else : ?>
-                <a class="btn btn-ghost btn-sm" href="<?= casting_e(preg_replace('/([?&])open=[^&]*&?/', '$1', $open_url) ?: 'my-requests.php') ?>">بستن جزئیات</a>
-              <?php endif; ?>
+              <button type="button" class="btn btn-ghost btn-sm" data-invitation-toggle aria-expanded="<?= $is_open ? 'true' : 'false' ?>">
+                <span data-invitation-toggle-open<?= $is_open ? ' hidden' : '' ?>>مشاهده جزئیات</span>
+                <span data-invitation-toggle-close<?= $is_open ? '' : ' hidden' ?>>بستن جزئیات</span>
+              </button>
+              <noscript>
+                <?php if (!$is_open) : ?>
+                  <a class="btn btn-ghost btn-sm" href="<?= casting_e($open_url) ?>#invitation-detail">مشاهده جزئیات</a>
+                <?php else : ?>
+                  <a class="btn btn-ghost btn-sm" href="<?= casting_e($close_url) ?>">بستن جزئیات</a>
+                <?php endif; ?>
+              </noscript>
               <?php if ($is_archive) : ?>
                 <form method="post" action="<?= casting_e($form_action) ?>">
                   <?php wp_nonce_field('casting_archive_request'); ?>
@@ -968,14 +1030,15 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
             </div>
           </div>
 
-          <?php if ($is_open && !$is_archive && $pending) : ?>
+          <div class="invitation-card-detail" data-invitation-detail<?= $is_open ? '' : ' hidden' ?>>
+          <?php if (!$is_archive && $pending) : ?>
             <form class="form invitation-reply-form" method="post" action="<?= casting_e($form_action) ?>">
               <?php wp_nonce_field('casting_respond_request'); ?>
               <input type="hidden" name="request_id" value="<?= casting_e($req_id) ?>">
               <?php if ($box === 'received') : ?><input type="hidden" name="box" value="received"><?php endif; ?>
               <div class="field">
-                <label for="reply-<?= casting_e($req_id) ?>">توضیح کوتاه (اختیاری)</label>
-                <textarea id="reply-<?= casting_e($req_id) ?>" name="reply" rows="3" maxlength="2000" placeholder="در صورت نیاز توضیح بنویسید…"></textarea>
+                <label for="<?= casting_e($reply_field_id) ?>">توضیح کوتاه (اختیاری)</label>
+                <textarea id="<?= casting_e($reply_field_id) ?>" name="reply" rows="3" maxlength="2000" placeholder="در صورت نیاز توضیح بنویسید…"></textarea>
               </div>
               <div class="cta-row invitation-decisions">
                 <button class="btn btn-primary" type="submit" name="decision" value="interested">علاقه‌مندم</button>
@@ -994,6 +1057,7 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
               <a class="btn btn-ghost btn-sm" href="chat.php?with=<?= (int) $req['employer_id'] ?>">گفتگو با ارسال‌کننده</a>
             <?php endif; ?>
           <?php endif; ?>
+          </div>
         </article>
       <?php endforeach; ?>
     </div>
@@ -1020,15 +1084,14 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
           $status = casting_request_status_key($req);
           $is_unread = !$is_archive && casting_request_is_unread($employer_id, $req);
           $is_call = (($req['kind'] ?? '') === 'casting_call');
-          $open_url = 'my-requests.php';
-          if ($req_id !== '') {
-              $open_url .= ($is_archive ? '?view=archive&' : '?') . 'open=' . rawurlencode($req_id);
-          } elseif ($is_archive) {
-              $open_url .= '?view=archive';
+          $extra_q = [];
+          if ($is_archive) {
+              $extra_q['view'] = 'archive';
           }
           if ($box === 'sent') {
-              $open_url .= (str_contains($open_url, '?') ? '&' : '?') . 'box=sent';
+              $extra_q['box'] = 'sent';
           }
+          $open_url = casting_request_open_url($req_id, $extra_q);
           ?>
         <article class="request-item status-<?= casting_e($status) ?><?= $is_call ? ' is-casting-call' : '' ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_archive ? ' is-archived' : '' ?>">
           <?php if (!empty($req['talent_id'])) : ?>

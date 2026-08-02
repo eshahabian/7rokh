@@ -236,13 +236,26 @@ function casting_url(string $path): string
     if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
         return $path;
     }
+
+    $hash = '';
+    $query = '';
+    if (str_contains($path, '#')) {
+        [$path, $hashPart] = explode('#', $path, 2);
+        $hash = '#' . $hashPart;
+    }
+    if (str_contains($path, '?')) {
+        [$path, $queryPart] = explode('?', $path, 2);
+        $query = '?' . $queryPart;
+    }
+
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $base = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');
     if ($base === '/' || $base === '\\' || $base === '.') {
         $base = '';
     }
-    return $scheme . '://' . $host . $base . '/' . ltrim($path, '/');
+
+    return $scheme . '://' . $host . $base . '/' . ltrim($path, '/') . $query . $hash;
 }
 
 function casting_redirect(string $path): void

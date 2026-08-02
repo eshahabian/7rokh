@@ -1970,4 +1970,43 @@
       if (submitBtn) submitBtn.disabled = false;
     }
   });
+
+  // باز/بسته کردن جزئیات فراخوان بدون تغییر URL (جلوگیری از 404)
+  const syncInvitationCard = (card, open) => {
+    if (!card) return;
+    card.classList.toggle("is-open", open);
+    const detail = card.querySelector("[data-invitation-detail]");
+    const shortEl = card.querySelector("[data-invitation-excerpt-short]");
+    const fullEl = card.querySelector("[data-invitation-excerpt-full]");
+    const btn = card.querySelector("[data-invitation-toggle]");
+    const openLabel = card.querySelector("[data-invitation-toggle-open]");
+    const closeLabel = card.querySelector("[data-invitation-toggle-close]");
+    if (detail) detail.hidden = !open;
+    if (shortEl) shortEl.hidden = open;
+    if (fullEl) fullEl.hidden = !open;
+    if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
+    if (openLabel) openLabel.hidden = open;
+    if (closeLabel) closeLabel.hidden = !open;
+  };
+
+  document.querySelectorAll("[data-invitation-card].is-open").forEach((card) => {
+    syncInvitationCard(card, true);
+  });
+
+  document.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-invitation-toggle]");
+    if (!btn) return;
+    event.preventDefault();
+    const card = btn.closest("[data-invitation-card]");
+    if (!card) return;
+    const willOpen = !card.classList.contains("is-open");
+    document.querySelectorAll("[data-invitation-card].is-open").forEach((other) => {
+      if (other !== card) syncInvitationCard(other, false);
+    });
+    syncInvitationCard(card, willOpen);
+    if (willOpen) {
+      card.id = "invitation-detail";
+      card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  });
 })();

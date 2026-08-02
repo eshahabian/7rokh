@@ -165,7 +165,7 @@ function casting_render_home_opportunities_section(int $user_id): void
               $unread = casting_request_is_unread($user_id, $req);
               $ptype = (string) ($req['project_type'] ?? '');
               $ptype_label = $types[$ptype] ?? $ptype;
-              $open_url = casting_url('my-requests.php' . ($req_id !== '' ? '?open=' . rawurlencode($req_id) : ''));
+              $open_url = casting_request_open_url($req_id);
               ?>
             <article class="home-opportunity-card<?= $unread ? ' is-unread' : '' ?>">
               <div class="home-opportunity-body">
