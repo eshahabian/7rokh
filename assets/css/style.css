@@ -1261,13 +1261,13 @@ fieldset.field legend {
   margin: 0;
 }
 
-.enamad-seal {
+.site-footer-inner > a {
   display: inline-flex;
   align-items: center;
   line-height: 0;
 }
 
-.enamad-seal img {
+.site-footer-inner > a img {
   display: block;
   width: 72px;
   height: auto;
