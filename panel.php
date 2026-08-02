@@ -25,6 +25,9 @@ if ($photo === '') {
     $photo = (string) ($closeup['url'] ?? '');
 }
 
+$posts_count = casting_user_media_public_count($user_id);
+$followers_count = casting_followers_count($user_id);
+$following_count = casting_following_count($user_id);
 $gallery_items = casting_user_media_public($user_id, 60);
 $can_gallery = casting_user_can_manage_gallery($user_id);
 $can_photos = casting_user_can_upload_portraits($user_id);
@@ -64,6 +67,25 @@ casting_render_flash();
         <?php endif; ?>
         <?php casting_render_official_page_badge($user_id); ?>
       </div>
+
+      <ul class="ig-profile-stats">
+        <li>
+          <strong><?= (int) $posts_count ?></strong>
+          <span>پست</span>
+        </li>
+        <li>
+          <a href="<?= casting_e(casting_url('following.php?tab=followers')) ?>">
+            <strong><?= (int) $followers_count ?></strong>
+            <span>دنبال‌کننده</span>
+          </a>
+        </li>
+        <li>
+          <a href="<?= casting_e(casting_url('following.php?tab=following')) ?>">
+            <strong><?= (int) $following_count ?></strong>
+            <span>دنبال‌شده</span>
+          </a>
+        </li>
+      </ul>
 
       <div class="ig-profile-meta">
         <?php if ($activity !== '') : ?>
