@@ -1020,9 +1020,16 @@ function casting_director_query_call_talents(int $director_id, array $filters, i
 }
 
 /**
- * @return array{ok:bool,error?:string,sent?:int,matched?:int}
+ * @return array{ok:bool,error?:string,sent?:int,matched?:int,opportunity_id?:int}
  */
-function casting_director_send_casting_call(int $director_id, int $project_id, array $filters, string $message): array
+function casting_director_send_casting_call(
+    int $director_id,
+    int $project_id,
+    array $filters,
+    string $message,
+    bool $publish_public = true,
+    int $role_id = 0
+): array
 {
     if (!casting_director_get_project($director_id, $project_id)) {
         return ['ok' => false, 'error' => 'پروژه پیدا نشد.'];
@@ -1047,7 +1054,7 @@ function casting_director_send_casting_call(int $director_id, int $project_id, a
 
     $talents = casting_director_query_call_talents($director_id, $filters);
     $matched = count($talents);
-    if ($matched === 0) {
+    if ($matched === 0 && !$publish_public) {
         return ['ok' => false, 'error' => 'عضوی با این مشخصات پیدا نشد.'];
     }
 
@@ -1057,10 +1064,18 @@ function casting_director_send_casting_call(int $director_id, int $project_id, a
 
     $filter_summary = casting_director_call_filter_summary($filters);
     $role_needed = '';
-    if (!empty($filters['activity_specialty'])) {
+    if ($role_id > 0) {
+        $role = casting_director_get_role($director_id, $role_id);
+        if ($role && (int) ($role['project_id'] ?? 0) === $project_id) {
+            $role_needed = (string) ($role['title'] ?? '');
+        } else {
+            $role_id = 0;
+        }
+    }
+    if ($role_needed === '' && !empty($filters['activity_specialty'])) {
         $labels = casting_activity_labels();
         $role_needed = (string) ($labels[sanitize_key((string) $filters['activity_specialty'])] ?? '');
-    } elseif (!empty($filters['activity_category'])) {
+    } elseif ($role_needed === '' && !empty($filters['activity_category'])) {
         $cats = casting_activity_categories();
         $role_needed = (string) ($cats[sanitize_key((string) $filters['activity_category'])]['label'] ?? '');
     }
@@ -1108,8 +1123,21 @@ function casting_director_send_casting_call(int $director_id, int $project_id, a
         }
     }
 
-    if ($sent === 0) {
-        return ['ok' => false, 'error' => 'به هیچ عضوی ارسال نشد (ممکن است همه بلاک باشند یا فیلترها منطبق نباشد).'];
+    $opportunity_id = 0;
+    if ($publish_public) {
+        if (!function_exists('casting_opportunity_publish')) {
+            require_once __DIR__ . '/opportunities.php';
+        }
+        $pub = casting_opportunity_publish($director_id, $project_id, $message, $filters, $role_id);
+        if (!empty($pub['ok'])) {
+            $opportunity_id = (int) ($pub['id'] ?? 0);
+        } elseif ($sent === 0) {
+            return ['ok' => false, 'error' => (string) ($pub['error'] ?? 'انتشار فراخوان ناموفق بود.')];
+        }
+    }
+
+    if ($sent === 0 && $opportunity_id <= 0) {
+        return ['ok' => false, 'error' => 'به هیچ عضوی ارسال نشد و فید عمومی هم ثبت نشد.'];
     }
 
     $log = get_user_meta($director_id, 'casting_director_call_log', true);
@@ -1117,30 +1145,47 @@ function casting_director_send_casting_call(int $director_id, int $project_id, a
         $log = [];
     }
     array_unshift($log, [
-        'call_id'       => $call_id,
-        'project_id'    => $project_id,
-        'project_title' => (string) ($project['title'] ?? ''),
-        'filters'       => $filter_summary,
-        'message'       => $message,
-        'matched'       => $matched,
-        'sent'          => $sent,
-        'sent_at'       => $sent_at,
+        'call_id'         => $call_id,
+        'project_id'      => $project_id,
+        'role_id'         => $role_id,
+        'opportunity_id' => $opportunity_id,
+        'project_title'   => (string) ($project['title'] ?? ''),
+        'filters'         => $filter_summary,
+        'message'         => $message,
+        'matched'         => $matched,
+        'sent'            => $sent,
+        'sent_at'         => $sent_at,
+        'public'          => $opportunity_id > 0,
     ]);
     update_user_meta($director_id, 'casting_director_call_log', array_slice($log, 0, 50));
 
-    return ['ok' => true, 'sent' => $sent, 'matched' => $matched];
+    return [
+        'ok'             => true,
+        'sent'           => $sent,
+        'matched'        => $matched,
+        'opportunity_id' => $opportunity_id,
+    ];
 }
 
 /**
  * @param array<string, string> $filters
  */
-function casting_render_director_casting_call_form(int $project_id, array $filters = [], string $message = ''): void
+function casting_render_director_casting_call_form(int $project_id, array $filters = [], string $message = '', int $director_id = 0): void
 {
     if (!function_exists('casting_render_body_metric_group')) {
         require_once __DIR__ . '/panel.php';
     }
+    if (!function_exists('casting_opportunities_list_for_director')) {
+        require_once __DIR__ . '/opportunities.php';
+    }
+    if ($director_id <= 0) {
+        $user = wp_get_current_user();
+        $director_id = (int) ($user->ID ?? 0);
+    }
     $genders = casting_gender_labels();
     $defs = casting_body_metric_defs();
+    $roles = casting_director_list_roles($director_id, $project_id);
+    $open_ops = casting_opportunities_list_for_director($director_id, $project_id, 20);
     $metric_defs = [
         [
             'prefix'    => 'height',
@@ -1173,8 +1218,8 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
     ?>
     <div class="director-casting-call">
       <h2 class="panel-section-title">فراخوان کستینگ</h2>
-      <p class="field-hint">نوع فعالیت و مشخصات را انتخاب کنید؛ فراخوان برای اعضای منطبق در بخش «فراخوان کستینگ» ثبت می‌شود.</p>
-      <form class="form" method="post" action="director-desk.php?project=<?= $project_id ?>" onsubmit="return confirm('فراخوان برای اعضای منطبق با فیلترها ارسال شود؟');">
+      <p class="field-hint">برای اعضای منطبق ارسال می‌شود و به‌صورت پیش‌فرض در فید عمومی «فرصت‌ها» هم منتشر می‌شود تا دیگران بتوانند اپلای کنند.</p>
+      <form class="form" method="post" action="director-desk.php?project=<?= $project_id ?>" onsubmit="return confirm('فراخوان ارسال و در فید فرصت‌ها منتشر شود؟');">
         <?php wp_nonce_field('casting_director_desk_page'); ?>
         <input type="hidden" name="desk_action" value="send_casting_call">
         <?php casting_render_member_search_activity_fields($filters, [
@@ -1196,11 +1241,60 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
           <?php casting_render_body_metric_group($filters, $metric_defs[2]); ?>
         </div>
         <div class="field">
+          <label for="call_role_id">نقش مرتبط (اختیاری)</label>
+          <select id="call_role_id" name="call_role_id">
+            <option value="0">— بدون نقش مشخص —</option>
+            <?php foreach ($roles as $role) : ?>
+              <option value="<?= (int) $role['id'] ?>"><?= casting_e((string) $role['title']) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <p class="field-hint">اگر نقش را انتخاب کنید، اپلای‌ها به همان نقش در میز کار اضافه می‌شوند.</p>
+        </div>
+        <div class="field">
           <label for="call_message">متن فراخوان</label>
           <textarea id="call_message" name="call_message" rows="4" required maxlength="3000" placeholder="توضیح نقش، زمان تست، محل حضور…"><?= casting_e($message) ?></textarea>
         </div>
-        <button class="btn btn-primary" type="submit">ارسال فراخوان</button>
+        <label class="checkbox-inline">
+          <input type="checkbox" name="publish_public" value="1" checked>
+          در فید عمومی فرصت‌ها هم منتشر شود (اپلای باز)
+        </label>
+        <button class="btn btn-primary" type="submit">ارسال و انتشار فراخوان</button>
       </form>
+
+      <?php if ($open_ops !== []) : ?>
+        <div class="director-open-ops" style="margin-top:1.5rem;">
+          <h3 class="panel-section-title">فراخوان‌های منتشرشده این پروژه</h3>
+          <ul class="home-opportunity-list">
+            <?php foreach ($open_ops as $op) :
+                $oid = (int) ($op['id'] ?? 0);
+                $count = casting_opportunity_applicant_count($oid);
+                $is_open = (string) ($op['status'] ?? '') === 'open';
+                ?>
+              <li class="home-opportunity-card">
+                <div class="home-opportunity-body">
+                  <h3><?= casting_e((string) ($op['title'] ?? '')) ?><?php if (!empty($op['role_title'])) : ?> · <?= casting_e((string) $op['role_title']) ?><?php endif; ?></h3>
+                  <p class="meta">
+                    <?= $is_open ? 'باز' : 'بسته' ?>
+                    · <?= (int) $count ?> اپلای
+                    · <?= casting_e(casting_opportunity_format_date((string) ($op['created_at'] ?? ''))) ?>
+                  </p>
+                </div>
+                <div class="home-opportunity-actions">
+                  <a class="btn btn-ghost btn-sm" href="director-desk.php?project=<?= (int) $project_id ?>&amp;opp=<?= $oid ?>">متقاضیان</a>
+                  <?php if ($is_open) : ?>
+                    <form method="post" action="director-desk.php?project=<?= (int) $project_id ?>" style="display:inline;" onsubmit="return confirm('این فراخوان بسته شود؟');">
+                      <?php wp_nonce_field('casting_director_desk_page'); ?>
+                      <input type="hidden" name="desk_action" value="close_opportunity">
+                      <input type="hidden" name="opportunity_id" value="<?= $oid ?>">
+                      <button class="btn btn-ghost btn-sm" type="submit">بستن</button>
+                    </form>
+                  <?php endif; ?>
+                </div>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
     </div>
     <?php
 }

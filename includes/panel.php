@@ -17,6 +17,7 @@ require_once __DIR__ . '/layout.php';
 function casting_panel_nav_items_desktop(): array
 {
     return [
+        ['key' => 'opportunities', 'label' => 'فرصت‌ها',                   'href' => 'opportunities.php'],
         ['key' => 'my-requests',  'label' => 'فراخوان کستینگ',           'href' => 'my-requests.php'],
         ['key' => 'search',       'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
         ['key' => 'newest',       'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],

@@ -105,49 +105,88 @@ function casting_recent_followers_for(int $user_id, int $limit = 5): array
 
 function casting_render_home_opportunities_section(int $user_id): void
 {
+    if (!function_exists('casting_opportunities_list_open')) {
+        require_once __DIR__ . '/opportunities.php';
+    }
     if (!function_exists('casting_invitation_project_type_labels')) {
         require_once __DIR__ . '/request.php';
     }
-    $calls = casting_home_casting_call_feed($user_id, 6);
-    $types = casting_invitation_project_type_labels();
+    casting_opportunities_ensure_tables();
+    $open = casting_opportunities_list_open(6);
+    $personal = casting_home_casting_call_feed($user_id, 4);
     ?>
   <section class="panel-ads-section home-feed-section" aria-labelledby="home-opportunities-title">
     <header class="panel-ads-head">
       <h2 id="home-opportunities-title">فرصت‌ها و فراخوان‌ها</h2>
-      <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('my-requests.php')) ?>">همه فراخوان‌ها</a>
+      <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('opportunities.php')) ?>">همه فرصت‌ها</a>
     </header>
-    <?php if ($calls === []) : ?>
-      <p class="empty-state">فعلاً فراخوان جدیدی برای شما نیست.</p>
+
+    <?php if ($open === [] && $personal === []) : ?>
+      <p class="empty-state">فعلاً فراخوان بازی نیست. کارگردان‌ها می‌توانند از «پروژه‌ها» فراخوان منتشر کنند.</p>
     <?php else : ?>
-      <div class="home-opportunity-list">
-        <?php foreach ($calls as $req) :
-            $req_id = (string) ($req['id'] ?? '');
-            $status = casting_request_status_key($req);
-            $unread = casting_request_is_unread($user_id, $req);
-            $ptype = (string) ($req['project_type'] ?? '');
-            $ptype_label = $types[$ptype] ?? $ptype;
-            $open = casting_url('my-requests.php' . ($req_id !== '' ? '?open=' . rawurlencode($req_id) : ''));
-            ?>
-          <article class="home-opportunity-card<?= $unread ? ' is-unread' : '' ?>">
-            <div class="home-opportunity-body">
-              <h3>
-                <?php if ($unread) : ?><span class="req-status req-status-new">جدید</span> <?php endif; ?>
-                <?= casting_e((string) ($req['project'] ?? 'فراخوان کستینگ')) ?>
-              </h3>
-              <p class="meta">
-                <?= casting_e((string) ($req['employer'] ?? 'کارفرما')) ?>
-                <?php if ($ptype_label !== '') : ?> · <?= casting_e($ptype_label) ?><?php endif; ?>
-                <?php if (!empty($req['role_needed'])) : ?> · <?= casting_e((string) $req['role_needed']) ?><?php endif; ?>
-                <?php if (!empty($req['project_city'])) : ?> · <?= casting_e((string) $req['project_city']) ?><?php endif; ?>
-              </p>
-              <p class="home-opportunity-status"><?= casting_e(casting_request_status_label($status)) ?></p>
-            </div>
-            <div class="home-opportunity-actions">
-              <a class="btn btn-primary btn-sm" href="<?= casting_e($open) ?>#invitation-detail">مشاهده و پاسخ</a>
-            </div>
-          </article>
-        <?php endforeach; ?>
-      </div>
+      <?php if ($open !== []) : ?>
+        <h3 class="panel-section-title" style="font-size:1rem;margin:0.35rem 0 0.65rem;">فراخوان‌های باز</h3>
+        <div class="home-opportunity-list">
+          <?php foreach ($open as $op) :
+              $oid = (int) ($op['id'] ?? 0);
+              $director = get_user_by('id', (int) ($op['director_id'] ?? 0));
+              $mine = casting_opportunity_get_application($oid, $user_id);
+              $already = $mine && (string) ($mine['status'] ?? '') !== 'withdrawn';
+              ?>
+            <article class="home-opportunity-card">
+              <div class="home-opportunity-body">
+                <h3><?= casting_e((string) ($op['title'] ?? 'فراخوان')) ?></h3>
+                <p class="meta">
+                  <?= $director ? casting_e((string) $director->display_name) : 'کارگردان' ?>
+                  <?php if (!empty($op['project_type'])) : ?> · <?= casting_e((string) $op['project_type']) ?><?php endif; ?>
+                  <?php if (!empty($op['role_title'])) : ?> · <?= casting_e((string) $op['role_title']) ?><?php endif; ?>
+                  <?php if (!empty($op['location'])) : ?> · <?= casting_e((string) $op['location']) ?><?php endif; ?>
+                </p>
+                <p class="home-opportunity-status"><?= $already ? 'اپلای کرده‌اید' : 'باز برای اپلای' ?></p>
+              </div>
+              <div class="home-opportunity-actions">
+                <a class="btn btn-primary btn-sm" href="<?= casting_e(casting_url('opportunities.php?tab=open&id=' . $oid . '#opp-' . $oid)) ?>">
+                  <?= $already ? 'مشاهده' : 'اپلای' ?>
+                </a>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($personal !== []) : ?>
+        <h3 class="panel-section-title" style="font-size:1rem;margin:1rem 0 0.65rem;">دعوت‌های مستقیم به شما</h3>
+        <div class="home-opportunity-list">
+          <?php
+          $types = casting_invitation_project_type_labels();
+          foreach ($personal as $req) :
+              $req_id = (string) ($req['id'] ?? '');
+              $status = casting_request_status_key($req);
+              $unread = casting_request_is_unread($user_id, $req);
+              $ptype = (string) ($req['project_type'] ?? '');
+              $ptype_label = $types[$ptype] ?? $ptype;
+              $open_url = casting_url('my-requests.php' . ($req_id !== '' ? '?open=' . rawurlencode($req_id) : ''));
+              ?>
+            <article class="home-opportunity-card<?= $unread ? ' is-unread' : '' ?>">
+              <div class="home-opportunity-body">
+                <h3>
+                  <?php if ($unread) : ?><span class="req-status req-status-new">جدید</span> <?php endif; ?>
+                  <?= casting_e((string) ($req['project'] ?? 'فراخوان کستینگ')) ?>
+                </h3>
+                <p class="meta">
+                  <?= casting_e((string) ($req['employer'] ?? 'کارفرما')) ?>
+                  <?php if ($ptype_label !== '') : ?> · <?= casting_e($ptype_label) ?><?php endif; ?>
+                  <?php if (!empty($req['role_needed'])) : ?> · <?= casting_e((string) $req['role_needed']) ?><?php endif; ?>
+                </p>
+                <p class="home-opportunity-status"><?= casting_e(casting_request_status_label($status)) ?></p>
+              </div>
+              <div class="home-opportunity-actions">
+                <a class="btn btn-ghost btn-sm" href="<?= casting_e($open_url) ?>#invitation-detail">مشاهده و پاسخ</a>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
     <?php endif; ?>
   </section>
     <?php

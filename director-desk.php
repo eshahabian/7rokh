@@ -16,7 +16,11 @@ if (!casting_user_is_director_role($director_id)) {
 
 $project_id = max(0, (int) ($_GET['project'] ?? 0));
 $role_id = max(0, (int) ($_GET['role'] ?? 0));
+$opp_id = max(0, (int) ($_GET['opp'] ?? 0));
 $error = '';
+
+require_once __DIR__ . '/includes/opportunities.php';
+casting_opportunities_ensure_tables();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_director_desk_page')) {
@@ -86,24 +90,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             casting_redirect('director-desk.php?project=' . $project_id . '&role=' . $role_id);
         } elseif ($action === 'send_casting_call' && $project_id > 0) {
             $call_filters = casting_director_parse_call_filters($_POST);
+            $publish_public = !empty($_POST['publish_public']);
+            $call_role_id = max(0, (int) ($_POST['call_role_id'] ?? 0));
             $result = casting_director_send_casting_call(
                 $director_id,
                 $project_id,
                 $call_filters,
-                (string) ($_POST['call_message'] ?? '')
+                (string) ($_POST['call_message'] ?? ''),
+                $publish_public,
+                $call_role_id
             );
             if (!$result['ok']) {
                 $error = $result['error'] ?? 'ارسال فراخوان ناموفق بود.';
             } else {
-                casting_set_flash(
-                    'success',
-                    'فراخوان برای ' . (int) ($result['sent'] ?? 0) . ' عضو ارسال شد'
-                    . ((int) ($result['matched'] ?? 0) > (int) ($result['sent'] ?? 0)
-                        ? ' (از ' . (int) ($result['matched'] ?? 0) . ' نفر منطبق)'
-                        : '')
-                    . '.'
-                );
+                $msg = 'فراخوان برای ' . (int) ($result['sent'] ?? 0) . ' عضو ارسال شد';
+                if ((int) ($result['matched'] ?? 0) > (int) ($result['sent'] ?? 0)) {
+                    $msg .= ' (از ' . (int) ($result['matched'] ?? 0) . ' نفر منطبق)';
+                }
+                if (!empty($result['opportunity_id'])) {
+                    $msg .= ' و در فید عمومی فرصت‌ها منتشر شد.';
+                } else {
+                    $msg .= '.';
+                }
+                casting_set_flash('success', $msg);
                 casting_redirect('director-desk.php?project=' . $project_id);
+            }
+        } elseif ($action === 'close_opportunity' && $project_id > 0) {
+            require_once __DIR__ . '/includes/opportunities.php';
+            $oid = max(0, (int) ($_POST['opportunity_id'] ?? 0));
+            $result = casting_opportunity_close($director_id, $oid);
+            if (!$result['ok']) {
+                $error = $result['error'];
+            } else {
+                casting_set_flash('success', 'فراخوان بسته شد.');
+                casting_redirect('director-desk.php?project=' . $project_id);
+            }
+        } elseif ($action === 'set_application_status' && $project_id > 0) {
+            require_once __DIR__ . '/includes/opportunities.php';
+            $app_id = max(0, (int) ($_POST['application_id'] ?? 0));
+            $status = sanitize_key((string) ($_POST['app_status'] ?? ''));
+            $result = casting_opportunity_set_application_status($director_id, $app_id, $status);
+            $opp_id = max(0, (int) ($_POST['opportunity_id'] ?? 0));
+            if (!$result['ok']) {
+                $error = $result['error'];
+            } else {
+                casting_set_flash('success', 'وضعیت اپلای به‌روز شد.');
+                casting_redirect('director-desk.php?project=' . $project_id . ($opp_id > 0 ? '&opp=' . $opp_id : ''));
             }
         }
     }
@@ -123,6 +155,18 @@ if ($role_id > 0 && !casting_director_get_role($director_id, $role_id)) {
 $role_talents = $role_id > 0 ? casting_director_list_role_talents($director_id, $role_id) : [];
 $active_project = $project_id > 0 ? casting_director_get_project($director_id, $project_id) : null;
 $active_role = $role_id > 0 ? casting_director_get_role($director_id, $role_id) : null;
+$active_opp = null;
+$opp_applicants = [];
+if ($opp_id > 0) {
+    $active_opp = casting_opportunity_get($opp_id);
+    if (!$active_opp || (int) ($active_opp['director_id'] ?? 0) !== $director_id || (int) ($active_opp['project_id'] ?? 0) !== $project_id) {
+        $opp_id = 0;
+        $active_opp = null;
+    } else {
+        $opp_applicants = casting_opportunity_list_applicants($opp_id, 100);
+    }
+}
+$app_status_labels = casting_opportunity_application_status_labels();
 $project_types = casting_director_project_type_labels();
 $status_labels = casting_director_role_talent_status_labels();
 $production_statuses = casting_director_production_status_labels();
@@ -185,6 +229,60 @@ casting_render_flash();
       </div>
     <?php else : ?>
       <p class="empty-state">هنوز پروژه‌ای ندارید — فرم بالا را پر کنید.</p>
+    <?php endif; ?>
+
+  <?php elseif ($opp_id > 0 && $active_opp) : ?>
+    <a class="back-link" href="director-desk.php?project=<?= $project_id ?>">← <?= casting_e((string) ($active_project['title'] ?? 'پروژه')) ?></a>
+    <h1>متقاضیان فراخوان</h1>
+    <p class="meta">
+      <?= casting_e((string) ($active_opp['title'] ?? '')) ?>
+      <?php if (!empty($active_opp['role_title'])) : ?> · <?= casting_e((string) $active_opp['role_title']) ?><?php endif; ?>
+      · <?= (string) ($active_opp['status'] ?? '') === 'open' ? 'باز' : 'بسته' ?>
+    </p>
+    <?php if (trim((string) ($active_opp['message'] ?? '')) !== '') : ?>
+      <p class="lede"><?= nl2br(casting_e((string) $active_opp['message'])) ?></p>
+    <?php endif; ?>
+
+    <?php if ($opp_applicants === []) : ?>
+      <p class="empty-state">هنوز کسی اپلای نکرده است.</p>
+    <?php else : ?>
+      <div class="home-opportunity-list">
+        <?php foreach ($opp_applicants as $app) :
+            $tid = (int) ($app['talent_id'] ?? 0);
+            $talent = $tid > 0 ? get_user_by('id', $tid) : null;
+            if (!$talent) {
+                continue;
+            }
+            $st = (string) ($app['status'] ?? 'pending');
+            ?>
+          <article class="home-opportunity-card">
+            <div class="home-opportunity-body">
+              <h3>
+                <button type="button" class="link-button" data-member-preview="<?= $tid ?>"><?= casting_e((string) $talent->display_name) ?></button>
+              </h3>
+              <p class="meta">
+                <?= casting_e(casting_user_public_role_label($tid)) ?>
+                · <?= casting_e($app_status_labels[$st] ?? $st) ?>
+                · <?= casting_e(casting_opportunity_format_date((string) ($app['created_at'] ?? ''))) ?>
+              </p>
+              <?php if (trim((string) ($app['note'] ?? '')) !== '') : ?>
+                <p><?= nl2br(casting_e((string) $app['note'])) ?></p>
+              <?php endif; ?>
+            </div>
+            <div class="home-opportunity-actions">
+              <form method="post" action="director-desk.php?project=<?= $project_id ?>&amp;opp=<?= $opp_id ?>" class="cta-row">
+                <?php wp_nonce_field('casting_director_desk_page'); ?>
+                <input type="hidden" name="desk_action" value="set_application_status">
+                <input type="hidden" name="application_id" value="<?= (int) $app['id'] ?>">
+                <input type="hidden" name="opportunity_id" value="<?= $opp_id ?>">
+                <button class="btn btn-primary btn-sm" type="submit" name="app_status" value="accepted">پذیرش</button>
+                <button class="btn btn-ghost btn-sm" type="submit" name="app_status" value="rejected">رد</button>
+                <button class="btn btn-ghost btn-sm" type="submit" name="app_status" value="pending">در انتظار</button>
+              </form>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
     <?php endif; ?>
 
   <?php elseif ($role_id <= 0 || !$active_role) : ?>
@@ -306,7 +404,7 @@ casting_render_flash();
       </form>
     </div>
 
-    <?php casting_render_director_casting_call_form($project_id); ?>
+    <?php casting_render_director_casting_call_form($project_id, [], '', $director_id); ?>
 
   <?php else : ?>
     <a class="back-link" href="director-desk.php?project=<?= $project_id ?>">← <?= casting_e((string) ($active_project['title'] ?? 'پروژه')) ?></a>

@@ -4021,6 +4021,12 @@ a.panel-home-filter-chip:focus-visible {
 
 .home-opportunity-actions {
   flex: 0 0 auto;
+  max-width: 100%;
+}
+
+.home-opportunity-actions .form {
+  margin: 0;
+  min-width: min(100%, 18rem);
 }
 
 .home-feed-followers-hint {
@@ -5970,6 +5976,15 @@ button.is-follow-locked {
   align-items: center;
   gap: 0.35rem;
   margin-inline-end: 1rem;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.75rem 0 1rem;
   font-size: 0.92rem;
   cursor: pointer;
 }
