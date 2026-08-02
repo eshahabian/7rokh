@@ -374,11 +374,40 @@ html[data-theme="day"] .brand-mark-rokh {
   padding: 12vh 0 2.5rem;
 }
 
+.page-home .hero {
+  align-items: flex-start;
+  min-height: auto;
+  padding: 2.5vh 0 1.25rem;
+}
+
 .hero-copy {
   width: min(720px, 100%);
   margin-inline: auto;
   text-align: center;
   animation: rise 0.8s var(--ease) both;
+}
+
+.page-home .hero-copy {
+  width: min(960px, 100%);
+}
+
+.page-home .hero-promo-banner {
+  width: 100%;
+  margin: 0 auto 1.25rem;
+  text-align: right;
+}
+
+.page-home .home-stats {
+  margin: 1.5rem auto 0;
+}
+
+.page-home .enamad-seal {
+  padding: 0.55rem clamp(1.25rem, 4vw, 3rem) 0.25rem;
+}
+
+.page-home .site-footer {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
 
 @keyframes rise {
@@ -2759,6 +2788,10 @@ legend .req-mark {
   .hero {
     min-height: auto;
     padding-top: 2.5rem;
+  }
+
+  .page-home .hero {
+    padding: 1.25rem 0 0.75rem;
   }
 
   .form-grid,

@@ -14,6 +14,14 @@ if ($user) {
 }
 
 $counts = casting_member_counts();
+$home_slides = [
+    ['src' => casting_asset('images/home-slide-1.png'), 'alt' => 'صحنه فیلم‌برداری و صندلی کارگردان'],
+    ['src' => casting_asset('images/home-slide-2.png'), 'alt' => 'دوربین سینمایی و تجهیزات تولید'],
+    ['src' => casting_asset('images/home-slide-3.png'), 'alt' => 'سالن تئاتر و صحنه نمایش'],
+    ['src' => casting_asset('images/home-slide-4.png'), 'alt' => 'پشت صحنه و میز گریم'],
+    ['src' => casting_asset('images/home-slide-5.png'), 'alt' => 'کلاکت و فیلمنامه'],
+    ['src' => casting_asset('images/home-slide-6.png'), 'alt' => 'تجهیزات صدا و فیلم‌برداری'],
+];
 
 casting_render_head('خانه', 'page-home');
 casting_render_header('home');
@@ -21,6 +29,31 @@ casting_render_flash();
 ?>
 <main class="wrap hero">
   <div class="hero-copy">
+    <section class="panel-promo-banner hero-promo-banner" aria-label="نمایش ویژه" data-promo-slider>
+      <div class="panel-promo-slides">
+        <?php foreach ($home_slides as $i => $slide) : ?>
+          <figure class="panel-promo-slide<?= $i === 0 ? ' is-active' : '' ?>">
+            <img src="<?= casting_e($slide['src']) ?>" alt="<?= casting_e($slide['alt']) ?>" width="1280" height="720" decoding="<?= $i === 0 ? 'sync' : 'async' ?>">
+          </figure>
+        <?php endforeach; ?>
+      </div>
+      <div class="panel-promo-banner-copy">
+        <h1>محل نمایش تبلیغات اعضای ویژه</h1>
+        <p>اینجا بهترین مکان برای دیده شدن استعداد شماست</p>
+      </div>
+      <div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدها">
+        <?php foreach ($home_slides as $i => $slide) : ?>
+          <button
+            type="button"
+            class="<?= $i === 0 ? 'is-active' : '' ?>"
+            aria-label="اسلاید <?= (int) ($i + 1) ?>"
+            aria-selected="<?= $i === 0 ? 'true' : 'false' ?>"
+            data-promo-dot="<?= (int) $i ?>"
+          ></button>
+        <?php endforeach; ?>
+      </div>
+    </section>
+
     <p class="hero-lead"><?= casting_brand_html() ?> - پرتابل ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
     <div class="cta-row hero-cta">
       <a class="btn btn-primary" href="register.php">عضویت</a>
@@ -45,7 +78,7 @@ casting_render_flash();
 </main>
 <aside class="enamad-seal" aria-label="نماد اعتماد الکترونیکی">
   <a referrerpolicy="origin" target="_blank" rel="noopener noreferrer" href="https://trustseal.enamad.ir/?id=4302477&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS">
-    <img referrerpolicy="origin" src="<?= casting_e(casting_asset('img/enamad.jfif')) ?>" alt="نماد اعتماد الکترونیکی" width="125" height="136" style="cursor:pointer" code="s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS">
+    <img referrerpolicy="origin" src="https://trustseal.enamad.ir/logo.aspx?id=4302477&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS" alt="نماد اعتماد الکترونیکی" style="cursor:pointer" code="s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS">
   </a>
 </aside>
 <?php casting_render_footer(); ?>

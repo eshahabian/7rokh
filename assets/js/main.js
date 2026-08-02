@@ -1518,8 +1518,8 @@
     }
   }
 
-  const promoSlider = document.querySelector("[data-promo-slider]");
-  if (promoSlider) {
+  const promoSliders = Array.from(document.querySelectorAll("[data-promo-slider]"));
+  promoSliders.forEach((promoSlider) => {
     const slides = Array.from(promoSlider.querySelectorAll(".panel-promo-slide"));
     const dots = Array.from(promoSlider.querySelectorAll("[data-promo-dot]"));
     let index = Math.max(0, slides.findIndex((slide) => slide.classList.contains("is-active")));
@@ -1553,9 +1553,10 @@
       });
     });
 
-    showSlide(index);
+    promoSlider.addEventListener("mouseenter", () => window.clearInterval(timer));
+    promoSlider.addEventListener("mouseleave", startTimer);
     startTimer();
-  }
+  });
 
   document.querySelectorAll("[data-show-more]").forEach((btn) => {
     btn.addEventListener("click", () => {
