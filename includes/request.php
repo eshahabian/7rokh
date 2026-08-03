@@ -46,17 +46,21 @@ function casting_request_id_from_open_token(string $token): string
 
 /**
  * لینک باز کردن جزئیات فراخوان
+ * از hash استفاده می‌کند تا WAF/ModSecurity روی ?open= خطای 403 ندهد.
  *
  * @param array<string, string> $extra
  */
 function casting_request_open_url(string $request_id, array $extra = []): string
 {
-    $query = $extra;
+    $url = 'my-requests.php';
+    if ($extra !== []) {
+        $url .= '?' . http_build_query($extra);
+    }
     if ($request_id !== '') {
-        $query['open'] = casting_request_open_token($request_id);
+        $url .= '#invite-' . casting_request_open_token($request_id);
     }
 
-    return 'my-requests.php' . ($query !== [] ? '?' . http_build_query($query) : '');
+    return $url;
 }
 
 /**
@@ -966,12 +970,11 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
               $extra_q['box'] = 'received';
           }
           $open_url = casting_request_open_url($req_id, $extra_q);
-          $close_url = casting_request_open_url('', $extra_q);
           $reply_field_id = 'reply-' . substr(md5($req_id), 0, 12);
           $project_type = (string) ($req['project_type'] ?? '');
           $project_type_label = $types[$project_type] ?? $project_type;
           ?>
-        <article class="invitation-card status-<?= casting_e($status) ?><?= $is_call ? ' is-casting-call' : '' ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_open ? ' is-open' : '' ?><?= $is_archive ? ' is-archived' : '' ?>" data-invitation-card<?= $is_open ? ' id="invitation-detail"' : '' ?>>
+        <article class="invitation-card status-<?= casting_e($status) ?><?= $is_call ? ' is-casting-call' : '' ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_open ? ' is-open' : '' ?><?= $is_archive ? ' is-archived' : '' ?>" data-invitation-card data-invite-token="<?= casting_e(casting_request_open_token($req_id)) ?>"<?= $is_open ? ' id="invitation-detail"' : '' ?>>
           <div class="invitation-card-main">
             <header class="invitation-card-head">
               <h3 class="invitation-project">
@@ -1005,11 +1008,7 @@ function casting_render_talent_requests_list(int $user_id, array $requests, stri
                 <span data-invitation-toggle-close<?= $is_open ? '' : ' hidden' ?>>بستن جزئیات</span>
               </button>
               <noscript>
-                <?php if (!$is_open) : ?>
-                  <a class="btn btn-ghost btn-sm" href="<?= casting_e($open_url) ?>#invitation-detail">مشاهده جزئیات</a>
-                <?php else : ?>
-                  <a class="btn btn-ghost btn-sm" href="<?= casting_e($close_url) ?>">بستن جزئیات</a>
-                <?php endif; ?>
+                <a class="btn btn-ghost btn-sm" href="my-requests.php">صفحه فراخوان‌ها</a>
               </noscript>
               <?php if ($is_archive) : ?>
                 <form method="post" action="<?= casting_e($form_action) ?>">

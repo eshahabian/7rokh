@@ -181,7 +181,7 @@ function casting_render_home_opportunities_section(int $user_id): void
                 <p class="home-opportunity-status"><?= casting_e(casting_request_status_label($status)) ?></p>
               </div>
               <div class="home-opportunity-actions">
-                <a class="btn btn-ghost btn-sm" href="<?= casting_e($open_url) ?>#invitation-detail">مشاهده و پاسخ</a>
+                <a class="btn btn-ghost btn-sm" href="<?= casting_e($open_url) ?>">مشاهده و پاسخ</a>
               </div>
             </article>
           <?php endforeach; ?>

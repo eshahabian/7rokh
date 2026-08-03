@@ -1993,6 +1993,25 @@
     syncInvitationCard(card, true);
   });
 
+  const openInviteFromHash = () => {
+    const hash = String(window.location.hash || "");
+    const match = hash.match(/^#invite-([A-Za-z0-9_-]+)$/);
+    if (!match) return;
+    const token = match[1];
+    const card = document.querySelector(`[data-invitation-card][data-invite-token="${token}"]`);
+    if (!card) return;
+    document.querySelectorAll("[data-invitation-card].is-open").forEach((other) => {
+      if (other !== card) syncInvitationCard(other, false);
+    });
+    syncInvitationCard(card, true);
+    card.id = "invitation-detail";
+    window.setTimeout(() => {
+      card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 50);
+  };
+  openInviteFromHash();
+  window.addEventListener("hashchange", openInviteFromHash);
+
   document.addEventListener("click", (event) => {
     const btn = event.target.closest("[data-invitation-toggle]");
     if (!btn) return;
@@ -2006,7 +2025,13 @@
     syncInvitationCard(card, willOpen);
     if (willOpen) {
       card.id = "invitation-detail";
+      const token = card.getAttribute("data-invite-token") || "";
+      if (token && window.history && window.history.replaceState) {
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#invite-${token}`);
+      }
       card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } else if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     }
   });
 })();
