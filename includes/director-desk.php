@@ -227,6 +227,62 @@ function casting_director_project_stats(int $director_id, int $project_id): arra
 }
 
 /**
+ * تعداد پاسخ/اپلای جدید مرتبط با پروژه‌ها (برای نشان منوی پروژه‌ها)
+ * - اپلای‌های در انتظار روی فراخوان‌های عمومی پروژه
+ * - پذیرش‌های ندیده‌شدهٔ فراخوان‌های مستقیم (interested)
+ */
+function casting_director_new_project_response_count(int $director_id, int $project_id = 0): int
+{
+    if ($director_id <= 0 || !casting_user_is_director_role($director_id)) {
+        return 0;
+    }
+
+    $count = 0;
+    if (!function_exists('casting_director_pending_applicant_count')) {
+        require_once __DIR__ . '/opportunities.php';
+    }
+    $count += casting_director_pending_applicant_count($director_id, $project_id);
+
+    if (!function_exists('casting_user_sent_requests')) {
+        require_once __DIR__ . '/request.php';
+    }
+
+    $project_title = '';
+    if ($project_id > 0) {
+        $project = casting_director_get_project($director_id, $project_id);
+        $project_title = trim((string) ($project['title'] ?? ''));
+    }
+
+    foreach (casting_user_sent_requests($director_id) as $req) {
+        if (!is_array($req)) {
+            continue;
+        }
+        if (($req['kind'] ?? '') !== 'casting_call') {
+            continue;
+        }
+        if (casting_request_status_key($req) !== 'interested') {
+            continue;
+        }
+        if ((string) ($req['employer_seen_at'] ?? '') !== '') {
+            continue;
+        }
+        $req_project_id = (int) ($req['project_id'] ?? 0);
+        if ($project_id > 0) {
+            if ($req_project_id > 0) {
+                if ($req_project_id !== $project_id) {
+                    continue;
+                }
+            } elseif ($project_title === '' || trim((string) ($req['project'] ?? '')) !== $project_title) {
+                continue;
+            }
+        }
+        $count++;
+    }
+
+    return $count;
+}
+
+/**
  * @return array<string, string>
  */
 function casting_director_rating_criteria(): array
@@ -1089,6 +1145,7 @@ function casting_director_send_casting_call(
     $project_type_key = sanitize_key((string) ($project['project_type'] ?? ''));
     $extra = [
         'kind'               => 'casting_call',
+        'project_id'         => $project_id,
         'project_type'       => $project_types[$project_type_key] ?? (string) ($project['project_type'] ?? ''),
         'role_needed'        => $role_needed,
         'activity_category'  => sanitize_key((string) ($filters['activity_category'] ?? '')),
@@ -1268,14 +1325,20 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
             <?php foreach ($open_ops as $op) :
                 $oid = (int) ($op['id'] ?? 0);
                 $count = casting_opportunity_applicant_count($oid);
+                $pending_count = casting_opportunity_pending_applicant_count($oid);
                 $is_open = (string) ($op['status'] ?? '') === 'open';
                 ?>
               <li class="home-opportunity-card">
                 <div class="home-opportunity-body">
-                  <h3><?= casting_e((string) ($op['title'] ?? '')) ?><?php if (!empty($op['role_title'])) : ?> · <?= casting_e((string) $op['role_title']) ?><?php endif; ?></h3>
+                  <h3>
+                    <?= casting_e((string) ($op['title'] ?? '')) ?><?php if (!empty($op['role_title'])) : ?> · <?= casting_e((string) $op['role_title']) ?><?php endif; ?>
+                    <?php if ($pending_count > 0) : ?>
+                      <span class="nav-badge" aria-label="<?= (int) $pending_count ?> اپلای جدید"><?= (int) $pending_count ?></span>
+                    <?php endif; ?>
+                  </h3>
                   <p class="meta">
                     <?= $is_open ? 'باز' : 'بسته' ?>
-                    · <?= (int) $count ?> اپلای
+                    · <?= (int) $count ?> اپلای<?= $pending_count > 0 ? ' (' . (int) $pending_count . ' جدید)' : '' ?>
                     · <?= casting_e(casting_opportunity_format_date((string) ($op['created_at'] ?? ''))) ?>
                   </p>
                 </div>

@@ -293,22 +293,18 @@ function casting_user_primary_activity_key(int $user_id): string
     if ($activities === []) {
         return '';
     }
-    $first = (string) $activities[0];
-    if ($first === 'it' || $first === 'activity_none') {
-        foreach ($activities as $key) {
-            $key = (string) $key;
-            if ($key !== 'it' && $key !== 'activity_none') {
-                $first = $key;
-                break;
-            }
+    $labels = casting_activity_labels_for_user($user_id);
+    foreach ($activities as $key) {
+        $key = (string) $key;
+        if ($key === 'it' || $key === 'activity_none') {
+            continue;
+        }
+        if (isset($labels[$key])) {
+            return $key;
         }
     }
-    if ($first === 'it' || $first === 'activity_none') {
-        return '';
-    }
-    $labels = casting_activity_labels_for_user($user_id);
 
-    return isset($labels[$first]) ? $first : '';
+    return '';
 }
 
 function casting_user_primary_activity_label(int $user_id): string
@@ -418,8 +414,15 @@ function casting_user_profile_chip_label(int $user_id, int $viewer_id = 0): stri
 function casting_legacy_activity_aliases(): array
 {
     return [
-        'actor'    => 'actor_cinema',
-        'director' => 'director_cinema',
+        'actor'            => 'actor_cinema',
+        'actor_film'       => 'actor_cinema',
+        'actress'          => 'actor_cinema',
+        'director'         => 'director_cinema',
+        'film_director'    => 'director_cinema',
+        'theater_actor'    => 'actor_theater',
+        'theater_director' => 'director_theater',
+        'tv_actor'         => 'actor_tv',
+        'tv_director'      => 'director_tv',
     ];
 }
 
@@ -429,17 +432,48 @@ function casting_legacy_activity_aliases(): array
  */
 function casting_normalize_activities($raw, int $user_id = 0): array
 {
+    if (is_string($raw) && $raw !== '') {
+        $maybe = maybe_unserialize($raw);
+        if (is_array($maybe)) {
+            $raw = $maybe;
+        } else {
+            $parts = preg_split('/[\s,;|]+/u', $raw) ?: [];
+            $raw = array_values(array_filter(array_map('trim', $parts), static fn(string $v): bool => $v !== ''));
+        }
+    }
     if (!is_array($raw)) {
         return [];
     }
     $labels = $user_id > 0 ? casting_activity_labels_for_user($user_id) : casting_activity_labels();
     $aliases = casting_legacy_activity_aliases();
+    $label_to_key = [];
+    foreach ($labels as $k => $label) {
+        $norm_label = function_exists('mb_strtolower')
+            ? mb_strtolower(trim((string) $label), 'UTF-8')
+            : strtolower(trim((string) $label));
+        $label_to_key[$norm_label] = $k;
+    }
     $out = [];
     foreach ($raw as $item) {
         if (is_array($item)) {
             $key = sanitize_key((string) ($item['specialty'] ?? $item['activity'] ?? ''));
+            if ($key === '' && isset($item['label'])) {
+                $lookup = function_exists('mb_strtolower')
+                    ? mb_strtolower(trim((string) $item['label']), 'UTF-8')
+                    : strtolower(trim((string) $item['label']));
+                $key = sanitize_key((string) ($label_to_key[$lookup] ?? ''));
+            }
         } else {
-            $key = sanitize_key((string) $item);
+            $raw_item = trim((string) $item);
+            $key = sanitize_key($raw_item);
+            if (($key === '' || !isset($labels[$key])) && $raw_item !== '') {
+                $lookup = function_exists('mb_strtolower')
+                    ? mb_strtolower($raw_item, 'UTF-8')
+                    : strtolower($raw_item);
+                if (isset($label_to_key[$lookup])) {
+                    $key = $label_to_key[$lookup];
+                }
+            }
         }
         if (isset($aliases[$key])) {
             $key = $aliases[$key];

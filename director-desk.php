@@ -209,11 +209,15 @@ casting_render_flash();
             $pid = (int) $project['id'];
             $type = $project_types[(string) ($project['project_type'] ?? 'film')] ?? '';
             $stats = casting_director_project_stats($director_id, $pid);
+            $project_new = casting_director_new_project_response_count($director_id, $pid);
             ?>
           <a class="director-project-line" href="director-desk.php?project=<?= $pid ?>">
             <span class="director-project-line-start">
               <span class="director-project-line-num"><?= (int) ($index + 1) ?></span>
               <span class="director-project-line-title"><?= casting_e((string) $project['title']) ?></span>
+              <?php if ($project_new > 0) : ?>
+                <span class="nav-badge" aria-label="<?= (int) $project_new ?> پذیرش جدید"><?= (int) $project_new ?></span>
+              <?php endif; ?>
             </span>
             <span class="director-project-line-meta">
               <?= casting_e($type) ?>

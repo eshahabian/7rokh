@@ -3132,13 +3132,22 @@ a.panel-sidebar-title.is-active {
 }
 
 .panel-sidebar-activity {
+  margin: 0 0 0.15rem;
   font-weight: 600;
-  font-size: 0.86em;
+  font-size: 0.78rem;
+  line-height: 1.3;
   color: var(--ink-muted);
 }
 
-.panel-sidebar-display-name .panel-sidebar-activity {
-  font-weight: 600;
+.panel-sidebar-display-name {
+  margin: 0 0 0.15rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel-drawer-head-row .panel-sidebar-title {
@@ -3195,17 +3204,6 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
 .panel-sidebar-identity-text {
   min-width: 0;
   flex: 1 1 auto;
-}
-
-.panel-sidebar-display-name {
-  margin: 0 0 0.2rem;
-  font-size: 0.9rem;
-  font-weight: 700;
-  line-height: 1.35;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .panel-sidebar-views {
@@ -6652,6 +6650,11 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
+  flex: 1 1 auto;
+}
+
+.director-project-line-start .nav-badge {
+  flex-shrink: 0;
 }
 
 .director-project-line-num {

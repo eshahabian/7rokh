@@ -149,6 +149,7 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
         'project_city'       => $project_city,
         'activity_category'  => $activity_category,
         'activity_specialty' => $activity_specialty,
+        'project_id'         => max(0, (int) ($extra['project_id'] ?? 0)),
         'message'            => $message,
         'created_at'         => current_time('mysql'),
         'status'             => 'pending',

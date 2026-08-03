@@ -274,6 +274,50 @@ function casting_opportunity_applicant_count(int $opportunity_id): int
     ));
 }
 
+/** تعداد اپلای‌های در انتظار بررسی برای کارگردان (یا یک پروژه) */
+function casting_director_pending_applicant_count(int $director_id, int $project_id = 0): int
+{
+    if ($director_id <= 0) {
+        return 0;
+    }
+    casting_opportunities_ensure_tables();
+    global $wpdb;
+    $apps = casting_opportunity_applications_table();
+    $ops = casting_opportunities_table();
+    if ($project_id > 0) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$apps} a
+             INNER JOIN {$ops} o ON o.id = a.opportunity_id
+             WHERE o.director_id = %d AND o.project_id = %d AND a.status = 'pending'",
+            $director_id,
+            $project_id
+        ));
+    }
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    return (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$apps} a
+         INNER JOIN {$ops} o ON o.id = a.opportunity_id
+         WHERE o.director_id = %d AND a.status = 'pending'",
+        $director_id
+    ));
+}
+
+function casting_opportunity_pending_applicant_count(int $opportunity_id): int
+{
+    if ($opportunity_id <= 0) {
+        return 0;
+    }
+    casting_opportunities_ensure_tables();
+    global $wpdb;
+    $table = casting_opportunity_applications_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    return (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$table} WHERE opportunity_id = %d AND status = 'pending'",
+        $opportunity_id
+    ));
+}
+
 /**
  * @return array<string, mixed>|null
  */

@@ -174,6 +174,7 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
     $unread_contacts = (int) $ctx['unread_contacts'];
     $request_count = (int) $ctx['request_count'];
     $pending_brief_count = (int) $ctx['pending_brief_count'];
+    $desk_response_count = (int) ($ctx['desk_response_count'] ?? 0);
     $panel_premium_until = $ctx['panel_premium_until'];
     $current = $highlight_mode ? casting_panel_nav_highlight_key($active) : $active;
 
@@ -232,6 +233,8 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
               <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
             <?php elseif ($item['key'] === 'my-requests' && $request_count > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $request_count) ?> مورد جدید"><?= (int) $request_count ?></span>
+            <?php elseif ($item['key'] === 'desk' && $desk_response_count > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $desk_response_count) ?> پذیرش جدید"><?= (int) $desk_response_count ?></span>
             <?php elseif ($item['key'] === 'briefs' && $pending_brief_count > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $pending_brief_count) ?> تکلیف"><?= (int) $pending_brief_count ?></span>
             <?php elseif (($item['key'] === 'contact' || $item['key'] === 'settings') && $unread_contacts > 0) : ?>
@@ -265,6 +268,13 @@ function casting_panel_menu_badge_count(): int
         require_once __DIR__ . '/request.php';
     }
     $badge += casting_user_new_request_count($user_id);
+
+    if (casting_user_is_director_role($user_id)) {
+        if (!function_exists('casting_director_new_project_response_count')) {
+            require_once __DIR__ . '/director-desk.php';
+        }
+        $badge += casting_director_new_project_response_count($user_id);
+    }
 
     if (!function_exists('casting_talent_pending_brief_count')) {
         require_once __DIR__ . '/talent-briefs.php';
@@ -302,6 +312,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
     $unread_contacts = 0;
     $request_count = 0;
     $pending_brief_count = 0;
+    $desk_response_count = 0;
     $panel_premium_until = null;
     $panel_membership_number = '';
     $user = casting_current_user();
@@ -319,6 +330,12 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
             require_once __DIR__ . '/request.php';
         }
         $request_count = casting_user_new_request_count($user_id);
+        if (casting_user_is_director_role($user_id)) {
+            if (!function_exists('casting_director_new_project_response_count')) {
+                require_once __DIR__ . '/director-desk.php';
+            }
+            $desk_response_count = casting_director_new_project_response_count($user_id);
+        }
         if (!function_exists('casting_talent_pending_brief_count')) {
             require_once __DIR__ . '/talent-briefs.php';
         }
@@ -377,6 +394,9 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
             $user_id
         );
         $sidebar_primary_activity = casting_user_primary_activity_label($user_id);
+        if ($sidebar_primary_activity === '') {
+            $sidebar_primary_activity = casting_user_public_role_label($user_id);
+        }
         $sidebar_show_views = casting_activities_has_acting($sidebar_activities);
         if ($sidebar_show_views) {
             if (!function_exists('casting_profile_view_stats')) {
@@ -397,6 +417,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
         'unread_contacts'     => $unread_contacts,
         'request_count'       => $request_count,
         'pending_brief_count' => $pending_brief_count,
+        'desk_response_count' => $desk_response_count,
         'panel_premium_until' => $panel_premium_until,
     ];
     ?>
@@ -427,12 +448,10 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
               <?php casting_render_presence_dot((int) $user->ID, 'sm'); ?>
             </div>
             <div class="panel-sidebar-identity-text">
-              <p class="panel-sidebar-display-name">
-                <?= casting_e($sidebar_name) ?>
-                <?php if ($sidebar_primary_activity !== '') : ?>
-                  <span class="panel-sidebar-activity"> · <?= casting_e($sidebar_primary_activity) ?></span>
-                <?php endif; ?>
-              </p>
+              <p class="panel-sidebar-display-name"><?= casting_e($sidebar_name) ?></p>
+              <?php if ($sidebar_primary_activity !== '') : ?>
+                <p class="panel-sidebar-activity"><?= casting_e($sidebar_primary_activity) ?></p>
+              <?php endif; ?>
               <p class="panel-sidebar-user-meta">
                 <span class="panel-sidebar-login">@<?= casting_e((string) $user->user_login) ?></span>
                 <?php if ($panel_membership_number !== '') : ?>
