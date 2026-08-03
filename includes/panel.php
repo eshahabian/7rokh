@@ -231,7 +231,7 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
             <?php elseif (($item['key'] === 'premium' || $item['key'] === 'membership') && $pending_receipts > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
             <?php elseif ($item['key'] === 'my-requests' && $request_count > 0) : ?>
-              <span class="nav-badge" aria-label="<?= casting_e((string) $request_count) ?> درخواست"><?= (int) $request_count ?></span>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $request_count) ?> مورد جدید"><?= (int) $request_count ?></span>
             <?php elseif ($item['key'] === 'briefs' && $pending_brief_count > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $pending_brief_count) ?> تکلیف"><?= (int) $pending_brief_count ?></span>
             <?php elseif (($item['key'] === 'contact' || $item['key'] === 'settings') && $unread_contacts > 0) : ?>

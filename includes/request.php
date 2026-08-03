@@ -763,16 +763,37 @@ function casting_request_status_key(array $req): string
     return $status;
 }
 
+/**
+ * خوانده‌نشده بودن بر اساس نقش کاربر در همان درخواست (فرستنده / گیرنده)، نه فقط نقش کلی حساب.
+ * برای فرستنده: فقط پذیرش‌های ندیده‌شده (interested) شمارش/هایلایت می‌شوند.
+ */
 function casting_request_is_unread(int $user_id, array $req): bool
 {
-    $role = casting_get_user_role($user_id);
     $status = casting_request_status_key($req);
+    $employer_id = (int) ($req['employer_id'] ?? 0);
+    $talent_id = (int) ($req['talent_id'] ?? 0);
 
-    if ($role === 'talent' || $role === 'director') {
+    // صاحب فراخوان: پذیرش‌های جدید
+    if ($employer_id > 0 && $employer_id === $user_id) {
+        if ($status !== 'interested') {
+            return false;
+        }
+
+        return (string) ($req['employer_seen_at'] ?? '') === '';
+    }
+
+    // گیرندهٔ فراخوان: فراخوان‌های جدیدِ بی‌پاسخ
+    if ($talent_id > 0 && $talent_id === $user_id) {
+        return $status === 'pending' && (string) ($req['seen_at'] ?? '') === '';
+    }
+
+    // سازگاری با داده‌های قدیمی بدون talent_id/employer_id درست
+    $role = casting_get_user_role($user_id);
+    if ($role === 'talent') {
         return $status === 'pending' && (string) ($req['seen_at'] ?? '') === '';
     }
     if (casting_is_employer_role($role)) {
-        if ($status === 'pending') {
+        if ($status !== 'interested') {
             return false;
         }
 
@@ -786,23 +807,80 @@ function casting_user_new_request_count(int $user_id): int
 {
     $role = casting_get_user_role($user_id);
     $count = 0;
+    $seen_ids = [];
 
     if ($role === 'talent' || $role === 'director') {
         foreach (casting_user_received_requests($user_id) as $req) {
-            if (is_array($req) && casting_request_is_unread($user_id, $req)) {
-                $count++;
+            if (!is_array($req) || !casting_request_is_unread($user_id, $req)) {
+                continue;
             }
+            $rid = (string) ($req['id'] ?? '');
+            if ($rid !== '' && isset($seen_ids[$rid])) {
+                continue;
+            }
+            if ($rid !== '') {
+                $seen_ids[$rid] = true;
+            }
+            $count++;
         }
     }
     if (casting_is_employer_role($role)) {
         foreach (casting_user_sent_requests($user_id) as $req) {
-            if (is_array($req) && casting_request_is_unread($user_id, $req)) {
-                $count++;
+            if (!is_array($req) || !casting_request_is_unread($user_id, $req)) {
+                continue;
             }
+            $rid = (string) ($req['id'] ?? '');
+            if ($rid !== '' && isset($seen_ids[$rid])) {
+                continue;
+            }
+            if ($rid !== '') {
+                $seen_ids[$rid] = true;
+            }
+            $count++;
         }
     }
 
     return $count;
+}
+
+/** تعداد پذیرش‌های جدید فراخوان‌های ارسالی (هنوز توسط صاحب پروژه دیده نشده) */
+function casting_user_new_acceptance_count(int $user_id): int
+{
+    if (!casting_is_employer_role(casting_get_user_role($user_id))) {
+        return 0;
+    }
+    $count = 0;
+    foreach (casting_user_sent_requests($user_id) as $req) {
+        if (!is_array($req)) {
+            continue;
+        }
+        if (casting_request_status_key($req) !== 'interested') {
+            continue;
+        }
+        if ((string) ($req['employer_seen_at'] ?? '') !== '') {
+            continue;
+        }
+        $count++;
+    }
+
+    return $count;
+}
+
+function casting_mark_request_employer_seen(int $employer_id, string $request_id): bool
+{
+    $req = casting_find_user_request($employer_id, $request_id);
+    if ($req === null) {
+        return false;
+    }
+    if ((int) ($req['employer_id'] ?? 0) !== $employer_id) {
+        return false;
+    }
+    if ((string) ($req['employer_seen_at'] ?? '') !== '') {
+        return true;
+    }
+    $req['employer_seen_at'] = current_time('mysql');
+
+    return casting_update_request_everywhere($req);
 }
 
 function casting_request_seed_chat(array $request): void
@@ -1091,6 +1169,11 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
               $extra_q['box'] = 'sent';
           }
           $open_url = casting_request_open_url($req_id, $extra_q);
+          if ($is_unread) {
+              $seen_q = $extra_q;
+              $seen_q['seen'] = casting_request_open_token($req_id);
+              $open_url = casting_request_open_url($req_id, $seen_q);
+          }
           ?>
         <article class="request-item status-<?= casting_e($status) ?><?= $is_call ? ' is-casting-call' : '' ?><?= $is_unread ? ' is-unread' : '' ?><?= $is_archive ? ' is-archived' : '' ?>">
           <?php if (!empty($req['talent_id'])) : ?>
@@ -1105,7 +1188,7 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
                 <span class="req-archived-at">بایگانی: <?= casting_e((string) $req['archived_at']) ?></span>
               <?php endif; ?>
               <?php if ($is_unread) : ?>
-                <span class="req-status req-status-new">پاسخ جدید</span>
+                <span class="req-status req-status-new">قبول جدید</span>
               <?php else : ?>
                 <span class="req-status"><?= casting_e(casting_request_status_label($status)) ?></span>
               <?php endif; ?>

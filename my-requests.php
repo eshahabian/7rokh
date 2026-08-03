@@ -78,10 +78,29 @@ if ($open_request_id !== '') {
     if ($opened !== null) {
         $updated = $opened;
         $role_now = casting_get_user_role($user_id);
-        if (($role_now === 'talent' || ($role_now === 'director' && (int) ($opened['employer_id'] ?? 0) !== $user_id))
-            && (string) ($updated['seen_at'] ?? '') === '') {
+        $is_owner = (int) ($opened['employer_id'] ?? 0) === $user_id;
+        $is_recipient = (int) ($opened['talent_id'] ?? 0) === $user_id
+            || (($role_now === 'talent' || ($role_now === 'director' && !$is_owner))
+                && (int) ($opened['employer_id'] ?? 0) !== $user_id);
+
+        if ($is_recipient && (string) ($updated['seen_at'] ?? '') === '') {
             $updated['seen_at'] = current_time('mysql');
             casting_update_request_everywhere($updated);
+        } elseif ($is_owner && casting_request_status_key($updated) === 'interested'
+            && (string) ($updated['employer_seen_at'] ?? '') === '') {
+            casting_mark_request_employer_seen($user_id, $open_request_id);
+        }
+    }
+}
+
+// مشاهدهٔ جزئیات از طریق ?seen= (لینک‌های ارسالی)
+$seen_token = sanitize_text_field((string) ($_GET['seen'] ?? ''));
+if ($seen_token !== '' && casting_is_employer_role($role)) {
+    $seen_id = casting_request_id_from_open_token($seen_token);
+    if ($seen_id !== '') {
+        casting_mark_request_employer_seen($user_id, $seen_id);
+        if ($open_request_id === '') {
+            $open_request_id = $seen_id;
         }
     }
 }
@@ -178,8 +197,14 @@ casting_render_flash();
 <section class="dash-card">
   <h1>فراخوان کستینگ</h1>
   <?php if ($is_director) : ?>
+    <?php $acceptance_count = casting_user_new_acceptance_count($user_id); ?>
     <nav class="admin-tabs request-box-tabs" aria-label="نوع فراخوان‌ها">
-      <a class="admin-tab <?= $box === 'sent' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'sent')) ?>">فراخوان‌های ارسالی</a>
+      <a class="admin-tab <?= $box === 'sent' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'sent')) ?>">
+        فراخوان‌های ارسالی
+        <?php if ($acceptance_count > 0) : ?>
+          <span class="nav-badge" aria-label="<?= (int) $acceptance_count ?> قبول جدید"><?= (int) $acceptance_count ?></span>
+        <?php endif; ?>
+      </a>
       <a class="admin-tab <?= $box === 'received' ? 'is-active' : '' ?>" href="<?= casting_e(casting_my_requests_redirect_url($view, 'received')) ?>">فراخوان‌های دریافتی</a>
     </nav>
   <?php endif; ?>

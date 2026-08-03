@@ -6771,6 +6771,10 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
   margin-bottom: 0.5rem;
 }
 
+.request-box-tabs .nav-badge {
+  margin-inline-start: 0.15rem;
+}
+
 .request-compose {
   margin: 1rem 0 1.25rem;
   border: 1px solid var(--line);
