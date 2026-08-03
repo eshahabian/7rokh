@@ -2034,4 +2034,57 @@
       window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     }
   });
+
+  // خروج خودکار پس از ۵ دقیقه عدم فعالیت
+  const sessionCfg = window.CASTING_SESSION;
+  if (sessionCfg && sessionCfg.active) {
+    const idleMs = Math.max(60, Number(sessionCfg.idleSeconds) || 300) * 1000;
+    const pingUrl = String(sessionCfg.pingUrl || "");
+    const logoutUrl = String(sessionCfg.logoutUrl || "logout.php?reason=idle");
+    let idleTimer = 0;
+    let lastPing = 0;
+    let loggingOut = false;
+
+    const doIdleLogout = () => {
+      if (loggingOut) return;
+      loggingOut = true;
+      window.location.href = logoutUrl;
+    };
+
+    const pingSession = () => {
+      if (!pingUrl || loggingOut) return;
+      const now = Date.now();
+      if (now - lastPing < 45000) return;
+      lastPing = now;
+      fetch(pingUrl, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      })
+        .then((res) => {
+          if (res.status === 401) doIdleLogout();
+        })
+        .catch(() => {});
+    };
+
+    const resetIdle = () => {
+      if (loggingOut) return;
+      window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(doIdleLogout, idleMs);
+      pingSession();
+    };
+
+    ["pointerdown", "keydown", "scroll", "touchstart", "mousemove", "visibilitychange"].forEach((evt) => {
+      document.addEventListener(
+        evt,
+        () => {
+          if (evt === "visibilitychange" && document.visibilityState !== "visible") return;
+          resetIdle();
+        },
+        { passive: true }
+      );
+    });
+    resetIdle();
+  }
 })();

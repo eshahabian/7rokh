@@ -2870,7 +2870,9 @@ function casting_require_casting_user(): WP_User
 {
     $user = casting_current_user();
     if (!$user) {
-        casting_set_flash('error', 'برای گفتگو ابتدا وارد شوید.');
+        if (empty($_SESSION['casting_flash'])) {
+            casting_set_flash('error', 'برای گفتگو ابتدا وارد شوید.');
+        }
         casting_redirect('login.php');
     }
     $role = casting_get_user_role((int) $user->ID);

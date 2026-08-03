@@ -115,7 +115,7 @@ function casting_dashboard_for_role(string $role, string $query = ''): string
 /**
  * ورود با نام کاربری یا ایمیل — نقش را خودش تشخیص می‌دهد
  */
-function casting_login(string $login, string $password, string $portal = ''): array
+function casting_login(string $login, string $password, string $portal = '', bool $force = false): array
 {
     $login = trim($login);
 
@@ -151,6 +151,20 @@ function casting_login(string $login, string $password, string $portal = ''): ar
 
     if (!wp_check_password($password, $user->user_pass, (int) $user->ID)) {
         return ['ok' => false, 'error' => 'نام کاربری/ایمیل یا رمز عبور اشتباه است.'];
+    }
+
+    if (!function_exists('casting_session_prepare_login')) {
+        require_once __DIR__ . '/session-guard.php';
+    }
+    $prep = casting_session_prepare_login((int) $user->ID, $force);
+    if (!$prep['ok']) {
+        return [
+            'ok'           => false,
+            'need_confirm' => !empty($prep['need_confirm']),
+            'error'        => (string) ($prep['error'] ?? casting_session_conflict_message()),
+            'user'         => $user,
+            'role'         => $role,
+        ];
     }
 
     if (!function_exists('casting_portal_login_user')) {
@@ -430,15 +444,30 @@ function casting_change_phone(int $user_id, string $password, string $mobile_raw
  *
  * @return array{ok:bool,error?:string,user?:WP_User,role?:string}
  */
-function casting_login_with_otp(string $mobile_raw, string $otp_code): array
+function casting_login_with_otp(string $mobile_raw, string $otp_code, bool $force = false): array
 {
     if (!function_exists('casting_normalize_mobile')) {
         require_once __DIR__ . '/profile.php';
     }
+    if (!function_exists('casting_otp_verify')) {
+        require_once __DIR__ . '/otp.php';
+    }
     $mobile = casting_normalize_mobile($mobile_raw);
-    $verify = casting_otp_verify('login', $mobile, $otp_code);
-    if (!$verify['ok']) {
-        return ['ok' => false, 'error' => $verify['error']];
+
+    $otp_ok = false;
+    // پس از تأیید OTP، اگر نشست دیگر فعال بود و کاربر تأیید کرد، کد دوباره مصرف نشود
+    if ($force && casting_otp_session_is_verified('login', $mobile, 300)) {
+        $otp_ok = true;
+    } else {
+        $verify = casting_otp_verify('login', $mobile, $otp_code);
+        if (!$verify['ok']) {
+            return ['ok' => false, 'error' => $verify['error']];
+        }
+        casting_otp_mark_session_verified('login', $mobile);
+        $otp_ok = true;
+    }
+    if (!$otp_ok) {
+        return ['ok' => false, 'error' => 'کد تأیید نامعتبر است.'];
     }
 
     $found = casting_find_user_by_mobile($mobile);
@@ -457,6 +486,20 @@ function casting_login_with_otp(string $mobile_raw, string $otp_code): array
 
     if (!casting_user_mobile_is_verified((int) $user->ID)) {
         casting_mark_mobile_verified((int) $user->ID, $mobile);
+    }
+
+    if (!function_exists('casting_session_prepare_login')) {
+        require_once __DIR__ . '/session-guard.php';
+    }
+    $prep = casting_session_prepare_login((int) $user->ID, $force);
+    if (!$prep['ok']) {
+        return [
+            'ok'           => false,
+            'need_confirm' => !empty($prep['need_confirm']),
+            'error'        => (string) ($prep['error'] ?? casting_session_conflict_message()),
+            'user'         => $user,
+            'role'         => $role,
+        ];
     }
 
     if (!function_exists('casting_portal_login_user')) {

@@ -35,6 +35,7 @@ if (!function_exists('str_contains')) {
 }
 
 require_once __DIR__ . '/portal-auth.php';
+require_once __DIR__ . '/session-guard.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
@@ -268,7 +269,9 @@ function casting_require_login(string $portal): WP_User
 {
     $user = casting_current_user();
     if (!$user) {
-        casting_set_flash('error', 'لطفاً ابتدا وارد شوید.');
+        if (empty($_SESSION['casting_flash'])) {
+            casting_set_flash('error', 'لطفاً ابتدا وارد شوید.');
+        }
         casting_redirect('login.php');
     }
 

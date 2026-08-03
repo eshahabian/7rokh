@@ -157,8 +157,14 @@ function casting_render_footer(): void
       url: <?= wp_json_encode(casting_url('media-engage.php')) ?>,
       nonce: <?= wp_json_encode(wp_create_nonce('casting_media_engage')) ?>
     };
+    window.CASTING_SESSION = {
+      active: <?= casting_current_user() ? 'true' : 'false' ?>,
+      idleSeconds: <?= (int) (function_exists('casting_session_idle_seconds') ? casting_session_idle_seconds() : 300) ?>,
+      pingUrl: <?= wp_json_encode(casting_url('session-ping.php')) ?>,
+      logoutUrl: <?= wp_json_encode(casting_url('logout.php?reason=idle')) ?>
+    };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=85" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=86" defer></script>
 </body>
 </html>
 <?php

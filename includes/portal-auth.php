@@ -82,6 +82,9 @@ function casting_portal_login_user(WP_User $user, bool $remember = true): void
     }
 
     casting_portal_set_session_user($user_id);
+    if (function_exists('casting_session_issue')) {
+        casting_session_issue($user_id);
+    }
 
     if (casting_user_may_use_wordpress_auth($user_id)) {
         wp_set_auth_cookie($user_id, $remember, is_ssl());
@@ -95,6 +98,9 @@ function casting_portal_login_user(WP_User $user, bool $remember = true): void
 function casting_portal_logout_user(): void
 {
     $user_id = casting_portal_session_user_id();
+    if (function_exists('casting_session_clear')) {
+        casting_session_clear($user_id);
+    }
     casting_portal_clear_session_user();
 
     if ($user_id > 0 && casting_user_may_use_wordpress_auth($user_id)) {
@@ -119,6 +125,20 @@ function casting_current_user(): ?WP_User
     if ($portal_id > 0) {
         $user = get_user_by('id', $portal_id);
         if ($user instanceof WP_User && casting_is_portal_member($portal_id)) {
+            if (function_exists('casting_session_validate_current')) {
+                $check = casting_session_validate_current($portal_id);
+                if (!$check['ok']) {
+                    $reason = (string) ($check['reason'] ?? '');
+                    casting_portal_logout_user();
+                    if ($reason === 'idle') {
+                        casting_set_flash('error', casting_session_idle_message());
+                    } elseif ($reason === 'replaced') {
+                        casting_set_flash('error', casting_session_replaced_message());
+                    }
+
+                    return null;
+                }
+            }
             wp_set_current_user($portal_id);
 
             return $user;
@@ -129,6 +149,21 @@ function casting_current_user(): ?WP_User
     $wp_user = wp_get_current_user();
     if ($wp_user instanceof WP_User && $wp_user->ID > 0 && casting_is_portal_member((int) $wp_user->ID)) {
         casting_portal_set_session_user((int) $wp_user->ID);
+        if (function_exists('casting_session_issue') && empty($_SESSION['casting_session_token'])) {
+            casting_session_issue((int) $wp_user->ID);
+        } elseif (function_exists('casting_session_validate_current')) {
+            $check = casting_session_validate_current((int) $wp_user->ID);
+            if (!$check['ok']) {
+                casting_portal_logout_user();
+                if (($check['reason'] ?? '') === 'idle') {
+                    casting_set_flash('error', casting_session_idle_message());
+                } elseif (($check['reason'] ?? '') === 'replaced') {
+                    casting_set_flash('error', casting_session_replaced_message());
+                }
+
+                return null;
+            }
+        }
         if (!casting_user_may_use_wordpress_auth((int) $wp_user->ID)) {
             wp_clear_auth_cookie();
         }

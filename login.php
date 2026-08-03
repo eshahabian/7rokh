@@ -22,6 +22,8 @@ $login = '';
 $mobile = '';
 $mode = ((string) ($_GET['mode'] ?? $_POST['mode'] ?? 'password')) === 'otp' ? 'otp' : 'password';
 $otp_sent = false;
+$need_confirm = false;
+$force_login = !empty($_POST['force_login']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $mode = ((string) ($_POST['mode'] ?? 'password')) === 'otp' ? 'otp' : 'password';
@@ -54,9 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             } else {
-                $result = casting_login_with_otp($mobile, (string) ($_POST['otp_code'] ?? ''));
+                $result = casting_login_with_otp($mobile, (string) ($_POST['otp_code'] ?? ''), $force_login);
                 if (!$result['ok']) {
-                    casting_rate_limit_hit('login_otp');
+                    $need_confirm = !empty($result['need_confirm']);
+                    if (!$need_confirm) {
+                        casting_rate_limit_hit('login_otp');
+                    }
                     $error = $result['error'] ?? 'ورود ناموفق بود.';
                     $otp_sent = true;
                 } else {
@@ -76,9 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $login = (string) ($_POST['login'] ?? '');
             $password = (string) ($_POST['password'] ?? '');
-            $result = casting_login($login, $password);
+            $result = casting_login($login, $password, '', $force_login);
             if (!$result['ok']) {
-                casting_rate_limit_hit('login');
+                $need_confirm = !empty($result['need_confirm']);
+                if (!$need_confirm) {
+                    casting_rate_limit_hit('login');
+                }
                 $error = $result['error'];
             } else {
                 casting_rate_limit_clear('login');
@@ -123,12 +131,21 @@ casting_render_flash();
         <?php if ($otp_sent || (string) ($_POST['otp_code'] ?? '') !== '') : ?>
           <div class="field">
             <label for="otp_code">کد تأیید</label>
-            <input id="otp_code" name="otp_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="۶ رقم">
+            <input id="otp_code" name="otp_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="۶ رقم" value="<?= casting_e((string) ($_POST['otp_code'] ?? '')) ?>">
           </div>
-          <div class="cta-row">
-            <button class="btn btn-primary" type="submit" name="otp_action" value="verify">ورود</button>
-            <button class="btn btn-ghost" type="submit" name="otp_action" value="send">ارسال مجدد کد</button>
-          </div>
+          <?php if ($need_confirm) : ?>
+            <input type="hidden" name="force_login" value="1">
+            <p class="lede" role="status">با ادامه، نشست دستگاه قبلی قطع می‌شود.</p>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="submit" name="otp_action" value="verify">ادامه ورود و قطع نشست قبلی</button>
+              <a class="btn btn-ghost" href="login.php?mode=otp">انصراف</a>
+            </div>
+          <?php else : ?>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="submit" name="otp_action" value="verify">ورود</button>
+              <button class="btn btn-ghost" type="submit" name="otp_action" value="send">ارسال مجدد کد</button>
+            </div>
+          <?php endif; ?>
         <?php else : ?>
           <button class="btn btn-primary" type="submit" name="otp_action" value="send">ارسال کد تأیید</button>
         <?php endif; ?>
@@ -164,7 +181,16 @@ casting_render_flash();
           <a href="forgot-password.php">فراموشی رمز عبور؟</a>
         </p>
 
-        <button class="btn btn-primary" type="submit">ورود</button>
+          <?php if ($need_confirm) : ?>
+            <input type="hidden" name="force_login" value="1">
+            <p class="lede" role="status">با ادامه، نشست دستگاه قبلی قطع می‌شود. رمز را دوباره وارد کنید و تأیید کنید.</p>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="submit">ادامه ورود و قطع نشست قبلی</button>
+              <a class="btn btn-ghost" href="login.php">انصراف</a>
+            </div>
+          <?php else : ?>
+            <button class="btn btn-primary" type="submit">ورود</button>
+          <?php endif; ?>
       </form>
     <?php endif; ?>
 
