@@ -448,10 +448,9 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
               <?php casting_render_presence_dot((int) $user->ID, 'sm'); ?>
             </div>
             <div class="panel-sidebar-identity-text">
-              <p class="panel-sidebar-display-name"><?= casting_e($sidebar_name) ?></p>
-              <?php if ($sidebar_primary_activity !== '') : ?>
-                <p class="panel-sidebar-activity"><?= casting_e($sidebar_primary_activity) ?></p>
-              <?php endif; ?>
+              <p class="panel-sidebar-display-name">
+                <span class="panel-sidebar-name"><?= casting_e($sidebar_name) ?></span><?php if ($sidebar_primary_activity !== '') : ?><span class="panel-sidebar-activity"> · <?= casting_e($sidebar_primary_activity) ?></span><?php endif; ?>
+              </p>
               <p class="panel-sidebar-user-meta">
                 <span class="panel-sidebar-login">@<?= casting_e((string) $user->user_login) ?></span>
                 <?php if ($panel_membership_number !== '') : ?>
