@@ -160,8 +160,8 @@ casting_render_flash();
             $caption = trim((string) ($item['caption'] ?? ''));
             $media_id = (int) ($item['id'] ?? 0);
             ?>
-          <figure class="ig-profile-cell is-pending<?= $is_video ? ' is-video' : '' ?>">
-            <a href="<?= casting_e($url !== '' ? $url : $thumb) ?>" target="_blank" rel="noopener">
+          <figure class="ig-profile-cell ig-profile-cell--thumb is-pending<?= $is_video ? ' is-video' : '' ?>">
+            <a href="<?= casting_e($url !== '' ? $url : $thumb) ?>" data-post-expand aria-label="مشاهده پست در انتظار تأیید">
               <?php if ($is_video) : ?>
                 <video src="<?= casting_e($url) ?>" muted preload="metadata" playsinline<?= $thumb !== '' && $thumb !== $url ? ' poster="' . casting_e($thumb) . '"' : '' ?>></video>
                 <span class="ig-profile-cell-badge" aria-hidden="true">▶</span>
@@ -171,18 +171,18 @@ casting_render_flash();
             </a>
             <span class="ig-profile-pending-chip">در انتظار تأیید</span>
             <?php if ($caption !== '') : ?>
-              <figcaption class="ig-profile-cell-meta<?= (function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 70 ? ' is-clamped' : '' ?>">
+              <figcaption class="ig-profile-cell-meta">
                 <p><?= nl2br(casting_e($caption)) ?></p>
               </figcaption>
             <?php else : ?>
               <figcaption class="ig-profile-cell-meta ig-profile-cell-meta--empty" aria-hidden="true"></figcaption>
             <?php endif; ?>
             <?php if ($can_gallery && $media_id > 0) : ?>
-              <form class="ig-profile-pending-delete" method="post" action="panel.php" onsubmit="return confirm('این پست حذف شود؟');">
+              <form class="ig-profile-cell-delete" method="post" action="panel.php" onsubmit="return confirm('این پست حذف شود؟');">
                 <?php wp_nonce_field('casting_panel_media'); ?>
                 <input type="hidden" name="panel_media_action" value="delete">
                 <input type="hidden" name="media_id" value="<?= $media_id ?>">
-                <button class="btn btn-ghost btn-sm" type="submit">حذف</button>
+                <button class="btn btn-ghost btn-sm" type="submit" title="حذف پست">حذف</button>
               </form>
             <?php endif; ?>
           </figure>
@@ -213,8 +213,8 @@ casting_render_flash();
           $caption = trim((string) ($item['caption'] ?? ''));
           $media_id = (int) ($item['id'] ?? 0);
           ?>
-        <figure class="ig-profile-cell<?= $is_video ? ' is-video' : '' ?>">
-          <a href="<?= casting_e($url) ?>" target="_blank" rel="noopener">
+        <figure class="ig-profile-cell ig-profile-cell--thumb<?= $is_video ? ' is-video' : '' ?>">
+          <a href="<?= casting_e($url) ?>" data-post-expand aria-label="مشاهده پست">
             <?php if ($is_video) : ?>
               <video src="<?= casting_e($url) ?>" muted preload="metadata" playsinline<?= $thumb !== '' && $thumb !== $url ? ' poster="' . casting_e($thumb) . '"' : '' ?>></video>
               <span class="ig-profile-cell-badge" aria-hidden="true">▶</span>
@@ -223,22 +223,19 @@ casting_render_flash();
             <?php endif; ?>
           </a>
           <?php if ($caption !== '') : ?>
-            <figcaption class="ig-profile-cell-meta<?= (function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 70 ? ' is-clamped' : '' ?>">
+            <figcaption class="ig-profile-cell-meta">
               <p><?= nl2br(casting_e($caption)) ?></p>
-              <?php if ((function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 70) : ?>
-                <button type="button" class="link-button media-engage-more" data-post-expand>بیشتر…</button>
-              <?php endif; ?>
             </figcaption>
           <?php else : ?>
             <figcaption class="ig-profile-cell-meta ig-profile-cell-meta--empty" aria-hidden="true"></figcaption>
           <?php endif; ?>
-          <?php casting_render_media_engagement((int) ($item['id'] ?? 0), $user_id, false); ?>
+          <?php casting_render_media_engagement($media_id, $user_id, false); ?>
           <?php if ($can_gallery && $media_id > 0) : ?>
             <form class="ig-profile-cell-delete" method="post" action="panel.php" onsubmit="return confirm('این پست حذف شود؟');">
               <?php wp_nonce_field('casting_panel_media'); ?>
               <input type="hidden" name="panel_media_action" value="delete">
               <input type="hidden" name="media_id" value="<?= $media_id ?>">
-              <button class="btn btn-ghost btn-sm" type="submit">حذف</button>
+              <button class="btn btn-ghost btn-sm" type="submit" title="حذف پست">حذف</button>
             </form>
           <?php endif; ?>
         </figure>

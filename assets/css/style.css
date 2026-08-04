@@ -3703,7 +3703,7 @@ html[data-theme="day"] .ig-profile-pending-chip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.35rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 .ig-profile-cell {
@@ -3717,6 +3717,56 @@ html[data-theme="day"] .ig-profile-pending-chip {
   border: 1px solid var(--line);
   min-width: 0;
   height: 100%;
+}
+
+.ig-profile-cell--thumb {
+  height: auto;
+  aspect-ratio: 1;
+  display: block;
+}
+
+.ig-profile-cell--thumb > a {
+  position: absolute;
+  inset: 0;
+  display: block;
+  aspect-ratio: auto;
+  height: 100%;
+  flex: none;
+}
+
+.ig-profile-cell--thumb > .ig-profile-cell-meta,
+.ig-profile-cell--thumb > .media-engage {
+  /* در DOM می‌ماند تا لایت‌باکس بخواند؛ در گرید دیده نمی‌شود */
+  display: none !important;
+}
+
+.ig-profile-cell--thumb .ig-profile-cell-delete,
+.ig-profile-cell--thumb .ig-profile-pending-delete {
+  position: absolute;
+  z-index: 3;
+  left: 0.35rem;
+  bottom: 0.35rem;
+  right: auto;
+  display: flex;
+  justify-content: flex-start;
+  padding: 0;
+  margin: 0;
+}
+
+.ig-profile-cell--thumb .ig-profile-cell-delete .btn,
+.ig-profile-cell--thumb .ig-profile-pending-delete .btn {
+  min-height: 1.7rem;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.72rem;
+  background: rgba(8, 10, 14, 0.72);
+  color: #f3eee4;
+  border-color: transparent;
+}
+
+html[data-theme="day"] .ig-profile-cell--thumb .ig-profile-cell-delete .btn,
+html[data-theme="day"] .ig-profile-cell--thumb .ig-profile-pending-delete .btn {
+  background: rgba(26, 32, 48, 0.78);
+  color: #fffdf9;
 }
 
 .ig-profile-cell > a {
