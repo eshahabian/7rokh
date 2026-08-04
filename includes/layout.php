@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=126">
+  <link rel="stylesheet" href="<?= $css ?>?v=127">
   <script>
     (function () {
       try {
@@ -135,13 +135,42 @@ function casting_render_flash(): void
 <?php
 }
 
+/**
+ * نشان اعتماد اینماد (فقط پورتال کستینگ)
+ */
+function casting_render_enamad_seal(string $extra_class = ''): void
+{
+    $class = trim('enamad-seal ' . $extra_class);
+    ?>
+  <a
+    class="<?= casting_e($class) ?>"
+    referrerpolicy="origin"
+    target="_blank"
+    rel="noopener"
+    href="https://trustseal.enamad.ir/?id=4302477&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+    title="نماد اعتماد الکترونیکی"
+  >
+    <img
+      referrerpolicy="origin"
+      src="https://trustseal.enamad.ir/logo.aspx?id=4302477&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+      alt="نماد اعتماد الکترونیکی"
+      width="125"
+      height="136"
+      loading="lazy"
+      style="cursor:pointer"
+      code="s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+    >
+  </a>
+    <?php
+}
+
 function casting_render_footer(): void
 {
     ?>
   <footer class="site-footer">
     <div class="site-footer-inner">
       <p><?= casting_brand_html() ?> — پورتال استعداد و بازیگری</p>
-      <a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=4302477&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=4302477&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS' alt='' style='cursor:pointer' code='s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS'></a>
+      <?php casting_render_enamad_seal(); ?>
     </div>
   </footer>
   <button type="button" class="scroll-top" data-scroll-top aria-label="بازگشت به بالای صفحه">
