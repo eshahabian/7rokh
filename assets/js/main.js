@@ -1863,6 +1863,9 @@
   };
 
   document.addEventListener("click", (event) => {
+    if (event.target.closest(".ig-profile-cell-delete, .ig-profile-pending-delete")) {
+      return;
+    }
     const expand = event.target.closest("[data-post-expand]");
     if (expand) {
       event.preventDefault();

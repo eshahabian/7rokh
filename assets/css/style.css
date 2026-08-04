@@ -4427,6 +4427,19 @@ a.panel-home-filter-chip:focus-visible {
   flex: 0 1 auto;
 }
 
+@media (max-width: 640px) {
+  .post-lightbox {
+    padding: 0.65rem;
+    align-items: flex-end;
+  }
+
+  .post-lightbox-panel {
+    width: 100%;
+    max-height: min(92vh, 100%);
+    border-radius: 14px 14px 10px 10px;
+  }
+}
+
 .post-lightbox-head {
   display: flex;
   align-items: center;
