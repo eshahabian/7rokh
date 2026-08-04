@@ -2100,4 +2100,55 @@
       box.checked = checked;
     });
   });
+
+  // Application Manager: applicant note shadow/lightbox
+  const appNoteLightbox = document.querySelector("[data-app-note-lightbox]");
+  if (appNoteLightbox && appNoteLightbox.parentElement !== document.body) {
+    document.body.appendChild(appNoteLightbox);
+  }
+  const appNoteTitle = appNoteLightbox?.querySelector("[data-app-note-lightbox-title]");
+  const appNoteBody = appNoteLightbox?.querySelector("[data-app-note-lightbox-body]");
+
+  const closeAppNoteLightbox = () => {
+    if (!appNoteLightbox?.classList.contains("is-open")) return;
+    appNoteLightbox.classList.remove("is-open");
+    appNoteLightbox.setAttribute("aria-hidden", "true");
+    if (appNoteBody) appNoteBody.textContent = "";
+    document.body.style.overflow = "";
+  };
+
+  const openAppNoteLightbox = (trigger) => {
+    if (!appNoteLightbox || !appNoteBody) return;
+    const title = trigger.getAttribute("data-app-note-title") || "یادداشت متقاضی";
+    const body = trigger.getAttribute("data-app-note-body") || "";
+    if (appNoteTitle) appNoteTitle.textContent = title;
+    appNoteBody.textContent = body;
+    appNoteLightbox.classList.add("is-open");
+    appNoteLightbox.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  };
+
+  document.addEventListener("click", (event) => {
+    const openBtn = event.target.closest("[data-app-note-open]");
+    if (openBtn) {
+      event.preventDefault();
+      openAppNoteLightbox(openBtn);
+      return;
+    }
+    if (event.target.closest("[data-app-note-lightbox-close]")) {
+      event.preventDefault();
+      closeAppNoteLightbox();
+      return;
+    }
+    if (
+      appNoteLightbox?.classList.contains("is-open") &&
+      !event.target.closest(".app-note-lightbox-panel")
+    ) {
+      closeAppNoteLightbox();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeAppNoteLightbox();
+  });
 })();

@@ -357,9 +357,32 @@ casting_render_flash();
                 <button type="button" class="link-button" data-member-preview="<?= $tid ?>"><?= casting_e($name) ?></button>
               </h3>
               <p class="meta"><?= casting_e($meta_bits !== [] ? implode(' · ', $meta_bits) : '—') ?></p>
-              <?php if ($note !== '') : ?>
-                <p class="app-manager-note" title="<?= casting_e($note) ?>"><?= casting_e(function_exists('mb_substr') ? mb_substr($note, 0, 72, 'UTF-8') : substr($note, 0, 72)) ?></p>
-              <?php endif; ?>
+              <?php
+              $note_limit = 48;
+              $note_len = $note === '' ? 0 : (function_exists('mb_strlen') ? mb_strlen($note, 'UTF-8') : strlen($note));
+              $note_long = $note_len > $note_limit;
+              $note_preview = $note === ''
+                  ? ''
+                  : ($note_long
+                      ? ((function_exists('mb_substr') ? mb_substr($note, 0, $note_limit, 'UTF-8') : substr($note, 0, $note_limit)) . '…')
+                      : $note);
+              ?>
+              <div class="app-manager-note-slot">
+                <?php if ($note !== '') : ?>
+                  <p class="app-manager-note"><?= casting_e($note_preview) ?></p>
+                  <?php if ($note_long) : ?>
+                    <button
+                      type="button"
+                      class="link-button app-manager-note-more"
+                      data-app-note-open
+                      data-app-note-title="<?= casting_e($name) ?>"
+                      data-app-note-body="<?= casting_e($note) ?>"
+                    >ادامه</button>
+                  <?php endif; ?>
+                <?php else : ?>
+                  <p class="app-manager-note app-manager-note--empty">بدون یادداشت</p>
+                <?php endif; ?>
+              </div>
               <form method="post" action="director-desk.php?project=<?= $project_id ?>&amp;opp=<?= $opp_id ?>&amp;folder=<?= casting_e($app_folder) ?>" class="app-manager-card-actions">
                 <?php wp_nonce_field('casting_director_desk_page'); ?>
                 <input type="hidden" name="desk_action" value="set_application_status">
@@ -374,6 +397,16 @@ casting_render_flash();
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
+
+    <div class="app-note-lightbox" data-app-note-lightbox aria-hidden="true">
+      <div class="app-note-lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="app-note-lightbox-title">
+        <div class="app-note-lightbox-head">
+          <h2 class="app-note-lightbox-title" id="app-note-lightbox-title" data-app-note-lightbox-title>یادداشت متقاضی</h2>
+          <button type="button" class="btn btn-ghost btn-sm" data-app-note-lightbox-close>بستن</button>
+        </div>
+        <div class="app-note-lightbox-body" data-app-note-lightbox-body></div>
+      </div>
+    </div>
 
   <?php elseif ($role_id <= 0 || !$active_role) : ?>
     <a class="back-link" href="director-desk.php">← همه پروژه‌ها</a>
