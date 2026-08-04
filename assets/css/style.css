@@ -3615,6 +3615,75 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   font-weight: 600;
 }
 
+.ig-profile-pending {
+  margin: 0.85rem 0 1.1rem;
+  padding: 0.85rem 0.9rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+}
+
+.ig-profile-pending-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.ig-profile-pending-head h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-family: var(--font);
+  font-weight: 700;
+}
+
+.ig-profile-pending-head .meta {
+  margin: 0;
+}
+
+.ig-profile-grid--pending {
+  margin-top: 0;
+}
+
+.ig-profile-cell.is-pending {
+  outline: 1px dashed rgba(212, 165, 116, 0.45);
+}
+
+.ig-profile-pending-chip {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 2;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(8, 10, 14, 0.72);
+  color: #f3eee4;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+html[data-theme="day"] .ig-profile-pending-chip {
+  background: rgba(26, 32, 48, 0.78);
+  color: #fffdf9;
+}
+
+.ig-profile-pending-delete,
+.ig-profile-cell-delete {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.35rem 0.45rem 0.5rem;
+}
+
+.ig-profile-pending-delete .btn,
+.ig-profile-cell-delete .btn {
+  min-height: 2rem;
+  padding: 0.25rem 0.7rem;
+}
+
 .ig-profile-empty {
   display: grid;
   gap: 0.65rem;

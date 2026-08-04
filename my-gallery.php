@@ -8,6 +8,7 @@ require_once __DIR__ . '/includes/user-media.php';
 
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
+$auto_publish = casting_user_can_auto_publish_media($user_id);
 
 if (!casting_user_can_manage_gallery($user_id)) {
     casting_set_flash('error', 'برای افزودن پست باید عضو پورتال باشید.');
@@ -38,9 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($res['ok']) {
             casting_clear_user_gallery_reject_notice($user_id);
         }
+        $edit_ok_msg = !empty($res['auto_publish'])
+            ? 'ویرایش ذخیره و پست منتشر شد.'
+            : 'ویرایش ذخیره شد و دوباره برای تأیید مدیر ارسال شد.';
         casting_set_flash(
             $res['ok'] ? 'success' : 'error',
-            $res['ok'] ? 'ویرایش ذخیره شد و دوباره برای تأیید مدیر ارسال شد.' : $res['error']
+            $res['ok'] ? $edit_ok_msg : $res['error']
         );
     } else {
         if (!empty($_FILES['gallery_photo']['name'])) {
@@ -50,9 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $res = ['ok' => false, 'error' => 'یک عکس یا ویدیو انتخاب کنید.'];
         }
+        $upload_ok_msg = !empty($res['auto_publish'])
+            ? 'پست منتشر شد.'
+            : 'ارسال شد و پس از تأیید مدیر در پروفایل نمایش داده می‌شود.';
         casting_set_flash(
             $res['ok'] ? 'success' : 'error',
-            $res['ok'] ? 'ارسال شد و پس از تأیید مدیر در پروفایل نمایش داده می‌شود.' : $res['error']
+            $res['ok'] ? $upload_ok_msg : $res['error']
         );
     }
     casting_redirect('my-gallery.php');
@@ -73,7 +80,11 @@ casting_render_flash();
 ?>
 <section class="dash-card">
   <?php casting_render_panel_heading('گالری من'); ?>
-  <p class="lede">عکس و ویدیو را با کپشن بفرستید. تا تأیید مدیر برای دیگران دیده نمی‌شود. ویرایش هم دوباره نیاز به تأیید دارد.</p>
+  <?php if ($auto_publish) : ?>
+    <p class="lede">عکس و ویدیو را با کپشن بفرستید. پست شما بلافاصله منتشر می‌شود.</p>
+  <?php else : ?>
+    <p class="lede">عکس و ویدیو را با کپشن بفرستید. تا تأیید مدیر برای دیگران دیده نمی‌شود. ویرایش هم دوباره نیاز به تأیید دارد.</p>
+  <?php endif; ?>
 
   <?php if ($rejected_count > 0) : ?>
     <div class="flash flash-error gallery-reject-banner" role="status">
@@ -105,7 +116,7 @@ casting_render_flash();
       <textarea id="caption" name="caption" rows="3" maxlength="500" placeholder="متن کوتاه برای این پست…"></textarea>
     </div>
     <p class="field-hint">در هر ارسال یکی از دو فایل را پر کنید.</p>
-    <button class="btn btn-primary" type="submit">ارسال برای تأیید</button>
+    <button class="btn btn-primary" type="submit"><?= $auto_publish ? 'انتشار پست' : 'ارسال برای تأیید' ?></button>
   </form>
 
   <h2 class="panel-section-title">فایل‌های شما</h2>
@@ -158,9 +169,9 @@ casting_render_flash();
                     <input id="edit_file_<?= (int) $item['id'] ?>" name="edit_photo" type="file" accept="image/jpeg,image/png,image/webp">
                   <?php endif; ?>
                 </div>
-                <p class="field-hint">بعد از ذخیره، پست دوباره در صف تأیید مدیر قرار می‌گیرد.</p>
+                <p class="field-hint"><?= $auto_publish ? 'بعد از ذخیره، پست بلافاصله منتشر می‌شود.' : 'بعد از ذخیره، پست دوباره در صف تأیید مدیر قرار می‌گیرد.' ?></p>
                 <div class="cta-row">
-                  <button class="btn btn-primary btn-sm" type="submit">ذخیره و ارسال تأیید</button>
+                  <button class="btn btn-primary btn-sm" type="submit"><?= $auto_publish ? 'ذخیره و انتشار' : 'ذخیره و ارسال تأیید' ?></button>
                   <a class="btn btn-ghost btn-sm" href="my-gallery.php">انصراف</a>
                 </div>
               </form>
