@@ -3260,6 +3260,35 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
 .panel-nav {
   display: flex;
   flex-direction: column;
+  gap: 0.85rem;
+}
+
+.panel-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.panel-nav-group + .panel-nav-group {
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
+}
+
+.panel-nav-group-label {
+  margin: 0 0.7rem 0.2rem;
+  padding: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  opacity: 0.85;
+  user-select: none;
+}
+
+.panel-nav-group-items {
+  display: flex;
+  flex-direction: column;
   gap: 0.15rem;
 }
 

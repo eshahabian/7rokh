@@ -10,37 +10,71 @@ require_once __DIR__ . '/chat-rules.php';
 require_once __DIR__ . '/layout.php';
 
 /**
- * منوی کامل دسکتاپ (مثل قبل)
+ * گروه‌های منوی پنل (کستینگ / شبکه / حساب)
+ *
+ * @return list<array{id:string,label:string,items:list<array{key:string,label:string,href:string,icon?:string,external?:bool}>}>
+ */
+function casting_panel_nav_groups(): array
+{
+    return [
+        [
+            'id'    => 'casting',
+            'label' => 'کستینگ',
+            'items' => [
+                ['key' => 'opportunities', 'label' => 'فرصت‌ها',         'href' => 'opportunities.php'],
+                ['key' => 'my-requests',   'label' => 'فراخوان کستینگ', 'href' => 'my-requests.php'],
+                ['key' => 'desk',          'label' => 'پروژه‌ها',        'href' => 'director-desk.php'],
+                ['key' => 'briefs',        'label' => 'تکالیف',         'href' => 'my-briefs.php'],
+                ['key' => 'favorites',     'label' => 'لیست کاندیدا',   'href' => 'favorites.php'],
+            ],
+        ],
+        [
+            'id'    => 'network',
+            'label' => 'شبکه',
+            'items' => [
+                ['key' => 'search',   'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
+                ['key' => 'newest',   'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
+                ['key' => 'visitors', 'label' => 'بازدیدکنندگان پروفایل من', 'href' => 'profile-visitors.php'],
+                [
+                    'key'      => 'news',
+                    'label'    => 'اخبار ۷ رخ',
+                    'href'     => casting_main_site_url(),
+                    'external' => true,
+                ],
+            ],
+        ],
+        [
+            'id'    => 'account',
+            'label' => 'حساب',
+            'items' => [
+                ['key' => 'premium',      'label' => 'فعال‌سازی',            'href' => 'premium.php'],
+                ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت', 'href' => 'premium-receipt.php'],
+                ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',      'href' => 'transactions.php'],
+                ['key' => 'cancel',       'label' => 'انصراف از عضویت',      'href' => 'cancel-membership.php'],
+                ['key' => 'rules',        'label' => 'قوانین',               'href' => 'rules.php'],
+                ['key' => 'contact',      'label' => 'تماس با ما',           'href' => 'contact.php'],
+                ['key' => 'faq',          'label' => 'سوالات متداول',        'href' => 'faq.php'],
+                ['key' => 'logout',       'label' => 'خروج',                 'href' => 'logout.php'],
+            ],
+        ],
+    ];
+}
+
+/**
+ * منوی کامل دسکتاپ (flat — سازگاری با کدهای قبلی)
  *
  * @return array<int, array{key:string,label:string,href:string,icon?:string,external?:bool}>
  */
 function casting_panel_nav_items_desktop(): array
 {
-    return [
-        ['key' => 'opportunities', 'label' => 'فرصت‌ها',                   'href' => 'opportunities.php'],
-        ['key' => 'my-requests',  'label' => 'فراخوان کستینگ',           'href' => 'my-requests.php'],
-        ['key' => 'search',       'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
-        ['key' => 'newest',       'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
-        ['key' => 'favorites',    'label' => 'لیست کاندیدا',             'href' => 'favorites.php'],
-        ['key' => 'premium',      'label' => 'فعال‌سازی',                'href' => 'premium.php'],
-        ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت',     'href' => 'premium-receipt.php'],
-        ['key' => 'desk',         'label' => 'پروژه‌ها',                  'href' => 'director-desk.php'],
-        ['key' => 'cancel',       'label' => 'انصراف از عضویت',          'href' => 'cancel-membership.php'],
-        ['key' => 'rules',        'label' => 'قوانین',                   'href' => 'rules.php'],
-        [
-            'key'      => 'news',
-            'label'    => 'اخبار ۷ رخ',
-            'href'     => casting_main_site_url(),
-            'external' => true,
-        ],
-        // آیتم‌های قبلی که در لیست درخواستی نبودند — انتها
-        ['key' => 'briefs',       'label' => 'تکالیف',                   'href' => 'my-briefs.php'],
-        ['key' => 'visitors',     'label' => 'بازدیدکنندگان پروفایل من', 'href' => 'profile-visitors.php'],
-        ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',          'href' => 'transactions.php'],
-        ['key' => 'contact',      'label' => 'تماس با ما',               'href' => 'contact.php'],
-        ['key' => 'faq',          'label' => 'سوالات متداول',            'href' => 'faq.php'],
-        ['key' => 'logout',       'label' => 'خروج',                     'href' => 'logout.php'],
-    ];
+    $flat = [];
+    foreach (casting_panel_nav_groups() as $group) {
+        foreach ($group['items'] as $item) {
+            $flat[] = $item;
+        }
+    }
+
+    return $flat;
 }
 
 /**
@@ -149,6 +183,44 @@ function casting_panel_profile_url(int $user_id): string
 }
 
 /**
+ * آیا آیتم منو برای این کاربر نمایش داده می‌شود؟
+ *
+ * @param array{key:string,label:string,href:string,external?:bool} $item
+ * @param array{user:?\WP_User,can_member_search?:bool} $ctx
+ */
+function casting_panel_nav_item_is_visible(array $item, array $ctx): bool
+{
+    $user = $ctx['user'] ?? null;
+    $key = (string) ($item['key'] ?? '');
+
+    // موقتاً مخفی — صفحه cancel-membership.php حفظ شده است
+    if ($key === 'cancel') {
+        return false;
+    }
+    if ($key === 'desk' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
+        return false;
+    }
+    if ($key === 'favorites' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
+        return false;
+    }
+    if ($key === 'briefs' && (!$user || casting_get_user_role((int) $user->ID) !== 'talent')) {
+        return false;
+    }
+    if ($user && casting_user_is_director_role((int) $user->ID)
+        && in_array($key, casting_panel_nav_keys_hidden_for_director(), true)) {
+        if ($key === 'photo' && casting_user_can_upload_portraits((int) $user->ID)) {
+            return true;
+        }
+        return false;
+    }
+    if ($key === 'photo' && $user && !casting_user_can_upload_portraits((int) $user->ID)) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * @param array<int, array{key:string,label:string,href:string,external?:bool}> $items
  * @param array{
  *   user:?\WP_User,
@@ -179,6 +251,10 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
     $current = $highlight_mode ? casting_panel_nav_highlight_key($active) : $active;
 
     foreach ($items as $item) {
+        if (!casting_panel_nav_item_is_visible($item, $ctx)) {
+            continue;
+        }
+
         $is_external = !empty($item['external']);
         $href = (string) $item['href'];
         if (!$is_external && $href !== '' && !str_starts_with($href, 'http')) {
@@ -196,30 +272,6 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
             <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
           </span>
             <?php
-            continue;
-        }
-        if ($item['key'] === 'desk' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
-            continue;
-        }
-        if ($item['key'] === 'favorites' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
-            continue;
-        }
-        if ($item['key'] === 'briefs' && (!$user || casting_get_user_role((int) $user->ID) !== 'talent')) {
-            continue;
-        }
-        // موقتاً مخفی — صفحه cancel-membership.php حفظ شده است
-        if ($item['key'] === 'cancel') {
-            continue;
-        }
-        if ($user && casting_user_is_director_role((int) $user->ID)
-            && in_array($item['key'], casting_panel_nav_keys_hidden_for_director(), true)) {
-            if ($item['key'] === 'photo' && casting_user_can_upload_portraits((int) $user->ID)) {
-                // مدیران سایت دسترسی به ویرایش تصویر دارند
-            } else {
-                continue;
-            }
-        }
-        if ($item['key'] === 'photo' && $user && !casting_user_can_upload_portraits((int) $user->ID)) {
             continue;
         }
         ?>
@@ -241,6 +293,46 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
             <?php endif; ?>
           </a>
+        <?php
+    }
+}
+
+/**
+ * رندر منوی پنل با گروه‌بندی کستینگ / شبکه / حساب
+ *
+ * @param array{
+ *   user:?\WP_User,
+ *   active:string,
+ *   highlight:bool,
+ *   can_member_search:bool,
+ *   unread_peers:int,
+ *   pending_receipts:int,
+ *   unread_contacts:int,
+ *   request_count:int,
+ *   pending_brief_count:int,
+ *   panel_premium_until:?int
+ * } $ctx
+ */
+function casting_render_panel_nav_groups(array $ctx): void
+{
+    foreach (casting_panel_nav_groups() as $group) {
+        $visible = [];
+        foreach ($group['items'] as $item) {
+            if (casting_panel_nav_item_is_visible($item, $ctx)) {
+                $visible[] = $item;
+            }
+        }
+        if ($visible === []) {
+            continue;
+        }
+        $group_id = 'panel-nav-group-' . (string) $group['id'];
+        ?>
+        <div class="panel-nav-group" data-nav-group="<?= casting_e((string) $group['id']) ?>">
+          <p class="panel-nav-group-label" id="<?= casting_e($group_id) ?>"><?= casting_e((string) $group['label']) ?></p>
+          <div class="panel-nav-group-items" role="group" aria-labelledby="<?= casting_e($group_id) ?>">
+            <?php casting_render_panel_nav_item_list($visible, $ctx); ?>
+          </div>
+        </div>
         <?php
     }
 }
@@ -468,10 +560,10 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
           <?php endif; ?>
         <?php endif; ?>
       </div>
-      <nav class="panel-nav">
+      <nav class="panel-nav" aria-label="بخش‌های پنل">
         <?php
         $nav_ctx['highlight'] = false;
-        casting_render_panel_nav_item_list(casting_panel_nav_items_mobile(), $nav_ctx);
+        casting_render_panel_nav_groups($nav_ctx);
         ?>
       </nav>
       <?php if ($admin_nav) : ?>
