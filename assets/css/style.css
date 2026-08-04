@@ -401,12 +401,6 @@ html[data-theme="day"] .brand-mark-rokh {
   margin: 1.5rem auto 0;
 }
 
-.home-enamad {
-  display: flex;
-  justify-content: center;
-  margin: 1.35rem auto 0.25rem;
-}
-
 .enamad-seal {
   display: inline-flex;
   align-items: center;
@@ -418,10 +412,6 @@ html[data-theme="day"] .brand-mark-rokh {
   width: 72px;
   height: auto;
   max-width: 100%;
-}
-
-.enamad-seal--home img {
-  width: 88px;
 }
 
 .page-home .site-footer {
