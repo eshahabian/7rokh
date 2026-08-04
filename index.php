@@ -74,10 +74,6 @@ casting_render_flash();
         <span>کل اعضا</span>
       </div>
     </div>
-
-    <div class="home-enamad" aria-label="نماد اعتماد الکترونیکی">
-      <?php casting_render_enamad_seal('enamad-seal--home'); ?>
-    </div>
   </div>
 </main>
 <?php casting_render_footer(); ?>
