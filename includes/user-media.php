@@ -318,6 +318,42 @@ function casting_user_media_sanitize_caption(string $caption): string
 }
 
 /**
+ * مدیران رسمی (eshahabian / ardavan) بدون صف تأیید منتشر می‌شوند
+ */
+function casting_user_can_auto_publish_media(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return false;
+    }
+    $login = strtolower((string) $user->user_login);
+    if ($login === '') {
+        return false;
+    }
+
+    $admins = [];
+    if (defined('CASTING_PORTAL_ADMINS') && is_array(CASTING_PORTAL_ADMINS)) {
+        foreach (CASTING_PORTAL_ADMINS as $admin_login) {
+            if (!is_string($admin_login)) {
+                continue;
+            }
+            $admin_login = strtolower(trim($admin_login));
+            if ($admin_login !== '') {
+                $admins[] = $admin_login;
+            }
+        }
+    }
+    if ($admins === []) {
+        $admins = ['eshahabian', 'ardavan'];
+    }
+
+    return in_array($login, $admins, true);
+}
+
+/**
  * نام کوتاه مدیر تأییدکننده برای نمایش روی پست
  */
 function casting_user_media_approver_label(int $admin_id): string
@@ -416,23 +452,32 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
     casting_user_media_ensure_table();
     global $wpdb;
     $table = casting_user_media_table();
+    $auto_publish = casting_user_can_auto_publish_media($user_id);
+    $now = current_time('mysql');
     $row = [
         'user_id'       => $user_id,
         'attachment_id' => (int) $attachment_id,
         'media_type'    => $media_type,
         'caption'       => casting_user_media_sanitize_caption($caption),
-        'status'        => 'pending',
+        'status'        => $auto_publish ? 'approved' : 'pending',
         'sort_order'    => 0,
-        'created_at'    => current_time('mysql'),
+        'created_at'    => $now,
     ];
+    $formats = ['%d', '%d', '%s', '%s', '%s', '%d', '%s'];
+    if ($auto_publish) {
+        $row['reviewed_at'] = $now;
+        $row['reviewed_by'] = $user_id;
+        $formats[] = '%s';
+        $formats[] = '%d';
+    }
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $ok = $wpdb->insert($table, $row, ['%d', '%d', '%s', '%s', '%s', '%d', '%s']);
+    $ok = $wpdb->insert($table, $row, $formats);
 
     // اگر هنوز ستون caption نباشد، بدون آن دوباره تلاش کن
     if ($ok === false && is_string($wpdb->last_error) && str_contains($wpdb->last_error, 'caption')) {
         casting_user_media_ensure_columns();
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-        $ok = $wpdb->insert($table, $row, ['%d', '%d', '%s', '%s', '%s', '%d', '%s']);
+        $ok = $wpdb->insert($table, $row, $formats);
     }
 
     if ($ok === false) {
@@ -446,7 +491,12 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
         return ['ok' => false, 'error' => $msg];
     }
 
-    return ['ok' => true, 'error' => '', 'id' => (int) $wpdb->insert_id];
+    return [
+        'ok'           => true,
+        'error'        => '',
+        'id'           => (int) $wpdb->insert_id,
+        'auto_publish' => $auto_publish,
+    ];
 }
 
 /**
@@ -506,8 +556,50 @@ function casting_user_media_edit_own(int $user_id, int $media_id, string $captio
     }
 
     $caption_clean = casting_user_media_sanitize_caption($caption);
+    $auto_publish = casting_user_can_auto_publish_media($user_id);
+    $now = current_time('mysql');
 
-    if ($new_attachment > 0) {
+    if ($auto_publish) {
+        if ($new_attachment > 0) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $ok = $wpdb->query($wpdb->prepare(
+                "UPDATE {$table}
+                 SET caption = %s,
+                     attachment_id = %d,
+                     status = 'approved',
+                     is_resubmit = 0,
+                     reviewed_at = %s,
+                     reviewed_by = %d,
+                     reject_reason = NULL,
+                     deleted_at = NULL
+                 WHERE id = %d AND user_id = %d",
+                $caption_clean,
+                $new_attachment,
+                $now,
+                $user_id,
+                $media_id,
+                $user_id
+            ));
+        } else {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $ok = $wpdb->query($wpdb->prepare(
+                "UPDATE {$table}
+                 SET caption = %s,
+                     status = 'approved',
+                     is_resubmit = 0,
+                     reviewed_at = %s,
+                     reviewed_by = %d,
+                     reject_reason = NULL,
+                     deleted_at = NULL
+                 WHERE id = %d AND user_id = %d",
+                $caption_clean,
+                $now,
+                $user_id,
+                $media_id,
+                $user_id
+            ));
+        }
+    } elseif ($new_attachment > 0) {
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $ok = $wpdb->query($wpdb->prepare(
             "UPDATE {$table}
@@ -554,27 +646,29 @@ function casting_user_media_edit_own(int $user_id, int $media_id, string $captio
         return ['ok' => false, 'error' => $msg];
     }
 
-    // اطمینان: بعد از ویرایش حتماً pending باشد
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $status_now = (string) $wpdb->get_var($wpdb->prepare(
-        "SELECT status FROM {$table} WHERE id = %d AND user_id = %d",
-        $media_id,
-        $user_id
-    ));
-    if ($status_now !== 'pending') {
+    if (!$auto_publish) {
+        // اطمینان: بعد از ویرایش حتماً pending باشد
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-        $wpdb->query($wpdb->prepare(
-            "UPDATE {$table} SET status = 'pending', is_resubmit = 1, reviewed_at = NULL, reviewed_by = 0 WHERE id = %d AND user_id = %d",
+        $status_now = (string) $wpdb->get_var($wpdb->prepare(
+            "SELECT status FROM {$table} WHERE id = %d AND user_id = %d",
             $media_id,
             $user_id
         ));
+        if ($status_now !== 'pending') {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $wpdb->query($wpdb->prepare(
+                "UPDATE {$table} SET status = 'pending', is_resubmit = 1, reviewed_at = NULL, reviewed_by = 0 WHERE id = %d AND user_id = %d",
+                $media_id,
+                $user_id
+            ));
+        }
     }
 
     if ($new_attachment > 0 && $attachment_id > 0 && $attachment_id !== $new_attachment) {
         wp_delete_attachment($attachment_id, true);
     }
 
-    return ['ok' => true, 'error' => ''];
+    return ['ok' => true, 'error' => '', 'auto_publish' => $auto_publish];
 }
 
 /**

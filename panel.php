@@ -12,6 +12,25 @@ require_once __DIR__ . '/includes/media-engagement.php';
 
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = sanitize_key((string) ($_POST['panel_media_action'] ?? ''));
+    if ($action === 'delete') {
+        $nonce = (string) ($_POST['_wpnonce'] ?? '');
+        if ($nonce === '' || !wp_verify_nonce($nonce, 'casting_panel_media')) {
+            casting_set_flash('error', 'نشست منقضی شده. دوباره تلاش کنید.');
+            casting_redirect('panel.php');
+        }
+        if (!casting_user_can_manage_gallery($user_id)) {
+            casting_set_flash('error', 'اجازه حذف پست را ندارید.');
+            casting_redirect('panel.php');
+        }
+        $res = casting_user_media_delete_own($user_id, (int) ($_POST['media_id'] ?? 0));
+        casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'پست حذف شد.' : $res['error']);
+        casting_redirect('panel.php');
+    }
+}
+
 $profile = casting_get_profile($user_id);
 $premium = casting_user_is_premium($user_id);
 $activity = casting_user_primary_activity_label($user_id);
@@ -29,6 +48,7 @@ $posts_count = casting_user_media_public_count($user_id);
 $followers_count = casting_followers_count($user_id);
 $following_count = casting_following_count($user_id);
 $gallery_items = casting_user_media_public($user_id, 60);
+$pending_items = casting_user_media_list($user_id, 'pending', 40);
 $can_gallery = casting_user_can_manage_gallery($user_id);
 $can_photos = casting_user_can_upload_portraits($user_id);
 $city = trim((string) ($profile['city'] ?? ''));
@@ -123,12 +143,62 @@ casting_render_flash();
     <span class="ig-profile-tab is-active" role="tab" aria-selected="true">پست‌ها</span>
   </div>
 
+  <?php if ($pending_items !== []) : ?>
+    <section class="ig-profile-pending" aria-labelledby="ig-pending-title">
+      <header class="ig-profile-pending-head">
+        <h2 id="ig-pending-title">در انتظار تأیید</h2>
+        <p class="meta"><?= (int) count($pending_items) ?> پست هنوز منتشر نشده است.</p>
+      </header>
+      <div class="ig-profile-grid ig-profile-grid--pending">
+        <?php foreach ($pending_items as $item) :
+            $url = casting_user_media_url($item);
+            $thumb = casting_user_media_thumb_url($item);
+            if ($url === '' && $thumb === '') {
+                continue;
+            }
+            $is_video = ($item['media_type'] ?? '') === 'video';
+            $caption = trim((string) ($item['caption'] ?? ''));
+            $media_id = (int) ($item['id'] ?? 0);
+            ?>
+          <figure class="ig-profile-cell is-pending<?= $is_video ? ' is-video' : '' ?>">
+            <a href="<?= casting_e($url !== '' ? $url : $thumb) ?>" target="_blank" rel="noopener">
+              <?php if ($is_video) : ?>
+                <video src="<?= casting_e($url) ?>" muted preload="metadata" playsinline<?= $thumb !== '' && $thumb !== $url ? ' poster="' . casting_e($thumb) . '"' : '' ?>></video>
+                <span class="ig-profile-cell-badge" aria-hidden="true">▶</span>
+              <?php else : ?>
+                <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
+              <?php endif; ?>
+            </a>
+            <span class="ig-profile-pending-chip">در انتظار تأیید</span>
+            <?php if ($caption !== '') : ?>
+              <figcaption class="ig-profile-cell-meta<?= (function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 70 ? ' is-clamped' : '' ?>">
+                <p><?= nl2br(casting_e($caption)) ?></p>
+              </figcaption>
+            <?php else : ?>
+              <figcaption class="ig-profile-cell-meta ig-profile-cell-meta--empty" aria-hidden="true"></figcaption>
+            <?php endif; ?>
+            <?php if ($can_gallery && $media_id > 0) : ?>
+              <form class="ig-profile-pending-delete" method="post" action="panel.php" onsubmit="return confirm('این پست حذف شود؟');">
+                <?php wp_nonce_field('casting_panel_media'); ?>
+                <input type="hidden" name="panel_media_action" value="delete">
+                <input type="hidden" name="media_id" value="<?= $media_id ?>">
+                <button class="btn btn-ghost btn-sm" type="submit">حذف</button>
+              </form>
+            <?php endif; ?>
+          </figure>
+        <?php endforeach; ?>
+      </div>
+    </section>
+  <?php endif; ?>
+
   <?php if ($gallery_items === []) : ?>
     <div class="ig-profile-empty">
-      <p>هنوز پستی منتشر نشده است.</p>
+      <p><?= $pending_items !== [] ? 'هنوز پست تأییدشده‌ای ندارید.' : 'هنوز پستی منتشر نشده است.' ?></p>
       <?php if ($can_gallery) : ?>
         <a class="btn btn-primary" href="<?= casting_e(casting_url('my-gallery.php')) ?>">اولین پست را اضافه کنید</a>
-        <p class="meta">پس از تأیید مدیر، پست در پروفایل دیده می‌شود.</p>
+        <?php if (!casting_user_can_auto_publish_media($user_id)) : ?>
+          <p class="meta">پس از تأیید مدیر، پست در پروفایل دیده می‌شود.</p>
+        <?php endif; ?>
       <?php endif; ?>
     </div>
   <?php else : ?>
@@ -141,6 +211,7 @@ casting_render_flash();
           }
           $is_video = ($item['media_type'] ?? '') === 'video';
           $caption = trim((string) ($item['caption'] ?? ''));
+          $media_id = (int) ($item['id'] ?? 0);
           ?>
         <figure class="ig-profile-cell<?= $is_video ? ' is-video' : '' ?>">
           <a href="<?= casting_e($url) ?>" target="_blank" rel="noopener">
@@ -162,6 +233,14 @@ casting_render_flash();
             <figcaption class="ig-profile-cell-meta ig-profile-cell-meta--empty" aria-hidden="true"></figcaption>
           <?php endif; ?>
           <?php casting_render_media_engagement((int) ($item['id'] ?? 0), $user_id, false); ?>
+          <?php if ($can_gallery && $media_id > 0) : ?>
+            <form class="ig-profile-cell-delete" method="post" action="panel.php" onsubmit="return confirm('این پست حذف شود؟');">
+              <?php wp_nonce_field('casting_panel_media'); ?>
+              <input type="hidden" name="panel_media_action" value="delete">
+              <input type="hidden" name="media_id" value="<?= $media_id ?>">
+              <button class="btn btn-ghost btn-sm" type="submit">حذف</button>
+            </form>
+          <?php endif; ?>
         </figure>
       <?php endforeach; ?>
     </div>
