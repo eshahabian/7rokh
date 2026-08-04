@@ -1531,6 +1531,42 @@ function casting_member_search_filters_active(array $filters): bool
 }
 
 /**
+ * آیا فیلترهای پیشرفته (غیر از اصلی) فعال‌اند؟
+ */
+function casting_member_search_advanced_filters_active(array $filters): bool
+{
+    $advanced_keys = [
+        'look',
+        'height_range',
+        'weight_range',
+        'health_well',
+        'artistic_org',
+        'availability',
+        'experience',
+        'language',
+        'language_level',
+        'education_degree',
+        'has_video',
+        'has_portfolio',
+        'eye_color',
+        'hair_color',
+        'apparent_age_range',
+        'accent',
+        'artistic_skill',
+        'motor_skill',
+        'skill',
+    ];
+    foreach ($advanced_keys as $key) {
+        $value = trim((string) ($filters[$key] ?? ''));
+        if ($value !== '') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * @return array<string, string>
  */
 function casting_parse_member_search_filters(array $input): array
@@ -1905,24 +1941,20 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
     $viewed = !empty($director_flags['viewed']);
     $highlight = !empty($director_flags['is_highlight']);
     $city = trim((string) ($profile['city'] ?? ''));
-    $role_label = casting_user_public_role_label($id);
-    if ($role_label === '') {
-        $role_label = '—';
-    }
-    if (!function_exists('casting_follow_can_target')) {
-        require_once __DIR__ . '/follows.php';
-    }
-    if (!function_exists('casting_render_member_message_button')) {
-        require_once __DIR__ . '/chat-rules.php';
-    }
-    $can_follow_btn = $viewer_id > 0 && $viewer_id !== $id && casting_follow_can_target($viewer_id, $id);
-    $show_actions = $viewer_id > 0 && $viewer_id !== $id;
+    $age = (int) ($profile['age'] ?? 0);
     $is_official = function_exists('casting_follow_target_is_required') && casting_follow_target_is_required($id);
+    $meta_bits = [];
+    if ($age > 0) {
+        $meta_bits[] = (string) $age . ' سال';
+    }
+    if ($city !== '') {
+        $meta_bits[] = $city;
+    }
     ?>
-    <article class="member-card<?= $highlight ? ' member-card--highlight' : '' ?><?= $is_official ? ' member-card--official' : '' ?>" data-member-preview="<?= $id ?>">
+    <article class="member-card member-card--headshot<?= $highlight ? ' member-card--highlight' : '' ?><?= $is_official ? ' member-card--official' : '' ?>" data-member-preview="<?= $id ?>">
       <button type="button" class="member-card-photo" data-member-preview="<?= $id ?>" aria-label="نمایش پروفایل <?= casting_e($member->display_name) ?>">
         <?php if ($photo !== '') : ?>
-          <img src="<?= casting_e($photo) ?>" alt="">
+          <img src="<?= casting_e($photo) ?>" alt="" loading="lazy">
         <?php else : ?>
           <span class="photo-placeholder">بدون عکس</span>
         <?php endif; ?>
@@ -1930,32 +1962,25 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
         <?php if ($viewed) : ?>
           <?php casting_render_director_viewed_badge(true); ?>
         <?php endif; ?>
+        <?php if ($premium) : ?>
+          <span class="member-card-photo-chip">ویژه</span>
+        <?php endif; ?>
+        <?php if ($director_score > 0) : ?>
+          <span class="member-card-photo-score" title="بهترین امتیاز شما">★ <?= casting_e(casting_director_format_score($director_score)) ?></span>
+        <?php endif; ?>
       </button>
       <div class="member-card-body">
-        <div class="member-card-badge-row">
-          <?php casting_render_official_page_badge($id); ?>
-        </div>
         <h3>
           <button type="button" class="link-button member-card-name" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button>
         </h3>
         <p class="meta member-card-meta">
-          <span class="member-card-role"><?= casting_e($role_label) ?></span>
-          <?php if ($premium) : ?><span class="chip chip-premium">ویژه</span><?php endif; ?>
-          <?php if ($director_score > 0) : ?>
-            <span class="director-score-pill" title="بهترین امتیاز شما">★ <?= casting_e(casting_director_format_score($director_score)) ?></span>
-          <?php endif; ?>
-          <span class="member-card-city"><?= casting_e($city !== '' ? $city : '—') ?></span>
-        </p>
-        <?php if ($show_actions) : ?>
-        <div class="member-card-actions">
-          <?php if ($can_follow_btn) : ?>
-            <?php casting_render_follow_button($viewer_id, $id, 'btn-sm'); ?>
+          <?php if ($meta_bits !== []) : ?>
+            <?= casting_e(implode(' · ', $meta_bits)) ?>
           <?php else : ?>
-            <span class="member-card-action-spacer" aria-hidden="true"></span>
+            <span class="member-card-city">—</span>
           <?php endif; ?>
-          <?php casting_render_member_message_button($viewer_id, $id, (string) $member->display_name); ?>
-        </div>
-        <?php endif; ?>
+        </p>
+        <?php casting_render_official_page_badge($id); ?>
       </div>
     </article>
     <?php

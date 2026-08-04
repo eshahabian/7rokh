@@ -21,11 +21,12 @@ if (!casting_user_can_member_search($user_id)) {
 
 $filters = casting_parse_member_search_filters($_GET);
 $page = max(1, (int) ($_GET['page'] ?? 1));
-$result = casting_query_members($user_id, $filters, $page, 20);
+$result = casting_query_members($user_id, $filters, $page, 24);
 $members = $result['users'];
 $total = $result['total'];
-$pages = max(1, (int) ceil($total / 20));
+$pages = max(1, (int) ceil($total / 24));
 $search_active = casting_member_search_filters_active($filters);
+$advanced_open = casting_member_search_advanced_filters_active($filters);
 
 if (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1') {
     casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters);
@@ -44,22 +45,26 @@ casting_render_flash();
     <?php endif; ?>
   </div>
 
-  <h1>جستجوی کاربران</h1>
+  <h1>کشف استعداد</h1>
+  <p class="lede">عکس‌ها را اسکن کنید؛ برای جزئیات، پیام و دنبال کردن روی هدشات بزنید.</p>
 
-  <form class="filter-bar filter-bar-wide" method="get" action="search-users.php" data-member-search-form>
-    <?php casting_render_member_search_activity_fields($filters); ?>
+  <form class="filter-bar filter-bar-wide filter-bar-headshot" method="get" action="search-users.php" data-member-search-form>
+    <div class="filter-primary">
+      <?php casting_render_member_search_activity_fields($filters); ?>
+      <?php casting_render_member_search_gender_field($filters); ?>
+      <?php casting_render_body_metric_search_fields($filters, ['age']); ?>
+      <?php casting_render_location_fields($filters['province'], $filters['city'], '', false, 'filter-activity-fields'); ?>
+    </div>
 
-    <?php casting_render_member_search_gender_field($filters); ?>
-
-    <?php casting_render_body_metric_search_fields($filters, ['age', 'height', 'weight']); ?>
-
-    <?php casting_render_location_fields($filters['province'], $filters['city'], '', false, 'filter-activity-fields'); ?>
-
-    <?php casting_render_member_search_appearance_fields($filters); ?>
-
-    <?php casting_render_member_search_skill_org_fields($filters); ?>
-
-    <?php casting_render_member_search_phase1_fields($filters); ?>
+    <details class="filter-details"<?= $advanced_open ? ' open' : '' ?>>
+      <summary>فیلترهای بیشتر</summary>
+      <div class="filter-advanced">
+        <?php casting_render_body_metric_search_fields($filters, ['height', 'weight']); ?>
+        <?php casting_render_member_search_appearance_fields($filters); ?>
+        <?php casting_render_member_search_skill_org_fields($filters); ?>
+        <?php casting_render_member_search_phase1_fields($filters); ?>
+      </div>
+    </details>
 
     <div class="filter-actions">
       <button class="btn btn-primary" type="submit">جستجو</button>

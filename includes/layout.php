@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=128">
+  <link rel="stylesheet" href="<?= $css ?>?v=129">
   <script>
     (function () {
       try {
@@ -193,7 +193,7 @@ function casting_render_footer(): void
       logoutUrl: <?= wp_json_encode(casting_url('logout.php?reason=idle')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=87" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=88" defer></script>
 </body>
 </html>
 <?php

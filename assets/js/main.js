@@ -2090,4 +2090,14 @@
     });
     resetIdle();
   }
+
+  // Application Manager: select all applicants in folder
+  document.addEventListener("change", (event) => {
+    const all = event.target.closest("[data-app-select-all]");
+    if (!all) return;
+    const checked = !!all.checked;
+    document.querySelectorAll("[data-app-select]").forEach((box) => {
+      box.checked = checked;
+    });
+  });
 })();

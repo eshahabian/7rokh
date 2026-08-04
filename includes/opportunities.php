@@ -78,11 +78,87 @@ function casting_opportunities_ensure_tables(): void
 function casting_opportunity_application_status_labels(): array
 {
     return [
-        'pending'   => 'در انتظار بررسی',
-        'accepted'  => 'پذیرفته‌شده',
-        'rejected'  => 'ردشده',
-        'withdrawn' => 'انصراف',
+        'pending'     => 'در انتظار بررسی',
+        'shortlisted' => 'فهرست کوتاه',
+        'accepted'    => 'پذیرفته‌شده',
+        'rejected'    => 'ردشده',
+        'withdrawn'   => 'انصراف',
     ];
+}
+
+/**
+ * پوشه‌های Application Manager
+ *
+ * @return array<string, string>
+ */
+function casting_opportunity_application_folder_labels(): array
+{
+    return [
+        'pending'     => 'برای بررسی',
+        'shortlisted' => 'فهرست کوتاه',
+        'accepted'    => 'پذیرفته',
+        'rejected'    => 'رد شده',
+    ];
+}
+
+/**
+ * @param list<array<string, mixed>> $applicants
+ * @return array<string, int>
+ */
+function casting_opportunity_application_folder_counts(array $applicants): array
+{
+    $counts = [
+        'pending'     => 0,
+        'shortlisted' => 0,
+        'accepted'    => 0,
+        'rejected'    => 0,
+        'all'         => 0,
+    ];
+    foreach ($applicants as $app) {
+        $status = (string) ($app['status'] ?? 'pending');
+        if ($status === 'withdrawn') {
+            continue;
+        }
+        $counts['all']++;
+        if (isset($counts[$status])) {
+            $counts[$status]++;
+        }
+    }
+
+    return $counts;
+}
+
+/**
+ * غنی‌سازی متقاضیان با عکس و مشخصات پروفایل
+ *
+ * @param list<array<string, mixed>> $applicants
+ * @return list<array<string, mixed>>
+ */
+function casting_opportunity_enrich_applicants(array $applicants): array
+{
+    if (!function_exists('casting_get_profile')) {
+        require_once __DIR__ . '/profile.php';
+    }
+    $out = [];
+    foreach ($applicants as $app) {
+        $tid = (int) ($app['talent_id'] ?? 0);
+        if ($tid <= 0) {
+            continue;
+        }
+        $user = get_user_by('id', $tid);
+        if (!$user) {
+            continue;
+        }
+        $profile = casting_get_profile($tid);
+        $app['display_name'] = (string) $user->display_name;
+        $app['photo_url'] = (string) ($profile['photo_url'] ?? '');
+        $app['city'] = trim((string) ($profile['city'] ?? ''));
+        $app['age'] = (int) ($profile['age'] ?? 0);
+        $app['role_label'] = casting_user_public_role_label($tid);
+        $out[] = $app;
+    }
+
+    return $out;
 }
 
 /**
@@ -514,7 +590,8 @@ function casting_opportunity_set_application_status(int $director_id, int $appli
     $ops = casting_opportunities_table();
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $row = $wpdb->get_row($wpdb->prepare(
-        "SELECT a.*, o.director_id FROM {$apps} a
+        "SELECT a.*, o.director_id, o.role_id
+         FROM {$apps} a
          INNER JOIN {$ops} o ON o.id = a.opportunity_id
          WHERE a.id = %d LIMIT 1",
         $application_id
@@ -533,7 +610,52 @@ function casting_opportunity_set_application_status(int $director_id, int $appli
         ['%d']
     );
 
+    // همگام‌سازی با پایپ‌لاین نقش در میز کارگردان
+    $role_id = (int) ($row['role_id'] ?? 0);
+    $talent_id = (int) ($row['talent_id'] ?? 0);
+    if ($role_id > 0 && $talent_id > 0) {
+        if (!function_exists('casting_director_save_role_talent')) {
+            require_once __DIR__ . '/director-desk.php';
+        }
+        $role_status_map = [
+            'pending'     => 'candidate',
+            'shortlisted' => 'shortlisted',
+            'accepted'    => 'selected',
+            'rejected'    => 'rejected',
+        ];
+        $role_status = $role_status_map[$status] ?? 'candidate';
+        casting_director_save_role_talent($director_id, $role_id, $talent_id, [
+            'status' => $role_status,
+        ]);
+    }
+
     return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * تغییر گروهی وضعیت اپلای‌ها
+ *
+ * @param list<int> $application_ids
+ * @return array{ok:bool,error:string,updated:int}
+ */
+function casting_opportunity_bulk_set_application_status(int $director_id, array $application_ids, string $status): array
+{
+    $updated = 0;
+    foreach ($application_ids as $app_id) {
+        $app_id = (int) $app_id;
+        if ($app_id <= 0) {
+            continue;
+        }
+        $res = casting_opportunity_set_application_status($director_id, $app_id, $status);
+        if (!empty($res['ok'])) {
+            $updated++;
+        }
+    }
+    if ($updated <= 0) {
+        return ['ok' => false, 'error' => 'هیچ اپلایی به‌روز نشد.', 'updated' => 0];
+    }
+
+    return ['ok' => true, 'error' => '', 'updated' => $updated];
 }
 
 function casting_opportunity_format_date(string $mysql): string

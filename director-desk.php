@@ -17,6 +17,7 @@ if (!casting_user_is_director_role($director_id)) {
 $project_id = max(0, (int) ($_GET['project'] ?? 0));
 $role_id = max(0, (int) ($_GET['role'] ?? 0));
 $opp_id = max(0, (int) ($_GET['opp'] ?? 0));
+$app_folder = sanitize_key((string) ($_GET['folder'] ?? 'pending'));
 $error = '';
 
 require_once __DIR__ . '/includes/opportunities.php';
@@ -135,7 +136,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = $result['error'];
             } else {
                 casting_set_flash('success', 'وضعیت اپلای به‌روز شد.');
-                casting_redirect('director-desk.php?project=' . $project_id . ($opp_id > 0 ? '&opp=' . $opp_id : ''));
+                $redir = 'director-desk.php?project=' . $project_id;
+                if ($opp_id > 0) {
+                    $redir .= '&opp=' . $opp_id . '&folder=' . rawurlencode($status);
+                }
+                casting_redirect($redir);
+            }
+        } elseif ($action === 'bulk_application_status' && $project_id > 0) {
+            require_once __DIR__ . '/includes/opportunities.php';
+            $opp_id = max(0, (int) ($_POST['opportunity_id'] ?? 0));
+            $status = sanitize_key((string) ($_POST['app_status'] ?? ''));
+            $ids_raw = $_POST['application_ids'] ?? [];
+            $ids = [];
+            if (is_array($ids_raw)) {
+                foreach ($ids_raw as $id) {
+                    $id = (int) $id;
+                    if ($id > 0) {
+                        $ids[] = $id;
+                    }
+                }
+            }
+            $result = casting_opportunity_bulk_set_application_status($director_id, $ids, $status);
+            if (!$result['ok']) {
+                $error = $result['error'];
+            } else {
+                casting_set_flash('success', (int) ($result['updated'] ?? 0) . ' متقاضی به‌روز شد.');
+                casting_redirect(
+                    'director-desk.php?project=' . $project_id
+                    . ($opp_id > 0 ? '&opp=' . $opp_id : '')
+                    . '&folder=' . rawurlencode($status)
+                );
             }
         }
     }
@@ -157,13 +187,21 @@ $active_project = $project_id > 0 ? casting_director_get_project($director_id, $
 $active_role = $role_id > 0 ? casting_director_get_role($director_id, $role_id) : null;
 $active_opp = null;
 $opp_applicants = [];
+$opp_folder_counts = [];
+$opp_folder_labels = casting_opportunity_application_folder_labels();
+if (!isset($opp_folder_labels[$app_folder])) {
+    $app_folder = 'pending';
+}
 if ($opp_id > 0) {
     $active_opp = casting_opportunity_get($opp_id);
     if (!$active_opp || (int) ($active_opp['director_id'] ?? 0) !== $director_id || (int) ($active_opp['project_id'] ?? 0) !== $project_id) {
         $opp_id = 0;
         $active_opp = null;
     } else {
-        $opp_applicants = casting_opportunity_list_applicants($opp_id, 100);
+        $opp_applicants = casting_opportunity_enrich_applicants(
+            casting_opportunity_list_applicants($opp_id, 200)
+        );
+        $opp_folder_counts = casting_opportunity_application_folder_counts($opp_applicants);
     }
 }
 $app_status_labels = casting_opportunity_application_status_labels();
@@ -235,53 +273,101 @@ casting_render_flash();
       <p class="empty-state">هنوز پروژه‌ای ندارید — فرم بالا را پر کنید.</p>
     <?php endif; ?>
 
-  <?php elseif ($opp_id > 0 && $active_opp) : ?>
+  <?php elseif ($opp_id > 0 && $active_opp) :
+      $folder_apps = array_values(array_filter(
+          $opp_applicants,
+          static fn(array $app): bool => (string) ($app['status'] ?? '') === $app_folder
+      ));
+      ?>
     <a class="back-link" href="director-desk.php?project=<?= $project_id ?>">← <?= casting_e((string) ($active_project['title'] ?? 'پروژه')) ?></a>
-    <h1>متقاضیان فراخوان</h1>
+    <h1>مدیریت متقاضیان</h1>
     <p class="meta">
       <?= casting_e((string) ($active_opp['title'] ?? '')) ?>
       <?php if (!empty($active_opp['role_title'])) : ?> · <?= casting_e((string) $active_opp['role_title']) ?><?php endif; ?>
       · <?= (string) ($active_opp['status'] ?? '') === 'open' ? 'باز' : 'بسته' ?>
+      · <?= (int) ($opp_folder_counts['all'] ?? 0) ?> اپلای
     </p>
     <?php if (trim((string) ($active_opp['message'] ?? '')) !== '') : ?>
       <p class="lede"><?= nl2br(casting_e((string) $active_opp['message'])) ?></p>
     <?php endif; ?>
 
-    <?php if ($opp_applicants === []) : ?>
-      <p class="empty-state">هنوز کسی اپلای نکرده است.</p>
+    <nav class="app-manager-folders" aria-label="پوشه‌های متقاضیان">
+      <?php foreach ($opp_folder_labels as $folder_key => $folder_label) :
+          $count = (int) ($opp_folder_counts[$folder_key] ?? 0);
+          $href = 'director-desk.php?project=' . $project_id . '&opp=' . $opp_id . '&folder=' . rawurlencode($folder_key);
+          ?>
+        <a class="app-manager-folder<?= $app_folder === $folder_key ? ' is-active' : '' ?>" href="<?= casting_e($href) ?>">
+          <span><?= casting_e($folder_label) ?></span>
+          <strong><?= $count ?></strong>
+        </a>
+      <?php endforeach; ?>
+    </nav>
+
+    <?php if ($folder_apps === []) : ?>
+      <p class="empty-state">در این پوشه متقاضی نیست.</p>
     <?php else : ?>
-      <div class="home-opportunity-list">
-        <?php foreach ($opp_applicants as $app) :
+      <form id="app-manager-bulk-form" method="post" action="director-desk.php?project=<?= $project_id ?>&amp;opp=<?= $opp_id ?>&amp;folder=<?= casting_e($app_folder) ?>" class="app-manager-bulk-form">
+        <?php wp_nonce_field('casting_director_desk_page'); ?>
+        <input type="hidden" name="desk_action" value="bulk_application_status">
+        <input type="hidden" name="opportunity_id" value="<?= $opp_id ?>">
+        <div class="app-manager-bulk">
+          <label class="app-manager-select-all">
+            <input type="checkbox" data-app-select-all>
+            انتخاب همه در این پوشه
+          </label>
+          <div class="app-manager-bulk-actions">
+            <button class="btn btn-ghost btn-sm" type="submit" name="app_status" value="pending">به بررسی</button>
+            <button class="btn btn-ghost btn-sm" type="submit" name="app_status" value="shortlisted">فهرست کوتاه</button>
+            <button class="btn btn-primary btn-sm" type="submit" name="app_status" value="accepted">پذیرش</button>
+            <button class="btn btn-ghost btn-sm" type="submit" name="app_status" value="rejected">رد</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="app-manager-grid">
+        <?php foreach ($folder_apps as $app) :
             $tid = (int) ($app['talent_id'] ?? 0);
-            $talent = $tid > 0 ? get_user_by('id', $tid) : null;
-            if (!$talent) {
-                continue;
+            $photo = (string) ($app['photo_url'] ?? '');
+            $name = (string) ($app['display_name'] ?? '');
+            $age = (int) ($app['age'] ?? 0);
+            $city = (string) ($app['city'] ?? '');
+            $note = trim((string) ($app['note'] ?? ''));
+            $meta_bits = [];
+            if ($age > 0) {
+                $meta_bits[] = $age . ' سال';
             }
-            $st = (string) ($app['status'] ?? 'pending');
+            if ($city !== '') {
+                $meta_bits[] = $city;
+            }
             ?>
-          <article class="home-opportunity-card">
-            <div class="home-opportunity-body">
-              <h3>
-                <button type="button" class="link-button" data-member-preview="<?= $tid ?>"><?= casting_e((string) $talent->display_name) ?></button>
-              </h3>
-              <p class="meta">
-                <?= casting_e(casting_user_public_role_label($tid)) ?>
-                · <?= casting_e($app_status_labels[$st] ?? $st) ?>
-                · <?= casting_e(casting_opportunity_format_date((string) ($app['created_at'] ?? ''))) ?>
-              </p>
-              <?php if (trim((string) ($app['note'] ?? '')) !== '') : ?>
-                <p><?= nl2br(casting_e((string) $app['note'])) ?></p>
+          <article class="app-manager-card">
+            <label class="app-manager-check">
+              <input form="app-manager-bulk-form" type="checkbox" name="application_ids[]" value="<?= (int) $app['id'] ?>" data-app-select>
+              <span class="sr-only">انتخاب <?= casting_e($name) ?></span>
+            </label>
+            <button type="button" class="app-manager-photo" data-member-preview="<?= $tid ?>" aria-label="پروفایل <?= casting_e($name) ?>">
+              <?php if ($photo !== '') : ?>
+                <img src="<?= casting_e($photo) ?>" alt="" loading="lazy">
+              <?php else : ?>
+                <span class="photo-placeholder">بدون عکس</span>
               <?php endif; ?>
-            </div>
-            <div class="home-opportunity-actions">
-              <form method="post" action="director-desk.php?project=<?= $project_id ?>&amp;opp=<?= $opp_id ?>" class="cta-row">
+            </button>
+            <div class="app-manager-card-body">
+              <h3>
+                <button type="button" class="link-button" data-member-preview="<?= $tid ?>"><?= casting_e($name) ?></button>
+              </h3>
+              <p class="meta"><?= casting_e($meta_bits !== [] ? implode(' · ', $meta_bits) : '—') ?></p>
+              <?php if ($note !== '') : ?>
+                <p class="app-manager-note" title="<?= casting_e($note) ?>"><?= casting_e(function_exists('mb_substr') ? mb_substr($note, 0, 72, 'UTF-8') : substr($note, 0, 72)) ?></p>
+              <?php endif; ?>
+              <form method="post" action="director-desk.php?project=<?= $project_id ?>&amp;opp=<?= $opp_id ?>&amp;folder=<?= casting_e($app_folder) ?>" class="app-manager-card-actions">
                 <?php wp_nonce_field('casting_director_desk_page'); ?>
                 <input type="hidden" name="desk_action" value="set_application_status">
                 <input type="hidden" name="application_id" value="<?= (int) $app['id'] ?>">
                 <input type="hidden" name="opportunity_id" value="<?= $opp_id ?>">
+                <button class="btn btn-ghost btn-sm" type="submit" name="app_status" value="shortlisted">کوتاه</button>
                 <button class="btn btn-primary btn-sm" type="submit" name="app_status" value="accepted">پذیرش</button>
                 <button class="btn btn-ghost btn-sm" type="submit" name="app_status" value="rejected">رد</button>
-                <button class="btn btn-ghost btn-sm" type="submit" name="app_status" value="pending">در انتظار</button>
               </form>
             </div>
           </article>
