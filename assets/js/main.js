@@ -1210,7 +1210,7 @@
       wm.className = "media-watermark";
       wm.setAttribute("aria-hidden", "true");
       const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
-      for (let i = 0; i < 6; i += 1) {
+      for (let i = 0; i < 4; i += 1) {
         const span = document.createElement("span");
         span.textContent = label;
         wm.appendChild(span);
@@ -1872,7 +1872,7 @@
           wm.className = "media-watermark";
           wm.setAttribute("aria-hidden", "true");
           const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
-          for (let i = 0; i < 6; i += 1) {
+          for (let i = 0; i < 4; i += 1) {
             const span = document.createElement("span");
             span.textContent = label;
             wm.appendChild(span);
@@ -2069,15 +2069,16 @@
         ctx.rotate((-18 * Math.PI) / 180);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        const fontSize = Math.max(14, Math.round(canvas.width * 0.045));
-        ctx.font = `700 ${fontSize}px Vazirmatn, Tahoma, sans-serif`;
-        ctx.lineWidth = Math.max(2, Math.round(fontSize * 0.12));
-        ctx.strokeStyle = "rgba(0,0,0,0.75)";
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
-        const step = fontSize * 3.2;
-        for (let y = -canvas.height; y < canvas.height; y += step) {
-          for (let x = -canvas.width; x < canvas.width; x += step * 3.4) {
-            ctx.globalAlpha = 0.82;
+        const fontSize = Math.max(13, Math.round(canvas.width * 0.038));
+        ctx.font = `600 ${fontSize}px Vazirmatn, Tahoma, sans-serif`;
+        ctx.lineWidth = Math.max(1.5, Math.round(fontSize * 0.1));
+        ctx.strokeStyle = "rgba(0,0,0,0.45)";
+        ctx.fillStyle = "rgba(255,255,255,0.72)";
+        const stepY = fontSize * 4.2;
+        const stepX = stepY * 3.6;
+        for (let y = -canvas.height; y < canvas.height; y += stepY) {
+          for (let x = -canvas.width; x < canvas.width; x += stepX) {
+            ctx.globalAlpha = 0.38;
             ctx.strokeText(label, x, y);
             ctx.fillText(label, x, y);
           }

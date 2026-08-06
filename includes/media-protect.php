@@ -139,7 +139,7 @@ function casting_render_media_watermark(string $label): void
     }
     ?>
   <div class="media-watermark" aria-hidden="true">
-    <?php for ($i = 0; $i < 6; $i++) : ?>
+    <?php for ($i = 0; $i < 4; $i++) : ?>
       <span><?= casting_e($label) ?></span>
     <?php endfor; ?>
   </div>
