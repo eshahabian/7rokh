@@ -56,8 +56,9 @@ casting_render_flash();
         <figure class="profile-media-item<?= $is_video ? ' is-video' : '' ?>">
           <?php if ($is_video) :
               casting_render_protected_video($url, $watermark, [
-                  'class'  => 'media-protect--gallery',
-                  'poster' => ($thumb !== '' && $thumb !== $url) ? $thumb : '',
+                  'class'         => 'media-protect--gallery',
+                  'poster'        => ($thumb !== '' && $thumb !== $url) ? $thumb : '',
+                  'attachment_id' => (int) ($item['attachment_id'] ?? 0),
               ]);
           else :
               casting_render_protected_image($thumb !== '' ? $thumb : $url, $watermark, [

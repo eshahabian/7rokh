@@ -995,9 +995,9 @@ function casting_render_public_media_gallery(int $user_id): void
         <figure class="profile-media-item<?= $is_video ? ' is-video' : '' ?>">
           <?php if ($is_video) :
               casting_render_protected_video($url, $watermark, [
-                  'class'    => 'media-protect--gallery',
-                  'poster'   => ($thumb !== '' && $thumb !== $url) ? $thumb : '',
-                  'controls' => true,
+                  'class'          => 'media-protect--gallery',
+                  'poster'         => ($thumb !== '' && $thumb !== $url) ? $thumb : '',
+                  'attachment_id'  => (int) ($item['attachment_id'] ?? 0),
               ]);
           else : ?>
             <button type="button" class="profile-media-open" data-post-expand aria-label="مشاهده پست">

@@ -42,30 +42,66 @@ function casting_media_protect_viewer_label(?WP_User $viewer = null): string
 }
 
 /**
- * @param array{class?:string,controls?:bool,muted?:bool,poster?:string,preload?:string} $opts
+ * لینک استریم داخل پورتال (نه URL مستقیم wp-content) تا دانلود آسان سخت‌تر شود.
+ */
+function casting_media_stream_url(int $attachment_id): string
+{
+    if ($attachment_id <= 0) {
+        return '';
+    }
+
+    return casting_url('media-stream.php?' . http_build_query([
+        'aid' => $attachment_id,
+        'n'   => wp_create_nonce('casting_stream_' . $attachment_id),
+    ]));
+}
+
+/**
+ * @param array{class?:string,muted?:bool,poster?:string,preload?:string,attachment_id?:int} $opts
  */
 function casting_render_protected_video(string $src, string $watermark, array $opts = []): void
 {
+    $aid = (int) ($opts['attachment_id'] ?? 0);
+    if ($aid > 0) {
+        $stream = casting_media_stream_url($aid);
+        if ($stream !== '') {
+            $src = $stream;
+        }
+    }
     if ($src === '') {
         return;
     }
-    $class = trim('media-protect ' . (string) ($opts['class'] ?? ''));
-    $controls = !isset($opts['controls']) || !empty($opts['controls']);
+    $class = trim('media-protect media-protect--video ' . (string) ($opts['class'] ?? ''));
     $muted = !empty($opts['muted']);
     $poster = (string) ($opts['poster'] ?? '');
     $preload = (string) ($opts['preload'] ?? 'metadata');
+    $wm = trim($watermark);
     ?>
-  <div class="<?= casting_e($class) ?>" data-media-protect>
+  <div
+    class="<?= casting_e($class) ?>"
+    data-media-protect
+    data-video-protect
+    data-watermark="<?= casting_e($wm) ?>"
+  >
     <video
+      class="media-protect-source"
       src="<?= casting_e($src) ?>"
-      <?= $controls ? 'controls ' : '' ?>controlslist="nodownload noplaybackrate noremoteplayback"
-      disablepictureinpicture
       playsinline
-      <?= $muted ? 'muted ' : '' ?>preload="<?= casting_e($preload) ?>"
+      webkit-playsinline
+      preload="<?= casting_e($preload) ?>"
+      <?= $muted ? 'muted ' : '' ?>
       <?= $poster !== '' ? 'poster="' . casting_e($poster) . '"' : '' ?>
+      disablepictureinpicture
+      controlslist="nodownload noplaybackrate noremoteplayback"
       oncontextmenu="return false;"
     ></video>
-    <?php casting_render_media_watermark($watermark); ?>
+    <canvas class="media-protect-canvas" aria-hidden="true"></canvas>
+    <?php casting_render_media_watermark($wm); ?>
+    <button type="button" class="media-protect-play" data-video-play aria-label="پخش ویدیو">▶</button>
+    <div class="media-protect-controls" hidden>
+      <button type="button" class="media-protect-toggle" data-video-toggle aria-label="توقف/پخش">❚❚</button>
+      <input class="media-protect-seek" type="range" min="0" max="1000" value="0" step="1" data-video-seek aria-label="زمان">
+    </div>
   </div>
     <?php
 }
@@ -103,9 +139,9 @@ function casting_render_media_watermark(string $label): void
     }
     ?>
   <div class="media-watermark" aria-hidden="true">
-    <span><?= casting_e($label) ?></span>
-    <span><?= casting_e($label) ?></span>
-    <span><?= casting_e($label) ?></span>
+    <?php for ($i = 0; $i < 6; $i++) : ?>
+      <span><?= casting_e($label) ?></span>
+    <?php endfor; ?>
   </div>
     <?php
 }

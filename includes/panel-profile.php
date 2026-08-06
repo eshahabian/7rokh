@@ -564,7 +564,8 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
                   require_once __DIR__ . '/media-protect.php';
               }
               casting_render_protected_video($video_file, casting_media_protect_viewer_label(), [
-                  'class' => 'media-protect--intro',
+                  'class'         => 'media-protect--intro',
+                  'attachment_id' => (int) ($profile['video_id'] ?? 0),
               ]);
               ?>
             </div>

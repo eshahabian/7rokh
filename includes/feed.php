@@ -222,8 +222,9 @@ function casting_render_feed_media_card(array $item, int $viewer_id): void
       $wm = casting_media_protect_viewer_label();
       if ($is_video) {
           casting_render_protected_video($url, $wm, [
-              'class'  => 'media-protect--feed',
-              'poster' => ($thumb !== '' && $thumb !== $url) ? $thumb : '',
+              'class'         => 'media-protect--feed',
+              'poster'        => ($thumb !== '' && $thumb !== $url) ? $thumb : '',
+              'attachment_id' => (int) ($item['attachment_id'] ?? 0),
           ]);
       } else {
           casting_render_protected_image($thumb !== '' ? $thumb : $url, $wm, [

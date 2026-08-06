@@ -7568,18 +7568,59 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  isolation: isolate;
+  background: #111;
 }
 
 .media-protect img,
-.media-protect video {
+.media-protect video,
+.media-protect-canvas {
   display: block;
   width: 100%;
   height: auto;
   max-height: 100%;
   object-fit: cover;
-  pointer-events: auto;
   -webkit-user-drag: none;
   user-select: none;
+}
+
+.media-protect--video {
+  aspect-ratio: 1 / 1;
+}
+
+.media-protect--intro.media-protect--video,
+.profile-video-player .media-protect--video {
+  aspect-ratio: 16 / 9;
+}
+
+.media-protect-source {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  object-fit: cover;
+}
+
+.media-protect--video.is-video-fallback .media-protect-source {
+  opacity: 1;
+  z-index: 1;
+}
+
+.media-protect--video.is-video-fallback .media-protect-canvas {
+  display: none;
+}
+
+.media-protect-canvas {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  pointer-events: none;
 }
 
 .media-protect video::-webkit-media-controls-download-button {
@@ -7589,28 +7630,82 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
 .media-watermark {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
   align-items: stretch;
   pointer-events: none;
-  mix-blend-mode: soft-light;
-  opacity: 0.55;
+  mix-blend-mode: normal;
+  opacity: 0.88;
 }
 
 .media-watermark span {
   display: block;
   text-align: center;
-  font-size: clamp(0.7rem, 2.4vw, 0.95rem);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  font-size: clamp(0.78rem, 2.6vw, 1.05rem);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow:
+    0 0 3px rgba(0, 0, 0, 0.95),
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    1px 1px 0 rgba(0, 0, 0, 0.8),
+    -1px -1px 0 rgba(0, 0, 0, 0.55);
   transform: rotate(-18deg);
   white-space: nowrap;
   overflow: hidden;
-  padding: 0.35rem 0.5rem;
+  padding: 0.2rem 0.45rem;
+}
+
+.media-protect-play {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  margin: auto;
+  width: 3.4rem;
+  height: 3.4rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.media-protect--video.is-playing .media-protect-play {
+  display: none;
+}
+
+.media-protect-controls {
+  position: absolute;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.55rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+}
+
+.media-protect-toggle {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0.2rem;
+}
+
+.media-protect-seek {
+  flex: 1;
+  min-width: 0;
+  accent-color: #fff;
 }
 
 .profile-media-open {
@@ -7634,22 +7729,31 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
 }
 
 .home-feed-post-media .media-protect img,
-.home-feed-post-media .media-protect video,
-.profile-media-item .media-protect img,
-.profile-media-item .media-protect video {
+.profile-media-item .media-protect img {
   aspect-ratio: 1 / 1;
   object-fit: cover;
   max-height: none;
 }
 
-.profile-video-player .media-protect video {
+.home-feed-post-media .media-protect--video,
+.profile-media-item .media-protect--video {
+  aspect-ratio: 1 / 1;
+}
+
+.profile-video-player .media-protect video,
+.profile-video-player .media-protect-canvas {
   aspect-ratio: 16 / 9;
   object-fit: contain;
   background: #000;
 }
 
+.post-lightbox-media .media-protect--video {
+  aspect-ratio: 16 / 9;
+  max-height: min(70vh, 720px);
+}
+
 .post-lightbox-media .media-protect img,
-.post-lightbox-media .media-protect video {
+.post-lightbox-media .media-protect-canvas {
   width: 100%;
   max-height: min(70vh, 720px);
   object-fit: contain;
@@ -7690,7 +7794,7 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
 }
 
 html.media-protect-obscured .media-protect img,
-html.media-protect-obscured .media-protect video,
+html.media-protect-obscured .media-protect-canvas,
 html.media-protect-obscured .portrait-lightbox-frame img {
   filter: blur(18px) brightness(0.55);
 }
@@ -7712,10 +7816,10 @@ body.media-protect-capture-flash::after {
 
 @media (max-width: 700px) {
   .media-watermark {
-    opacity: 0.62;
+    opacity: 0.92;
   }
 
   .media-watermark span {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
   }
 }

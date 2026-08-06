@@ -1210,7 +1210,7 @@
       wm.className = "media-watermark";
       wm.setAttribute("aria-hidden", "true");
       const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
-      for (let i = 0; i < 3; i += 1) {
+      for (let i = 0; i < 6; i += 1) {
         const span = document.createElement("span");
         span.textContent = label;
         wm.appendChild(span);
@@ -1872,7 +1872,7 @@
           wm.className = "media-watermark";
           wm.setAttribute("aria-hidden", "true");
           const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
-          for (let i = 0; i < 3; i += 1) {
+          for (let i = 0; i < 6; i += 1) {
             const span = document.createElement("span");
             span.textContent = label;
             wm.appendChild(span);
@@ -2039,6 +2039,172 @@
   });
   window.addEventListener("focus", () => {
     document.documentElement.classList.remove("media-protect-obscured");
+  });
+
+  const paintProtectedFrame = (root, video, canvas, ctx) => {
+    try {
+      const rect = root.getBoundingClientRect();
+      const cssW = Math.max(1, Math.round(rect.width * (window.devicePixelRatio || 1)));
+      const cssH = Math.max(1, Math.round(rect.height * (window.devicePixelRatio || 1)));
+      if (canvas.width !== cssW || canvas.height !== cssH) {
+        canvas.width = cssW;
+        canvas.height = cssH;
+      }
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const vw = video.videoWidth || 0;
+      const vh = video.videoHeight || 0;
+      if (vw > 0 && vh > 0) {
+        const scale = Math.max(canvas.width / vw, canvas.height / vh);
+        const dw = vw * scale;
+        const dh = vh * scale;
+        const dx = (canvas.width - dw) / 2;
+        const dy = (canvas.height - dh) / 2;
+        ctx.drawImage(video, dx, dy, dw, dh);
+      }
+      const label = root.getAttribute("data-watermark") || "";
+      if (label) {
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((-18 * Math.PI) / 180);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const fontSize = Math.max(14, Math.round(canvas.width * 0.045));
+        ctx.font = `700 ${fontSize}px Vazirmatn, Tahoma, sans-serif`;
+        ctx.lineWidth = Math.max(2, Math.round(fontSize * 0.12));
+        ctx.strokeStyle = "rgba(0,0,0,0.75)";
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        const step = fontSize * 3.2;
+        for (let y = -canvas.height; y < canvas.height; y += step) {
+          for (let x = -canvas.width; x < canvas.width; x += step * 3.4) {
+            ctx.globalAlpha = 0.82;
+            ctx.strokeText(label, x, y);
+            ctx.fillText(label, x, y);
+          }
+        }
+        ctx.restore();
+      }
+      root.classList.remove("is-video-fallback");
+    } catch (_err) {
+      root.classList.add("is-video-fallback");
+    }
+  };
+
+  const initProtectedVideo = (root) => {
+    if (!root || root.dataset.videoReady === "1") return;
+    const video = root.querySelector("video.media-protect-source, video");
+    const canvas = root.querySelector("canvas.media-protect-canvas");
+    if (!video || !canvas) return;
+    root.dataset.videoReady = "1";
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const playBtn = root.querySelector("[data-video-play]");
+    const toggleBtn = root.querySelector("[data-video-toggle]");
+    const seek = root.querySelector("[data-video-seek]");
+    const controls = root.querySelector(".media-protect-controls");
+    let raf = 0;
+
+    const stopLoop = () => {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
+    const loop = () => {
+      paintProtectedFrame(root, video, canvas, ctx);
+      if (!video.paused && !video.ended) {
+        raf = requestAnimationFrame(loop);
+      } else {
+        raf = 0;
+      }
+    };
+
+    const syncUi = () => {
+      root.classList.toggle("is-playing", !video.paused && !video.ended);
+      if (controls) controls.hidden = false;
+      if (toggleBtn) toggleBtn.textContent = video.paused ? "▶" : "❚❚";
+      if (seek && video.duration && Number.isFinite(video.duration)) {
+        seek.value = String(Math.round((video.currentTime / video.duration) * 1000));
+      }
+    };
+
+    const play = async () => {
+      try {
+        await video.play();
+        stopLoop();
+        loop();
+        syncUi();
+      } catch (_err) {
+        /* autoplay / gesture */
+      }
+    };
+
+    const pause = () => {
+      video.pause();
+      stopLoop();
+      paintProtectedFrame(root, video, canvas, ctx);
+      syncUi();
+    };
+
+    playBtn?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (video.paused) play();
+      else pause();
+    });
+    toggleBtn?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (video.paused) play();
+      else pause();
+    });
+    seek?.addEventListener("input", () => {
+      if (!video.duration || !Number.isFinite(video.duration)) return;
+      video.currentTime = (Number(seek.value) / 1000) * video.duration;
+      paintProtectedFrame(root, video, canvas, ctx);
+    });
+    video.addEventListener("loadeddata", () => paintProtectedFrame(root, video, canvas, ctx));
+    video.addEventListener("seeked", () => paintProtectedFrame(root, video, canvas, ctx));
+    video.addEventListener("pause", syncUi);
+    video.addEventListener("play", () => {
+      stopLoop();
+      loop();
+      syncUi();
+    });
+    video.addEventListener("ended", () => {
+      stopLoop();
+      paintProtectedFrame(root, video, canvas, ctx);
+      syncUi();
+    });
+    video.addEventListener("timeupdate", () => {
+      if (seek && video.duration && Number.isFinite(video.duration)) {
+        seek.value = String(Math.round((video.currentTime / video.duration) * 1000));
+      }
+    });
+
+    // First frame / poster-sized black until metadata
+    paintProtectedFrame(root, video, canvas, ctx);
+    if (controls) controls.hidden = false;
+  };
+
+  const bootProtectedVideos = (scope) => {
+    (scope || document).querySelectorAll("[data-video-protect]").forEach(initProtectedVideo);
+  };
+  bootProtectedVideos(document);
+
+  // Re-init when lightbox clones protected video
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("[data-post-expand]")) return;
+    window.setTimeout(() => {
+      const body = document.querySelector("[data-post-lightbox-body]");
+      if (body) {
+        body.querySelectorAll("[data-video-protect]").forEach((el) => {
+          delete el.dataset.videoReady;
+          initProtectedVideo(el);
+        });
+      }
+    }, 0);
   });
 
   document.addEventListener("submit", async (event) => {
