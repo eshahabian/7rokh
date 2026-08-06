@@ -1872,8 +1872,8 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
             $slot_req = ' required';
         }
         ?>
-      <div class="portrait-upload-card<?= $is_profile ? ' portrait-upload-card--profile' : '' ?>">
-        <div class="portrait-frame portrait-preview<?= $is_profile ? ' portrait-preview--profile' : '' ?>">
+      <div class="portrait-upload-card<?= $is_profile ? ' portrait-upload-card--profile' : '' ?>" data-file-preview-card>
+        <div class="portrait-frame portrait-preview<?= $is_profile ? ' portrait-preview--profile' : '' ?>" data-file-preview-frame>
           <?php if ($preview !== '') : ?>
             <img
               src="<?= casting_e($preview) ?>"
@@ -1881,14 +1881,15 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
               width="<?= (int) $dims['width'] ?>"
               height="<?= (int) $dims['height'] ?>"
               decoding="async"
+              data-file-preview-img
             >
           <?php else : ?>
-            <div class="photo-placeholder portrait-frame-empty">بدون عکس</div>
+            <div class="photo-placeholder portrait-frame-empty" data-file-preview-empty>بدون عکس</div>
           <?php endif; ?>
         </div>
         <div class="field">
           <label for="<?= casting_e($field) ?>"><?= casting_e($label) ?><?= $slot_req !== '' ? ' <span class="req-mark">*</span>' : '' ?></label>
-          <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp"<?= $slot_req ?>>
+          <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp"<?= $slot_req ?> data-file-preview-input>
           <p class="field-hint"><?= casting_e($hints[$slot] ?? '') ?> · JPG / PNG / WebP — حداکثر ۵ مگابایت</p>
         </div>
       </div>
@@ -1909,8 +1910,8 @@ function casting_render_single_profile_photo_field(array $portraits = [], bool $
     $req = $required ? ' required' : '';
     ?>
   <div class="portrait-upload-grid portrait-upload-grid--single">
-    <div class="portrait-upload-card">
-      <div class="portrait-frame portrait-preview">
+    <div class="portrait-upload-card" data-file-preview-card>
+      <div class="portrait-frame portrait-preview" data-file-preview-frame>
         <?php if ($preview !== '') : ?>
           <img
             src="<?= casting_e($preview) ?>"
@@ -1918,14 +1919,15 @@ function casting_render_single_profile_photo_field(array $portraits = [], bool $
             width="<?= (int) $dims['width'] ?>"
             height="<?= (int) $dims['height'] ?>"
             decoding="async"
+            data-file-preview-img
           >
         <?php else : ?>
-          <div class="photo-placeholder portrait-frame-empty">بدون عکس</div>
+          <div class="photo-placeholder portrait-frame-empty" data-file-preview-empty>بدون عکس</div>
         <?php endif; ?>
       </div>
       <div class="field">
         <label for="<?= casting_e($input_id) ?>">عکس پروفایل<?= $required ? ' <span class="req-mark">*</span>' : '' ?></label>
-        <input id="<?= casting_e($input_id) ?>" name="photo_medium" type="file" accept="image/jpeg,image/png,image/webp"<?= $req ?> data-profile-photo-single>
+        <input id="<?= casting_e($input_id) ?>" name="photo_medium" type="file" accept="image/jpeg,image/png,image/webp"<?= $req ?> data-profile-photo-single data-file-preview-input>
         <p class="field-hint">یک عکس واضح از خودتان · JPG / PNG / WebP — حداکثر ۵ مگابایت</p>
       </div>
     </div>
@@ -2459,6 +2461,104 @@ function casting_require_media_includes(): void
 }
 
 /**
+ * پیام خطای آپلود PHP برای کاربر
+ */
+function casting_upload_php_error_message(int $error_code): string
+{
+    if ($error_code === UPLOAD_ERR_INI_SIZE || $error_code === UPLOAD_ERR_FORM_SIZE) {
+        return 'حجم فایل از حد مجاز سرور بیشتر است. عکس حداکثر ۵ مگ و ویدیو حداکثر ۴۰ مگ باشد.';
+    }
+    if ($error_code === UPLOAD_ERR_PARTIAL) {
+        return 'آپلود ناقص بود. دوباره تلاش کنید.';
+    }
+    if ($error_code === UPLOAD_ERR_NO_FILE) {
+        return 'فایلی انتخاب نشده است.';
+    }
+    if ($error_code === UPLOAD_ERR_NO_TMP_DIR) {
+        return 'پوشه موقت سرور در دسترس نیست.';
+    }
+    if ($error_code === UPLOAD_ERR_CANT_WRITE) {
+        return 'نوشتن فایل روی سرور ناموفق بود.';
+    }
+    if ($error_code === UPLOAD_ERR_EXTENSION) {
+        return 'افزونه سرور جلوی آپلود را گرفت.';
+    }
+
+    return 'آپلود فایل ناموفق بود.';
+}
+
+/**
+ * نرمال‌سازی MIME برای مرورگرهایی که type خالی / octet-stream می‌فرستند
+ *
+ * @param array<string, mixed> $file
+ * @return array{ok:bool,error:string,type:string}
+ */
+function casting_normalize_uploaded_file_type(array &$file, string $kind = 'image'): array
+{
+    $error = (int) ($file['error'] ?? UPLOAD_ERR_OK);
+    if ($error !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'error' => casting_upload_php_error_message($error), 'type' => ''];
+    }
+
+    $ftype = strtolower(trim((string) ($file['type'] ?? '')));
+    $name = (string) ($file['name'] ?? '');
+    $tmp = (string) ($file['tmp_name'] ?? '');
+
+    if ($ftype === '' || $ftype === 'application/octet-stream' || $ftype === 'binary/octet-stream') {
+        if (function_exists('wp_check_filetype_and_ext') && $tmp !== '' && is_uploaded_file($tmp)) {
+            $check = wp_check_filetype_and_ext($tmp, $name);
+            if (!empty($check['type'])) {
+                $ftype = strtolower((string) $check['type']);
+                $file['type'] = $ftype;
+            }
+        }
+        if ($ftype === '' || $ftype === 'application/octet-stream' || $ftype === 'binary/octet-stream') {
+            $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+            $map = $kind === 'video'
+                ? ['mp4' => 'video/mp4', 'webm' => 'video/webm', 'mov' => 'video/quicktime']
+                : ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+            if (isset($map[$ext])) {
+                $ftype = $map[$ext];
+                $file['type'] = $ftype;
+            }
+        }
+    }
+
+    return ['ok' => true, 'error' => '', 'type' => $ftype];
+}
+
+/**
+ * آپلود با دسترسی موقت — برای ثبت‌نام (هنوز لاگین نیست) و نقش subscriber
+ *
+ * @return int|\WP_Error
+ */
+function casting_media_handle_upload_as_user(string $field, int $user_id)
+{
+    casting_require_media_includes();
+    casting_enable_user_upload_dir($user_id);
+
+    $prev_user = get_current_user_id();
+    $grant = static function (array $allcaps, $caps, $args, $user) use ($user_id): array {
+        unset($caps, $args);
+        if ($user instanceof WP_User && (int) $user->ID === $user_id) {
+            $allcaps['upload_files'] = true;
+        }
+
+        return $allcaps;
+    };
+    add_filter('user_has_cap', $grant, 20, 4);
+    wp_set_current_user($user_id);
+
+    $attachment_id = media_handle_upload($field, 0);
+
+    remove_filter('user_has_cap', $grant, 20);
+    wp_set_current_user($prev_user);
+    casting_disable_user_upload_dir();
+
+    return $attachment_id;
+}
+
+/**
  * پوشه آپلود اختصاصی هر کاربر: uploads/casting/{username}/
  */
 function casting_user_upload_subdir(int $user_id): string
@@ -2523,21 +2623,22 @@ function casting_handle_portrait_upload(int $user_id, string $slot): array
         return ['ok' => true, 'skipped' => true];
     }
 
-    casting_require_media_includes();
+    $file = &$_FILES[$field];
+    $norm = casting_normalize_uploaded_file_type($file, 'image');
+    if (!$norm['ok']) {
+        return ['ok' => false, 'error' => $norm['error']];
+    }
 
-    $file = $_FILES[$field];
     $allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    $ftype = (string) ($file['type'] ?? '');
+    $ftype = (string) ($norm['type'] ?? '');
     if (!in_array($ftype, $allowed, true)) {
         return ['ok' => false, 'error' => 'فقط عکس JPG، PNG یا WebP مجاز است.'];
     }
-    if ((int) $file['size'] > 5 * 1024 * 1024) {
+    if ((int) ($file['size'] ?? 0) > 5 * 1024 * 1024) {
         return ['ok' => false, 'error' => 'حجم عکس حداکثر ۵ مگابایت باشد.'];
     }
 
-    casting_enable_user_upload_dir($user_id);
-    $attachment_id = media_handle_upload($field, 0);
-    casting_disable_user_upload_dir();
+    $attachment_id = casting_media_handle_upload_as_user($field, $user_id);
 
     if (is_wp_error($attachment_id)) {
         return ['ok' => false, 'error' => 'آپلود عکس ناموفق بود: ' . $attachment_id->get_error_message()];
@@ -2618,24 +2719,25 @@ function casting_handle_video_upload(int $user_id): array
         return ['ok' => true, 'skipped' => true];
     }
 
-    casting_require_media_includes();
+    $file = &$_FILES['video'];
+    $norm = casting_normalize_uploaded_file_type($file, 'video');
+    if (!$norm['ok']) {
+        return ['ok' => false, 'error' => $norm['error']];
+    }
 
-    $file = $_FILES['video'];
     $allowed = ['video/mp4', 'video/webm', 'video/quicktime'];
-    $ftype = (string) ($file['type'] ?? '');
+    $ftype = (string) ($norm['type'] ?? '');
     $name = strtolower((string) ($file['name'] ?? ''));
     $ext_ok = preg_match('/\.(mp4|webm|mov)$/', $name) === 1;
 
     if (!in_array($ftype, $allowed, true) && !$ext_ok) {
         return ['ok' => false, 'error' => 'فقط ویدیو MP4، WebM یا MOV مجاز است.'];
     }
-    if ((int) $file['size'] > 40 * 1024 * 1024) {
+    if ((int) ($file['size'] ?? 0) > 40 * 1024 * 1024) {
         return ['ok' => false, 'error' => 'حجم ویدیو حداکثر ۴۰ مگابایت باشد.'];
     }
 
-    casting_enable_user_upload_dir($user_id);
-    $attachment_id = media_handle_upload('video', 0);
-    casting_disable_user_upload_dir();
+    $attachment_id = casting_media_handle_upload_as_user('video', $user_id);
 
     if (is_wp_error($attachment_id)) {
         return ['ok' => false, 'error' => 'آپلود ویدیو ناموفق بود: ' . $attachment_id->get_error_message()];

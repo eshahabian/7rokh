@@ -487,9 +487,12 @@ if ($otp_notice !== '') {
         <?php casting_render_single_profile_photo_field([], true, 'photo_medium_single'); ?>
       </fieldset>
 
-      <div class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
+      <div class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?> data-file-preview-card>
         <label for="video">ویدیو معرفی</label>
-        <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime">
+        <div class="video-preview-frame" data-file-preview-frame hidden>
+          <video controls playsinline preload="metadata" data-file-preview-video></video>
+        </div>
+        <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime" data-file-preview-input data-file-preview-kind="video">
         <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت (اختیاری)</p>
       </div>
 

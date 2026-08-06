@@ -528,6 +528,165 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     <div class="bio-block bio-block--missing"><h3>درباره</h3><p><?= casting_panel_missing_label('') ?> — <a href="#edit-profile">نوشتن معرفی</a></p></div>
   <?php endif; ?>
 
+  <?php
+  // بخش‌های پروفایل استعداد که قبلاً ذخیره می‌شدند ولی روی پروفایل عمومی دیده نمی‌شدند
+  $look_labels = casting_look_labels();
+  $look_key = (string) ($profile['look'] ?? '');
+  $look_label = $look_labels[$look_key] ?? '';
+  $experience_years = trim((string) ($profile['experience'] ?? ''));
+  $license_key = (string) ($profile['activity_license'] ?? '');
+  $license_label = $license_key === 'yes' ? 'دارد' : ($license_key === 'no' ? 'ندارد' : '');
+  $work_credits = is_array($profile['work_credits'] ?? null) ? $profile['work_credits'] : [];
+  $artistic_works = is_array($profile['artistic_works'] ?? null) ? $profile['artistic_works'] : [];
+  $education_items = is_array($profile['education_items'] ?? null) ? $profile['education_items'] : [];
+  $language_items = is_array($profile['language_items'] ?? null) ? $profile['language_items'] : [];
+  $education_note = trim((string) ($profile['education'] ?? ''));
+  $work_history = trim((string) ($profile['work_history'] ?? ''));
+  $video_file = trim((string) ($profile['video_file_url'] ?? ''));
+  $video_link = trim((string) ($profile['video_url'] ?? ''));
+  $work_types = casting_work_type_labels();
+  $degree_labels = casting_education_degree_labels();
+  $lang_levels = casting_language_level_labels();
+  $has_career_block = $look_label !== '' || $experience_years !== '' || $license_label !== ''
+      || $work_credits !== [] || $artistic_works !== [] || $work_history !== ''
+      || $education_items !== [] || $education_note !== '' || $language_items !== []
+      || $video_file !== '' || $video_link !== '';
+  ?>
+  <?php if ($has_career_block) : ?>
+    <div class="profile-career-stack<?= $director_section_class('career') ?>">
+      <?php if ($video_file !== '' || $video_link !== '') : ?>
+        <div class="bio-block profile-video-block">
+          <h3>ویدیو معرفی</h3>
+          <?php if ($video_file !== '') : ?>
+            <div class="profile-video-player">
+              <video controls playsinline preload="metadata" src="<?= casting_e($video_file) ?>"></video>
+            </div>
+          <?php endif; ?>
+          <?php if ($video_link !== '') : ?>
+            <p class="meta"><a href="<?= casting_e($video_link) ?>" target="_blank" rel="noopener">مشاهده لینک ویدیو</a></p>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($look_label !== '' || $experience_years !== '' || $license_label !== '') : ?>
+        <div class="bio-block">
+          <h3>مشخصات حرفه‌ای</h3>
+          <ul class="info-list">
+            <?php if ($look_label !== '') : ?>
+              <li><strong>رنگ پوست:</strong> <?= casting_e($look_label) ?></li>
+            <?php endif; ?>
+            <?php if ($experience_years !== '') : ?>
+              <li><strong>سابقه:</strong> <?= casting_e($experience_years) ?> سال</li>
+            <?php endif; ?>
+            <?php if ($license_label !== '') : ?>
+              <li><strong>پروانه فعالیت:</strong> <?= casting_e($license_label) ?></li>
+            <?php endif; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($work_credits !== [] || $artistic_works !== [] || $work_history !== '') : ?>
+        <div class="bio-block">
+          <h3>سوابق کاری</h3>
+          <?php if ($work_credits !== []) : ?>
+            <ul class="profile-credit-list">
+              <?php foreach ($work_credits as $credit) :
+                  $ctype = (string) ($credit['type'] ?? 'film');
+                  $ctitle = trim((string) ($credit['title'] ?? ''));
+                  if ($ctitle === '') {
+                      continue;
+                  }
+                  ?>
+                <li>
+                  <span class="profile-credit-type"><?= casting_e($work_types[$ctype] ?? $ctype) ?></span>
+                  <span class="profile-credit-title"><?= casting_e($ctitle) ?></span>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          <?php endif; ?>
+          <?php if ($artistic_works !== []) : ?>
+            <p class="meta"><strong>آثار هنری:</strong></p>
+            <ul class="profile-credit-list">
+              <?php foreach ($artistic_works as $work) :
+                  $wtype = (string) ($work['type'] ?? 'film');
+                  $wtitle = trim((string) ($work['title'] ?? ''));
+                  if ($wtitle === '') {
+                      continue;
+                  }
+                  ?>
+                <li>
+                  <span class="profile-credit-type"><?= casting_e($work_types[$wtype] ?? $wtype) ?></span>
+                  <span class="profile-credit-title"><?= casting_e($wtitle) ?></span>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          <?php endif; ?>
+          <?php if ($work_history !== '') : ?>
+            <p><?= nl2br(casting_e($work_history)) ?></p>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($language_items !== []) : ?>
+        <div class="bio-block">
+          <h3>زبان‌ها</h3>
+          <ul class="profile-credit-list">
+            <?php foreach ($language_items as $lang) :
+                $lname = trim((string) ($lang['name'] ?? ''));
+                if ($lname === '') {
+                    continue;
+                }
+                $llevel = (string) ($lang['level'] ?? '');
+                $llevel_label = $lang_levels[$llevel] ?? '';
+                ?>
+              <li>
+                <span class="profile-credit-title"><?= casting_e($lname) ?></span>
+                <?php if ($llevel_label !== '') : ?>
+                  <span class="profile-credit-type"><?= casting_e($llevel_label) ?></span>
+                <?php endif; ?>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($education_items !== [] || $education_note !== '') : ?>
+        <div class="bio-block">
+          <h3>تحصیلات</h3>
+          <?php if ($education_items !== []) : ?>
+            <ul class="profile-credit-list">
+              <?php foreach ($education_items as $edu) :
+                  $degree = (string) ($edu['degree'] ?? '');
+                  $uni = trim((string) ($edu['university'] ?? ''));
+                  $degree_label = $degree_labels[$degree] ?? '';
+                  if ($degree_label === '' && $uni === '') {
+                      continue;
+                  }
+                  ?>
+                <li>
+                  <?php if ($degree_label !== '') : ?>
+                    <span class="profile-credit-type"><?= casting_e($degree_label) ?></span>
+                  <?php endif; ?>
+                  <?php if ($uni !== '') : ?>
+                    <span class="profile-credit-title"><?= casting_e($uni) ?></span>
+                  <?php endif; ?>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          <?php endif; ?>
+          <?php if ($education_note !== '') : ?>
+            <p><?= nl2br(casting_e($education_note)) ?></p>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
+    </div>
+  <?php elseif ($embedded && $is_self && !$hide_talent_details) : ?>
+    <div class="bio-block bio-block--missing">
+      <h3>سوابق و ویدیو</h3>
+      <p><?= casting_panel_missing_label('') ?> — <a href="#edit-profile">تکمیل سوابق، زبان، تحصیل و ویدیو</a></p>
+    </div>
+  <?php endif; ?>
+
   <?php if ($show_director_tools && is_array($director_workspace)) : ?>
     <?php casting_render_director_talent_workspace_panel($viewer_id, $member_id, $director_workspace); ?>
     <?php casting_render_director_desk_talent_panel($viewer_id, $member_id, max(0, (int) ($_GET['role'] ?? 0))); ?>
@@ -796,9 +955,16 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       <textarea id="bio" name="bio" rows="3"><?= casting_e($profile['bio']) ?></textarea>
     </div>
 
-    <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
+    <div class="field" data-talent-profile-field<?= $talent_hidden ?> data-file-preview-card>
       <label for="video">آپلود ویدیو معرفی</label>
-      <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime">
+      <div class="video-preview-frame" data-file-preview-frame<?= $profile['video_file_url'] === '' ? ' hidden' : '' ?>>
+        <?php if ($profile['video_file_url'] !== '') : ?>
+          <video controls playsinline preload="metadata" data-file-preview-video src="<?= casting_e($profile['video_file_url']) ?>"></video>
+        <?php else : ?>
+          <video controls playsinline preload="metadata" data-file-preview-video></video>
+        <?php endif; ?>
+      </div>
+      <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime" data-file-preview-input data-file-preview-kind="video">
       <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت</p>
       <?php if ($profile['video_file_url'] !== '') : ?>
         <p class="field-hint"><a href="<?= casting_e($profile['video_file_url']) ?>" target="_blank" rel="noopener">ویدیو فعلی</a></p>

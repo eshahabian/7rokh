@@ -411,40 +411,34 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
     }
 
     casting_require_media_includes();
-    $file = $_FILES[$field];
-    $ftype = (string) ($file['type'] ?? '');
-    // بعضی مرورگرها type خالی یا octet-stream می‌فرستند
-    if ($ftype === '' || $ftype === 'application/octet-stream') {
-        $check = wp_check_filetype_and_ext(
-            (string) ($file['tmp_name'] ?? ''),
-            (string) ($file['name'] ?? '')
-        );
-        if (!empty($check['type'])) {
-            $ftype = (string) $check['type'];
-            $_FILES[$field]['type'] = $ftype;
-        }
+    $file = &$_FILES[$field];
+    $kind = $media_type === 'video' ? 'video' : 'image';
+    $norm = casting_normalize_uploaded_file_type($file, $kind);
+    if (!$norm['ok']) {
+        return ['ok' => false, 'error' => $norm['error']];
     }
+    $ftype = (string) ($norm['type'] ?? '');
     if ($media_type === 'photo') {
         $allowed = ['image/jpeg', 'image/png', 'image/webp'];
         if (!in_array($ftype, $allowed, true)) {
             return ['ok' => false, 'error' => 'فقط عکس JPG، PNG یا WebP مجاز است.'];
         }
-        if ((int) $file['size'] > 5 * 1024 * 1024) {
+        if ((int) ($file['size'] ?? 0) > 5 * 1024 * 1024) {
             return ['ok' => false, 'error' => 'حجم عکس حداکثر ۵ مگابایت باشد.'];
         }
     } else {
         $allowed = ['video/mp4', 'video/webm', 'video/quicktime'];
-        if (!in_array($ftype, $allowed, true)) {
+        $name = strtolower((string) ($file['name'] ?? ''));
+        $ext_ok = preg_match('/\.(mp4|webm|mov)$/', $name) === 1;
+        if (!in_array($ftype, $allowed, true) && !$ext_ok) {
             return ['ok' => false, 'error' => 'فقط ویدیو MP4، WebM یا MOV مجاز است.'];
         }
-        if ((int) $file['size'] > 40 * 1024 * 1024) {
+        if ((int) ($file['size'] ?? 0) > 40 * 1024 * 1024) {
             return ['ok' => false, 'error' => 'حجم ویدیو حداکثر ۴۰ مگابایت باشد.'];
         }
     }
 
-    casting_enable_user_upload_dir($user_id);
-    $attachment_id = media_handle_upload($field, 0);
-    casting_disable_user_upload_dir();
+    $attachment_id = casting_media_handle_upload_as_user($field, $user_id);
     if (is_wp_error($attachment_id)) {
         return ['ok' => false, 'error' => 'آپلود ناموفق بود: ' . $attachment_id->get_error_message()];
     }

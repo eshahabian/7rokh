@@ -2151,4 +2151,77 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeAppNoteLightbox();
   });
+
+  // پیش‌نمایش فوری عکس/ویدیو قبل از ثبت
+  const revokePreviewUrl = (el) => {
+    const prev = el?.dataset?.previewObjectUrl;
+    if (prev) {
+      try {
+        URL.revokeObjectURL(prev);
+      } catch (_err) {
+        /* ignore */
+      }
+      delete el.dataset.previewObjectUrl;
+    }
+  };
+
+  const showImagePreview = (card, file) => {
+    const frame = card.querySelector("[data-file-preview-frame]");
+    if (!frame) return;
+    let img = frame.querySelector("[data-file-preview-img]");
+    const empty = frame.querySelector("[data-file-preview-empty]");
+    if (!img) {
+      img = document.createElement("img");
+      img.setAttribute("data-file-preview-img", "");
+      img.alt = "پیش‌نمایش";
+      img.decoding = "async";
+      frame.appendChild(img);
+    }
+    revokePreviewUrl(img);
+    const url = URL.createObjectURL(file);
+    img.dataset.previewObjectUrl = url;
+    img.src = url;
+    if (empty) empty.hidden = true;
+    frame.hidden = false;
+  };
+
+  const showVideoPreview = (card, file) => {
+    const frame = card.querySelector("[data-file-preview-frame]");
+    if (!frame) return;
+    let video = frame.querySelector("[data-file-preview-video]");
+    if (!video) {
+      video = document.createElement("video");
+      video.setAttribute("data-file-preview-video", "");
+      video.controls = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+      frame.appendChild(video);
+    }
+    revokePreviewUrl(video);
+    const url = URL.createObjectURL(file);
+    video.dataset.previewObjectUrl = url;
+    video.src = url;
+    frame.hidden = false;
+  };
+
+  document.addEventListener("change", (event) => {
+    const input = event.target.closest("[data-file-preview-input], input[type='file'][accept*='image']");
+    if (!(input instanceof HTMLInputElement) || input.type !== "file") return;
+    const file = input.files && input.files[0] ? input.files[0] : null;
+    const card =
+      input.closest("[data-file-preview-card]") ||
+      input.closest(".portrait-upload-card") ||
+      input.closest(".field");
+    if (!card || !file) return;
+
+    const kind = input.getAttribute("data-file-preview-kind") || "";
+    const isVideo = kind === "video" || (file.type || "").startsWith("video/");
+    if (isVideo) {
+      showVideoPreview(card, file);
+      return;
+    }
+    if ((file.type || "").startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(file.name || "")) {
+      showImagePreview(card, file);
+    }
+  });
 })();
