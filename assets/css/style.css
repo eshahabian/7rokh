@@ -7637,28 +7637,32 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
   align-items: stretch;
   pointer-events: none;
   mix-blend-mode: normal;
-  opacity: 0.42;
+  opacity: 0.32;
 }
 
 .media-watermark span {
   display: block;
   text-align: center;
-  font-size: clamp(0.72rem, 2.2vw, 0.92rem);
-  font-weight: 600;
+  font-size: clamp(0.68rem, 2vw, 0.85rem);
+  font-weight: 500;
   letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.65);
   text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.7),
-    0 0 2px rgba(0, 0, 0, 0.55);
+    0 1px 2px rgba(0, 0, 0, 0.55);
   transform: rotate(-18deg);
   white-space: nowrap;
   overflow: hidden;
-  padding: 0.2rem 0.45rem;
+  padding: 0.15rem 0.4rem;
 }
 
-/* ویدیو: فقط واترمارک canvas — تا دو لایه روی هم نیاید و تصویر سیاه نشود */
-.media-protect--video:not(.is-video-fallback) .media-watermark {
-  display: none;
+/* ویدیو: واترمارک CSS مخفی؛ فقط ۳ خط کم‌رنگ روی canvas */
+.media-protect--video .media-watermark {
+  display: none !important;
+}
+
+.media-protect--video.is-video-fallback .media-watermark {
+  display: flex !important;
+  opacity: 0.28;
 }
 
 .media-protect-play {
@@ -7819,10 +7823,10 @@ body.media-protect-capture-flash::after {
 
 @media (max-width: 700px) {
   .media-watermark {
-    opacity: 0.45;
+    opacity: 0.34;
   }
 
   .media-watermark span {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
   }
 }

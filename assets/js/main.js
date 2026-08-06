@@ -1210,7 +1210,7 @@
       wm.className = "media-watermark";
       wm.setAttribute("aria-hidden", "true");
       const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
-      for (let i = 0; i < 4; i += 1) {
+      for (let i = 0; i < 3; i += 1) {
         const span = document.createElement("span");
         span.textContent = label;
         wm.appendChild(span);
@@ -1872,7 +1872,7 @@
           wm.className = "media-watermark";
           wm.setAttribute("aria-hidden", "true");
           const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
-          for (let i = 0; i < 4; i += 1) {
+          for (let i = 0; i < 3; i += 1) {
             const span = document.createElement("span");
             span.textContent = label;
             wm.appendChild(span);
@@ -2063,26 +2063,24 @@
         ctx.drawImage(video, dx, dy, dw, dh);
       }
       const label = root.getAttribute("data-watermark") || "";
-      if (label) {
+      if (label && (vw > 0 || root.classList.contains("is-playing"))) {
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((-18 * Math.PI) / 180);
+        ctx.rotate((-22 * Math.PI) / 180);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        const fontSize = Math.max(13, Math.round(canvas.width * 0.038));
-        ctx.font = `600 ${fontSize}px Vazirmatn, Tahoma, sans-serif`;
-        ctx.lineWidth = Math.max(1.5, Math.round(fontSize * 0.1));
-        ctx.strokeStyle = "rgba(0,0,0,0.45)";
-        ctx.fillStyle = "rgba(255,255,255,0.72)";
-        const stepY = fontSize * 4.2;
-        const stepX = stepY * 3.6;
-        for (let y = -canvas.height; y < canvas.height; y += stepY) {
-          for (let x = -canvas.width; x < canvas.width; x += stepX) {
-            ctx.globalAlpha = 0.38;
-            ctx.strokeText(label, x, y);
-            ctx.fillText(label, x, y);
-          }
-        }
+        const fontSize = Math.max(12, Math.round(Math.min(canvas.width, canvas.height) * 0.032));
+        ctx.font = `500 ${fontSize}px Vazirmatn, Tahoma, sans-serif`;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(0,0,0,0.35)";
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
+        ctx.globalAlpha = 0.28;
+        // فقط ۳ خط کم‌تراکم — نه کاشی‌کاری کامل
+        const offsets = [-canvas.height * 0.22, 0, canvas.height * 0.22];
+        offsets.forEach((y) => {
+          ctx.strokeText(label, 0, y);
+          ctx.fillText(label, 0, y);
+        });
         ctx.restore();
       }
       root.classList.remove("is-video-fallback");
