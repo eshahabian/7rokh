@@ -215,13 +215,22 @@ function casting_render_feed_media_card(array $item, int $viewer_id): void
       </button>
     </header>
     <div class="home-feed-post-media<?= $is_video ? ' is-video' : '' ?>">
-      <?php if ($is_video) : ?>
-        <video src="<?= casting_e($url) ?>" controls preload="metadata" playsinline<?= $thumb !== '' && $thumb !== $url ? ' poster="' . casting_e($thumb) . '"' : '' ?>></video>
-      <?php else : ?>
-        <a href="<?= casting_e($url) ?>" target="_blank" rel="noopener">
-          <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
-        </a>
-      <?php endif; ?>
+      <?php
+      if (!function_exists('casting_render_protected_video')) {
+          require_once __DIR__ . '/media-protect.php';
+      }
+      $wm = casting_media_protect_viewer_label();
+      if ($is_video) {
+          casting_render_protected_video($url, $wm, [
+              'class'  => 'media-protect--feed',
+              'poster' => ($thumb !== '' && $thumb !== $url) ? $thumb : '',
+          ]);
+      } else {
+          casting_render_protected_image($thumb !== '' ? $thumb : $url, $wm, [
+              'class' => 'media-protect--feed',
+          ]);
+      }
+      ?>
     </div>
     <?php if ($caption !== '') :
         $caption_long = (function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 90;

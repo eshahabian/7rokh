@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=134">
+  <link rel="stylesheet" href="<?= $css ?>?v=135">
   <script>
     (function () {
       try {
@@ -186,6 +186,15 @@ function casting_render_footer(): void
       url: <?= wp_json_encode(casting_url('media-engage.php')) ?>,
       nonce: <?= wp_json_encode(wp_create_nonce('casting_media_engage')) ?>
     };
+    <?php
+    if (!function_exists('casting_media_protect_viewer_label')) {
+        require_once __DIR__ . '/media-protect.php';
+    }
+    ?>
+    window.CASTING_MEDIA_PROTECT = {
+      watermark: <?= wp_json_encode(casting_media_protect_viewer_label()) ?>,
+      isMobile: <?= wp_json_encode(wp_is_mobile()) ?>
+    };
     window.CASTING_SESSION = {
       active: <?= casting_current_user() ? 'true' : 'false' ?>,
       idleSeconds: <?= (int) (function_exists('casting_session_idle_seconds') ? casting_session_idle_seconds() : 300) ?>,
@@ -193,7 +202,7 @@ function casting_render_footer(): void
       logoutUrl: <?= wp_json_encode(casting_url('logout.php?reason=idle')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=90" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=91" defer></script>
 </body>
 </html>
 <?php

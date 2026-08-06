@@ -1200,8 +1200,23 @@
       portraitLightboxEl.type = "button";
       portraitLightboxEl.className = "portrait-lightbox";
       portraitLightboxEl.setAttribute("aria-label", "بستن تصویر");
+      const frame = document.createElement("div");
+      frame.className = "portrait-lightbox-frame media-protect";
+      frame.setAttribute("data-media-protect", "");
       portraitLightboxImg = document.createElement("img");
-      portraitLightboxEl.appendChild(portraitLightboxImg);
+      portraitLightboxImg.draggable = false;
+      frame.appendChild(portraitLightboxImg);
+      const wm = document.createElement("div");
+      wm.className = "media-watermark";
+      wm.setAttribute("aria-hidden", "true");
+      const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
+      for (let i = 0; i < 3; i += 1) {
+        const span = document.createElement("span");
+        span.textContent = label;
+        wm.appendChild(span);
+      }
+      frame.appendChild(wm);
+      portraitLightboxEl.appendChild(frame);
       portraitLightboxEl.addEventListener("click", closePortraitLightbox);
       document.body.appendChild(portraitLightboxEl);
     }
@@ -1817,7 +1832,11 @@
     closePostLightbox();
 
     const mediaHost =
+      root.querySelector(".home-feed-post-media .media-protect") ||
+      root.querySelector(".profile-media-open .media-protect") ||
+      root.querySelector(".media-protect") ||
       root.querySelector(".home-feed-post-media") ||
+      root.querySelector(".profile-media-open") ||
       root.querySelector(":scope > a") ||
       root.querySelector("img, video");
     const captionEl =
@@ -1831,9 +1850,36 @@
     const mediaWrap = document.createElement("div");
     mediaWrap.className = "post-lightbox-media";
     if (mediaHost) {
-      const cloneSource = mediaHost.matches("img, video") ? mediaHost : mediaHost.querySelector("img, video");
-      if (cloneSource) {
-        mediaWrap.appendChild(cloneSource.cloneNode(true));
+      if (mediaHost.classList?.contains("media-protect") || mediaHost.querySelector?.(".media-protect")) {
+        const protect = mediaHost.classList.contains("media-protect")
+          ? mediaHost
+          : mediaHost.querySelector(".media-protect");
+        mediaWrap.appendChild(protect.cloneNode(true));
+      } else {
+        const cloneSource = mediaHost.matches("img, video") ? mediaHost : mediaHost.querySelector("img, video");
+        if (cloneSource) {
+          const protect = document.createElement("div");
+          protect.className = "media-protect";
+          protect.setAttribute("data-media-protect", "");
+          const clone = cloneSource.cloneNode(true);
+          if (clone.tagName === "VIDEO") {
+            clone.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
+            clone.setAttribute("disablepictureinpicture", "");
+          }
+          clone.draggable = false;
+          protect.appendChild(clone);
+          const wm = document.createElement("div");
+          wm.className = "media-watermark";
+          wm.setAttribute("aria-hidden", "true");
+          const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
+          for (let i = 0; i < 3; i += 1) {
+            const span = document.createElement("span");
+            span.textContent = label;
+            wm.appendChild(span);
+          }
+          protect.appendChild(wm);
+          mediaWrap.appendChild(protect);
+        }
       }
     }
     postLightboxBody.appendChild(mediaWrap);
@@ -1923,6 +1969,76 @@
     } finally {
       likeBtn.disabled = false;
     }
+  });
+
+  document.addEventListener("click", async (event) => {
+    const saveBtn = event.target.closest("[data-media-save]");
+    if (!saveBtn || saveBtn.disabled) return;
+    event.preventDefault();
+    const cfg = mediaEngageCfg();
+    const mediaId = saveBtn.getAttribute("data-media-save");
+    if (!mediaId || !cfg.url || !cfg.nonce) return;
+    saveBtn.disabled = true;
+    try {
+      const body = new URLSearchParams();
+      body.set("_wpnonce", cfg.nonce);
+      body.set("engage_action", "save");
+      body.set("media_id", mediaId);
+      const res = await fetch(cfg.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+        body: body.toString(),
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!data?.ok) {
+        window.alert(data?.error || "ذخیره انجام نشد.");
+        return;
+      }
+      const saved = !!data.saved;
+      saveBtn.classList.toggle("is-saved", saved);
+      saveBtn.setAttribute("aria-pressed", saved ? "true" : "false");
+      saveBtn.title = saved ? "حذف از ذخیره‌شده‌ها" : "ذخیره در پروفایل";
+      const icon = saveBtn.querySelector("span[aria-hidden]");
+      if (icon) icon.textContent = saved ? "🔖" : "📑";
+      const label = saveBtn.querySelector(".media-engage-label");
+      if (label) label.textContent = saved ? "ذخیره شد" : "ذخیره";
+    } catch (_err) {
+      window.alert("خطا در ارتباط با سرور.");
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+
+  document.addEventListener("contextmenu", (event) => {
+    if (event.target.closest("[data-media-protect], .media-protect, .portrait-lightbox, .post-lightbox-media")) {
+      event.preventDefault();
+    }
+  });
+  document.addEventListener("dragstart", (event) => {
+    if (event.target.closest("[data-media-protect], .media-protect img, .media-protect video")) {
+      event.preventDefault();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "PrintScreen") {
+      document.body.classList.add("media-protect-capture-flash");
+      window.setTimeout(() => document.body.classList.remove("media-protect-capture-flash"), 800);
+    }
+  });
+  document.addEventListener("visibilitychange", () => {
+    document.documentElement.classList.toggle(
+      "media-protect-obscured",
+      document.hidden || document.visibilityState === "hidden"
+    );
+  });
+  window.addEventListener("blur", () => {
+    if (window.CASTING_MEDIA_PROTECT?.isMobile) {
+      document.documentElement.classList.add("media-protect-obscured");
+    }
+  });
+  window.addEventListener("focus", () => {
+    document.documentElement.classList.remove("media-protect-obscured");
   });
 
   document.addEventListener("submit", async (event) => {

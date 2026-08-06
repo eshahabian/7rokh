@@ -4,6 +4,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/profile.php';
 require_once __DIR__ . '/includes/media-engagement.php';
+require_once __DIR__ . '/includes/media-protect.php';
+require_once __DIR__ . '/includes/director-workspace.php';
 
 casting_nocache();
 header('Content-Type: application/json; charset=utf-8');
@@ -30,6 +32,11 @@ if ($action === 'like') {
 
 if ($action === 'comment') {
     echo wp_json_encode(casting_media_add_comment($media_id, $user_id, (string) ($_POST['body'] ?? '')));
+    exit;
+}
+
+if ($action === 'save') {
+    echo wp_json_encode(casting_media_toggle_save($user_id, $media_id));
     exit;
 }
 

@@ -971,10 +971,14 @@ function casting_render_public_media_gallery(int $user_id): void
     if (!function_exists('casting_render_media_engagement')) {
         require_once __DIR__ . '/media-engagement.php';
     }
+    if (!function_exists('casting_render_protected_video')) {
+        require_once __DIR__ . '/media-protect.php';
+    }
     $items = casting_user_media_public($user_id);
     if ($items === []) {
         return;
     }
+    $watermark = casting_media_protect_viewer_label();
     ?>
   <section class="profile-media-gallery" aria-label="گالری">
     <h3 class="panel-section-title">گالری</h3>
@@ -989,12 +993,20 @@ function casting_render_public_media_gallery(int $user_id): void
           $caption = trim((string) ($item['caption'] ?? ''));
           ?>
         <figure class="profile-media-item<?= $is_video ? ' is-video' : '' ?>">
-          <?php if ($is_video) : ?>
-            <video src="<?= casting_e($url) ?>" controls preload="metadata" playsinline<?= $thumb !== '' && $thumb !== $url ? ' poster="' . casting_e($thumb) . '"' : '' ?>></video>
-          <?php else : ?>
-            <a href="<?= casting_e($url) ?>" target="_blank" rel="noopener">
-              <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
-            </a>
+          <?php if ($is_video) :
+              casting_render_protected_video($url, $watermark, [
+                  'class'    => 'media-protect--gallery',
+                  'poster'   => ($thumb !== '' && $thumb !== $url) ? $thumb : '',
+                  'controls' => true,
+              ]);
+          else : ?>
+            <button type="button" class="profile-media-open" data-post-expand aria-label="مشاهده پست">
+              <?php
+              casting_render_protected_image($thumb !== '' ? $thumb : $url, $watermark, [
+                  'class' => 'media-protect--gallery',
+              ]);
+              ?>
+            </button>
           <?php endif; ?>
           <?php if ($caption !== '') :
               $caption_long = (function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 70;
@@ -1082,9 +1094,15 @@ function casting_render_admin_approved_media_section(int $admin_id): void
           $is_deleted = (($item['status'] ?? '') === 'deleted');
           ?>
         <figure class="profile-media-item<?= $is_deleted ? ' is-user-deleted' : '' ?>">
-          <a href="<?= casting_e($url) ?>" target="_blank" rel="noopener">
-            <img src="<?= casting_e($thumb !== '' ? $thumb : $url) ?>" alt="" loading="lazy">
-          </a>
+          <?php
+          if (!function_exists('casting_render_protected_image')) {
+              require_once __DIR__ . '/media-protect.php';
+          }
+          $wm = casting_media_protect_viewer_label();
+          casting_render_protected_image($thumb !== '' ? $thumb : $url, $wm, [
+              'class' => 'media-protect--gallery',
+          ]);
+          ?>
           <figcaption class="profile-media-caption">
             <?php if ($owner) : ?>
               <p><strong><?= casting_e((string) $owner->display_name) ?></strong></p>

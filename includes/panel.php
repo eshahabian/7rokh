@@ -26,6 +26,7 @@ function casting_panel_nav_groups(): array
                 ['key' => 'desk',          'label' => 'پروژه‌ها',        'href' => 'director-desk.php'],
                 ['key' => 'briefs',        'label' => 'تکالیف',         'href' => 'my-briefs.php'],
                 ['key' => 'favorites',     'label' => 'لیست کاندیدا',   'href' => 'favorites.php'],
+                ['key' => 'saved',         'label' => 'ذخیره‌شده‌ها',     'href' => 'saved-media.php'],
             ],
         ],
         [
@@ -201,6 +202,9 @@ function casting_panel_nav_item_is_visible(array $item, array $ctx): bool
         return false;
     }
     if ($key === 'favorites' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
+        return false;
+    }
+    if ($key === 'saved' && (!$user || !casting_user_is_director_role((int) $user->ID))) {
         return false;
     }
     if ($key === 'briefs' && (!$user || casting_get_user_role((int) $user->ID) !== 'talent')) {

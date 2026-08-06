@@ -559,7 +559,14 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           <h3>ویدیو معرفی</h3>
           <?php if ($video_file !== '') : ?>
             <div class="profile-video-player">
-              <video controls playsinline preload="metadata" src="<?= casting_e($video_file) ?>"></video>
+              <?php
+              if (!function_exists('casting_render_protected_video')) {
+                  require_once __DIR__ . '/media-protect.php';
+              }
+              casting_render_protected_video($video_file, casting_media_protect_viewer_label(), [
+                  'class' => 'media-protect--intro',
+              ]);
+              ?>
             </div>
           <?php endif; ?>
           <?php if ($video_link !== '') : ?>

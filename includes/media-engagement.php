@@ -256,6 +256,11 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
     $preview_limit = 2;
     $preview = array_slice($list, 0, $preview_limit);
     $show_more = !$compact && ($comments > $preview_limit || count($list) > $preview_limit);
+    if (!function_exists('casting_user_can_save_media')) {
+        require_once __DIR__ . '/media-protect.php';
+    }
+    $can_save = $viewer_id > 0 && casting_user_can_save_media($viewer_id);
+    $saved = $can_save && casting_media_is_saved($viewer_id, $media_id);
     ?>
   <div class="media-engage" data-media-engage="<?= (int) $media_id ?>">
     <div class="media-engage-actions">
@@ -270,6 +275,18 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
         <span data-like-count><?= (int) $likes ?></span>
         <span class="media-engage-label">پسند</span>
       </button>
+      <?php if ($can_save) : ?>
+      <button
+        type="button"
+        class="media-engage-save<?= $saved ? ' is-saved' : '' ?>"
+        data-media-save="<?= (int) $media_id ?>"
+        aria-pressed="<?= $saved ? 'true' : 'false' ?>"
+        title="<?= $saved ? 'حذف از ذخیره‌شده‌ها' : 'ذخیره در پروفایل' ?>"
+      >
+        <span aria-hidden="true"><?= $saved ? '🔖' : '📑' ?></span>
+        <span class="media-engage-label"><?= $saved ? 'ذخیره شد' : 'ذخیره' ?></span>
+      </button>
+      <?php endif; ?>
       <span class="media-engage-comment-count" title="کامنت">
         <span aria-hidden="true">💬</span>
         <span data-comment-count><?= (int) $comments ?></span>
