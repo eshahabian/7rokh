@@ -1,0 +1,10 @@
+﻿{
+  "appId": "ir.rokh7.app",
+  "appName": "7rokh",
+  "webDir": "www",
+  "server": {
+    "url": "https://7rokh.ir/casting-portal/",
+    "cleartext": false,
+    "allowNavigation": ["7rokh.ir", "*.7rokh.ir"]
+  }
+}

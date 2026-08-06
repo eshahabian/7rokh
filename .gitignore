@@ -11,3 +11,23 @@ uploads/
 Thumbs.db
 .vscode/
 .continue/
+
+# Node / Capacitor (هرگز commit نشوند)
+node_modules/
+**/node_modules/
+npm-debug.log*
+
+# Capacitor / Android build artifacts
+mobile/node_modules/
+mobile/.capacitor/
+7rokh-app/node_modules/
+7rokh-app/.capacitor/
+**/android/.gradle/
+**/android/**/build/
+**/android/local.properties
+**/android/captures/
+**/android/.idea/
+**/*.apk
+**/*.aab
+**/*.dex
+**/*.iml

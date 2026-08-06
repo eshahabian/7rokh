@@ -990,7 +990,7 @@ fieldset.field legend {
   color: var(--ink);
 }
 
-.field input:not([type="checkbox"]):not([type="radio"]),
+.field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .field select,
 .field textarea {
   width: 100%;
@@ -1010,7 +1010,7 @@ fieldset.field legend {
   resize: vertical;
 }
 
-.field input:not([type="checkbox"]):not([type="radio"]):focus,
+.field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
 .field select:focus,
 .field textarea:focus {
   outline: none;
@@ -1393,6 +1393,45 @@ fieldset.field legend {
   border-radius: var(--radius);
   background: rgba(0, 0, 0, 0.12);
   min-width: 0;
+}
+
+.portrait-upload-card input[type="file"],
+.field input[type="file"] {
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.88rem;
+  box-shadow: none;
+}
+
+.portrait-upload-card input[type="file"]:focus,
+.field input[type="file"]:focus {
+  outline: none;
+  box-shadow: none;
+  border: none;
+}
+
+.portrait-upload-card input[type="file"]::file-selector-button,
+.field input[type="file"]::file-selector-button,
+.portrait-upload-card input[type="file"]::-webkit-file-upload-button,
+.field input[type="file"]::-webkit-file-upload-button {
+  margin-inline-end: 0.65rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .portrait-frame,
