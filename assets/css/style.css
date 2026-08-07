@@ -6141,6 +6141,15 @@ button.is-follow-locked {
   border-color: rgba(212, 165, 116, 0.35);
 }
 
+.admin-member-action-box--danger {
+  border-color: rgba(180, 40, 40, 0.35);
+  background: rgba(180, 40, 40, 0.06);
+}
+
+.admin-member-action-box--danger .panel-section-title {
+  color: #a33;
+}
+
 .admin-member-actions .panel-section-title {
   margin: 0 0 0.65rem;
 }

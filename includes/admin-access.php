@@ -244,6 +244,58 @@ function casting_admin_set_password(int $target_id, int $admin_id, string $new, 
 }
 
 /**
+ * حذف کامل کاربر پورتال توسط مدیر (از بخش مشترکین)
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_admin_delete_user(int $target_id, int $admin_id): array
+{
+    if (!casting_user_has_admin_permission($admin_id, 'view_premium_users')) {
+        return ['ok' => false, 'error' => 'اجازه حذف کاربر را ندارید.'];
+    }
+    if ($target_id <= 0 || casting_get_user_role($target_id) === '') {
+        return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
+    }
+    if ($target_id === $admin_id) {
+        return ['ok' => false, 'error' => 'نمی‌توانید حساب خودتان را حذف کنید.'];
+    }
+    if (casting_user_is_super_admin($target_id)) {
+        return ['ok' => false, 'error' => 'مدیر اصلی قابل حذف نیست.'];
+    }
+    if (!get_user_by('id', $target_id)) {
+        return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
+    }
+
+    // پاک‌سازی پست‌های گالری پورتال (در صورت وجود جدول)
+    if (!function_exists('casting_user_media_table')) {
+        $um = __DIR__ . '/user-media.php';
+        if (is_file($um)) {
+            require_once $um;
+        }
+    }
+    if (function_exists('casting_user_media_table')) {
+        global $wpdb;
+        $table = casting_user_media_table();
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+        if ($exists === $table) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $wpdb->delete($table, ['user_id' => $target_id], ['%d']);
+        }
+    }
+
+    if (!function_exists('wp_delete_user')) {
+        require_once ABSPATH . 'wp-admin/includes/user.php';
+    }
+    $ok = wp_delete_user($target_id);
+    if (!$ok) {
+        return ['ok' => false, 'error' => 'حذف کاربر ناموفق بود.'];
+    }
+
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
  * @return array{rows:array<int, array{id:int,name:string,login:string,membership_number:string,email:string,role:string,suspended:bool,premium:bool,until:string,remaining:string,until_ts:?int}>,total:int,page:int,per_page:int}
  */
 function casting_list_casting_members(int $page = 1, int $per_page = 50, string $search = ''): array

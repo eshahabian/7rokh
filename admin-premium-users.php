@@ -18,6 +18,7 @@ $can_suspend = casting_user_has_admin_permission($user_id, 'suspend_users')
     || casting_user_is_portal_owner($user_id);
 $can_manage_password = casting_user_is_portal_owner($user_id)
     || casting_user_has_admin_permission($user_id, 'view_premium_users');
+$can_delete_user = casting_user_has_admin_permission($user_id, 'view_premium_users');
 $can_view_blocks = casting_user_has_admin_permission($user_id, 'view_user_blocks')
     || casting_user_has_admin_permission($user_id, 'unblock_users');
 
@@ -62,6 +63,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             } else {
                 casting_set_flash('error', $result['error']);
+            }
+        } elseif ($action === 'delete_user' && $can_delete_user) {
+            $confirm_login = trim((string) ($_POST['confirm_login'] ?? ''));
+            $target_user = get_user_by('id', $target_id);
+            $expected = $target_user ? (string) $target_user->user_login : '';
+            if ($expected === '' || $confirm_login === '' || strcasecmp($confirm_login, $expected) !== 0) {
+                casting_set_flash('error', 'برای حذف، نام کاربری را دقیقاً وارد کنید.');
+            } else {
+                $result = casting_admin_delete_user($target_id, $user_id);
+                if ($result['ok']) {
+                    casting_set_flash('success', 'کاربر حذف شد.');
+                    $redirect = 'admin-premium-users.php';
+                    if ($search !== '') {
+                        $redirect .= '?q=' . rawurlencode($search);
+                        if ($page > 1) {
+                            $redirect .= '&page=' . $page;
+                        }
+                    } elseif ($page > 1) {
+                        $redirect .= '?page=' . $page;
+                    }
+                } else {
+                    casting_set_flash('error', $result['error']);
+                }
             }
         }
         casting_redirect($redirect);
@@ -207,9 +231,30 @@ casting_render_flash();
               <button class="btn btn-primary" type="submit" name="action" value="set_password">ذخیره رمز جدید</button>
             </form>
           </div>
+
+          <?php if ($can_delete_user) : ?>
+            <div class="admin-member-action-box admin-member-action-box--danger">
+              <h3 class="panel-section-title">حذف کاربر</h3>
+              <p class="meta">حذف دائمی است و قابل بازگشت نیست. برای تأیید، نام کاربری را وارد کنید: <strong><?= casting_e((string) $target->user_login) ?></strong></p>
+              <form
+                class="form admin-delete-user-form"
+                method="post"
+                action="<?= casting_e($member_query($target_id)) ?>"
+                onsubmit="return confirm('این کاربر برای همیشه حذف شود؟ این عمل قابل بازگشت نیست.');"
+              >
+                <?php wp_nonce_field('casting_admin_members'); ?>
+                <input type="hidden" name="target_id" value="<?= $target_id ?>">
+                <div class="field">
+                  <label for="confirm_login">نام کاربری برای تأیید حذف</label>
+                  <input id="confirm_login" name="confirm_login" type="text" autocomplete="off" required placeholder="<?= casting_e((string) $target->user_login) ?>">
+                </div>
+                <button class="btn btn-reject" type="submit" name="action" value="delete_user">حذف دائمی کاربر</button>
+              </form>
+            </div>
+          <?php endif; ?>
         </div>
       <?php else : ?>
-        <p class="meta">حساب مدیر اصلی از این بخش قابل تعلیق یا تغییر رمز نیست.</p>
+        <p class="meta">حساب مدیر اصلی از این بخش قابل تعلیق، تغییر رمز یا حذف نیست.</p>
       <?php endif; ?>
 
       <?php if (!$can_suspend && !$target_is_super) : ?>
