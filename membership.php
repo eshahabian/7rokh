@@ -16,24 +16,14 @@ $pending_receipts = casting_user_has_admin_permission($user_id, 'approve_receipt
 
 $tiles = [
     [
-        'title' => 'خرید و فعال‌سازی',
-        'desc'  => 'اشتراک ویژه، خلاصه سفارش و درگاه بانکی',
+        'title' => 'خرید اشتراک و خدمات',
+        'desc'  => 'عضویت ویژه و فراخوان — فقط پس از پرداخت موفق فعال می‌شود',
         'href'  => 'premium.php',
         'badge' => $pending_receipts,
     ],
     [
-        'title' => 'خرید آنلاین عضویت ویژه',
-        'desc'  => 'حداقل ۳ ماه · ۷۰ هزار تومان / ماه + مالیات',
-        'href'  => 'checkout.php?service=premium&plan=featured_90',
-    ],
-    [
-        'title' => 'ثبت فیش کارت به کارت',
-        'desc'  => 'بارگذاری تصویر فیش پرداخت',
-        'href'  => 'premium-receipt.php',
-    ],
-    [
         'title' => 'تراکنش‌های مالی',
-        'desc'  => 'تاریخچه پرداخت‌ها و وضعیت فیش‌ها',
+        'desc'  => 'تاریخچه پرداخت‌ها و وضعیت سفارش‌ها',
         'href'  => 'transactions.php',
     ],
 ];
@@ -58,7 +48,7 @@ casting_render_flash();
     <div class="flash flash-success">حساب کاربری ویژه فعال است.</div>
     <?php casting_render_premium_countdown($user_id); ?>
   <?php else : ?>
-    <p class="meta">حساب ویژه ندارید. از «خرید و فعال‌سازی» می‌توانید اشتراک بگیرید.</p>
+    <p class="meta">حساب ویژه ندارید. از «خرید اشتراک و خدمات» بسته را انتخاب و پس از پرداخت موفق فعال کنید.</p>
   <?php endif; ?>
 
   <?php casting_render_panel_hub_tiles($tiles); ?>

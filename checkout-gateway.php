@@ -56,10 +56,11 @@ casting_render_panel_start('درگاه پرداخت', 'membership');
     <input type="hidden" name="order_code" value="<?= casting_e($order_code) ?>">
     <input type="hidden" name="token" value="<?= casting_e($token) ?>">
     <div class="cta-row">
-      <button class="btn btn-primary" type="submit" name="gateway_action" value="success">شبیه‌سازی پرداخت موفق</button>
-      <button class="btn btn-ghost" type="submit" name="gateway_action" value="fail">شبیه‌سازی پرداخت ناموفق</button>
+      <button class="btn btn-primary" type="submit" name="gateway_action" value="success">پرداخت موفق — فعال‌سازی حساب</button>
+      <button class="btn btn-ghost" type="submit" name="gateway_action" value="fail">پرداخت ناموفق — بدون فعال‌سازی</button>
     </div>
-    <p class="meta" style="margin-top:1rem">
+    <p class="meta" style="margin-top:1rem">فقط در صورت پرداخت موفق، اشتراک یا اعتبار فراخوان روی حساب اعمال می‌شود.</p>
+    <p class="meta">
       <a href="checkout.php?order=<?= casting_e(rawurlencode($order_code)) ?>">بازگشت به خلاصه سفارش</a>
     </p>
   </form>

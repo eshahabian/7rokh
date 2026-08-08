@@ -261,8 +261,7 @@ casting_render_flash();
               <p><?= casting_e(casting_dm_premium_required_notice_message()) ?></p>
               <p class="meta">برای خواندن و پاسخ دادن به پیام‌ها، حساب ویژه را فعال کنید.</p>
               <div class="cta-row">
-                <a class="btn btn-primary" href="premium.php">خرید و فعال‌سازی</a>
-                <a class="btn btn-ghost" href="premium-receipt.php">ثبت فیش</a>
+                <a class="btn btn-primary" href="premium.php">خرید اشتراک</a>
               </div>
             </div>
           <?php elseif (!$thread) : ?>
@@ -311,8 +310,7 @@ casting_render_flash();
           <div class="chat-premium-gate">
             <p><?= casting_e($peer_allow['error'] !== '' ? $peer_allow['error'] : casting_employer_premium_send_error()) ?></p>
             <div class="cta-row">
-              <a class="btn btn-primary" href="premium.php">خرید و فعال‌سازی</a>
-              <a class="btn btn-ghost" href="premium-receipt.php">ثبت فیش</a>
+              <a class="btn btn-primary" href="premium.php">خرید اشتراک</a>
             </div>
           </div>
         <?php else : ?>

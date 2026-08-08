@@ -48,8 +48,7 @@ function casting_panel_nav_groups(): array
             'id'    => 'account',
             'label' => 'حساب',
             'items' => [
-                ['key' => 'premium',      'label' => 'فعال‌سازی',            'href' => 'premium.php'],
-                ['key' => 'receipt',      'label' => 'ثبت فیش کارت به کارت', 'href' => 'premium-receipt.php'],
+                ['key' => 'premium',      'label' => 'خرید اشتراک',          'href' => 'premium.php'],
                 ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',      'href' => 'transactions.php'],
                 ['key' => 'cancel',       'label' => 'انصراف از عضویت',      'href' => 'cancel-membership.php'],
                 ['key' => 'rules',        'label' => 'قوانین',               'href' => 'rules.php'],
@@ -167,8 +166,7 @@ function casting_render_premium_account_links(string $wrapper_class = 'cta-row p
 {
     ?>
     <div class="<?= casting_e($wrapper_class) ?>">
-      <a class="btn btn-ghost" href="<?= casting_e(casting_url('premium.php')) ?>">خرید و فعال‌سازی</a>
-      <a class="btn btn-ghost" href="<?= casting_e(casting_url('premium-receipt.php')) ?>">ثبت فیش کارت به کارت</a>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('premium.php')) ?>">خرید اشتراک</a>
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('transactions.php')) ?>">تراکنش‌های مالی</a>
     </div>
     <?php
@@ -196,6 +194,10 @@ function casting_panel_nav_item_is_visible(array $item, array $ctx): bool
 
     // موقتاً مخفی — صفحه cancel-membership.php حفظ شده است
     if ($key === 'cancel') {
+        return false;
+    }
+    // ثبت فیش کارت‌به‌کارت از منوی اصلی حذف شده — فقط پرداخت آنلاین
+    if ($key === 'receipt') {
         return false;
     }
     if ($key === 'desk' && (!$user || !casting_user_is_director_role((int) $user->ID))) {

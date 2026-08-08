@@ -451,8 +451,12 @@ function casting_checkout_fulfill_order(array $order): array
 
     if ($service === 'casting_call') {
         $project_id = (int) ($order['project_id'] ?? 0);
+        $type_key = sanitize_key((string) (($order['meta']['project_type'] ?? '') ?: ($order['plan_key'] ?? '')));
         if ($project_id > 0) {
             update_user_meta($user_id, 'casting_casting_call_credit_' . $project_id, (string) $order['order_code']);
+        }
+        if ($type_key !== '') {
+            update_user_meta($user_id, 'casting_casting_call_credit_type_' . $type_key, (string) $order['order_code']);
         }
         update_user_meta($user_id, 'casting_last_casting_call_credit', (string) $order['order_code']);
     }
@@ -477,16 +481,33 @@ function casting_checkout_fulfill_order(array $order): array
 
 function casting_user_has_casting_call_credit(int $user_id, int $project_id): bool
 {
-    if ($user_id <= 0 || $project_id <= 0) {
+    if ($user_id <= 0) {
         return false;
     }
-    $code = (string) get_user_meta($user_id, 'casting_casting_call_credit_' . $project_id, true);
-    if ($code === '') {
-        return false;
+    if ($project_id > 0) {
+        $code = (string) get_user_meta($user_id, 'casting_casting_call_credit_' . $project_id, true);
+        if ($code !== '') {
+            $order = casting_get_order_by_code($code);
+            if ($order !== [] && (string) ($order['status'] ?? '') === 'paid' && (int) ($order['user_id'] ?? 0) === $user_id) {
+                return true;
+            }
+        }
+        if (function_exists('casting_director_get_project')) {
+            $project = casting_director_get_project($user_id, $project_id);
+            $type_key = casting_checkout_map_project_type((string) ($project['project_type'] ?? ''));
+            if ($type_key !== '') {
+                $type_code = (string) get_user_meta($user_id, 'casting_casting_call_credit_type_' . $type_key, true);
+                if ($type_code !== '') {
+                    $order = casting_get_order_by_code($type_code);
+                    if ($order !== [] && (string) ($order['status'] ?? '') === 'paid' && (int) ($order['user_id'] ?? 0) === $user_id) {
+                        return true;
+                    }
+                }
+            }
+        }
     }
-    $order = casting_get_order_by_code($code);
 
-    return $order !== [] && (string) ($order['status'] ?? '') === 'paid' && (int) ($order['user_id'] ?? 0) === $user_id;
+    return false;
 }
 
 function casting_consume_casting_call_credit(int $user_id, int $project_id): void
@@ -494,7 +515,18 @@ function casting_consume_casting_call_credit(int $user_id, int $project_id): voi
     if ($user_id <= 0 || $project_id <= 0) {
         return;
     }
-    delete_user_meta($user_id, 'casting_casting_call_credit_' . $project_id);
+    $code = (string) get_user_meta($user_id, 'casting_casting_call_credit_' . $project_id, true);
+    if ($code !== '') {
+        delete_user_meta($user_id, 'casting_casting_call_credit_' . $project_id);
+        return;
+    }
+    if (function_exists('casting_director_get_project')) {
+        $project = casting_director_get_project($user_id, $project_id);
+        $type_key = casting_checkout_map_project_type((string) ($project['project_type'] ?? ''));
+        if ($type_key !== '') {
+            delete_user_meta($user_id, 'casting_casting_call_credit_type_' . $type_key);
+        }
+    }
 }
 
 /**

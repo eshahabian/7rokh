@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/premium.php';
 require_once __DIR__ . '/includes/admin-access.php';
+require_once __DIR__ . '/includes/checkout.php';
 require_once __DIR__ . '/includes/panel.php';
 
 casting_nocache();
@@ -12,13 +13,7 @@ $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $premium = casting_user_is_premium($user_id);
 $plans = casting_premium_plans();
-$plan_key = sanitize_key((string) ($_GET['plan'] ?? 'featured_90'));
-if (!isset($plans[$plan_key]) || $plan_key === 'featured_30') {
-    $plan_key = 'featured_90';
-}
-$plan = $plans[$plan_key];
-require_once __DIR__ . '/includes/checkout.php';
-$vat_preview = casting_checkout_calc_amounts((int) $plan['price']);
+$catalog = casting_paid_services_catalog();
 $can_approve_receipts = casting_user_has_admin_permission($user_id, 'approve_receipts');
 $admin_filter = sanitize_key((string) ($_GET['status'] ?? 'pending'));
 if (!in_array($admin_filter, ['pending', 'approved', 'rejected', 'all'], true)) {
@@ -44,12 +39,43 @@ if ($can_approve_receipts && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_PO
 
 $admin_receipts = $can_approve_receipts ? casting_admin_list_receipts($admin_filter === 'all' ? '' : $admin_filter) : [];
 
-casting_render_panel_start('خرید و فعال‌سازی', 'premium');
+/** @var list<array{group:string,label:string,meta:string,href:string,price_final:int}> $shop_items */
+$shop_items = [];
+foreach ($plans as $key => $p) {
+    if ($key === 'featured_30') {
+        continue;
+    }
+    $calc = casting_checkout_calc_amounts((int) $p['price']);
+    $shop_items[] = [
+        'group'       => 'عضویت ویژه',
+        'label'       => 'عضویت ویژه — ' . (string) ($p['period_label'] ?? ''),
+        'meta'        => 'ارتقای حساب کاربری · ماهیانه ۷۰٬۰۰۰ تومان',
+        'href'        => 'checkout.php?service=premium&plan=' . rawurlencode($key),
+        'price_final' => $calc['final'],
+        'price_base'  => $calc['base'],
+        'vat'         => $calc['vat'],
+    ];
+}
+$call_types = $catalog['casting_call']['types'] ?? [];
+foreach ($call_types as $type_key => $type) {
+    $calc = casting_checkout_calc_amounts((int) $type['amount_base']);
+    $shop_items[] = [
+        'group'       => 'فراخوان کستینگ',
+        'label'       => (string) $type['label'],
+        'meta'        => 'انتشار یک فراخوان · ' . (string) ($catalog['casting_call']['service_type'] ?? ''),
+        'href'        => 'checkout.php?service=casting_call&plan=' . rawurlencode((string) $type_key),
+        'price_final' => $calc['final'],
+        'price_base'  => $calc['base'],
+        'vat'         => $calc['vat'],
+    ];
+}
+
+casting_render_panel_start('خرید اشتراک', 'premium');
 casting_render_flash();
 ?>
 <section class="dash-card">
-  <h1>خرید و فعال‌سازی</h1>
-  <p class="meta">با حساب کاربری ویژه، به جستجوی کاربران دسترسی دارید، می‌توانید گفتگو را شروع کنید و پروفایل شما در اولین نتایج جستجو نمایش داده می‌شود.</p>
+  <h1>خرید اشتراک و خدمات</h1>
+  <p class="meta">خدمت را انتخاب کنید؛ به صفحه خلاصه سفارش می‌روید. حساب فقط پس از پرداخت موفق شارژ/فعال می‌شود.</p>
 
   <?php if ($premium) : ?>
     <div class="flash flash-success">حساب کاربری ویژه فعال است.</div>
@@ -59,69 +85,44 @@ casting_render_flash();
   <?php if ($can_approve_receipts) : ?>
     <?php $pending_count = casting_admin_pending_receipt_count(); ?>
     <div class="premium-admin-notice">
-      <strong>مدیریت پرداخت‌ها</strong>
-      <p class="meta">می‌توانید فیش کاربران را تأیید کنید و حساب ویژه (طبق پلن فیش، حداقل ۳ ماه) برایشان فعال شود.</p>
+      <strong>مدیریت پرداخت‌ها (مدیران)</strong>
+      <p class="meta">تأیید فیش‌های قدیمی در صورت نیاز.</p>
       <?php if ($pending_count > 0) : ?>
         <p><a class="btn btn-primary btn-sm" href="#admin-receipts"><?= (int) $pending_count ?> فیش در انتظار تأیید</a></p>
       <?php endif; ?>
     </div>
   <?php endif; ?>
 
-  <article class="premium-plan premium-plan-main">
-    <h2><?= casting_e($plan['label']) ?></h2>
-    <p class="premium-duration"><?= casting_e((string) ($plan['period_label'] ?? '۳ ماه')) ?> (حداقل)</p>
-    <p class="premium-price"><?= casting_e(number_format((int) $plan['unit_price'])) ?> تومان <span class="meta">/ ماه</span></p>
-    <p class="premium-plan-note">
-      مبلغ پایه بسته <strong><?= casting_e((string) ($plan['period_label'] ?? '۳ ماه')) ?></strong>:
-      <strong><?= casting_e(number_format((int) $vat_preview['base'])) ?> تومان</strong>
-      + مالیات ۱۰٪ =
-      <strong><?= casting_e(number_format((int) $vat_preview['final'])) ?> تومان</strong>
-    </p>
-    <p><?= casting_e($plan['description']) ?></p>
-    <form class="form" method="get" action="premium.php" style="margin-top:0.75rem">
-      <div class="field">
-        <label for="plan">انتخاب بسته</label>
-        <select id="plan" name="plan" onchange="this.form.submit()">
-          <?php foreach ($plans as $key => $p) :
-              if ($key === 'featured_30') {
-                  continue;
-              }
-              ?>
-            <option value="<?= casting_e($key) ?>" <?= $plan_key === $key ? 'selected' : '' ?>>
-              <?= casting_e((string) $p['period_label']) ?> — <?= casting_e(number_format((int) $p['price'])) ?> تومان (+ مالیات)
-            </option>
-          <?php endforeach; ?>
-        </select>
+  <div class="shop-list">
+    <?php
+    $last_group = '';
+    foreach ($shop_items as $item) :
+        if ($last_group !== $item['group']) :
+            $last_group = $item['group'];
+            ?>
+      <h2 class="panel-section-title shop-group-title"><?= casting_e($last_group) ?></h2>
+        <?php endif; ?>
+    <article class="shop-item">
+      <div class="shop-item-body">
+        <strong><?= casting_e($item['label']) ?></strong>
+        <p class="meta"><?= casting_e($item['meta']) ?></p>
+        <p class="shop-item-price">
+          <?= casting_e(number_format((int) $item['price_base'])) ?> + مالیات
+          = <strong><?= casting_e(number_format((int) $item['price_final'])) ?> تومان</strong>
+        </p>
       </div>
-    </form>
-  </article>
-
-  <div class="premium-action-row">
-    <a class="premium-action-tile premium-action-tile--primary" href="checkout.php?service=premium&plan=<?= casting_e($plan_key) ?>">
-      <span class="premium-action-icon" aria-hidden="true">💳</span>
-      <strong>خرید آنلاین</strong>
-      <span class="premium-action-meta">خلاصه سفارش و انتقال به درگاه</span>
-    </a>
-    <a class="premium-action-tile" href="premium-receipt.php?plan=<?= casting_e($plan_key) ?>">
-      <span class="premium-action-icon" aria-hidden="true">🧾</span>
-      <strong>ثبت فیش</strong>
-      <span class="premium-action-meta">بارگذاری فیش کارت به کارت</span>
-    </a>
-    <a class="premium-action-tile" href="transactions.php">
-      <span class="premium-action-icon" aria-hidden="true">✓</span>
-      <strong>فعال‌سازی</strong>
-      <span class="premium-action-meta">پیگیری وضعیت و تأیید</span>
-    </a>
+      <a class="btn btn-primary" href="<?= casting_e($item['href']) ?>">خرید و خلاصه سفارش</a>
+    </article>
+    <?php endforeach; ?>
   </div>
 
-  <div class="bio-block premium-payment-block">
-    <h2>نحوه پرداخت</h2>
+  <div class="bio-block premium-payment-block" style="margin-top:1.25rem">
+    <h2>نکته مهم</h2>
     <ul class="info-list">
-      <li><strong>آنلاین:</strong> از دکمه «خرید آنلاین» وارد خلاصه سفارش شوید، قوانین را بپذیرید و به درگاه بانکی بروید.</li>
-      <li><strong>کارت به کارت:</strong> <?= casting_e(CASTING_PAYMENT_CARD) ?> به نام <?= casting_e(CASTING_PAYMENT_HOLDER) ?></li>
-      <li><strong>مبلغ پایه بسته:</strong> <?= casting_e(number_format((int) $vat_preview['base'])) ?> تومان · <strong>با مالیات:</strong> <?= casting_e(number_format((int) $vat_preview['final'])) ?> تومان</li>
+      <li>با زدن «خرید» فقط وارد خلاصه سفارش می‌شوید؛ تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
+      <li>عضویت ویژه: حداقل ۳ ماه · ماهیانه ۷۰٬۰۰۰ تومان · مالیات بر ارزش افزوده ۱۰٪.</li>
+      <li>فراخوان تئاتر و فیلم کوتاه: ۷۰۰٬۰۰۰ تومان (+ مالیات) · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان (+ مالیات).</li>
     </ul>
-    <p class="meta">حداقل عضویت ویژه ۳ ماهه است (ماهیانه ۷۰٬۰۰۰ تومان). مالیات بر ارزش افزوده ۱۰٪ به مبلغ افزوده می‌شود.</p>
   </div>
 </section>
 
