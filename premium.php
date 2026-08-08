@@ -12,8 +12,13 @@ $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $premium = casting_user_is_premium($user_id);
 $plans = casting_premium_plans();
-$plan_key = 'featured_30';
+$plan_key = sanitize_key((string) ($_GET['plan'] ?? 'featured_90'));
+if (!isset($plans[$plan_key]) || $plan_key === 'featured_30') {
+    $plan_key = 'featured_90';
+}
 $plan = $plans[$plan_key];
+require_once __DIR__ . '/includes/checkout.php';
+$vat_preview = casting_checkout_calc_amounts((int) $plan['price']);
 $can_approve_receipts = casting_user_has_admin_permission($user_id, 'approve_receipts');
 $admin_filter = sanitize_key((string) ($_GET['status'] ?? 'pending'));
 if (!in_array($admin_filter, ['pending', 'approved', 'rejected', 'all'], true)) {
@@ -55,7 +60,7 @@ casting_render_flash();
     <?php $pending_count = casting_admin_pending_receipt_count(); ?>
     <div class="premium-admin-notice">
       <strong>مدیریت پرداخت‌ها</strong>
-      <p class="meta">می‌توانید فیش کاربران را تأیید کنید و حساب ویژه ۳۰ روزه برایشان فعال شود.</p>
+      <p class="meta">می‌توانید فیش کاربران را تأیید کنید و حساب ویژه (طبق پلن فیش، حداقل ۳ ماه) برایشان فعال شود.</p>
       <?php if ($pending_count > 0) : ?>
         <p><a class="btn btn-primary btn-sm" href="#admin-receipts"><?= (int) $pending_count ?> فیش در انتظار تأیید</a></p>
       <?php endif; ?>
@@ -64,13 +69,39 @@ casting_render_flash();
 
   <article class="premium-plan premium-plan-main">
     <h2><?= casting_e($plan['label']) ?></h2>
-    <p class="premium-duration"><?= casting_e((string) ($plan['period_label'] ?? '۱ ماه')) ?></p>
-    <p class="premium-price"><?= casting_e(number_format((int) $plan['price'])) ?> تومان</p>
-    <p class="premium-plan-note">مبلغ <strong><?= casting_e(number_format((int) $plan['price'])) ?> تومان</strong> برای <strong><?= casting_e((string) ($plan['period_label'] ?? '۱ ماه')) ?></strong> حساب کاربری ویژه</p>
+    <p class="premium-duration"><?= casting_e((string) ($plan['period_label'] ?? '۳ ماه')) ?> (حداقل)</p>
+    <p class="premium-price"><?= casting_e(number_format((int) $plan['unit_price'])) ?> تومان <span class="meta">/ ماه</span></p>
+    <p class="premium-plan-note">
+      مبلغ پایه بسته <strong><?= casting_e((string) ($plan['period_label'] ?? '۳ ماه')) ?></strong>:
+      <strong><?= casting_e(number_format((int) $vat_preview['base'])) ?> تومان</strong>
+      + مالیات ۱۰٪ =
+      <strong><?= casting_e(number_format((int) $vat_preview['final'])) ?> تومان</strong>
+    </p>
     <p><?= casting_e($plan['description']) ?></p>
+    <form class="form" method="get" action="premium.php" style="margin-top:0.75rem">
+      <div class="field">
+        <label for="plan">انتخاب بسته</label>
+        <select id="plan" name="plan" onchange="this.form.submit()">
+          <?php foreach ($plans as $key => $p) :
+              if ($key === 'featured_30') {
+                  continue;
+              }
+              ?>
+            <option value="<?= casting_e($key) ?>" <?= $plan_key === $key ? 'selected' : '' ?>>
+              <?= casting_e((string) $p['period_label']) ?> — <?= casting_e(number_format((int) $p['price'])) ?> تومان (+ مالیات)
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+    </form>
   </article>
 
   <div class="premium-action-row">
+    <a class="premium-action-tile premium-action-tile--primary" href="checkout.php?service=premium&plan=<?= casting_e($plan_key) ?>">
+      <span class="premium-action-icon" aria-hidden="true">💳</span>
+      <strong>خرید آنلاین</strong>
+      <span class="premium-action-meta">خلاصه سفارش و انتقال به درگاه</span>
+    </a>
     <a class="premium-action-tile" href="premium-receipt.php?plan=<?= casting_e($plan_key) ?>">
       <span class="premium-action-icon" aria-hidden="true">🧾</span>
       <strong>ثبت فیش</strong>
@@ -86,18 +117,18 @@ casting_render_flash();
   <div class="bio-block premium-payment-block">
     <h2>نحوه پرداخت</h2>
     <ul class="info-list">
-      <li><strong>کارت:</strong> <?= casting_e(CASTING_PAYMENT_CARD) ?></li>
-      <li><strong>به نام:</strong> <?= casting_e(CASTING_PAYMENT_HOLDER) ?></li>
-      <li><strong>مبلغ:</strong> <?= casting_e(number_format((int) $plan['price'])) ?> تومان (<?= casting_e((string) ($plan['period_label'] ?? '۱ ماه')) ?>)</li>
+      <li><strong>آنلاین:</strong> از دکمه «خرید آنلاین» وارد خلاصه سفارش شوید، قوانین را بپذیرید و به درگاه بانکی بروید.</li>
+      <li><strong>کارت به کارت:</strong> <?= casting_e(CASTING_PAYMENT_CARD) ?> به نام <?= casting_e(CASTING_PAYMENT_HOLDER) ?></li>
+      <li><strong>مبلغ پایه بسته:</strong> <?= casting_e(number_format((int) $vat_preview['base'])) ?> تومان · <strong>با مالیات:</strong> <?= casting_e(number_format((int) $vat_preview['final'])) ?> تومان</li>
     </ul>
-    <p class="meta">پس از واریز، فیش را ثبت کنید. پس از تأیید مدیر، حساب کاربری ویژه فعال می‌شود.</p>
+    <p class="meta">حداقل عضویت ویژه ۳ ماهه است (ماهیانه ۷۰٬۰۰۰ تومان). مالیات بر ارزش افزوده ۱۰٪ به مبلغ افزوده می‌شود.</p>
   </div>
 </section>
 
 <?php if ($can_approve_receipts) : ?>
 <section class="dash-card" id="admin-receipts" style="margin-top:1rem">
   <h2 class="panel-section-title">مدیریت فیش‌ها و ارتقا به ویژه</h2>
-  <p class="meta">تأیید فیش = فعال‌سازی ۳۰ روز حساب کاربری ویژه برای کاربر · پس از ۳۰ روز خودکار غیرفعال می‌شود.</p>
+  <p class="meta">تأیید فیش = فعال‌سازی حساب کاربری ویژه طبق پلن · پس از پایان اعتبار خودکار غیرفعال می‌شود.</p>
 
   <nav class="admin-tabs" aria-label="فیلتر وضعیت">
     <?php foreach (['pending' => 'در انتظار', 'approved' => 'تأیید شده', 'rejected' => 'رد شده', 'all' => 'همه'] as $key => $label) : ?>

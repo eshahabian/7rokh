@@ -9,9 +9,9 @@ require_once __DIR__ . '/includes/panel.php';
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $plans = casting_premium_plans();
-$plan_key = sanitize_key((string) ($_GET['plan'] ?? $_POST['plan'] ?? 'featured_30'));
-if (!isset($plans[$plan_key])) {
-    $plan_key = 'featured_30';
+$plan_key = sanitize_key((string) ($_GET['plan'] ?? $_POST['plan'] ?? 'featured_90'));
+if (!isset($plans[$plan_key]) || $plan_key === 'featured_30') {
+    $plan_key = 'featured_90';
 }
 $plan = $plans[$plan_key];
 $error = '';

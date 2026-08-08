@@ -17,9 +17,14 @@ $pending_receipts = casting_user_has_admin_permission($user_id, 'approve_receipt
 $tiles = [
     [
         'title' => 'خرید و فعال‌سازی',
-        'desc'  => 'اشتراک ویژه، جستجو و اولویت در نتایج',
+        'desc'  => 'اشتراک ویژه، خلاصه سفارش و درگاه بانکی',
         'href'  => 'premium.php',
         'badge' => $pending_receipts,
+    ],
+    [
+        'title' => 'خرید آنلاین عضویت ویژه',
+        'desc'  => 'حداقل ۳ ماه · ۷۰ هزار تومان / ماه + مالیات',
+        'href'  => 'checkout.php?service=premium&plan=featured_90',
     ],
     [
         'title' => 'ثبت فیش کارت به کارت',

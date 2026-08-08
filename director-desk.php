@@ -102,6 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $call_role_id
             );
             if (!$result['ok']) {
+                if (!empty($result['need_checkout']) && !empty($result['checkout_url'])) {
+                    casting_set_flash('error', (string) ($result['error'] ?? 'پرداخت فراخوان لازم است.'));
+                    casting_redirect((string) $result['checkout_url']);
+                }
                 $error = $result['error'] ?? 'ارسال فراخوان ناموفق بود.';
             } else {
                 $msg = 'فراخوان برای ' . (int) ($result['sent'] ?? 0) . ' عضو ارسال شد';

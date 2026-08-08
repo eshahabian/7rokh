@@ -3,21 +3,45 @@ declare(strict_types=1);
 
 function casting_premium_plans(): array
 {
+    $month = 70000;
+
     return [
-        'featured_30' => [
-            'label'        => 'حساب کاربری ویژه',
-            'days'         => 30,
-            'period_label' => '۱ ماه',
-            'price'        => 70000,
-            'description'  => '۷۰,۰۰۰ تومان برای ۱ ماه — دسترسی به جستجو، شروع گفتگو با اعضا، اولویت در نتایج و برچسب ویژه',
-        ],
-        // پلن قدیمی — فقط برای فیش‌های قبلی
         'featured_90' => [
-            'label'        => 'حساب کاربری ویژه',
-            'days'         => 30,
-            'period_label' => '۱ ماه',
-            'price'        => 70000,
-            'description'  => '۷۰,۰۰۰ تومان برای ۱ ماه — دسترسی به جستجو، شروع گفتگو با اعضا، اولویت در نتایج و برچسب ویژه',
+            'label'        => 'عضویت ویژه پرتال ۷رخ',
+            'days'         => 90,
+            'months'       => 3,
+            'period_label' => '۳ ماه',
+            'price'        => $month * 3,
+            'unit_price'   => $month,
+            'description'  => 'حداقل ۳ ماه — ماهیانه ۷۰٬۰۰۰ تومان (+ مالیات بر ارزش افزوده). دسترسی به جستجو، شروع گفتگو و اولویت در نتایج.',
+        ],
+        'featured_180' => [
+            'label'        => 'عضویت ویژه پرتال ۷رخ',
+            'days'         => 180,
+            'months'       => 6,
+            'period_label' => '۶ ماه',
+            'price'        => $month * 6,
+            'unit_price'   => $month,
+            'description'  => '۶ ماه — ماهیانه ۷۰٬۰۰۰ تومان (+ مالیات بر ارزش افزوده).',
+        ],
+        'featured_365' => [
+            'label'        => 'عضویت ویژه پرتال ۷رخ',
+            'days'         => 365,
+            'months'       => 12,
+            'period_label' => '۱۲ ماه',
+            'price'        => $month * 12,
+            'unit_price'   => $month,
+            'description'  => '۱۲ ماه — ماهیانه ۷۰٬۰۰۰ تومان (+ مالیات بر ارزش افزوده).',
+        ],
+        // سازگاری با فیش‌ها / لینک‌های قدیمی (حداقل ۳ ماه)
+        'featured_30' => [
+            'label'        => 'عضویت ویژه پرتال ۷رخ',
+            'days'         => 90,
+            'months'       => 3,
+            'period_label' => '۳ ماه',
+            'price'        => $month * 3,
+            'unit_price'   => $month,
+            'description'  => 'حداقل ۳ ماه — ماهیانه ۷۰٬۰۰۰ تومان (+ مالیات بر ارزش افزوده).',
         ],
     ];
 }
@@ -94,6 +118,33 @@ function casting_user_is_premium(int $user_id): bool
         return false;
     }
     return strtotime($until) >= strtotime((string) current_time('mysql'));
+}
+
+/**
+ * فعال‌سازی / تمدید عضویت ویژه پس از پرداخت موفق
+ *
+ * @return array{ok:bool,error:string,until?:string}
+ */
+function casting_premium_activate_for_user(int $user_id, int $days, string $plan_key = '', int $amount = 0, string $ref = ''): array
+{
+    if ($user_id <= 0) {
+        return ['ok' => false, 'error' => 'کاربر نامعتبر است.'];
+    }
+    $days = max(1, $days);
+    $current = (string) get_user_meta($user_id, 'casting_premium_until', true);
+    $now = (string) current_time('mysql');
+    $now_ts = strtotime($now);
+    $base_ts = ($current !== '' && strtotime($current) > $now_ts) ? strtotime($current) : $now_ts;
+    $until = wp_date('Y-m-d H:i:s', $base_ts + ($days * DAY_IN_SECONDS));
+    update_user_meta($user_id, 'casting_premium_until', $until);
+    if ($plan_key !== '') {
+        update_user_meta($user_id, 'casting_premium_last_plan', sanitize_key($plan_key));
+    }
+    if ($ref !== '') {
+        update_user_meta($user_id, 'casting_premium_last_ref', sanitize_text_field($ref));
+    }
+
+    return ['ok' => true, 'error' => '', 'until' => $until];
 }
 
 function casting_premium_until_label(int $user_id): string
@@ -321,7 +372,7 @@ function casting_approve_premium_receipt(int $receipt_id): array
  *
  * @return array{ok:bool,error:string,until?:string}
  */
-function casting_admin_grant_premium(int $target_id, int $admin_id, string $plan_key = 'featured_30'): array
+function casting_admin_grant_premium(int $target_id, int $admin_id, string $plan_key = 'featured_90'): array
 {
     if (!function_exists('casting_user_has_admin_permission')) {
         require_once __DIR__ . '/admin-access.php';
@@ -335,7 +386,7 @@ function casting_admin_grant_premium(int $target_id, int $admin_id, string $plan
 
     $plans = casting_premium_plans();
     if (!isset($plans[$plan_key])) {
-        $plan_key = 'featured_30';
+        $plan_key = 'featured_90';
     }
     if (!isset($plans[$plan_key])) {
         return ['ok' => false, 'error' => 'پلن ویژه تعریف نشده است.'];

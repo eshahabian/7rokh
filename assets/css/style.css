@@ -5773,6 +5773,52 @@ html[data-theme="day"] .member-card-photo-score {
   margin: 0 0 0.75rem;
 }
 
+.checkout-card h1 {
+  margin-bottom: 0.35rem;
+}
+
+.checkout-summary-list .checkout-total {
+  margin-top: 0.5rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+  font-size: 1.05rem;
+}
+
+.checkout-desc {
+  margin-top: 1rem;
+}
+
+.checkout-rules-link {
+  margin: 1rem 0 0.5rem;
+}
+
+.checkout-rules-accept {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0.75rem 0 1.1rem;
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.checkout-rules-accept input {
+  margin-top: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.checkout-actions {
+  flex-wrap: wrap;
+}
+
+.checkout-call-price {
+  margin: 0.75rem 0 1rem;
+}
+
+.premium-action-tile--primary {
+  border-color: rgba(212, 165, 116, 0.55);
+  background: rgba(212, 165, 116, 0.12);
+}
+
 .btn.is-follow-locked,
 button.is-follow-locked {
   opacity: 0.85;

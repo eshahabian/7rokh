@@ -105,10 +105,13 @@ function casting_director_require_director(int $user_id): bool
 function casting_director_project_type_labels(): array
 {
     return [
-        'film'    => 'فیلم',
-        'series'  => 'سریال',
-        'theater' => 'تئاتر',
-        'other'   => 'سایر',
+        'theater'    => 'تئاتر',
+        'short_film' => 'فیلم کوتاه',
+        'cinema'     => 'فیلم سینمایی',
+        'tv'         => 'تلویزیونی / سریال',
+        'film'       => 'فیلم (قدیمی)',
+        'series'     => 'سریال (قدیمی)',
+        'other'      => 'سایر',
     ];
 }
 
@@ -169,9 +172,9 @@ function casting_director_save_project(int $director_id, int $project_id, array 
 
     $types = casting_director_project_type_labels();
     $statuses = casting_director_production_status_labels();
-    $project_type = sanitize_key((string) ($data['project_type'] ?? 'film'));
+    $project_type = sanitize_key((string) ($data['project_type'] ?? 'theater'));
     if (!isset($types[$project_type])) {
-        $project_type = 'film';
+        $project_type = 'theater';
     }
     $production_status = sanitize_key((string) ($data['production_status'] ?? 'planning'));
     if (!isset($statuses[$production_status])) {
@@ -514,7 +517,7 @@ function casting_director_get_role_talent(int $director_id, int $role_id, int $t
 /**
  * @return array{ok:bool,error?:string,project_id?:int}
  */
-function casting_director_create_project(int $director_id, string $title, string $project_type = 'film', string $notes = ''): array
+function casting_director_create_project(int $director_id, string $title, string $project_type = 'theater', string $notes = ''): array
 {
     casting_director_desk_ensure_tables();
     if (!casting_director_require_director($director_id)) {
@@ -528,7 +531,7 @@ function casting_director_create_project(int $director_id, string $title, string
     $types = casting_director_project_type_labels();
     $project_type = sanitize_key($project_type);
     if (!isset($types[$project_type])) {
-        $project_type = 'film';
+        $project_type = 'theater';
     }
     $notes = sanitize_textarea_field($notes);
 
@@ -1109,6 +1112,23 @@ function casting_director_send_casting_call(
         return ['ok' => false, 'error' => 'اطلاعات پروژه پیدا نشد.'];
     }
 
+    if (!function_exists('casting_user_has_casting_call_credit')) {
+        require_once __DIR__ . '/checkout.php';
+    }
+    if (!casting_user_has_casting_call_credit($director_id, $project_id)) {
+        $type_key = casting_checkout_map_project_type((string) ($project['project_type'] ?? ''));
+        if ($type_key === '') {
+            return ['ok' => false, 'error' => 'برای انتشار فراخوان، نوع پروژه باید تئاتر، فیلم کوتاه، سینمایی یا تلویزیونی باشد.'];
+        }
+
+        return [
+            'ok'            => false,
+            'error'         => 'برای انتشار فراخوان ابتدا هزینه آن را پرداخت کنید.',
+            'need_checkout' => true,
+            'checkout_url'  => 'checkout.php?service=casting_call&plan=' . rawurlencode($type_key) . '&project=' . $project_id,
+        ];
+    }
+
     $talents = casting_director_query_call_talents($director_id, $filters);
     $matched = count($talents);
     if ($matched === 0 && !$publish_public) {
@@ -1217,6 +1237,10 @@ function casting_director_send_casting_call(
     ]);
     update_user_meta($director_id, 'casting_director_call_log', array_slice($log, 0, 50));
 
+    if (function_exists('casting_consume_casting_call_credit')) {
+        casting_consume_casting_call_credit($director_id, $project_id);
+    }
+
     return [
         'ok'             => true,
         'sent'           => $sent,
@@ -1230,6 +1254,20 @@ function casting_director_send_casting_call(
  */
 function casting_render_director_casting_call_form(int $project_id, array $filters = [], string $message = '', int $director_id = 0): void
 {
+    if (!function_exists('casting_paid_services_catalog')) {
+        require_once __DIR__ . '/checkout.php';
+    }
+    $project = $director_id > 0 ? casting_director_get_project($director_id, $project_id) : [];
+    $type_key = casting_checkout_map_project_type((string) ($project['project_type'] ?? ''));
+    $catalog = casting_paid_services_catalog();
+    $call_types = $catalog['casting_call']['types'] ?? [];
+    $price_base = ($type_key !== '' && isset($call_types[$type_key])) ? (int) $call_types[$type_key]['amount_base'] : 0;
+    $price_final = $price_base > 0 ? casting_checkout_calc_amounts($price_base)['final'] : 0;
+    $has_credit = $director_id > 0 && casting_user_has_casting_call_credit($director_id, $project_id);
+    $checkout_href = $type_key !== ''
+        ? ('checkout.php?service=casting_call&plan=' . rawurlencode($type_key) . '&project=' . (int) $project_id)
+        : '';
+
     if (!function_exists('casting_render_body_metric_group')) {
         require_once __DIR__ . '/panel.php';
     }
@@ -1277,6 +1315,19 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
     <div class="director-casting-call">
       <h2 class="panel-section-title">فراخوان کستینگ</h2>
       <p class="field-hint">برای اعضای منطبق ارسال می‌شود و به‌صورت پیش‌فرض در فید عمومی «فرصت‌ها» هم منتشر می‌شود تا دیگران بتوانند اپلای کنند.</p>
+      <?php if ($type_key === '') : ?>
+        <div class="flash flash-error">نوع پروژه برای قیمت‌گذاری فراخوان مناسب نیست. نوع را روی تئاتر، فیلم کوتاه، سینمایی یا تلویزیونی تنظیم کنید.</div>
+      <?php else : ?>
+        <div class="bio-block checkout-call-price">
+          <p><strong>هزینه انتشار این فراخوان:</strong> <?= casting_e(casting_format_toman($price_base)) ?> + مالیات ۱۰٪ = <strong><?= casting_e(casting_format_toman($price_final)) ?></strong></p>
+          <?php if ($has_credit) : ?>
+            <p class="meta flash-success" style="margin:0.35rem 0 0">پرداخت این فراخوان انجام شده — می‌توانید ارسال کنید.</p>
+          <?php elseif ($checkout_href !== '') : ?>
+            <p class="meta" style="margin:0.35rem 0 0.65rem">قبل از ارسال، هزینه را پرداخت کنید (خلاصه سفارش → درگاه).</p>
+            <a class="btn btn-primary btn-sm" href="<?= casting_e($checkout_href) ?>">پرداخت فراخوان و رفتن به خلاصه سفارش</a>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
       <form class="form" method="post" action="director-desk.php?project=<?= $project_id ?>" onsubmit="return confirm('فراخوان ارسال و در فید فرصت‌ها منتشر شود؟');">
         <?php wp_nonce_field('casting_director_desk_page'); ?>
         <input type="hidden" name="desk_action" value="send_casting_call">
@@ -1316,7 +1367,10 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
           <input type="checkbox" name="publish_public" value="1" checked>
           در فید عمومی فرصت‌ها هم منتشر شود (اپلای باز)
         </label>
-        <button class="btn btn-primary" type="submit">ارسال و انتشار فراخوان</button>
+        <button class="btn btn-primary" type="submit"<?= (!$has_credit || $type_key === '') ? ' disabled title="ابتدا هزینه فراخوان را پرداخت کنید"' : '' ?>>ارسال و انتشار فراخوان</button>
+        <?php if (!$has_credit && $checkout_href !== '') : ?>
+          <a class="btn btn-ghost" href="<?= casting_e($checkout_href) ?>">پرداخت و خلاصه سفارش</a>
+        <?php endif; ?>
       </form>
 
       <?php if ($open_ops !== []) : ?>

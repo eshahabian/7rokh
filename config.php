@@ -33,6 +33,20 @@ define('CASTING_EMPLOYER_ROLES', ['director', 'producer']);
 define('CASTING_PAYMENT_CARD', '6037-9971-0000-0000');
 define('CASTING_PAYMENT_HOLDER', '۷ رخ');
 
+/** حالت درگاه پرداخت: sandbox | live | off */
+if (!defined('CASTING_GATEWAY_MODE')) {
+    define('CASTING_GATEWAY_MODE', 'sandbox');
+}
+if (!defined('CASTING_BEHPARDAKHT_TERMINAL_ID')) {
+    define('CASTING_BEHPARDAKHT_TERMINAL_ID', '');
+}
+if (!defined('CASTING_BEHPARDAKHT_USERNAME')) {
+    define('CASTING_BEHPARDAKHT_USERNAME', '');
+}
+if (!defined('CASTING_BEHPARDAKHT_PASSWORD')) {
+    define('CASTING_BEHPARDAKHT_PASSWORD', '');
+}
+
 /**
  * n8n — وقتی کسی ثبت‌نام کرد، JSON به این آدرس POST می‌شود.
  * خالی بگذارید = غیرفعال
