@@ -30,6 +30,7 @@ function casting_notify_n8n_registration(int $user_id, array $extra = []): void
         'role'       => $role,
         'role_label' => casting_role_label($role),
         'mobile'     => (string) ($profile['mobile'] ?? ''),
+        'mobile2'    => (string) ($profile['mobile2'] ?? ''),
         'city'       => (string) ($profile['city'] ?? ''),
         'province'   => $provinces[$profile['province'] ?? ''] ?? (string) ($profile['province'] ?? ''),
         'registered_at' => (string) get_user_meta($user_id, 'casting_registered_at', true),

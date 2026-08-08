@@ -1966,6 +1966,7 @@ function casting_get_profile(int $user_id): array
         'age'               => (string) get_user_meta($user_id, 'casting_age', true),
         'gender'            => (string) get_user_meta($user_id, 'casting_gender', true),
         'mobile'            => (string) get_user_meta($user_id, 'casting_mobile', true),
+        'mobile2'           => (string) get_user_meta($user_id, 'casting_mobile2', true),
         'phone'             => (string) get_user_meta($user_id, 'casting_phone', true),
         'province'          => (string) get_user_meta($user_id, 'casting_province', true),
         'city'              => (string) get_user_meta($user_id, 'casting_city', true),
@@ -2019,6 +2020,65 @@ function casting_normalize_mobile(string $mobile): string
     return $mobile;
 }
 
+/**
+ * شماره موبایل دوم (اختیاری) — خالی مجاز است؛ در صورت پر بودن باید معتبر و متفاوت از موبایل اصلی باشد.
+ *
+ * @return array{ok:bool,error:string,mobile:string}
+ */
+function casting_normalize_optional_mobile2(string $raw, string $primary_mobile = ''): array
+{
+    $mobile2 = casting_normalize_mobile($raw);
+    if ($mobile2 === '') {
+        return ['ok' => true, 'error' => '', 'mobile' => ''];
+    }
+    if (!preg_match('/^09\d{9}$/', $mobile2)) {
+        return ['ok' => false, 'error' => 'شماره موبایل دوم را درست وارد کنید (مثلاً ۰۹۱۲۱۲۳۴۵۶۷).', 'mobile' => ''];
+    }
+    $primary = casting_normalize_mobile($primary_mobile);
+    if ($primary !== '' && $mobile2 === $primary) {
+        return ['ok' => false, 'error' => 'شماره موبایل دوم باید با موبایل اصلی فرق داشته باشد.', 'mobile' => ''];
+    }
+
+    return ['ok' => true, 'error' => '', 'mobile' => $mobile2];
+}
+
+/**
+ * دکمه و فیلد اختیاری موبایل دوم (ثبت‌نام / ویرایش پروفایل)
+ */
+function casting_render_optional_mobile2_field(string $mobile2 = '', bool $invalid = false): void
+{
+    $has = $mobile2 !== '';
+    ?>
+  <div class="mobile2-extra" data-mobile2-extra>
+    <button
+      type="button"
+      class="btn btn-ghost btn-sm mobile2-add-btn"
+      data-mobile2-add
+      <?= $has ? 'hidden' : '' ?>
+    >+ افزودن شماره موبایل دوم (اختیاری)</button>
+    <div class="field mobile2-field<?= $invalid ? ' is-invalid' : '' ?>" data-mobile2-field<?= $has ? '' : ' hidden' ?>>
+      <label for="mobile2">موبایل دوم <span class="meta">(اختیاری)</span></label>
+      <div class="field-control field-control--mobile2">
+        <input
+          id="mobile2"
+          name="mobile2"
+          type="tel"
+          inputmode="numeric"
+          pattern="09[0-9]{9}"
+          value="<?= casting_e($mobile2) ?>"
+          placeholder="09121234567"
+          autocomplete="tel-national"
+          data-mobile2-input
+          <?= $invalid ? ' aria-invalid="true"' : '' ?>
+        >
+        <button type="button" class="btn btn-ghost btn-sm" data-mobile2-remove title="حذف شماره دوم">حذف</button>
+      </div>
+      <p class="field-hint">اگر لازم دارید شماره جایگزین ثبت کنید؛ این فیلد اجباری نیست.</p>
+    </div>
+  </div>
+    <?php
+}
+
 function casting_normalize_phone(string $phone): string
 {
     return preg_replace('/\D+/', '', $phone) ?? '';
@@ -2029,6 +2089,7 @@ function casting_register_focus_for_error(string $error): string
     $map = [
         'نام کاربری'       => 'username',
         'تلفن ثابت'        => 'phone',
+        'موبایل دوم'       => 'mobile2',
         'تاریخ تولد'       => 'birth_jd',
         'رنگ پوست'         => 'look',
         'ایمیل'            => 'email',
@@ -2207,6 +2268,14 @@ function casting_save_registration_profile(int $user_id, array $data): array
     if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
         return ['ok' => false, 'error' => 'شماره موبایل را درست وارد کنید (مثلاً ۰۹۱۲۱۲۳۴۵۶۷).'];
     }
+    $mobile2_res = casting_normalize_optional_mobile2((string) ($data['mobile2'] ?? ''), $mobile);
+    if (!$mobile2_res['ok']) {
+        return ['ok' => false, 'error' => $mobile2_res['error']];
+    }
+    $mobile2 = $mobile2_res['mobile'];
+    if ($mobile2 !== '' && function_exists('casting_mobile_is_taken') && casting_mobile_is_taken($mobile2, $user_id)) {
+        return ['ok' => false, 'error' => 'شماره موبایل دوم قبلاً برای حساب دیگری ثبت شده است.'];
+    }
     $phone = casting_normalize_phone((string) ($data['phone'] ?? ''));
     if ($phone !== '' && (strlen($phone) < 8 || strlen($phone) > 11)) {
         return ['ok' => false, 'error' => 'تلفن ثابت معتبر نیست.'];
@@ -2283,6 +2352,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
         update_user_meta($user_id, 'casting_look', $look);
     }
     update_user_meta($user_id, 'casting_mobile', $mobile);
+    update_user_meta($user_id, 'casting_mobile2', $mobile2);
     update_user_meta($user_id, 'casting_phone', $phone);
     update_user_meta($user_id, 'casting_province', $province);
     update_user_meta($user_id, 'casting_city', $city);
@@ -2389,6 +2459,22 @@ function casting_save_profile(int $user_id, array $data): array
         if ($mobile !== '') {
             update_user_meta($user_id, 'casting_mobile', $mobile);
         }
+    }
+    if (array_key_exists('mobile2', $data)) {
+        $primary = casting_normalize_mobile((string) (
+            array_key_exists('mobile', $data)
+                ? $data['mobile']
+                : get_user_meta($user_id, 'casting_mobile', true)
+        ));
+        $mobile2_res = casting_normalize_optional_mobile2((string) $data['mobile2'], $primary);
+        if (!$mobile2_res['ok']) {
+            return ['ok' => false, 'error' => $mobile2_res['error']];
+        }
+        $mobile2 = $mobile2_res['mobile'];
+        if ($mobile2 !== '' && function_exists('casting_mobile_is_taken') && casting_mobile_is_taken($mobile2, $user_id)) {
+            return ['ok' => false, 'error' => 'شماره موبایل دوم قبلاً برای حساب دیگری ثبت شده است.'];
+        }
+        update_user_meta($user_id, 'casting_mobile2', $mobile2);
     }
     if (array_key_exists('phone', $data)) {
         $phone = casting_normalize_phone((string) $data['phone']);

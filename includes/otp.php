@@ -73,11 +73,48 @@ function casting_find_user_by_mobile(string $mobile, int $exclude_user_id = 0): 
     return ['ok' => false, 'error' => 'کاربری با این موبایل پیدا نشد.'];
 }
 
+/**
+ * آیا این شماره به‌عنوان موبایل اصلی یا دومِ کاربر دیگری ثبت شده؟
+ */
 function casting_mobile_is_taken(string $mobile, int $exclude_user_id = 0): bool
 {
     $found = casting_find_user_by_mobile($mobile, $exclude_user_id);
+    if (!empty($found['ok'])) {
+        return true;
+    }
 
-    return !empty($found['ok']);
+    $mobile = casting_normalize_mobile($mobile);
+    if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
+        return false;
+    }
+
+    $q = new WP_User_Query([
+        'number'     => 5,
+        'meta_query' => [
+            [
+                'key'   => 'casting_mobile2',
+                'value' => $mobile,
+            ],
+        ],
+        'fields' => 'ID',
+    ]);
+    $ids = $q->get_results();
+    if (!is_array($ids)) {
+        return false;
+    }
+    foreach ($ids as $id) {
+        $uid = (int) $id;
+        if ($uid <= 0 || ($exclude_user_id > 0 && $uid === $exclude_user_id)) {
+            continue;
+        }
+        if (casting_get_user_role($uid) === '') {
+            continue;
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 function casting_otp_storage_key(string $purpose, string $mobile): string

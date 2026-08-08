@@ -2569,4 +2569,36 @@
       showImagePreview(card, file);
     }
   });
+
+  document.querySelectorAll("[data-mobile2-extra]").forEach((box) => {
+    const addBtn = box.querySelector("[data-mobile2-add]");
+    const field = box.querySelector("[data-mobile2-field]");
+    const input = box.querySelector("[data-mobile2-input]");
+    const removeBtn = box.querySelector("[data-mobile2-remove]");
+    if (!(field instanceof HTMLElement) || !(input instanceof HTMLInputElement)) return;
+
+    const show = () => {
+      field.hidden = false;
+      if (addBtn instanceof HTMLElement) addBtn.hidden = true;
+      input.focus();
+    };
+    const hide = () => {
+      input.value = "";
+      field.hidden = true;
+      if (addBtn instanceof HTMLElement) addBtn.hidden = false;
+    };
+
+    if (addBtn) {
+      addBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        show();
+      });
+    }
+    if (removeBtn) {
+      removeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        hide();
+      });
+    }
+  });
 })();

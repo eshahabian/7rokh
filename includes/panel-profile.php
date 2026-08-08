@@ -91,6 +91,7 @@ function casting_process_profile_post(int $user_id): array
         'gender'              => $_POST['gender'] ?? '',
         'email'               => $_POST['email'] ?? '',
         'mobile'              => $_POST['mobile'] ?? '',
+        'mobile2'             => $_POST['mobile2'] ?? '',
         'phone'               => $_POST['phone'] ?? '',
         'province'            => $_POST['province'] ?? '',
         'city'                => $_POST['city'] ?? '',
@@ -417,6 +418,9 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           <li><strong>ایمیل:</strong> <?= $embedded
               ? casting_panel_missing_label(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '')
               : casting_e(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '—') ?></li>
+          <?php if (($profile['mobile2'] ?? '') !== '') : ?>
+            <li><strong>موبایل دوم:</strong> <?= casting_e((string) $profile['mobile2']) ?></li>
+          <?php endif; ?>
         <?php endif; ?>
         <li><strong>سن:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($profile['age'] !== '' ? $profile['age'] . ' سال' : '')
@@ -834,6 +838,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
         <input id="phone" name="phone" type="tel" inputmode="numeric" value="<?= casting_e($profile['phone'] ?? '') ?>" placeholder="02112345678">
       </div>
     </div>
+    <?php casting_render_optional_mobile2_field((string) ($profile['mobile2'] ?? '')); ?>
 
     <?php casting_render_jalali_birthday_fields($profile['birthdate'], false); ?>
     <div class="field">

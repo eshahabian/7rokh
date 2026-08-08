@@ -23,6 +23,7 @@ $email = '';
 $gender = '';
 $look = '';
 $mobile = '';
+$mobile2 = '';
 $phone = '';
 $province = '';
 $city = '';
@@ -94,6 +95,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $gender = (string) ($_POST['gender'] ?? '');
         $look = (string) ($_POST['look'] ?? '');
         $mobile = (string) ($_POST['mobile'] ?? '');
+        $mobile2 = (string) ($_POST['mobile2'] ?? '');
         $phone = (string) ($_POST['phone'] ?? '');
         $province = (string) ($_POST['province'] ?? '');
         $city = (string) ($_POST['city'] ?? '');
@@ -223,6 +225,19 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = 'این شماره موبایل قبلاً ثبت شده است.';
                     $focus_field = 'mobile';
                     $invalid_fields = ['mobile'];
+                } else {
+                    $mobile2_res = casting_normalize_optional_mobile2($mobile2, $mobile_norm);
+                    if (!$mobile2_res['ok']) {
+                        $error = $mobile2_res['error'];
+                        $focus_field = 'mobile2';
+                        $invalid_fields = ['mobile2'];
+                    } elseif ($mobile2_res['mobile'] !== '' && casting_mobile_is_taken($mobile2_res['mobile'])) {
+                        $error = 'شماره موبایل دوم قبلاً ثبت شده است.';
+                        $focus_field = 'mobile2';
+                        $invalid_fields = ['mobile2'];
+                    } else {
+                        $mobile2 = $mobile2_res['mobile'];
+                    }
                 }
 
                 $otp_ok = !$otp_enabled || casting_otp_session_is_verified('register', $mobile_norm);
@@ -243,6 +258,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'gender'           => $gender,
                                 'look'             => $look,
                                 'mobile'           => $mobile_norm,
+                                'mobile2'          => $mobile2,
                                 'phone'            => $phone,
                                 'province'         => $province,
                                 'city'             => $city,
@@ -406,6 +422,7 @@ $pending_video = $pending_media['video'];
           <input id="phone" name="phone" type="tel" inputmode="numeric" value="<?= casting_e($phone) ?>" placeholder="02112345678" autocomplete="tel">
         </div>
       </div>
+      <?php casting_render_optional_mobile2_field($mobile2, $reg_invalid('mobile2') !== ''); ?>
 
       <?php if ($otp_enabled) : ?>
       <div class="otp-verify-block">
