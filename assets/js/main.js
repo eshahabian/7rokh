@@ -1136,6 +1136,29 @@
       (event) => {
         const first = event.target;
         if (!(first instanceof HTMLElement)) return;
+        const wrap = first.closest(".field, fieldset.field, .jalali-birth, .portrait-upload-card");
+        if (wrap) {
+          wrap.classList.add("is-invalid");
+          const hint = wrap.querySelector("[data-field-req-hint]");
+          if (hint) hint.hidden = false;
+        }
+        if (first instanceof HTMLInputElement || first instanceof HTMLSelectElement || first instanceof HTMLTextAreaElement) {
+          if (first.validity.valueMissing) {
+            first.setCustomValidity("این گزینه ستاره‌دار الزامی است.");
+          } else if (first.validity.tooShort || first.validity.patternMismatch || first.validity.typeMismatch) {
+            first.setCustomValidity(first.title || "مقدار این فیلد درست نیست.");
+          }
+          first.addEventListener(
+            "input",
+            () => {
+              first.setCustomValidity("");
+              wrap?.classList.remove("is-invalid");
+              const hint = wrap?.querySelector("[data-field-req-hint]");
+              if (hint) hint.hidden = true;
+            },
+            { once: true }
+          );
+        }
         if (form.dataset.registerInvalidHandled === "1") return;
         form.dataset.registerInvalidHandled = "1";
         window.setTimeout(() => {
@@ -1145,6 +1168,47 @@
       },
       true
     );
+
+    const markInvalidKeys = (keys) => {
+      keys.forEach((key) => {
+        if (!key) return;
+        const el =
+          form.querySelector("#" + CSS.escape(key)) ||
+          form.querySelector(`[name="${CSS.escape(key)}"]`) ||
+          form.querySelector(`input[name="${CSS.escape(key)}"]`);
+        const wrap =
+          el?.closest(".field, fieldset.field, .jalali-birth, .portrait-upload-card") ||
+          form.querySelector(`[data-field-key="${CSS.escape(key)}"]`);
+        if (wrap) {
+          wrap.classList.add("is-invalid");
+          const hint = wrap.querySelector("[data-field-req-hint]");
+          if (hint) hint.hidden = false;
+        }
+        if (key.startsWith("photo_") || key === "photo_medium_single") {
+          form.querySelector("#profile-photos-actor")?.classList.add("is-invalid");
+          form.querySelector("#profile-photo-single")?.classList.add("is-invalid");
+        }
+        if (key === "birth_jd" || key === "birth_jm" || key === "birth_jy") {
+          form.querySelector("[data-jalali-birth]")?.classList.add("is-invalid");
+        }
+        if (key === "province" || key === "city") {
+          el?.closest(".form-grid, .field")?.classList.add("is-invalid");
+          form.querySelector("#province")?.closest(".field")?.classList.add("is-invalid");
+          form.querySelector("#city")?.closest(".field")?.classList.add("is-invalid");
+        }
+        if (key === "health_well") {
+          form.querySelector("[data-health-field]")?.classList.add("is-invalid");
+        }
+        if (key === "activities") {
+          form.querySelector("[data-activity-items]")?.closest(".field, fieldset")?.classList.add("is-invalid");
+        }
+      });
+    };
+
+    const invalidAttr = form.getAttribute("data-invalid-fields") || "";
+    if (invalidAttr) {
+      markInvalidKeys(invalidAttr.split(",").map((s) => s.trim()).filter(Boolean));
+    }
 
     const focusId = form.getAttribute("data-focus-field");
     if (focusId) {

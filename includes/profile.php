@@ -1865,10 +1865,11 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
         $preview = $portraits[$slot]['url'] ?? '';
         $is_profile = $slot === 'profile';
         $slot_req = '';
-        if ($required && !$is_profile) {
+        $has_preview = $preview !== '';
+        if ($required && !$is_profile && !$has_preview) {
             $slot_req = ' required';
         }
-        if (!$required && $require_primary_only && $slot === 'medium') {
+        if (!$required && $require_primary_only && $slot === 'medium' && !$has_preview) {
             $slot_req = ' required';
         }
         ?>
@@ -1907,7 +1908,7 @@ function casting_render_single_profile_photo_field(array $portraits = [], bool $
 {
     $preview = (string) (($portraits['medium']['url'] ?? '') ?: ($portraits['medium']['full'] ?? ''));
     $dims = casting_portrait_display_dimensions();
-    $req = $required ? ' required' : '';
+    $req = ($required && $preview === '') ? ' required' : '';
     ?>
   <div class="portrait-upload-grid portrait-upload-grid--single">
     <div class="portrait-upload-card" data-file-preview-card>
@@ -2049,6 +2050,7 @@ function casting_register_focus_for_error(string $error): string
         'تشکل'             => 'artistic_membership',
         'قوانین'           => 'rules_accepted',
         'نام'              => 'name',
+        'فعالیت'           => 'activities',
     ];
     foreach ($map as $needle => $field) {
         if (str_contains($error, $needle)) {
@@ -2057,6 +2059,124 @@ function casting_register_focus_for_error(string $error): string
     }
 
     return '';
+}
+
+/**
+ * بررسی فیلدهای ستاره‌دار ثبت‌نام — همه ایرادها را یکجا برمی‌گرداند
+ *
+ * @param array<string, mixed> $ctx
+ * @return array{errors: list<string>, fields: list<string>}
+ */
+function casting_register_collect_required_issues(array $ctx): array
+{
+    $errors = [];
+    $fields = [];
+    $add = static function (string $field, string $message) use (&$errors, &$fields): void {
+        if (!in_array($field, $fields, true)) {
+            $fields[] = $field;
+        }
+        if (!in_array($message, $errors, true)) {
+            $errors[] = $message;
+        }
+    };
+
+    $activities = casting_normalize_activities($ctx['activities'] ?? []);
+    if ($activities === []) {
+        $add('activities', 'نوع فعالیت (ستاره‌دار) الزامی است.');
+    }
+    $skip_talent = !casting_activities_need_talent_fields($activities);
+    $pending = casting_register_pending_media_get();
+
+    $name = trim((string) ($ctx['name'] ?? ''));
+    if ($name === '' || casting_strlen($name) < 2) {
+        $add('name', 'نام و نام خانوادگی (ستاره‌دار) الزامی است.');
+    }
+    $username = trim((string) ($ctx['username'] ?? ''));
+    if ($username === '' || strlen($username) < 3) {
+        $add('username', 'نام کاربری (ستاره‌دار) الزامی است.');
+    }
+    $email = trim((string) ($ctx['email'] ?? ''));
+    if ($email === '' || !is_email($email)) {
+        $add('email', 'ایمیل (ستاره‌دار) الزامی است.');
+    }
+    $password = (string) ($ctx['password'] ?? '');
+    $password2 = (string) ($ctx['password2'] ?? '');
+    if (strlen($password) < 8) {
+        $add('password', 'رمز عبور (ستاره‌دار) حداقل ۸ کاراکتر است.');
+    }
+    if ($password !== $password2) {
+        $add('password2', 'تکرار رمز عبور با رمز یکسان نیست.');
+    }
+    $mobile = casting_normalize_mobile((string) ($ctx['mobile'] ?? ''));
+    if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
+        $add('mobile', 'موبایل (ستاره‌دار) را درست وارد کنید.');
+    }
+    $birthdate = (string) ($ctx['birthdate'] ?? '');
+    if ($birthdate === '' || casting_age_from_birthdate($birthdate) === null) {
+        $add('birth_jd', 'تاریخ تولد شمسی (ستاره‌دار) الزامی است.');
+    }
+    $gender = sanitize_key((string) ($ctx['gender'] ?? ''));
+    if (!array_key_exists($gender, casting_gender_labels())) {
+        $add('gender', 'جنسیت (ستاره‌دار) را انتخاب کنید.');
+    }
+    $province = sanitize_key((string) ($ctx['province'] ?? ''));
+    if (!array_key_exists($province, casting_province_labels())) {
+        $add('province', 'استان (ستاره‌دار) را انتخاب کنید.');
+    }
+    $city = casting_normalize_city_name((string) ($ctx['city'] ?? ''));
+    if ($province !== '' && !casting_is_valid_city_for_province($province, $city)) {
+        $add('city', 'شهر (ستاره‌دار) را انتخاب کنید.');
+    }
+    $experience = (string) ($ctx['experience'] ?? '');
+    if ($experience === '' || (int) $experience < 0 || (int) $experience > 60) {
+        $add('experience', 'سابقه فعالیت (ستاره‌دار) الزامی است.');
+    }
+    $license = sanitize_key((string) ($ctx['activity_license'] ?? ''));
+    if (!isset(casting_yes_no_labels()[$license])) {
+        $add('activity_license', 'پروانه فعالیت (ستاره‌دار) را مشخص کنید.');
+    }
+    if (empty($ctx['rules_accepted'])) {
+        $add('rules_accepted', 'تأیید قوانین (ستاره‌دار) الزامی است.');
+    }
+
+    if (!$skip_talent) {
+        $look = sanitize_key((string) ($ctx['look'] ?? ''));
+        if (!array_key_exists($look, casting_look_labels())) {
+            $add('look', 'رنگ پوست (ستاره‌دار) الزامی است.');
+        }
+        $health_err = casting_validate_health_fields([
+            'well'   => (string) ($ctx['health_well'] ?? ''),
+            'detail' => (string) ($ctx['health_status'] ?? ''),
+        ], true);
+        if ($health_err !== null) {
+            $add('health_well', $health_err);
+        }
+        $availability = sanitize_key((string) ($ctx['availability'] ?? ''));
+        if (!array_key_exists($availability, casting_availability_labels())) {
+            $add('availability', 'وضعیت آمادگی همکاری (ستاره‌دار) را انتخاب کنید.');
+        }
+        if (casting_activities_need_body_metrics($activities)) {
+            if (trim((string) ($ctx['height'] ?? '')) === '') {
+                $add('height', 'قد (ستاره‌دار) الزامی است.');
+            }
+            if (trim((string) ($ctx['weight'] ?? '')) === '') {
+                $add('weight', 'وزن (ستاره‌دار) الزامی است.');
+            }
+        }
+        foreach (casting_portrait_slots() as $slot => $label) {
+            $has = !empty($_FILES['photo_' . $slot]['name']) || !empty($pending['portraits'][$slot]);
+            if (!$has) {
+                $add('photo_' . $slot, 'عکس «' . $label . '» (ستاره‌دار) الزامی است.');
+            }
+        }
+    } else {
+        $has = !empty($_FILES['photo_medium']['name']) || !empty($pending['portraits']['medium']);
+        if (!$has) {
+            $add('photo_medium_single', 'عکس پروفایل (ستاره‌دار) الزامی است.');
+        }
+    }
+
+    return ['errors' => $errors, 'fields' => $fields];
 }
 
 function casting_save_registration_profile(int $user_id, array $data): array
@@ -2556,6 +2676,297 @@ function casting_media_handle_upload_as_user(string $field, int $user_id)
     casting_disable_user_upload_dir();
 
     return $attachment_id;
+}
+
+/**
+ * نگهداری موقت عکس/ویدیو ثبت‌نام در نشست — تا با خطای فرم پاک نشوند
+ *
+ * @return array{portraits: array<string, array{url:string,full:string,id:int,path:string,name:string,type:string}>, video:?array{url:string,path:string,name:string,type:string}}
+ */
+function casting_register_pending_media_get(): array
+{
+    $raw = $_SESSION['casting_reg_pending_media'] ?? null;
+    if (!is_array($raw)) {
+        return ['portraits' => [], 'video' => null];
+    }
+    $portraits = [];
+    foreach ((array) ($raw['portraits'] ?? []) as $slot => $item) {
+        if (!is_array($item) || empty($item['path']) || !is_file((string) $item['path'])) {
+            continue;
+        }
+        $portraits[(string) $slot] = [
+            'id'   => 0,
+            'url'  => (string) ($item['url'] ?? ''),
+            'full' => (string) ($item['url'] ?? ''),
+            'path' => (string) $item['path'],
+            'name' => (string) ($item['name'] ?? 'photo.jpg'),
+            'type' => (string) ($item['type'] ?? 'image/jpeg'),
+        ];
+    }
+    $video = null;
+    if (is_array($raw['video'] ?? null) && !empty($raw['video']['path']) && is_file((string) $raw['video']['path'])) {
+        $video = [
+            'url'  => (string) ($raw['video']['url'] ?? ''),
+            'path' => (string) $raw['video']['path'],
+            'name' => (string) ($raw['video']['name'] ?? 'video.mp4'),
+            'type' => (string) ($raw['video']['type'] ?? 'video/mp4'),
+        ];
+    }
+
+    return ['portraits' => $portraits, 'video' => $video];
+}
+
+function casting_register_pending_token(): string
+{
+    if (empty($_SESSION['casting_reg_pending_token']) || !is_string($_SESSION['casting_reg_pending_token'])) {
+        $_SESSION['casting_reg_pending_token'] = wp_generate_password(24, false, false);
+    }
+
+    return (string) $_SESSION['casting_reg_pending_token'];
+}
+
+/**
+ * @return array{basedir:string,baseurl:string,dir:string,url:string}|null
+ */
+function casting_register_pending_paths(): ?array
+{
+    $uploads = wp_upload_dir();
+    if (!empty($uploads['error'])) {
+        return null;
+    }
+    $token = preg_replace('/[^a-zA-Z0-9_-]/', '', casting_register_pending_token()) ?? '';
+    if ($token === '') {
+        return null;
+    }
+    $subdir = '/casting/_pending/' . $token;
+    $dir = (string) $uploads['basedir'] . $subdir;
+    if (!is_dir($dir) && !wp_mkdir_p($dir)) {
+        return null;
+    }
+
+    return [
+        'basedir' => (string) $uploads['basedir'],
+        'baseurl' => (string) $uploads['baseurl'],
+        'dir'     => $dir,
+        'url'     => (string) $uploads['baseurl'] . $subdir,
+    ];
+}
+
+/**
+ * فایل‌های آپلودشده این درخواست را در نشست نگه می‌دارد (جایگزین اسلات قبلی می‌شود).
+ */
+function casting_register_pending_capture_uploads(): void
+{
+    $paths = casting_register_pending_paths();
+    if ($paths === null) {
+        return;
+    }
+    $pending = casting_register_pending_media_get();
+    $slot_fields = [
+        'closeup'  => 'photo_closeup',
+        'medium'   => 'photo_medium',
+        'long'     => 'photo_long',
+        'profile'  => 'photo_profile',
+    ];
+    foreach ($slot_fields as $slot => $field) {
+        if (empty($_FILES[$field]['name']) || (int) ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            continue;
+        }
+        $file = $_FILES[$field];
+        $norm = casting_normalize_uploaded_file_type($file, 'image');
+        if (!$norm['ok']) {
+            continue;
+        }
+        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            $ext = 'jpg';
+        }
+        $dest_name = $slot . '.' . $ext;
+        $dest = $paths['dir'] . '/' . $dest_name;
+        if (!empty($pending['portraits'][$slot]['path']) && is_file($pending['portraits'][$slot]['path'])) {
+            @unlink($pending['portraits'][$slot]['path']);
+        }
+        if (!@move_uploaded_file((string) $file['tmp_name'], $dest)) {
+            continue;
+        }
+        $pending['portraits'][$slot] = [
+            'id'   => 0,
+            'url'  => $paths['url'] . '/' . rawurlencode($dest_name),
+            'full' => $paths['url'] . '/' . rawurlencode($dest_name),
+            'path' => $dest,
+            'name' => (string) $file['name'],
+            'type' => (string) ($norm['type'] ?? 'image/jpeg'),
+        ];
+        // مصرف شد تا دوباره media_handle_upload همان فایل را نبیند
+        $_FILES[$field]['name'] = '';
+        $_FILES[$field]['tmp_name'] = '';
+        $_FILES[$field]['error'] = UPLOAD_ERR_NO_FILE;
+    }
+
+    if (!empty($_FILES['video']['name']) && (int) ($_FILES['video']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+        $file = $_FILES['video'];
+        $norm = casting_normalize_uploaded_file_type($file, 'video');
+        if ($norm['ok']) {
+            $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['mp4', 'webm', 'mov'], true)) {
+                $ext = 'mp4';
+            }
+            $dest_name = 'intro.' . $ext;
+            $dest = $paths['dir'] . '/' . $dest_name;
+            if (!empty($pending['video']['path']) && is_file($pending['video']['path'])) {
+                @unlink($pending['video']['path']);
+            }
+            if (@move_uploaded_file((string) $file['tmp_name'], $dest)) {
+                $pending['video'] = [
+                    'url'  => $paths['url'] . '/' . rawurlencode($dest_name),
+                    'path' => $dest,
+                    'name' => (string) $file['name'],
+                    'type' => (string) ($norm['type'] ?? 'video/mp4'),
+                ];
+                $_FILES['video']['name'] = '';
+                $_FILES['video']['tmp_name'] = '';
+                $_FILES['video']['error'] = UPLOAD_ERR_NO_FILE;
+            }
+        }
+    }
+
+    $_SESSION['casting_reg_pending_media'] = [
+        'portraits' => $pending['portraits'],
+        'video'     => $pending['video'],
+    ];
+}
+
+function casting_register_pending_clear(): void
+{
+    $pending = casting_register_pending_media_get();
+    foreach ($pending['portraits'] as $item) {
+        if (!empty($item['path']) && is_file($item['path'])) {
+            @unlink($item['path']);
+        }
+    }
+    if (!empty($pending['video']['path']) && is_file($pending['video']['path'])) {
+        @unlink($pending['video']['path']);
+    }
+    $paths = casting_register_pending_paths();
+    if ($paths !== null && is_dir($paths['dir'])) {
+        @rmdir($paths['dir']);
+    }
+    unset($_SESSION['casting_reg_pending_media'], $_SESSION['casting_reg_pending_token']);
+}
+
+/**
+ * فایل pending را به پیوست کاربر تبدیل می‌کند.
+ *
+ * @param array{path:string,name:string,type:string} $item
+ * @return array{ok:bool,error:string,attachment_id?:int}
+ */
+function casting_register_pending_attach_to_user(array $item, int $user_id): array
+{
+    $path = (string) ($item['path'] ?? '');
+    if ($path === '' || !is_file($path) || $user_id <= 0) {
+        return ['ok' => false, 'error' => 'فایل موقت پیدا نشد.'];
+    }
+    casting_require_media_includes();
+    casting_enable_user_upload_dir($user_id);
+    $binary = file_get_contents($path);
+    if ($binary === false) {
+        casting_disable_user_upload_dir();
+
+        return ['ok' => false, 'error' => 'خواندن فایل موقت ناموفق بود.'];
+    }
+    $filename = sanitize_file_name((string) ($item['name'] ?? basename($path)));
+    if ($filename === '') {
+        $filename = basename($path);
+    }
+    $bits = wp_upload_bits($filename, null, $binary);
+    casting_disable_user_upload_dir();
+    if (!empty($bits['error'])) {
+        return ['ok' => false, 'error' => (string) $bits['error']];
+    }
+    $filetype = wp_check_filetype((string) $bits['file']);
+    $attachment = [
+        'post_mime_type' => (string) ($filetype['type'] ?: ($item['type'] ?? 'application/octet-stream')),
+        'post_title'     => preg_replace('/\.[^.]+$/', '', $filename) ?? $filename,
+        'post_content'   => '',
+        'post_status'    => 'inherit',
+        'post_author'    => $user_id,
+    ];
+    $attach_id = wp_insert_attachment($attachment, (string) $bits['file']);
+    if (is_wp_error($attach_id) || !$attach_id) {
+        return ['ok' => false, 'error' => 'ذخیره فایل ناموفق بود.'];
+    }
+    $meta = wp_generate_attachment_metadata((int) $attach_id, (string) $bits['file']);
+    if (is_array($meta)) {
+        wp_update_attachment_metadata((int) $attach_id, $meta);
+    }
+
+    return ['ok' => true, 'error' => '', 'attachment_id' => (int) $attach_id];
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_register_apply_pending_media(int $user_id, bool $require_all = false, bool $require_one = false): array
+{
+    $pending = casting_register_pending_media_get();
+    $labels = casting_all_portrait_slots();
+
+    foreach ($labels as $slot => $label) {
+        unset($label);
+        $field = 'photo_' . $slot;
+        if (!empty($_FILES[$field]['name'])) {
+            $result = casting_handle_portrait_upload($user_id, $slot);
+            if (!$result['ok']) {
+                return ['ok' => false, 'error' => $result['error']];
+            }
+            continue;
+        }
+        if (empty($pending['portraits'][$slot])) {
+            continue;
+        }
+        $attached = casting_register_pending_attach_to_user($pending['portraits'][$slot], $user_id);
+        if (!$attached['ok']) {
+            return $attached;
+        }
+        $meta_key = casting_portrait_meta_key($slot);
+        $old = (int) get_user_meta($user_id, $meta_key, true);
+        update_user_meta($user_id, $meta_key, (int) $attached['attachment_id']);
+        if ($slot === 'medium' || $slot === 'profile') {
+            update_user_meta($user_id, 'casting_photo_id', (int) $attached['attachment_id']);
+        }
+        if ($old > 0 && $old !== (int) $attached['attachment_id']) {
+            wp_delete_attachment($old, true);
+        }
+    }
+
+    if (!empty($_FILES['video']['name'])) {
+        $video = casting_handle_video_upload($user_id);
+        if (!$video['ok']) {
+            return ['ok' => false, 'error' => $video['error']];
+        }
+    } elseif (!empty($pending['video'])) {
+        $attached = casting_register_pending_attach_to_user($pending['video'], $user_id);
+        if (!$attached['ok']) {
+            return $attached;
+        }
+        $old = (int) get_user_meta($user_id, 'casting_video_id', true);
+        update_user_meta($user_id, 'casting_video_id', (int) $attached['attachment_id']);
+        if ($old > 0 && $old !== (int) $attached['attachment_id']) {
+            wp_delete_attachment($old, true);
+        }
+    }
+
+    $portraits = casting_load_all_portraits($user_id);
+    if ($require_all && !casting_portraits_complete($portraits)) {
+        return ['ok' => false, 'error' => 'هر سه عکس (کلوزاپ، مدیوم، لانگ) الزامی است.'];
+    }
+    if ($require_one && empty(casting_primary_portrait($portraits)['id'])) {
+        return ['ok' => false, 'error' => 'عکس پروفایل الزامی است.'];
+    }
+
+    casting_register_pending_clear();
+
+    return ['ok' => true, 'error' => ''];
 }
 
 /**

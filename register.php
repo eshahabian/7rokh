@@ -14,6 +14,7 @@ casting_nocache();
 
 $error = '';
 $focus_field = '';
+$invalid_fields = [];
 $password_mismatch = false;
 $otp_notice = '';
 $name = '';
@@ -51,6 +52,13 @@ $accent = '';
 $accent_other = '';
 $apparent_age_range = '';
 $age_preview = '';
+$pending_media = casting_register_pending_media_get();
+$pending_portraits = $pending_media['portraits'];
+$pending_video = $pending_media['video'];
+
+$reg_invalid = static function (string $key) use (&$invalid_fields): string {
+    return in_array($key, $invalid_fields, true) ? ' is-invalid' : '';
+};
 
 $current = casting_current_user();
 if ($current) {
@@ -122,6 +130,12 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $mobile_norm = casting_normalize_mobile($mobile);
         $otp_enabled = casting_mobile_otp_enabled();
 
+        // نگه داشتن عکس/ویدیو در نشست (حتی هنگام ارسال/تأیید OTP)
+        casting_register_pending_capture_uploads();
+        $pending_media = casting_register_pending_media_get();
+        $pending_portraits = $pending_media['portraits'];
+        $pending_video = $pending_media['video'];
+
         if ($is_otp_only) {
             if (!$otp_enabled) {
                 $error = 'تأیید موبایل موقتاً غیرفعال است؛ مستقیم ثبت‌نام را کامل کنید.';
@@ -162,30 +176,33 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($rate_error !== null) {
                 $error = $rate_error;
             } else {
-                if ($password !== $password2) {
-                    $password_mismatch = true;
-                    $focus_field = 'password2';
-                } elseif ($birthdate === '' || $age_calc === null) {
-                    $error = 'تاریخ تولد شمسی را کامل و درست انتخاب کنید.';
-                    $focus_field = 'birth_jd';
-                } elseif (!array_key_exists($gender, casting_gender_labels())) {
-                    $error = 'جنسیت را انتخاب کنید.';
-                    $focus_field = 'gender';
-                } elseif (!$skip_talent_profile && ($health_err = casting_validate_health_fields($health_parsed, true)) !== null) {
-                    $error = $health_err;
-                    $focus_field = 'health_well';
-                } elseif (empty($_POST['rules_accepted'])) {
-                    $error = 'برای ثبت‌نام باید قوانین را مطالعه و تأیید کنید.';
-                    $focus_field = 'rules_accepted';
-                } elseif (!$skip_talent_profile && !array_key_exists($availability, casting_availability_labels())) {
-                    $error = 'وضعیت آمادگی برای همکاری را انتخاب کنید.';
-                    $focus_field = 'availability';
-                } elseif ($mobile_norm === '' || !preg_match('/^09\d{9}$/', $mobile_norm)) {
-                    $error = 'شماره موبایل را درست وارد کنید.';
-                    $focus_field = 'mobile';
-                } elseif (casting_mobile_is_taken($mobile_norm)) {
-                    $error = 'این شماره موبایل قبلاً ثبت شده است.';
-                    $focus_field = 'mobile';
+                $issues = casting_register_collect_required_issues([
+                    'name'             => $name,
+                    'username'         => $username,
+                    'email'            => $email,
+                    'password'         => $password,
+                    'password2'        => $password2,
+                    'mobile'           => $mobile,
+                    'birthdate'        => $birthdate,
+                    'gender'           => $gender,
+                    'look'             => $look,
+                    'province'         => $province,
+                    'city'             => $city,
+                    'experience'       => $experience,
+                    'activity_license' => $activity_license,
+                    'health_well'      => $health_well,
+                    'health_status'    => $health_status,
+                    'availability'     => $availability,
+                    'height'           => $height,
+                    'weight'           => $weight,
+                    'activities'       => $activities,
+                    'rules_accepted'   => !empty($_POST['rules_accepted']),
+                ]);
+                if ($issues['errors'] !== []) {
+                    $invalid_fields = $issues['fields'];
+                    $password_mismatch = in_array('password2', $invalid_fields, true);
+                    $error = 'لطفاً فیلدهای ستاره‌دار را کامل کنید: ' . implode(' · ', $issues['errors']);
+                    $focus_field = $invalid_fields[0] ?? '';
                 } elseif ($otp_enabled && !casting_otp_session_is_verified('register', $mobile_norm)) {
                     $otp_code = (string) ($_POST['otp_code'] ?? '');
                     if ($otp_code !== '') {
@@ -195,11 +212,17 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         } else {
                             $error = $verify['error'];
                             $focus_field = 'otp_code';
+                            $invalid_fields = ['otp_code'];
                         }
                     } else {
                         $error = 'ابتدا موبایل را با کد پیامک تأیید کنید.';
                         $focus_field = 'otp_code';
+                        $invalid_fields = ['otp_code'];
                     }
+                } elseif (casting_mobile_is_taken($mobile_norm)) {
+                    $error = 'این شماره موبایل قبلاً ثبت شده است.';
+                    $focus_field = 'mobile';
+                    $invalid_fields = ['mobile'];
                 }
 
                 $otp_ok = !$otp_enabled || casting_otp_session_is_verified('register', $mobile_norm);
@@ -210,6 +233,9 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (!$result['ok']) {
                             $error = $result['error'];
                             $focus_field = casting_register_focus_for_error($error);
+                            if ($focus_field !== '') {
+                                $invalid_fields = [$focus_field];
+                            }
                         } else {
                             $user_id = (int) $result['user_id'];
                             $profile_save = casting_save_registration_profile($user_id, [
@@ -249,19 +275,16 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                 casting_delete_registered_user($user_id);
                                 $error = $profile_save['error'];
                                 $focus_field = casting_register_focus_for_error($error);
+                                if ($focus_field !== '') {
+                                    $invalid_fields = [$focus_field];
+                                }
                             } else {
-                                $photo = casting_handle_portrait_uploads($user_id, !$skip_talent_profile, $skip_talent_profile);
+                                $photo = casting_register_apply_pending_media($user_id, !$skip_talent_profile, $skip_talent_profile);
                                 if (!$photo['ok']) {
                                     casting_delete_registered_user($user_id);
                                     $error = $photo['error'];
                                     $focus_field = $skip_talent_profile ? 'photo_medium_single' : 'photo_closeup';
-                                } else {
-                                    $video = casting_handle_video_upload($user_id);
-                                    if (!$video['ok']) {
-                                        casting_delete_registered_user($user_id);
-                                        $error = $video['error'];
-                                        $focus_field = 'video';
-                                    }
+                                    $invalid_fields = [$focus_field];
                                 }
                             }
 
@@ -316,6 +339,9 @@ if ($error !== '') {
 if ($otp_notice !== '') {
     echo '<div class="flash flash-success" role="alert">' . casting_e($otp_notice) . '</div>';
 }
+$pending_media = casting_register_pending_media_get();
+$pending_portraits = $pending_media['portraits'];
+$pending_video = $pending_media['video'];
 ?>
 <main class="wrap panel-page">
   <section class="panel panel-wide">
@@ -324,50 +350,56 @@ if ($otp_notice !== '') {
         ? 'اطلاعات پایه، عکس و ویدیو را وارد کنید. قبل از ایجاد حساب، موبایل را با کد پیامک تأیید کنید.'
         : 'اطلاعات پایه، عکس و ویدیو را وارد کنید و ثبت‌نام را کامل کنید.' ?></p>
 
-    <form class="form" method="post" action="register.php" enctype="multipart/form-data" autocomplete="on" data-talent-profile-toggle data-register-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?>>
+    <form class="form" method="post" action="register.php" enctype="multipart/form-data" autocomplete="on" data-talent-profile-toggle data-register-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?><?= $invalid_fields !== [] ? ' data-invalid-fields="' . casting_e(implode(',', $invalid_fields)) . '"' : '' ?>>
       <?php wp_nonce_field('casting_register'); ?>
 
       <?php casting_render_activity_fields($activities, true); ?>
 
-      <div class="field">
+      <div class="field<?= $reg_invalid('name') ?>">
         <label for="name">نام و نام خانوادگی <span class="req-mark">*</span></label>
         <input id="name" name="name" type="text" required autocomplete="name" value="<?= casting_e($name) ?>">
+        <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
       </div>
 
       <div class="form-grid">
-        <div class="field">
+        <div class="field<?= $reg_invalid('username') ?>">
           <label for="username">نام کاربری <span class="req-mark">*</span></label>
           <input id="username" name="username" type="text" required minlength="3" autocomplete="username" pattern="[A-Za-z0-9._\-]+" title="فقط حروف انگلیسی، عدد، نقطه، خط تیره" value="<?= casting_e($username) ?>">
           <p class="field-hint">با همین نام کاربری بعداً وارد می‌شوید</p>
+          <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
         </div>
-        <div class="field">
+        <div class="field<?= $reg_invalid('email') ?>">
           <label for="email">ایمیل <span class="req-mark">*</span></label>
           <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($email) ?>">
           <p class="field-hint">برای بازیابی رمز عبور، لینک بازنشانی به همین ایمیل ارسال می‌شود.</p>
+          <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
         </div>
       </div>
 
       <div class="form-grid">
-        <div class="field">
+        <div class="field<?= $reg_invalid('password') ?>">
           <label for="password">رمز عبور (حداقل ۸ کاراکتر) <span class="req-mark">*</span></label>
           <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password" data-password-source>
+          <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
         </div>
-        <div class="field" data-password-confirm-field<?= $password_mismatch ? ' is-invalid' : '' ?>>
+        <div class="field<?= $reg_invalid('password2') ?>" data-password-confirm-field<?= $password_mismatch ? ' is-invalid' : '' ?>>
           <label for="password2">تکرار رمز عبور <span class="req-mark">*</span></label>
           <div class="field-control field-control--password-confirm">
             <input id="password2" name="password2" type="password" required minlength="8" autocomplete="new-password" data-password-confirm<?= $password_mismatch ? ' aria-invalid="true"' : '' ?>>
             <span class="field-inline-error" data-password-mismatch-msg role="alert"<?= $password_mismatch ? '' : ' hidden' ?>>پسورد یکسان نیست</span>
           </div>
+          <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
         </div>
       </div>
 
       <div class="form-grid">
-        <div class="field">
+        <div class="field<?= $reg_invalid('mobile') ?>">
           <label for="mobile">موبایل <span class="req-mark">*</span></label>
           <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($mobile) ?>" placeholder="09121234567" autocomplete="tel-national">
           <?php if ($mobile_verified) : ?>
             <p class="field-hint otp-verified-hint">موبایل تأیید شد ✓</p>
           <?php endif; ?>
+          <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
         </div>
         <div class="field">
           <label for="phone">تلفن ثابت (اختیاری)</label>
@@ -404,7 +436,7 @@ if ($otp_notice !== '') {
         </select>
       </div>
 
-      <fieldset class="field" id="gender">
+      <fieldset class="field<?= $reg_invalid('gender') ?>" id="gender">
         <legend>جنسیت <span class="req-mark">*</span></legend>
         <div class="role-grid role-grid-2">
           <?php foreach (casting_gender_labels() as $key => $label) : ?>
@@ -414,9 +446,10 @@ if ($otp_notice !== '') {
             </label>
           <?php endforeach; ?>
         </div>
+        <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
       </fieldset>
 
-      <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
+      <fieldset class="field<?= $reg_invalid('look') ?>" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
         <legend>رنگ پوست <span class="req-mark" data-talent-required-mark>*</span></legend>
         <div class="role-grid role-grid-3">
           <?php foreach (casting_look_labels() as $key => $label) : ?>
@@ -426,6 +459,7 @@ if ($otp_notice !== '') {
             </label>
           <?php endforeach; ?>
         </div>
+        <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
       </fieldset>
 
       <div data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?>>
@@ -458,7 +492,7 @@ if ($otp_notice !== '') {
       <?php casting_render_artistic_membership_fields($artistic_has, $artistic_orgs, $artistic_other); ?>
 
       <div class="form-grid">
-        <fieldset class="field">
+        <fieldset class="field<?= $reg_invalid('activity_license') ?>">
           <legend>دارای پروانه فعالیت <span class="req-mark">*</span></legend>
           <div class="role-grid role-grid-2">
             <?php foreach (casting_yes_no_labels() as $key => $label) : ?>
@@ -468,32 +502,36 @@ if ($otp_notice !== '') {
               </label>
             <?php endforeach; ?>
           </div>
+          <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
         </fieldset>
-        <div class="field">
+        <div class="field<?= $reg_invalid('experience') ?>">
           <label for="experience">سابقه فعالیت (سال) <span class="req-mark">*</span></label>
           <input id="experience" name="experience" type="number" min="0" max="60" required value="<?= casting_e($experience !== '' ? $experience : '0') ?>">
+          <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
         </div>
       </div>
 
-      <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?> id="profile-photos-actor">
+      <fieldset class="field<?= $reg_invalid('photo_closeup') || $reg_invalid('photo_medium') || $reg_invalid('photo_long') ? ' is-invalid' : '' ?>" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?> id="profile-photos-actor">
         <legend>عکس‌های پروفایل <span class="req-mark" data-talent-required-mark>*</span></legend>
-        <p class="field-hint">هر سه عکس الزامی است: کلوزاپ، مدیوم و لانگ.</p>
-        <?php casting_render_portrait_upload_fields([], true); ?>
+        <p class="field-hint">هر سه عکس الزامی است: کلوزاپ، مدیوم و لانگ.<?= $pending_portraits !== [] ? ' عکس‌های قبلی‌تان نگه داشته شده‌اند.' : '' ?></p>
+        <?php casting_render_portrait_upload_fields($pending_portraits, true); ?>
+        <p class="field-req-hint" data-field-req-hint hidden>عکس‌های ستاره‌دار الزامی هستند.</p>
       </fieldset>
 
-      <fieldset class="field" data-non-talent-profile-photo<?= $hide_talent_profile ? '' : ' hidden' ?> id="profile-photo-single">
+      <fieldset class="field<?= $reg_invalid('photo_medium_single') ?>" data-non-talent-profile-photo<?= $hide_talent_profile ? '' : ' hidden' ?> id="profile-photo-single">
         <legend>عکس پروفایل <span class="req-mark">*</span></legend>
-        <p class="field-hint">یک عکس واضح از خودتان بارگذاری کنید.</p>
-        <?php casting_render_single_profile_photo_field([], true, 'photo_medium_single'); ?>
+        <p class="field-hint">یک عکس واضح از خودتان بارگذاری کنید.<?= !empty($pending_portraits['medium']) ? ' عکس قبلی نگه داشته شده است.' : '' ?></p>
+        <?php casting_render_single_profile_photo_field($pending_portraits, true, 'photo_medium_single'); ?>
+        <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
       </fieldset>
 
       <div class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?> data-file-preview-card>
         <label for="video">ویدیو معرفی</label>
-        <div class="video-preview-frame" data-file-preview-frame hidden>
-          <video controls playsinline preload="metadata" data-file-preview-video></video>
+        <div class="video-preview-frame" data-file-preview-frame<?= $pending_video ? '' : ' hidden' ?>>
+          <video controls playsinline preload="metadata" data-file-preview-video<?= $pending_video ? ' src="' . casting_e((string) $pending_video['url']) . '"' : '' ?>></video>
         </div>
         <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime" data-file-preview-input data-file-preview-kind="video">
-        <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت (اختیاری)</p>
+        <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت (اختیاری)<?= $pending_video ? ' · ویدیوی قبلی نگه داشته شده است.' : '' ?></p>
       </div>
 
       <?php casting_render_profile_work_sections(['activities' => $activities, 'work_credits' => $work_credits, 'artistic_works' => $artistic_works]); ?>
@@ -518,7 +556,7 @@ if ($otp_notice !== '') {
       <?php casting_render_skill_fields($skill_items); ?>
       </div>
 
-      <fieldset class="field" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?> id="availability">
+      <fieldset class="field<?= $reg_invalid('availability') ?>" data-talent-profile-field<?= $hide_talent_profile ? ' hidden' : '' ?> id="availability">
         <legend>وضعیت آمادگی برای همکاری <span class="req-mark" data-talent-required-mark>*</span></legend>
         <div class="role-grid">
           <?php foreach (casting_availability_labels() as $key => $label) : ?>
@@ -528,13 +566,15 @@ if ($otp_notice !== '') {
             </label>
           <?php endforeach; ?>
         </div>
+        <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
       </fieldset>
 
-      <div class="field rules-consent-field" data-rules-consent>
+      <div class="field rules-consent-field<?= $reg_invalid('rules_accepted') ?>" data-rules-consent>
         <label class="checkbox-row">
           <input type="checkbox" name="rules_accepted" value="1" id="rules_accepted" data-rules-consent-checkbox<?= !empty($_POST['rules_accepted']) ? ' checked' : '' ?>>
           <span>قوانین را مطالعه کرده‌ام و می‌پذیرم. <span class="req-mark">*</span> <button type="button" class="link-button" data-rules-lightbox-open>مطالعه قوانین</button></span>
         </label>
+        <p class="field-req-hint" data-field-req-hint hidden>تأیید قوانین ستاره‌دار الزامی است.</p>
       </div>
 
       <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= !empty($_POST['rules_accepted']) ? '' : ' disabled' ?>>ایجاد حساب</button>
