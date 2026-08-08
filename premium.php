@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/premium.php';
 require_once __DIR__ . '/includes/admin-access.php';
 require_once __DIR__ . '/includes/checkout.php';
+require_once __DIR__ . '/includes/cart.php';
 require_once __DIR__ . '/includes/panel.php';
 
 casting_nocache();
@@ -50,7 +51,7 @@ foreach ($plans as $key => $p) {
         'group'       => 'عضویت ویژه',
         'label'       => 'عضویت ویژه — ' . (string) ($p['period_label'] ?? ''),
         'meta'        => 'ارتقای حساب کاربری · ماهیانه ۷۰٬۰۰۰ تومان',
-        'href'        => 'checkout.php?service=premium&plan=' . rawurlencode($key),
+        'href'        => casting_cart_add_url('premium', $key),
         'price_final' => $calc['final'],
         'price_base'  => $calc['base'],
         'vat'         => $calc['vat'],
@@ -63,7 +64,7 @@ foreach ($call_types as $type_key => $type) {
         'group'       => 'فراخوان کستینگ',
         'label'       => (string) $type['label'],
         'meta'        => 'انتشار یک فراخوان · ' . (string) ($catalog['casting_call']['service_type'] ?? ''),
-        'href'        => 'checkout.php?service=casting_call&plan=' . rawurlencode((string) $type_key),
+        'href'        => casting_cart_add_url('casting_call', (string) $type_key),
         'price_final' => $calc['final'],
         'price_base'  => $calc['base'],
         'vat'         => $calc['vat'],
@@ -75,7 +76,7 @@ casting_render_flash();
 ?>
 <section class="dash-card">
   <h1>خرید اشتراک و خدمات</h1>
-  <p class="meta">خدمت را انتخاب کنید؛ به صفحه خلاصه سفارش می‌روید. حساب فقط پس از پرداخت موفق شارژ/فعال می‌شود.</p>
+  <p class="meta">خدمت را به سبد اضافه کنید؛ سپس از سبد به خلاصه سفارش و درگاه می‌روید. حساب فقط پس از پرداخت موفق فعال می‌شود.</p>
 
   <?php if ($premium) : ?>
     <div class="flash flash-success">حساب کاربری ویژه فعال است.</div>
@@ -111,7 +112,7 @@ casting_render_flash();
           = <strong><?= casting_e(number_format((int) $item['price_final'])) ?> تومان</strong>
         </p>
       </div>
-      <a class="btn btn-primary" href="<?= casting_e($item['href']) ?>">خرید و خلاصه سفارش</a>
+      <a class="btn btn-primary" href="<?= casting_e($item['href']) ?>">افزودن به سبد</a>
     </article>
     <?php endforeach; ?>
   </div>
@@ -119,7 +120,7 @@ casting_render_flash();
   <div class="bio-block premium-payment-block" style="margin-top:1.25rem">
     <h2>نکته مهم</h2>
     <ul class="info-list">
-      <li>با زدن «خرید» فقط وارد خلاصه سفارش می‌شوید؛ تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
+      <li>با زدن «افزودن به سبد» وارد سبد خرید می‌شوید؛ سپس خلاصه سفارش و درگاه. تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
       <li>عضویت ویژه: حداقل ۳ ماه · ماهیانه ۷۰٬۰۰۰ تومان · مالیات بر ارزش افزوده ۱۰٪.</li>
       <li>فراخوان تئاتر و فیلم کوتاه: ۷۰۰٬۰۰۰ تومان (+ مالیات) · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان (+ مالیات).</li>
     </ul>

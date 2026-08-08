@@ -21,8 +21,11 @@ $project_id = max(0, (int) ($_GET['project'] ?? $_POST['project_id'] ?? 0));
 
 $order = $order_code !== '' ? casting_get_order_by_code($order_code) : [];
 
-// ایجاد سفارش جدید از لینک خدمت
+// ایجاد سفارش جدید از لینک خدمت → اول سبد خرید
 if ($order === [] && $service !== '') {
+    if (!function_exists('casting_cart_add')) {
+        require_once __DIR__ . '/includes/cart.php';
+    }
     if ($service === 'casting_call' && $plan === '' && $project_id > 0) {
         require_once __DIR__ . '/includes/director-desk.php';
         $project = casting_director_get_project($user_id, $project_id);
@@ -30,17 +33,13 @@ if ($order === [] && $service !== '') {
             $plan = casting_checkout_map_project_type((string) ($project['project_type'] ?? ''));
         }
     }
-    $built = casting_checkout_build_draft($service, $plan, $project_id);
-    if (!$built['ok']) {
-        casting_set_flash('error', $built['error']);
+    $added = casting_cart_add($service, $plan, $project_id);
+    if (!$added['ok']) {
+        casting_set_flash('error', $added['error']);
         casting_redirect($service === 'casting_call' ? 'director-desk.php' : 'premium.php');
     }
-    $created = casting_checkout_create_order($user_id, $built['draft']);
-    if (!$created['ok']) {
-        casting_set_flash('error', $created['error']);
-        casting_redirect($service === 'casting_call' ? 'director-desk.php' : 'premium.php');
-    }
-    casting_redirect('checkout.php?order=' . rawurlencode((string) $created['order']['order_code']));
+    casting_set_flash('success', 'به سبد خرید اضافه شد.');
+    casting_redirect('cart.php');
 }
 
 if ($order === [] || (int) ($order['user_id'] ?? 0) !== $user_id) {
@@ -55,7 +54,9 @@ if ((string) ($order['status'] ?? '') === 'paid') {
 $catalog = casting_paid_services_catalog();
 $svc = $catalog[(string) $order['service_key']] ?? [];
 $cancel_url = (string) ($svc['cancel_url'] ?? 'membership.php');
-if ((int) ($order['project_id'] ?? 0) > 0 && (string) $order['service_key'] === 'casting_call') {
+if ((string) ($order['service_key'] ?? '') === 'cart' || !empty($order['meta']['from_cart'])) {
+    $cancel_url = 'cart.php';
+} elseif ((int) ($order['project_id'] ?? 0) > 0 && (string) $order['service_key'] === 'casting_call') {
     $cancel_url = 'director-desk.php?project=' . (int) $order['project_id'];
 }
 

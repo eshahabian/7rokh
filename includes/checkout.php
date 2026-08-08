@@ -436,22 +436,54 @@ function casting_checkout_fulfill_order(array $order): array
     }
     $user_id = (int) ($order['user_id'] ?? 0);
     $service = (string) ($order['service_key'] ?? '');
+    $meta = is_array($order['meta'] ?? null) ? $order['meta'] : [];
+    $cart_items = is_array($meta['cart_items'] ?? null) ? $meta['cart_items'] : [];
 
-    if ($service === 'premium') {
+    // سفارش ترکیبی از سبد
+    if ($service === 'cart' && $cart_items !== []) {
+        foreach ($cart_items as $it) {
+            if (!is_array($it)) {
+                continue;
+            }
+            $sk = (string) ($it['service_key'] ?? '');
+            if ($sk === 'premium') {
+                if (!function_exists('casting_premium_activate_for_user')) {
+                    require_once __DIR__ . '/premium.php';
+                }
+                $days = (int) (($it['meta']['days'] ?? 0) ?: 90);
+                casting_premium_activate_for_user(
+                    $user_id,
+                    $days,
+                    (string) ($it['plan_key'] ?? 'featured_90'),
+                    (int) ($it['amount_final'] ?? 0),
+                    (string) $order['order_code']
+                );
+            }
+            if ($sk === 'casting_call') {
+                $project_id = (int) ($it['project_id'] ?? 0);
+                $type_key = sanitize_key((string) (($it['meta']['project_type'] ?? '') ?: ($it['plan_key'] ?? '')));
+                if ($project_id > 0) {
+                    update_user_meta($user_id, 'casting_casting_call_credit_' . $project_id, (string) $order['order_code']);
+                }
+                if ($type_key !== '') {
+                    update_user_meta($user_id, 'casting_casting_call_credit_type_' . $type_key, (string) $order['order_code']);
+                }
+                update_user_meta($user_id, 'casting_last_casting_call_credit', (string) $order['order_code']);
+            }
+        }
+    } elseif ($service === 'premium') {
         if (!function_exists('casting_premium_activate_for_user')) {
             require_once __DIR__ . '/premium.php';
         }
-        $days = (int) (($order['meta']['days'] ?? 0) ?: 90);
+        $days = (int) (($meta['days'] ?? 0) ?: 90);
         $plan_key = (string) ($order['plan_key'] ?? 'featured_90');
         $result = casting_premium_activate_for_user($user_id, $days, $plan_key, (int) $order['amount_final'], (string) $order['order_code']);
         if (!$result['ok']) {
             return $result;
         }
-    }
-
-    if ($service === 'casting_call') {
+    } elseif ($service === 'casting_call') {
         $project_id = (int) ($order['project_id'] ?? 0);
-        $type_key = sanitize_key((string) (($order['meta']['project_type'] ?? '') ?: ($order['plan_key'] ?? '')));
+        $type_key = sanitize_key((string) (($meta['project_type'] ?? '') ?: ($order['plan_key'] ?? '')));
         if ($project_id > 0) {
             update_user_meta($user_id, 'casting_casting_call_credit_' . $project_id, (string) $order['order_code']);
         }

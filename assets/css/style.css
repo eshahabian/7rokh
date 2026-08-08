@@ -5810,6 +5810,46 @@ html[data-theme="day"] .member-card-photo-score {
   flex-wrap: wrap;
 }
 
+.cart-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.cart-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme="day"] .cart-item {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.cart-item-body {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.cart-item-price {
+  margin: 0.35rem 0 0;
+}
+
+.cart-totals {
+  margin-top: 1rem;
+}
+
+.cart-actions {
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
 .shop-list {
   display: grid;
   gap: 0.75rem;

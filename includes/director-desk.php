@@ -1115,6 +1115,9 @@ function casting_director_send_casting_call(
     if (!function_exists('casting_user_has_casting_call_credit')) {
         require_once __DIR__ . '/checkout.php';
     }
+    if (!function_exists('casting_cart_add_url')) {
+        require_once __DIR__ . '/cart.php';
+    }
     if (!casting_user_has_casting_call_credit($director_id, $project_id)) {
         $type_key = casting_checkout_map_project_type((string) ($project['project_type'] ?? ''));
         if ($type_key === '') {
@@ -1125,7 +1128,7 @@ function casting_director_send_casting_call(
             'ok'            => false,
             'error'         => 'برای انتشار فراخوان ابتدا هزینه آن را پرداخت کنید.',
             'need_checkout' => true,
-            'checkout_url'  => 'checkout.php?service=casting_call&plan=' . rawurlencode($type_key) . '&project=' . $project_id,
+            'checkout_url'  => casting_cart_add_url('casting_call', $type_key, $project_id),
         ];
     }
 
@@ -1257,6 +1260,9 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
     if (!function_exists('casting_paid_services_catalog')) {
         require_once __DIR__ . '/checkout.php';
     }
+    if (!function_exists('casting_cart_add_url')) {
+        require_once __DIR__ . '/cart.php';
+    }
     $project = $director_id > 0 ? casting_director_get_project($director_id, $project_id) : [];
     $type_key = casting_checkout_map_project_type((string) ($project['project_type'] ?? ''));
     $catalog = casting_paid_services_catalog();
@@ -1265,7 +1271,7 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
     $price_final = $price_base > 0 ? casting_checkout_calc_amounts($price_base)['final'] : 0;
     $has_credit = $director_id > 0 && casting_user_has_casting_call_credit($director_id, $project_id);
     $checkout_href = $type_key !== ''
-        ? ('checkout.php?service=casting_call&plan=' . rawurlencode($type_key) . '&project=' . (int) $project_id)
+        ? casting_cart_add_url('casting_call', $type_key, (int) $project_id)
         : '';
 
     if (!function_exists('casting_render_body_metric_group')) {
@@ -1324,7 +1330,7 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
             <p class="meta flash-success" style="margin:0.35rem 0 0">پرداخت این فراخوان انجام شده — می‌توانید ارسال کنید.</p>
           <?php elseif ($checkout_href !== '') : ?>
             <p class="meta" style="margin:0.35rem 0 0.65rem">قبل از ارسال، هزینه را پرداخت کنید (خلاصه سفارش → درگاه).</p>
-            <a class="btn btn-primary btn-sm" href="<?= casting_e($checkout_href) ?>">پرداخت فراخوان و رفتن به خلاصه سفارش</a>
+            <a class="btn btn-primary btn-sm" href="<?= casting_e($checkout_href) ?>">افزودن هزینه فراخوان به سبد</a>
           <?php endif; ?>
         </div>
       <?php endif; ?>
@@ -1369,7 +1375,7 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
         </label>
         <button class="btn btn-primary" type="submit"<?= (!$has_credit || $type_key === '') ? ' disabled title="ابتدا هزینه فراخوان را پرداخت کنید"' : '' ?>>ارسال و انتشار فراخوان</button>
         <?php if (!$has_credit && $checkout_href !== '') : ?>
-          <a class="btn btn-ghost" href="<?= casting_e($checkout_href) ?>">پرداخت و خلاصه سفارش</a>
+          <a class="btn btn-ghost" href="<?= casting_e($checkout_href) ?>">افزودن به سبد خرید</a>
         <?php endif; ?>
       </form>
 

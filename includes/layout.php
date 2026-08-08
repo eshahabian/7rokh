@@ -102,6 +102,18 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت <?= casting_brand_html() ?></a>
       <?php if ($role !== '') : ?>
         <a href="home.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
+        <?php
+        if (!function_exists('casting_cart_count')) {
+            require_once __DIR__ . '/cart.php';
+        }
+        $cart_count = casting_cart_count();
+        ?>
+        <a href="<?= casting_e(casting_url('cart.php')) ?>" class="<?= $active === 'cart' ? 'is-active' : '' ?><?= $cart_count > 0 ? ' has-notify' : '' ?>">
+          سبد خرید
+          <?php if ($cart_count > 0) : ?>
+            <span class="nav-badge" aria-label="<?= (int) $cart_count ?> مورد در سبد"><?= (int) $cart_count ?></span>
+          <?php endif; ?>
+        </a>
         <a href="<?= casting_e(casting_url($new_followers > 0 ? 'following.php?tab=followers' : 'panel.php')) ?>" class="<?= $active === 'panel' || $active === 'following' ? 'is-active' : '' ?><?= $new_followers > 0 ? ' has-notify' : '' ?>">
           پنل کاربری
           <?php if ($new_followers > 0) : ?>

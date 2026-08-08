@@ -17,9 +17,14 @@ $pending_receipts = casting_user_has_admin_permission($user_id, 'approve_receipt
 $tiles = [
     [
         'title' => 'خرید اشتراک و خدمات',
-        'desc'  => 'عضویت ویژه و فراخوان — فقط پس از پرداخت موفق فعال می‌شود',
+        'desc'  => 'افزودن به سبد · خلاصه سفارش · درگاه',
         'href'  => 'premium.php',
         'badge' => $pending_receipts,
+    ],
+    [
+        'title' => 'سبد خرید',
+        'desc'  => 'اقلام انتخاب‌شده قبل از پرداخت',
+        'href'  => 'cart.php',
     ],
     [
         'title' => 'تراکنش‌های مالی',
