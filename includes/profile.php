@@ -1891,7 +1891,11 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
         <div class="field">
           <label for="<?= casting_e($field) ?>"><?= casting_e($label) ?><?= $slot_req !== '' ? ' <span class="req-mark">*</span>' : '' ?></label>
           <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp"<?= $slot_req ?> data-file-preview-input data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
-          <p class="field-hint"><?= casting_e($hints[$slot] ?? '') ?> · JPG / PNG / WebP — حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></p>
+          <p class="field-hint portrait-upload-hint">
+            <span class="portrait-upload-hint-desc"><?= casting_e($hints[$slot] ?? '') ?></span>
+            <span class="portrait-upload-hint-formats">JPG / PNG / WebP</span>
+            <span class="portrait-upload-hint-size">حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></span>
+          </p>
         </div>
       </div>
     <?php endforeach; ?>
@@ -1929,7 +1933,11 @@ function casting_render_single_profile_photo_field(array $portraits = [], bool $
       <div class="field">
         <label for="<?= casting_e($input_id) ?>">عکس پروفایل<?= $required ? ' <span class="req-mark">*</span>' : '' ?></label>
         <input id="<?= casting_e($input_id) ?>" name="photo_medium" type="file" accept="image/jpeg,image/png,image/webp"<?= $req ?> data-profile-photo-single data-file-preview-input data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
-        <p class="field-hint">یک عکس واضح از خودتان · JPG / PNG / WebP — حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></p>
+        <p class="field-hint portrait-upload-hint">
+          <span class="portrait-upload-hint-desc">یک عکس واضح از خودتان</span>
+          <span class="portrait-upload-hint-formats">JPG / PNG / WebP</span>
+          <span class="portrait-upload-hint-size">حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></span>
+        </p>
       </div>
     </div>
   </div>
