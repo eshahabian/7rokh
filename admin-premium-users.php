@@ -307,10 +307,22 @@ casting_render_flash();
               <td>
                 <?php if ($row['premium']) : ?>
                   <?php if (($row['until_ts'] ?? null) !== null) : ?>
-                    <span class="nav-premium-countdown admin-table-countdown" data-premium-until-ts="<?= (int) $row['until_ts'] ?>">
-                      <span data-premium-countdown><?= casting_e($row['remaining']) ?></span>
-                    </span>
-                    <span class="meta"><?= casting_e($row['until']) ?></span>
+                    <?php
+                    $until_parts = casting_premium_until_parts((string) ($row['until'] ?? ''));
+                    ?>
+                    <div class="admin-premium-until">
+                      <span class="nav-premium-countdown admin-table-countdown" data-premium-until-ts="<?= (int) $row['until_ts'] ?>">
+                        <span data-premium-countdown><?= casting_e($row['remaining']) ?></span>
+                      </span>
+                      <?php if ($until_parts['date'] !== '') : ?>
+                        <span class="admin-premium-until-datetime">
+                          <span class="admin-premium-until-date"><?= casting_e($until_parts['date']) ?></span>
+                          <?php if ($until_parts['time'] !== '') : ?>
+                            <span class="admin-premium-until-time"><?= casting_e($until_parts['time']) ?></span>
+                          <?php endif; ?>
+                        </span>
+                      <?php endif; ?>
+                    </div>
                   <?php else : ?>
                     <span class="chip chip-premium">ویژه</span>
                   <?php endif; ?>

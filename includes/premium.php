@@ -155,6 +155,24 @@ function casting_premium_until_label(int $user_id): string
     return (string) get_user_meta($user_id, 'casting_premium_until', true);
 }
 
+/**
+ * جدا کردن تاریخ و ساعت پایان اشتراک برای نمایش فشرده در جدول
+ *
+ * @return array{date:string,time:string}
+ */
+function casting_premium_until_parts(string $until): array
+{
+    $until = trim($until);
+    if ($until === '') {
+        return ['date' => '', 'time' => ''];
+    }
+    if (preg_match('/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)/', $until, $m)) {
+        return ['date' => $m[1], 'time' => $m[2]];
+    }
+
+    return ['date' => $until, 'time' => ''];
+}
+
 function casting_premium_countdown_summary(int $user_id): string
 {
     $until_ts = casting_premium_expire_timestamp($user_id);

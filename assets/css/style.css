@@ -6229,6 +6229,31 @@ button.is-follow-locked {
   font-size: 0.85rem;
 }
 
+.admin-premium-until {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.admin-premium-until-datetime {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  margin: 0;
+  line-height: 1.25;
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.admin-premium-until-date,
+.admin-premium-until-time {
+  display: block;
+}
+
 .admin-members-table td .meta {
   display: block;
 }
