@@ -17,7 +17,9 @@ if (!casting_user_can_upload_portraits($user_id)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_photo')) {
+    if (casting_upload_post_too_large()) {
+        $error = casting_upload_too_large_message('image');
+    } elseif (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_photo')) {
         $error = 'درخواست نامعتبر است.';
     } else {
         $has_file = false;

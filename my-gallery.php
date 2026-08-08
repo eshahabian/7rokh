@@ -16,6 +16,10 @@ if (!casting_user_can_manage_gallery($user_id)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (casting_upload_post_too_large()) {
+        casting_set_flash('error', casting_upload_post_too_large_message());
+        casting_redirect('my-gallery.php');
+    }
     $nonce = (string) ($_POST['_wpnonce'] ?? '');
     if ($nonce === '' || !wp_verify_nonce($nonce, 'casting_gallery')) {
         casting_set_flash('error', 'نشست منقضی شده. دوباره تلاش کنید.');
@@ -102,13 +106,13 @@ casting_render_flash();
     <div class="form-grid">
       <div class="field">
         <label for="gallery_photo">عکس جدید</label>
-        <input id="gallery_photo" name="gallery_photo" type="file" accept="image/jpeg,image/png,image/webp">
-        <p class="field-hint">JPG / PNG / WebP — حداکثر ۵ مگابایت</p>
+        <input id="gallery_photo" name="gallery_photo" type="file" accept="image/jpeg,image/png,image/webp" data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
+        <p class="field-hint">JPG / PNG / WebP — حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></p>
       </div>
       <div class="field">
         <label for="gallery_video">ویدیو جدید</label>
-        <input id="gallery_video" name="gallery_video" type="file" accept="video/mp4,video/webm,video/quicktime">
-        <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت</p>
+        <input id="gallery_video" name="gallery_video" type="file" accept="video/mp4,video/webm,video/quicktime" data-upload-kind="video" data-max-bytes="<?= (int) casting_upload_max_bytes('video') ?>">
+        <p class="field-hint">MP4 / WebM / MOV — حداکثر <?= casting_e(casting_upload_max_label_fa('video')) ?></p>
       </div>
     </div>
     <div class="field">
@@ -164,9 +168,9 @@ casting_render_flash();
                 <div class="field">
                   <label for="edit_file_<?= (int) $item['id'] ?>">جایگزینی فایل (اختیاری)</label>
                   <?php if ($is_video) : ?>
-                    <input id="edit_file_<?= (int) $item['id'] ?>" name="edit_video" type="file" accept="video/mp4,video/webm,video/quicktime">
+                    <input id="edit_file_<?= (int) $item['id'] ?>" name="edit_video" type="file" accept="video/mp4,video/webm,video/quicktime" data-upload-kind="video" data-max-bytes="<?= (int) casting_upload_max_bytes('video') ?>">
                   <?php else : ?>
-                    <input id="edit_file_<?= (int) $item['id'] ?>" name="edit_photo" type="file" accept="image/jpeg,image/png,image/webp">
+                    <input id="edit_file_<?= (int) $item['id'] ?>" name="edit_photo" type="file" accept="image/jpeg,image/png,image/webp" data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
                   <?php endif; ?>
                 </div>
                 <p class="field-hint"><?= $auto_publish ? 'بعد از ذخیره، پست بلافاصله منتشر می‌شود.' : 'بعد از ذخیره، پست دوباره در صف تأیید مدیر قرار می‌گیرد.' ?></p>

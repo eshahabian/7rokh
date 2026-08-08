@@ -423,8 +423,9 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
         if (!in_array($ftype, $allowed, true)) {
             return ['ok' => false, 'error' => 'فقط عکس JPG، PNG یا WebP مجاز است.'];
         }
-        if ((int) ($file['size'] ?? 0) > 5 * 1024 * 1024) {
-            return ['ok' => false, 'error' => 'حجم عکس حداکثر ۵ مگابایت باشد.'];
+        $size_check = casting_uploaded_file_within_limit($file, 'image');
+        if (!$size_check['ok']) {
+            return ['ok' => false, 'error' => $size_check['error']];
         }
     } else {
         $allowed = ['video/mp4', 'video/webm', 'video/quicktime'];
@@ -433,8 +434,9 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
         if (!in_array($ftype, $allowed, true) && !$ext_ok) {
             return ['ok' => false, 'error' => 'فقط ویدیو MP4، WebM یا MOV مجاز است.'];
         }
-        if ((int) ($file['size'] ?? 0) > 40 * 1024 * 1024) {
-            return ['ok' => false, 'error' => 'حجم ویدیو حداکثر ۴۰ مگابایت باشد.'];
+        $size_check = casting_uploaded_file_within_limit($file, 'video');
+        if (!$size_check['ok']) {
+            return ['ok' => false, 'error' => $size_check['error']];
         }
     }
 
@@ -522,23 +524,29 @@ function casting_user_media_edit_own(int $user_id, int $media_id, string $captio
 
     if ($file_field !== '' && !empty($_FILES[$file_field]['name'])) {
         casting_require_media_includes();
-        $file = $_FILES[$file_field];
+        $file = &$_FILES[$file_field];
+        $kind = $media_type === 'video' ? 'video' : 'image';
+        $norm = casting_normalize_uploaded_file_type($file, $kind);
+        if (!$norm['ok']) {
+            return ['ok' => false, 'error' => $norm['error']];
+        }
+        $ftype = (string) ($norm['type'] ?? '');
         if ($media_type === 'photo') {
             $allowed = ['image/jpeg', 'image/png', 'image/webp'];
-            if (!in_array((string) ($file['type'] ?? ''), $allowed, true)) {
+            if (!in_array($ftype, $allowed, true)) {
                 return ['ok' => false, 'error' => 'فقط عکس JPG، PNG یا WebP مجاز است.'];
-            }
-            if ((int) $file['size'] > 5 * 1024 * 1024) {
-                return ['ok' => false, 'error' => 'حجم عکس حداکثر ۵ مگابایت باشد.'];
             }
         } else {
             $allowed = ['video/mp4', 'video/webm', 'video/quicktime'];
-            if (!in_array((string) ($file['type'] ?? ''), $allowed, true)) {
+            $name = strtolower((string) ($file['name'] ?? ''));
+            $ext_ok = preg_match('/\.(mp4|webm|mov)$/', $name) === 1;
+            if (!in_array($ftype, $allowed, true) && !$ext_ok) {
                 return ['ok' => false, 'error' => 'فقط ویدیو MP4، WebM یا MOV مجاز است.'];
             }
-            if ((int) $file['size'] > 40 * 1024 * 1024) {
-                return ['ok' => false, 'error' => 'حجم ویدیو حداکثر ۴۰ مگابایت باشد.'];
-            }
+        }
+        $size_check = casting_uploaded_file_within_limit($file, $kind);
+        if (!$size_check['ok']) {
+            return ['ok' => false, 'error' => $size_check['error']];
         }
         casting_enable_user_upload_dir($user_id);
         $uploaded = media_handle_upload($file_field, 0);

@@ -2549,6 +2549,84 @@
     frame.hidden = false;
   };
 
+  const uploadLimitByKind = {
+    image: { bytes: 5 * 1024 * 1024, label: "۵ مگابایت", title: "عکس" },
+    video: { bytes: 40 * 1024 * 1024, label: "۴۰ مگابایت", title: "ویدیو" },
+    audio: { bytes: 25 * 1024 * 1024, label: "۲۵ مگابایت", title: "فایل صوتی" },
+  };
+
+  const detectUploadKind = (input) => {
+    const explicit = (input.getAttribute("data-upload-kind") || "").toLowerCase();
+    if (explicit === "video" || explicit === "audio" || explicit === "image") {
+      return explicit;
+    }
+    const previewKind = (input.getAttribute("data-file-preview-kind") || "").toLowerCase();
+    if (previewKind === "video" || previewKind === "audio") {
+      return previewKind;
+    }
+    const accept = (input.getAttribute("accept") || "").toLowerCase();
+    if (accept.includes("video")) return "video";
+    if (accept.includes("audio")) return "audio";
+    return "image";
+  };
+
+  const uploadTooLargeMessage = (kindKey) => {
+    const lim = uploadLimitByKind[kindKey] || uploadLimitByKind.image;
+    return `حجم ${lim.title} بالاتر از حد مجاز است. حداکثر حجم مجاز ${lim.label} است.`;
+  };
+
+  const validateUploadFileInput = (input) => {
+    if (!(input instanceof HTMLInputElement) || input.type !== "file") return true;
+    const file = input.files && input.files[0] ? input.files[0] : null;
+    if (!file) return true;
+    const accept = (input.getAttribute("accept") || "").toLowerCase();
+    const hasLimitHint =
+      input.hasAttribute("data-max-bytes") ||
+      input.hasAttribute("data-upload-kind") ||
+      accept.includes("image") ||
+      accept.includes("video") ||
+      accept.includes("audio");
+    if (!hasLimitHint) return true;
+    const kindKey = detectUploadKind(input);
+    const lim = uploadLimitByKind[kindKey] || uploadLimitByKind.image;
+    const maxAttr = parseInt(input.getAttribute("data-max-bytes") || "", 10);
+    const maxBytes = Number.isFinite(maxAttr) && maxAttr > 0 ? maxAttr : lim.bytes;
+    if (file.size > maxBytes) {
+      window.alert(uploadTooLargeMessage(kindKey));
+      input.value = "";
+      return false;
+    }
+    return true;
+  };
+
+  document.addEventListener(
+    "change",
+    (event) => {
+      const input = event.target.closest("input[type='file']");
+      if (!(input instanceof HTMLInputElement)) return;
+      validateUploadFileInput(input);
+    },
+    true
+  );
+
+  document.addEventListener(
+    "submit",
+    (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      if ((form.getAttribute("enctype") || "").toLowerCase() !== "multipart/form-data") return;
+      const inputs = form.querySelectorAll("input[type='file']");
+      for (const input of inputs) {
+        if (!validateUploadFileInput(input)) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+      }
+    },
+    true
+  );
+
   document.addEventListener("change", (event) => {
     const input = event.target.closest("[data-file-preview-input], input[type='file'][accept*='image']");
     if (!(input instanceof HTMLInputElement) || input.type !== "file") return;

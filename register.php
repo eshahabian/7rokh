@@ -73,7 +73,9 @@ if ($current) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($current && casting_get_user_role((int) $current->ID) === '') {
+    if (casting_upload_post_too_large()) {
+        $error = casting_upload_post_too_large_message();
+    } elseif ($current && casting_get_user_role((int) $current->ID) === '') {
         $error = 'با یک حساب وردپرس وارد هستید که نقش ۷ رخ ندارد. اول خارج شوید، بعد ثبت‌نام کنید.';
     }
 }
@@ -133,12 +135,17 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $otp_enabled = casting_mobile_otp_enabled();
 
         // نگه داشتن عکس/ویدیو در نشست (حتی هنگام ارسال/تأیید OTP)
-        casting_register_pending_capture_uploads();
+        $pending_upload_error = casting_register_pending_capture_uploads();
         $pending_media = casting_register_pending_media_get();
         $pending_portraits = $pending_media['portraits'];
         $pending_video = $pending_media['video'];
+        if ($pending_upload_error !== '') {
+            $error = $pending_upload_error;
+        }
 
-        if ($is_otp_only) {
+        if ($error !== '') {
+            // خطای آپلود یا قبلی — فقط فرم را با پیام نشان بده
+        } elseif ($is_otp_only) {
             if (!$otp_enabled) {
                 $error = 'تأیید موبایل موقتاً غیرفعال است؛ مستقیم ثبت‌نام را کامل کنید.';
             } else {
@@ -547,8 +554,8 @@ $pending_video = $pending_media['video'];
         <div class="video-preview-frame" data-file-preview-frame<?= $pending_video ? '' : ' hidden' ?>>
           <video controls playsinline preload="metadata" data-file-preview-video<?= $pending_video ? ' src="' . casting_e((string) $pending_video['url']) . '"' : '' ?>></video>
         </div>
-        <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime" data-file-preview-input data-file-preview-kind="video">
-        <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت (اختیاری)<?= $pending_video ? ' · ویدیوی قبلی نگه داشته شده است.' : '' ?></p>
+        <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime" data-file-preview-input data-file-preview-kind="video" data-upload-kind="video" data-max-bytes="<?= (int) casting_upload_max_bytes('video') ?>">
+        <p class="field-hint">MP4 / WebM / MOV — حداکثر <?= casting_e(casting_upload_max_label_fa('video')) ?> (اختیاری)<?= $pending_video ? ' · ویدیوی قبلی نگه داشته شده است.' : '' ?></p>
       </div>
 
       <?php casting_render_profile_work_sections(['activities' => $activities, 'work_credits' => $work_credits, 'artistic_works' => $artistic_works]); ?>

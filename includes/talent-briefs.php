@@ -202,20 +202,23 @@ function casting_handle_brief_media_upload(int $user_id, string $field_name, str
     if ($kind === 'audio') {
         $allowed = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/webm', 'audio/ogg'];
         $ext_ok = preg_match('/\.(mp3|m4a|wav|webm|ogg|aac)$/', $name) === 1;
-        $max = 25 * 1024 * 1024;
         $type_err = 'فقط فایل صوتی MP3، M4A، WAV، WebM یا OGG مجاز است.';
     } else {
         $allowed = ['video/mp4', 'video/webm', 'video/quicktime'];
         $ext_ok = preg_match('/\.(mp4|webm|mov)$/', $name) === 1;
-        $max = 40 * 1024 * 1024;
         $type_err = 'فقط ویدیو MP4، WebM یا MOV مجاز است.';
     }
 
     if (!in_array($ftype, $allowed, true) && !$ext_ok) {
         return ['ok' => false, 'error' => $type_err];
     }
-    if ((int) ($file['size'] ?? 0) > $max) {
-        return ['ok' => false, 'error' => $kind === 'audio' ? 'حجم فایل صوتی حداکثر ۲۵ مگابایت باشد.' : 'حجم ویدیو حداکثر ۴۰ مگابایت باشد.'];
+    $size_kind = $kind === 'audio' ? 'audio' : 'video';
+    if (!function_exists('casting_uploaded_file_within_limit')) {
+        require_once __DIR__ . '/profile.php';
+    }
+    $size_check = casting_uploaded_file_within_limit($file, $size_kind);
+    if (!$size_check['ok']) {
+        return ['ok' => false, 'error' => $size_check['error']];
     }
 
     casting_enable_user_upload_dir($user_id);
@@ -372,16 +375,16 @@ function casting_render_talent_brief_card(array $brief, bool $show_form = true):
         <?php if ($reqs['audio']) : ?>
           <div class="field">
             <label for="brief_audio_<?= casting_e($brief_id) ?>">فایل صوتی <span class="req-mark">*</span></label>
-            <input id="brief_audio_<?= casting_e($brief_id) ?>" name="brief_audio" type="file" accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg" required>
-            <p class="field-hint">MP3 / M4A / WAV / WebM / OGG — حداکثر ۲۵ مگابایت</p>
+            <input id="brief_audio_<?= casting_e($brief_id) ?>" name="brief_audio" type="file" accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg" required data-upload-kind="audio" data-max-bytes="<?= (int) casting_upload_max_bytes('audio') ?>">
+            <p class="field-hint">MP3 / M4A / WAV / WebM / OGG — حداکثر <?= casting_e(casting_upload_max_label_fa('audio')) ?></p>
           </div>
         <?php endif; ?>
 
         <?php if ($reqs['video']) : ?>
           <div class="field">
             <label for="brief_video_<?= casting_e($brief_id) ?>">فایل ویدیو <span class="req-mark">*</span></label>
-            <input id="brief_video_<?= casting_e($brief_id) ?>" name="brief_video" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" required>
-            <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت</p>
+            <input id="brief_video_<?= casting_e($brief_id) ?>" name="brief_video" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" required data-upload-kind="video" data-max-bytes="<?= (int) casting_upload_max_bytes('video') ?>">
+            <p class="field-hint">MP4 / WebM / MOV — حداکثر <?= casting_e(casting_upload_max_label_fa('video')) ?></p>
           </div>
         <?php endif; ?>
 

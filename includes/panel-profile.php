@@ -75,6 +75,11 @@ function casting_process_profile_post(int $user_id): array
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         return $out;
     }
+    if (casting_upload_post_too_large()) {
+        $out['error'] = casting_upload_post_too_large_message();
+
+        return $out;
+    }
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_profile')) {
         return $out;
     }
@@ -977,8 +982,8 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
           <video controls playsinline preload="metadata" data-file-preview-video></video>
         <?php endif; ?>
       </div>
-      <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime" data-file-preview-input data-file-preview-kind="video">
-      <p class="field-hint">MP4 / WebM / MOV — حداکثر ۴۰ مگابایت</p>
+      <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime" data-file-preview-input data-file-preview-kind="video" data-upload-kind="video" data-max-bytes="<?= (int) casting_upload_max_bytes('video') ?>">
+      <p class="field-hint">MP4 / WebM / MOV — حداکثر <?= casting_e(casting_upload_max_label_fa('video')) ?></p>
       <?php if ($profile['video_file_url'] !== '') : ?>
         <p class="field-hint"><a href="<?= casting_e($profile['video_file_url']) ?>" target="_blank" rel="noopener">ویدیو فعلی</a></p>
       <?php endif; ?>
