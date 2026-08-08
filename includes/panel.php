@@ -284,7 +284,7 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
             continue;
         }
         ?>
-          <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= ($is_external || $item['key'] !== 'logout') ? ' target="_blank" rel="noopener"' : '' ?>>
+          <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= $is_external ? ' target="_blank" rel="noopener"' : '' ?>>
             <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
             <?php if ($item['key'] === 'membership' && $panel_premium_until !== null && $user) : ?>
               <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
@@ -530,8 +530,12 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
             require_once $cart_file;
         }
     }
-    if (function_exists('casting_cart_count')) {
-        $nav_ctx['cart_count'] = casting_cart_count();
+    try {
+        if (function_exists('casting_cart_count')) {
+            $nav_ctx['cart_count'] = (int) casting_cart_count();
+        }
+    } catch (Throwable $e) {
+        $nav_ctx['cart_count'] = 0;
     }
     ?>
     <div class="panel-shell-nav">

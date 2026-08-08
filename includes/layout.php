@@ -103,10 +103,20 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <?php if ($role !== '') : ?>
         <a href="home.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <?php
-        if (!function_exists('casting_cart_count')) {
-            require_once __DIR__ . '/cart.php';
+        $cart_count = 0;
+        try {
+            if (!function_exists('casting_cart_count')) {
+                $cartLib = __DIR__ . '/cart.php';
+                if (is_file($cartLib)) {
+                    require_once $cartLib;
+                }
+            }
+            if (function_exists('casting_cart_count')) {
+                $cart_count = (int) casting_cart_count();
+            }
+        } catch (Throwable $e) {
+            $cart_count = 0;
         }
-        $cart_count = casting_cart_count();
         ?>
         <a href="<?= casting_e(casting_url('cart.php')) ?>" class="<?= $active === 'cart' ? 'is-active' : '' ?><?= $cart_count > 0 ? ' has-notify' : '' ?>">
           سبد خرید

@@ -10,21 +10,28 @@ function casting_cart_session_key(): string
     return 'casting_cart_v1';
 }
 
+function casting_cart_session_ready(): bool
+{
+    return session_status() === PHP_SESSION_ACTIVE;
+}
+
 /**
  * @return array{items: list<array<string, mixed>>}
  */
 function casting_cart_get(): array
 {
+    if (!casting_cart_session_ready()) {
+        return ['items' => []];
+    }
     $raw = $_SESSION[casting_cart_session_key()] ?? null;
     if (!is_array($raw) || !isset($raw['items']) || !is_array($raw['items'])) {
         return ['items' => []];
     }
     $items = [];
     foreach ($raw['items'] as $item) {
-        if (!is_array($item)) {
-            continue;
+        if (is_array($item)) {
+            $items[] = $item;
         }
-        $items[] = $item;
     }
 
     return ['items' => array_values($items)];
@@ -35,19 +42,29 @@ function casting_cart_get(): array
  */
 function casting_cart_save(array $cart): void
 {
+    if (!casting_cart_session_ready()) {
+        return;
+    }
     $_SESSION[casting_cart_session_key()] = [
-        'items' => array_values($cart['items'] ?? []),
+        'items' => array_values(is_array($cart['items'] ?? null) ? $cart['items'] : []),
     ];
 }
 
 function casting_cart_clear(): void
 {
+    if (!casting_cart_session_ready()) {
+        return;
+    }
     unset($_SESSION[casting_cart_session_key()]);
 }
 
 function casting_cart_count(): int
 {
-    return count(casting_cart_get()['items']);
+    try {
+        return count(casting_cart_get()['items']);
+    } catch (Throwable $e) {
+        return 0;
+    }
 }
 
 /**
@@ -66,9 +83,9 @@ function casting_cart_build_item(string $service_key, string $plan_key = '', int
     $id = substr(hash('sha256', $service_key . '|' . ($draft['plan_key'] ?? '') . '|' . $project_id . '|' . microtime(true)), 0, 12);
 
     return [
-        'ok'   => true,
-        'error'=> '',
-        'item' => [
+        'ok'    => true,
+        'error' => '',
+        'item'  => [
             'id'             => $id,
             'service_key'    => (string) ($draft['service_key'] ?? $service_key),
             'plan_key'       => (string) ($draft['plan_key'] ?? $plan_key),
@@ -102,10 +119,13 @@ function casting_cart_add(string $service_key, string $plan_key = '', int $proje
 
     // عضویت ویژه: فقط یک پلن در سبد — پلن جدید جایگزین قبلی می‌شود
     if ((string) $new['service_key'] === 'premium') {
-        $cart['items'] = array_values(array_filter(
-            $cart['items'],
-            static fn(array $it): bool => (string) ($it['service_key'] ?? '') !== 'premium'
-        ));
+        $kept = [];
+        foreach ($cart['items'] as $it) {
+            if ((string) ($it['service_key'] ?? '') !== 'premium') {
+                $kept[] = $it;
+            }
+        }
+        $cart['items'] = $kept;
     }
 
     // همان خدمت+پلن+پروژه: جایگزین (بدون تکرار)
@@ -141,10 +161,13 @@ function casting_cart_remove(string $item_id): array
     }
     $cart = casting_cart_get();
     $before = count($cart['items']);
-    $cart['items'] = array_values(array_filter(
-        $cart['items'],
-        static fn(array $it): bool => (string) ($it['id'] ?? '') !== $item_id
-    ));
+    $kept = [];
+    foreach ($cart['items'] as $it) {
+        if ((string) ($it['id'] ?? '') !== $item_id) {
+            $kept[] = $it;
+        }
+    }
+    $cart['items'] = $kept;
     casting_cart_save($cart);
     if (count($cart['items']) === $before) {
         return ['ok' => false, 'error' => 'آیتم در سبد پیدا نشد.'];
@@ -156,9 +179,9 @@ function casting_cart_remove(string $item_id): array
 /**
  * @return array{base:int,discount:int,vat:int,final:int,count:int}
  */
-function casting_cart_totals(array $cart = []): array
+function casting_cart_totals(?array $cart = null): array
 {
-    if ($cart === []) {
+    if ($cart === null || !isset($cart['items']) || !is_array($cart['items'])) {
         $cart = casting_cart_get();
     }
     $base = 0;
@@ -166,6 +189,9 @@ function casting_cart_totals(array $cart = []): array
     $vat = 0;
     $final = 0;
     foreach ($cart['items'] as $it) {
+        if (!is_array($it)) {
+            continue;
+        }
         $qty = max(1, (int) ($it['qty'] ?? 1));
         $base += (int) ($it['amount_base'] ?? 0) * $qty;
         $discount += (int) ($it['discount'] ?? 0) * $qty;
@@ -207,6 +233,9 @@ function casting_cart_create_order_from_cart(int $user_id): array
     $primary_plan = (string) ($cart['items'][0]['plan_key'] ?? 'cart');
 
     foreach ($cart['items'] as $it) {
+        if (!is_array($it)) {
+            continue;
+        }
         $titles[] = (string) ($it['title'] ?? '');
         if ((string) ($it['service_type'] ?? '') !== '') {
             $types[] = (string) $it['service_type'];
@@ -225,15 +254,16 @@ function casting_cart_create_order_from_cart(int $user_id): array
     $title = count($titles) === 1
         ? $titles[0]
         : ('سفارش ترکیبی (' . count($titles) . ' مورد)');
-    $service_type = count(array_unique($types)) === 1
-        ? $types[0]
+    $unique_types = array_values(array_unique($types));
+    $service_type = count($unique_types) === 1
+        ? $unique_types[0]
         : 'سبد خرید خدمات ۷رخ';
     $duration = count($durations) === 1 ? $durations[0] : '';
     $description = implode("\n", $descs);
 
-    // اگر فقط یک آیتم است، سفارش همان خدمت باشد تا فعال‌سازی ساده‌تر شود
     $service_key = count($cart['items']) === 1 ? $primary_service : 'cart';
     $plan_key = count($cart['items']) === 1 ? $primary_plan : 'multi';
+    $first_meta = is_array($cart['items'][0]['meta'] ?? null) ? $cart['items'][0]['meta'] : [];
 
     $draft = [
         'service_key'    => $service_key,
@@ -249,16 +279,16 @@ function casting_cart_create_order_from_cart(int $user_id): array
         'project_id'     => $project_id,
         'cancel_url'     => 'cart.php',
         'meta'           => [
-            'from_cart'  => true,
-            'cart_items' => $cart['items'],
-            'days'       => (int) (($cart['items'][0]['meta']['days'] ?? 0) ?: 0),
-            'months'     => (int) (($cart['items'][0]['meta']['months'] ?? 0) ?: 0),
-            'project_type' => (string) (($cart['items'][0]['meta']['project_type'] ?? '') ?: ($cart['items'][0]['plan_key'] ?? '')),
+            'from_cart'    => true,
+            'cart_items'   => $cart['items'],
+            'days'         => (int) (($first_meta['days'] ?? 0) ?: 0),
+            'months'       => (int) (($first_meta['months'] ?? 0) ?: 0),
+            'project_type' => (string) (($first_meta['project_type'] ?? '') ?: ($cart['items'][0]['plan_key'] ?? '')),
         ],
     ];
 
     $created = casting_checkout_create_order($user_id, $draft);
-    if ($created['ok']) {
+    if (!empty($created['ok'])) {
         casting_cart_clear();
     }
 
