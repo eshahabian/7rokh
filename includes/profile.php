@@ -1744,7 +1744,7 @@ function casting_portrait_display_dimensions(): array
 function casting_portrait_slot_hints(): array
 {
     return [
-        'profile' => 'عکس اصلی برای آواتار و نمایش در پنل',
+        'profile' => 'عکس اصلی نمایش در پنل',
         'closeup' => 'نمای نزدیک صورت',
         'medium'  => 'نیم‌تنه یا تا کمر',
         'long'    => 'تمام‌قد',
