@@ -367,11 +367,11 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           }
           ?>
       <div class="profile-follow-row">
+        <span class="meta profile-followers-count"><?= (int) casting_followers_count($member_id) ?> دنبال‌کننده</span>
+        <?php casting_render_member_message_button($viewer_id, $member_id, (string) $member->display_name); ?>
         <?php if (casting_follow_can_target($viewer_id, $member_id)) : ?>
           <?php casting_render_follow_button($viewer_id, $member_id, 'btn-sm'); ?>
         <?php endif; ?>
-        <?php casting_render_member_message_button($viewer_id, $member_id, (string) $member->display_name); ?>
-        <span class="meta"><?= (int) casting_followers_count($member_id) ?> دنبال‌کننده</span>
       </div>
           <?php
       }
