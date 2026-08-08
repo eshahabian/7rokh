@@ -33,6 +33,57 @@ function casting_follows_ensure_table(): void
     if ((string) get_option('casting_follows_db_version', '') !== '1') {
         casting_follows_install();
     }
+    casting_follows_purge_orphans_once();
+}
+
+/**
+ * پاک‌سازی روابط دنبال برای کاربرانی که دیگر عضو پورتال نیستند
+ */
+function casting_follows_purge_orphans_once(): void
+{
+    static $ran = false;
+    if ($ran) {
+        return;
+    }
+    $ran = true;
+    // یک‌بار اجباری بعد از آپدیت، بعد هر ۶ ساعت
+    $force = (string) get_option('casting_follows_orphan_purge_v2', '') !== '1';
+    $stamp = (int) get_option('casting_follows_orphan_purged_at', 0);
+    if (!$force && $stamp > 0 && (time() - $stamp) < 6 * HOUR_IN_SECONDS) {
+        return;
+    }
+    casting_follows_purge_orphans();
+    update_option('casting_follows_orphan_purged_at', time(), false);
+    if ($force) {
+        update_option('casting_follows_orphan_purge_v2', '1', false);
+    }
+}
+
+function casting_follows_purge_orphans(): void
+{
+    global $wpdb;
+    $table = casting_follows_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists !== $table) {
+        return;
+    }
+    $usermeta = $wpdb->usermeta;
+    $users = $wpdb->users;
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->query(
+        "DELETE f FROM {$table} f
+         LEFT JOIN {$users} u ON u.ID = f.follower_id
+         LEFT JOIN {$usermeta} m ON m.user_id = f.follower_id AND m.meta_key = 'casting_role'
+         WHERE u.ID IS NULL OR m.umeta_id IS NULL OR m.meta_value = ''"
+    );
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->query(
+        "DELETE f FROM {$table} f
+         LEFT JOIN {$users} u ON u.ID = f.followed_id
+         LEFT JOIN {$usermeta} m ON m.user_id = f.followed_id AND m.meta_key = 'casting_role'
+         WHERE u.ID IS NULL OR m.umeta_id IS NULL OR m.meta_value = ''"
+    );
 }
 
 function casting_follow_can_target(int $follower_id, int $followed_id): bool
@@ -362,9 +413,14 @@ function casting_followers_count(int $user_id): int
     casting_follows_ensure_table();
     global $wpdb;
     $table = casting_follows_table();
+    $usermeta = $wpdb->usermeta;
+    $users = $wpdb->users;
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     return (int) $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM {$table} WHERE followed_id = %d",
+        "SELECT COUNT(*) FROM {$table} f
+         INNER JOIN {$users} u ON u.ID = f.follower_id
+         INNER JOIN {$usermeta} m ON m.user_id = f.follower_id AND m.meta_key = 'casting_role' AND m.meta_value <> ''
+         WHERE f.followed_id = %d",
         $user_id
     ));
 }
@@ -377,9 +433,14 @@ function casting_following_count(int $user_id): int
     casting_follows_ensure_table();
     global $wpdb;
     $table = casting_follows_table();
+    $usermeta = $wpdb->usermeta;
+    $users = $wpdb->users;
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     return (int) $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM {$table} WHERE follower_id = %d",
+        "SELECT COUNT(*) FROM {$table} f
+         INNER JOIN {$users} u ON u.ID = f.followed_id
+         INNER JOIN {$usermeta} m ON m.user_id = f.followed_id AND m.meta_key = 'casting_role' AND m.meta_value <> ''
+         WHERE f.follower_id = %d",
         $user_id
     ));
 }
@@ -395,10 +456,17 @@ function casting_list_follower_ids(int $user_id, int $limit = 100): array
     casting_follows_ensure_table();
     global $wpdb;
     $table = casting_follows_table();
+    $usermeta = $wpdb->usermeta;
+    $users = $wpdb->users;
     $limit = max(1, min(200, $limit));
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $rows = $wpdb->get_col($wpdb->prepare(
-        "SELECT follower_id FROM {$table} WHERE followed_id = %d ORDER BY created_at DESC LIMIT %d",
+        "SELECT f.follower_id FROM {$table} f
+         INNER JOIN {$users} u ON u.ID = f.follower_id
+         INNER JOIN {$usermeta} m ON m.user_id = f.follower_id AND m.meta_key = 'casting_role' AND m.meta_value <> ''
+         WHERE f.followed_id = %d
+         ORDER BY f.created_at DESC
+         LIMIT %d",
         $user_id,
         $limit
     ));
@@ -417,10 +485,17 @@ function casting_list_following_ids(int $user_id, int $limit = 100): array
     casting_follows_ensure_table();
     global $wpdb;
     $table = casting_follows_table();
+    $usermeta = $wpdb->usermeta;
+    $users = $wpdb->users;
     $limit = max(1, min(200, $limit));
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $rows = $wpdb->get_col($wpdb->prepare(
-        "SELECT followed_id FROM {$table} WHERE follower_id = %d ORDER BY created_at DESC LIMIT %d",
+        "SELECT f.followed_id FROM {$table} f
+         INNER JOIN {$users} u ON u.ID = f.followed_id
+         INNER JOIN {$usermeta} m ON m.user_id = f.followed_id AND m.meta_key = 'casting_role' AND m.meta_value <> ''
+         WHERE f.follower_id = %d
+         ORDER BY f.created_at DESC
+         LIMIT %d",
         $user_id,
         $limit
     ));

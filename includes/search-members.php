@@ -686,7 +686,7 @@ function casting_render_member_search_advanced_fields(array $filters, array $lab
         </div>
         </div>
 
-        <p class="filter-section-title filter-section-span">فیلترهای بازیگران</p>
+        <p class="filter-section-title filter-section-span">فیلترهای بازیگری</p>
         <div class="filter-bar filter-bar-wide">
         <div class="field">
           <label for="gender">جنسیت</label>

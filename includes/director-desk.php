@@ -881,7 +881,7 @@ function casting_render_director_desk_talent_panel(int $director_id, int $talent
     ?>
     <div class="director-desk-inline" id="director-desk">
       <h4>میز کار — امتیاز و نقش</h4>
-      <p class="field-hint">بازیگر را به پروژه/نقش اضافه کنید و برای بازی (دیالوگ، ایفا، …) امتیاز بدهید. در هر نقش، بازیگران با امتیاز بالاتر بالاتر می‌آیند.</p>
+      <p class="field-hint">بازیگر را به پروژه/نقش اضافه کنید و برای بازی (دیالوگ، ایفا، …) امتیاز بدهید. در هر نقش، نفرات با امتیاز بالاتر بالاتر می‌آیند.</p>
 
       <?php if ($entries) : ?>
         <div class="director-desk-entries">

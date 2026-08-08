@@ -885,12 +885,12 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       <div class="field">
         <label for="height">قد (سانتی‌متر)</label>
         <?php casting_render_body_metric_select('height', 'height', 'height', (string) ($profile['height'] ?? '')); ?>
-        <p class="field-hint">برای بازیگران الزامی است</p>
+        <p class="field-hint">برای بازیگری الزامی است</p>
       </div>
       <div class="field">
         <label for="weight">وزن (کیلوگرم)</label>
         <?php casting_render_body_metric_select('weight', 'weight', 'weight', (string) ($profile['weight'] ?? '')); ?>
-        <p class="field-hint">برای بازیگران الزامی است</p>
+        <p class="field-hint">برای بازیگری الزامی است</p>
       </div>
     </div>
 

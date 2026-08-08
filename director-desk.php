@@ -535,7 +535,7 @@ casting_render_flash();
     <?php if (($active_role['description'] ?? '') !== '') : ?>
       <p class="meta"><?= casting_e((string) $active_role['description']) ?></p>
     <?php endif; ?>
-    <p class="field-hint">بازیگران بر اساس امتیاز شما مرتب می‌شوند — بالاترین در بالا.</p>
+    <p class="field-hint">نفرات بر اساس امتیاز شما مرتب می‌شوند — بالاترین در بالا.</p>
 
     <div class="cta-row">
       <a class="btn btn-ghost btn-sm" href="search-users.php">افزودن از جستجو</a>

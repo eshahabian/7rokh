@@ -1369,7 +1369,7 @@ function casting_render_director_send_request_compose(
         <?php endif; ?>
 
         <div class="request-compose-search">
-          <a class="btn btn-ghost" href="search-users.php">جستجوی بازیگران</a>
+          <a class="btn btn-ghost" href="search-users.php">جستجوی بازیگری</a>
           <a class="btn btn-ghost" href="favorites.php">لیست کاندیدا</a>
         </div>
       </div>

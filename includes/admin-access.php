@@ -284,6 +284,22 @@ function casting_admin_delete_user(int $target_id, int $admin_id): array
         }
     }
 
+    // پاک‌سازی روابط دنبال
+    if (!function_exists('casting_follows_table')) {
+        $ff = __DIR__ . '/follows.php';
+        if (is_file($ff)) {
+            require_once $ff;
+        }
+    }
+    if (function_exists('casting_follows_table')) {
+        global $wpdb;
+        $ft = casting_follows_table();
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->delete($ft, ['follower_id' => $target_id], ['%d']);
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->delete($ft, ['followed_id' => $target_id], ['%d']);
+    }
+
     if (!function_exists('wp_delete_user')) {
         require_once ABSPATH . 'wp-admin/includes/user.php';
     }

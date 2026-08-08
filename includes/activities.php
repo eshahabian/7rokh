@@ -10,7 +10,7 @@ function casting_activity_categories(): array
 {
     return [
         'acting' => [
-            'label' => 'بازیگران',
+            'label' => 'بازیگری',
             'items' => [
                 'actor_cinema'  => 'بازیگر سینما',
                 'actor_theater' => 'بازیگر تئاتر',
@@ -145,7 +145,7 @@ function casting_activity_categories(): array
             'items' => [
                 'casting_director'    => 'مدیر انتخاب بازیگر',
                 'casting_assistant'   => 'دستیار انتخاب بازیگر',
-                'actor_coordinator'   => 'مسئول هماهنگی بازیگران',
+                'actor_coordinator'   => 'مسئول هماهنگی بازیگری',
                 'location_manager'    => 'مدیر لوکیشن',
                 'finance_manager'     => 'مدیر مالی',
                 'transport_manager'   => 'مدیر حمل‌ونقل',
@@ -375,7 +375,7 @@ function casting_panel_home_welcome(int $user_id, string $display_name = '', str
 
     $category = $key !== '' ? casting_activity_category_for_specialty($key) : '';
     $sublines = [
-        'acting'     => 'به خانهٔ حرفه‌ای بازیگران خوش آمدید؛ اینجا مسیر دیده شدن و پیشنهاد نقش آغاز می‌شود.',
+        'acting'     => 'به خانهٔ حرفه‌ای بازیگری خوش آمدید؛ اینجا مسیر دیده شدن و پیشنهاد نقش آغاز می‌شود.',
         'directing'  => 'به فضای حرفه‌ای کارگردانی خوش آمدید؛ استعدادها و پروژه‌ها از همین‌جا به هم می‌رسند.',
         'production' => 'به جمع عوامل تهیه و تولید خوش آمدید؛ هماهنگی پروژه از اینجا ساده‌تر است.',
         'writing'    => 'به خانهٔ نویسندگان و فیلمنامه‌نویسان خوش آمدید؛ روایت شما اینجا شنیده می‌شود.',
