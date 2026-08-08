@@ -34,6 +34,7 @@ function casting_follows_ensure_table(): void
         casting_follows_install();
     }
     casting_follows_purge_orphans_once();
+    casting_follow_sync_required_admins_once();
 }
 
 /**
@@ -311,6 +312,77 @@ function casting_follow_default_admins(int $user_id): void
             continue;
         }
         casting_follow_ensure($user_id, $admin_id);
+    }
+}
+
+/**
+ * همگام‌سازی فالوهای الزامی مدیران برای همهٔ اعضای پورتال
+ * (کاربرانی که قبل از فعال شدن این قابلیت ثبت‌نام کرده‌اند یا از مسیر دیگر ساخته شده‌اند)
+ */
+function casting_follow_sync_required_admins(): int
+{
+    $admin_ids = [];
+    foreach (casting_default_follow_admin_logins() as $login) {
+        $admin = get_user_by('login', $login);
+        if ($admin) {
+            $admin_ids[] = (int) $admin->ID;
+        }
+    }
+    $admin_ids = array_values(array_unique(array_filter($admin_ids)));
+    if ($admin_ids === []) {
+        return 0;
+    }
+
+    $member_ids = get_users([
+        'fields'   => 'ID',
+        'meta_key' => 'casting_role',
+        'number'   => 5000,
+    ]);
+    if (!is_array($member_ids) || $member_ids === []) {
+        return 0;
+    }
+
+    $created = 0;
+    foreach ($member_ids as $member_id) {
+        $member_id = (int) $member_id;
+        if ($member_id <= 0 || casting_get_user_role($member_id) === '') {
+            continue;
+        }
+        foreach ($admin_ids as $admin_id) {
+            if ($member_id === $admin_id) {
+                continue;
+            }
+            if (casting_user_is_following($member_id, $admin_id)) {
+                continue;
+            }
+            if (casting_follow_ensure($member_id, $admin_id)) {
+                $created++;
+            }
+        }
+    }
+
+    return $created;
+}
+
+/**
+ * یک‌بار اجباری بعد از آپدیت، بعد هر ساعت — تا شمارندهٔ دنبال‌کننده‌های مدیران کامل بماند
+ */
+function casting_follow_sync_required_admins_once(): void
+{
+    static $ran = false;
+    if ($ran) {
+        return;
+    }
+    $ran = true;
+    $force = (string) get_option('casting_follow_required_sync_v1', '') !== '1';
+    $stamp = (int) get_option('casting_follow_required_synced_at', 0);
+    if (!$force && $stamp > 0 && (time() - $stamp) < HOUR_IN_SECONDS) {
+        return;
+    }
+    casting_follow_sync_required_admins();
+    update_option('casting_follow_required_synced_at', time(), false);
+    if ($force) {
+        update_option('casting_follow_required_sync_v1', '1', false);
     }
 }
 
