@@ -70,6 +70,7 @@ function casting_opportunities_ensure_tables(): void
     if ($ver !== '1') {
         casting_opportunities_install();
     }
+    casting_opportunities_purge_emad_once();
 }
 
 /**
@@ -264,6 +265,99 @@ function casting_opportunity_close(int $director_id, int $opportunity_id): array
     );
 
     return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * حذف کامل فرصت + اپلای‌ها (برای ادمین یا مالک)
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_opportunity_delete(int $opportunity_id): array
+{
+    if ($opportunity_id <= 0) {
+        return ['ok' => false, 'error' => 'فراخوان نامعتبر است.'];
+    }
+    casting_opportunities_ensure_tables();
+    $row = casting_opportunity_get($opportunity_id);
+    if (!$row) {
+        return ['ok' => false, 'error' => 'فراخوان پیدا نشد.'];
+    }
+    global $wpdb;
+    $apps = casting_opportunity_applications_table();
+    $ops = casting_opportunities_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->delete($apps, ['opportunity_id' => $opportunity_id], ['%d']);
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->delete($ops, ['id' => $opportunity_id], ['%d']);
+
+    return ['ok' => true, 'error' => ''];
+}
+
+function casting_user_can_admin_delete_opportunity(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (!function_exists('casting_user_is_super_admin')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if (casting_user_is_super_admin($user_id)) {
+        return true;
+    }
+    if (function_exists('casting_user_staff_permissions') && casting_user_staff_permissions($user_id) !== []) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_admin_delete_opportunity(int $admin_id, int $opportunity_id): array
+{
+    if (!casting_user_can_admin_delete_opportunity($admin_id)) {
+        return ['ok' => false, 'error' => 'اجازه حذف فراخوان را ندارید.'];
+    }
+
+    return casting_opportunity_delete($opportunity_id);
+}
+
+/**
+ * یک‌بار فرصت‌هایی با عنوان دقیق «عماد» را پاک می‌کند.
+ */
+function casting_opportunities_purge_emad_once(): void
+{
+    static $running = false;
+    if ($running) {
+        return;
+    }
+    if ((string) get_option('casting_purged_opp_emad_v1', '') === '1') {
+        return;
+    }
+    if ((string) get_option('casting_opportunities_db_version', '') !== '1') {
+        return;
+    }
+    global $wpdb;
+    $table = casting_opportunities_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists !== $table) {
+        return;
+    }
+    $running = true;
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $ids = $wpdb->get_col($wpdb->prepare(
+        "SELECT id FROM {$table} WHERE TRIM(title) = %s",
+        'عماد'
+    ));
+    if (is_array($ids)) {
+        foreach ($ids as $id) {
+            casting_opportunity_delete((int) $id);
+        }
+    }
+    update_option('casting_purged_opp_emad_v1', '1', false);
+    $running = false;
 }
 
 /**

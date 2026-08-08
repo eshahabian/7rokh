@@ -14,12 +14,26 @@ casting_opportunities_ensure_tables();
 $tab = ((string) ($_GET['tab'] ?? 'open')) === 'mine' ? 'mine' : 'open';
 $error = '';
 $open_id = max(0, (int) ($_GET['id'] ?? 0));
+$can_admin_delete = casting_user_can_admin_delete_opportunity($user_id);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_opportunity_apply')) {
+    $action = sanitize_key((string) ($_POST['opp_action'] ?? 'apply'));
+    if ($action === 'admin_delete') {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_opportunity_admin')) {
+            $error = 'درخواست نامعتبر است.';
+        } else {
+            $oid = max(0, (int) ($_POST['opportunity_id'] ?? 0));
+            $result = casting_admin_delete_opportunity($user_id, $oid);
+            if (!$result['ok']) {
+                $error = $result['error'];
+            } else {
+                casting_set_flash('success', 'فراخوان حذف شد.');
+                casting_redirect('opportunities.php?tab=open');
+            }
+        }
+    } elseif (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_opportunity_apply')) {
         $error = 'درخواست نامعتبر است.';
     } else {
-        $action = sanitize_key((string) ($_POST['opp_action'] ?? 'apply'));
         $oid = max(0, (int) ($_POST['opportunity_id'] ?? 0));
         if ($action === 'withdraw') {
             $result = casting_opportunity_withdraw($user_id, $oid);
@@ -135,6 +149,14 @@ casting_render_flash();
               <?php endif; ?>
             </div>
             <div class="home-opportunity-actions">
+              <?php if ($can_admin_delete) : ?>
+                <form method="post" action="opportunities.php?tab=open" onsubmit="return confirm('این فراخوان برای همیشه حذف شود؟');">
+                  <?php wp_nonce_field('casting_opportunity_admin'); ?>
+                  <input type="hidden" name="opp_action" value="admin_delete">
+                  <input type="hidden" name="opportunity_id" value="<?= $oid ?>">
+                  <button class="btn btn-reject btn-sm" type="submit">حذف</button>
+                </form>
+              <?php endif; ?>
               <?php if ($is_own) : ?>
                 <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('director-desk.php?project=' . (int) ($op['project_id'] ?? 0) . '&opp=' . $oid)) ?>">متقاضیان</a>
               <?php elseif ($already) : ?>
