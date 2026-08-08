@@ -1051,6 +1051,7 @@ function casting_director_query_call_talents(int $director_id, array $filters, i
     $all = [];
     $page = 1;
     $per_page = 50;
+    $filters['viewer_id'] = $director_id;
     while (count($all) < $max) {
         $result = casting_query_members($director_id, $filters, $page, $per_page);
         foreach ($result['users'] as $user) {

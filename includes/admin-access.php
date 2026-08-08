@@ -49,6 +49,10 @@ function casting_user_is_super_admin(int $user_id): bool
     if ($user_id <= 0) {
         return false;
     }
+    // مدیر اصلی پورتال — بالاترین سطح، همیشه همه دسترسی‌ها
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
     if (user_can($user_id, 'manage_options')) {
         return true;
     }
@@ -230,7 +234,12 @@ function casting_admin_set_password(int $target_id, int $admin_id, string $new, 
         return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
     }
     if (casting_user_is_super_admin($target_id)) {
-        return ['ok' => false, 'error' => 'رمز مدیر اصلی از این بخش قابل تغییر نیست.'];
+        // فقط مدیر اصلی پورتال می‌تواند رمز سایر مدیران را عوض کند (نه رمز خودش)
+        if (!function_exists('casting_user_is_portal_owner')
+            || !casting_user_is_portal_owner($admin_id)
+            || casting_user_is_portal_owner($target_id)) {
+            return ['ok' => false, 'error' => 'رمز مدیر اصلی از این بخش قابل تغییر نیست.'];
+        }
     }
     if (strlen($new) < 8) {
         return ['ok' => false, 'error' => 'رمز جدید باید حداقل ۸ کاراکتر باشد.'];

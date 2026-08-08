@@ -1634,8 +1634,12 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
             'key'     => 'casting_role',
             'compare' => 'EXISTS',
         ],
-        casting_member_visible_meta_query(),
     ];
+    $viewer_id = (int) ($filters['viewer_id'] ?? 0);
+    $skip_visible = $viewer_id > 0 && function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($viewer_id);
+    if (!$skip_visible) {
+        $meta_query[] = casting_member_visible_meta_query();
+    }
 
     if (!empty($filters['activity_specialty'])) {
         $activity_specialty = sanitize_key((string) $filters['activity_specialty']);
@@ -1993,11 +1997,23 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
 /**
  * @return array<int, array{id:int,name:string,login:string,role:string,photo_url:string,href:string}>
  */
-function casting_search_members_by_name(string $q, int $exclude_id, int $limit = 12): array
+function casting_search_members_by_name(string $q, int $exclude_id, int $limit = 12, int $viewer_id = 0): array
 {
     $q = trim(sanitize_text_field($q));
     if ($q === '' || casting_strlen($q) < 2) {
         return [];
+    }
+
+    $skip_visible = $viewer_id > 0 && function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($viewer_id);
+    $meta_query = [
+        'relation' => 'AND',
+        [
+            'key'     => 'casting_role',
+            'compare' => 'EXISTS',
+        ],
+    ];
+    if (!$skip_visible) {
+        $meta_query[] = casting_member_visible_meta_query();
     }
 
     $args = [
@@ -2006,14 +2022,7 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
         'search_columns' => ['display_name', 'user_login'],
         'orderby'        => 'display_name',
         'order'          => 'ASC',
-        'meta_query'     => [
-            'relation' => 'AND',
-            [
-                'key'     => 'casting_role',
-                'compare' => 'EXISTS',
-            ],
-            casting_member_visible_meta_query(),
-        ],
+        'meta_query'     => $meta_query,
     ];
     if ($exclude_id > 0) {
         $args['exclude'] = [$exclude_id];
@@ -2032,9 +2041,13 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
         if ($role === '') {
             continue;
         }
-        $profile = casting_get_profile($id);
-        if (!$profile['visible']) {
-            continue;
+        if (!$skip_visible) {
+            $profile = casting_get_profile($id);
+            if (!$profile['visible']) {
+                continue;
+            }
+        } else {
+            $profile = casting_get_profile($id);
         }
         $out[] = [
             'id'        => $id,

@@ -20,6 +20,7 @@ if (!casting_user_can_member_search($user_id)) {
 }
 
 $filters = casting_parse_member_search_filters($_GET);
+$filters['viewer_id'] = $user_id;
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $result = casting_query_members($user_id, $filters, $page, 24);
 $members = $result['users'];

@@ -172,6 +172,39 @@ function casting_user_is_portal_owner(int $user_id): bool
 }
 
 /**
+ * آیا بیننده می‌تواند پروفایل عضو را ببیند؟
+ * مدیر اصلی (eshahabian) بالاترین سطح را دارد و همه پروفایل‌ها را می‌بیند.
+ */
+function casting_user_can_view_member_profile(int $viewer_id, int $member_id): bool
+{
+    if ($viewer_id <= 0 || $member_id <= 0) {
+        return false;
+    }
+    if ($viewer_id === $member_id) {
+        return true;
+    }
+    // بالاترین سطح دسترسی — بدون محدودیت مخفی‌بودن یا بلاک
+    if (casting_user_is_portal_owner($viewer_id)) {
+        return (bool) get_user_by('id', $member_id);
+    }
+    if (casting_get_user_role($member_id) === '') {
+        return false;
+    }
+    if (casting_get_user_role($viewer_id) === '') {
+        return false;
+    }
+    $visible = get_user_meta($member_id, 'casting_visible', true) !== '0';
+    if (!$visible) {
+        return false;
+    }
+    if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($viewer_id, $member_id)) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * مدیرانی که جدول دسترسی پیام‌رسان را می‌بینند
  *
  * @return list<string>

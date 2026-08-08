@@ -53,6 +53,9 @@ function casting_member_preview_can_view(int $viewer_id, int $member_id): bool
     if ($member_id <= 0 || $viewer_id <= 0 || $viewer_id === $member_id) {
         return false;
     }
+    if (function_exists('casting_user_can_view_member_profile')) {
+        return casting_user_can_view_member_profile($viewer_id, $member_id);
+    }
     if (casting_get_user_role($member_id) === '') {
         return false;
     }
@@ -63,7 +66,6 @@ function casting_member_preview_can_view(int $viewer_id, int $member_id): bool
     if (!$profile['visible']) {
         return false;
     }
-    // پیش‌نمایش پروفایل عمومی است؛ محدودیت پیام فقط روی دکمهٔ چت اعمال می‌شود
     if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($viewer_id, $member_id)) {
         return false;
     }

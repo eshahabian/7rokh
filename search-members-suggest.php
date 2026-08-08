@@ -23,5 +23,5 @@ if ($q === '' || casting_strlen($q) < 2) {
     exit;
 }
 
-$items = casting_search_members_by_name($q, $user_id, 12);
+$items = casting_search_members_by_name($q, $user_id, 12, $user_id);
 echo wp_json_encode(['ok' => true, 'items' => $items], JSON_UNESCAPED_UNICODE);
