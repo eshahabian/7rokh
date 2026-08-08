@@ -14,6 +14,9 @@ $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $error = '';
 
+// همگام‌سازی شمارنده برای badge سایت اصلی (سبدهای قدیمی بدون کوکی)
+casting_cart_sync_count_cookie();
+
 $action = sanitize_key((string) ($_GET['action'] ?? $_POST['cart_action'] ?? ''));
 
 // افزودن از لینک فروشگاه

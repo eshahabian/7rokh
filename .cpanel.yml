@@ -8,3 +8,4 @@ deployment:
     - test -f $DEPLOYPATH/config.local.php || cp $DEPLOYPATH/config.local.php.example $DEPLOYPATH/config.local.php
     - /bin/mkdir -p $MUPATH
     - /bin/cp $DEPLOYPATH/mu-plugin/casting-wp-admin-guard.php $MUPATH/casting-wp-admin-guard.php
+    - /bin/cp $DEPLOYPATH/mu-plugin/casting-main-cart-nav.php $MUPATH/casting-main-cart-nav.php

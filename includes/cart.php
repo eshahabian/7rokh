@@ -10,9 +10,47 @@ function casting_cart_session_key(): string
     return 'casting_cart_v1';
 }
 
+function casting_cart_count_cookie_name(): string
+{
+    return 'casting_cart_count';
+}
+
 function casting_cart_session_ready(): bool
 {
     return session_status() === PHP_SESSION_ACTIVE;
+}
+
+/**
+ * کوکی دامنهٔ ریشه برای نمایش شمارنده سبد در سایت اصلی وردپرس
+ */
+function casting_cart_sync_count_cookie(int $count = -1): void
+{
+    if (headers_sent()) {
+        return;
+    }
+    if ($count < 0) {
+        try {
+            $count = casting_cart_count();
+        } catch (Throwable $e) {
+            $count = 0;
+        }
+    }
+    $count = max(0, (int) $count);
+    $name = casting_cart_count_cookie_name();
+    $secure = !empty($_SERVER['HTTPS']) && (string) $_SERVER['HTTPS'] !== 'off';
+    $params = [
+        'expires'  => $count > 0 ? (time() + (30 * DAY_IN_SECONDS)) : (time() - HOUR_IN_SECONDS),
+        'path'     => '/',
+        'secure'   => $secure,
+        'httponly' => false,
+        'samesite' => 'Lax',
+    ];
+    setcookie($name, $count > 0 ? (string) $count : '0', $params);
+    if ($count > 0) {
+        $_COOKIE[$name] = (string) $count;
+    } else {
+        unset($_COOKIE[$name]);
+    }
 }
 
 /**
@@ -45,9 +83,11 @@ function casting_cart_save(array $cart): void
     if (!casting_cart_session_ready()) {
         return;
     }
+    $items = array_values(is_array($cart['items'] ?? null) ? $cart['items'] : []);
     $_SESSION[casting_cart_session_key()] = [
-        'items' => array_values(is_array($cart['items'] ?? null) ? $cart['items'] : []),
+        'items' => $items,
     ];
+    casting_cart_sync_count_cookie(count($items));
 }
 
 function casting_cart_clear(): void
@@ -56,6 +96,7 @@ function casting_cart_clear(): void
         return;
     }
     unset($_SESSION[casting_cart_session_key()]);
+    casting_cart_sync_count_cookie(0);
 }
 
 function casting_cart_count(): int
