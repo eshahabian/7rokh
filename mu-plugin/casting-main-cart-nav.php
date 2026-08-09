@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Casting Portal — سبد خرید در هدر سایت
  * Description: آیکون سبد خرید کنار شبکه‌های اجتماعی هدر + شمارنده زنده
- * Version: 1.4
+ * Version: 1.5
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-cart-nav.php
  * (خودکار با deploy — .cpanel.yml)
@@ -82,10 +82,11 @@ function casting_main_cart_enqueue_assets(): void
   vertical-align:middle !important;
   text-decoration:none !important;
   line-height:1 !important;
-  margin:0 0.35em !important;
+  margin:0 !important;
   padding:0 !important;
   color:#666 !important;
-  box-sizing:border-box;
+  box-sizing:border-box !important;
+  float:none !important;
 }
 .casting-main-cart-social:hover,
 .casting-main-cart-social:focus{
@@ -99,6 +100,7 @@ function casting_main_cart_enqueue_assets(): void
   fill:currentColor;
   color:inherit;
   flex:0 0 auto;
+  margin:0 !important;
 }
 .casting-main-cart-badge{
   position:absolute;
@@ -152,7 +154,7 @@ function casting_main_cart_enqueue_assets(): void
 }
 ';
 
-    wp_register_style('casting-main-cart-nav', false, [], '1.4');
+    wp_register_style('casting-main-cart-nav', false, [], '1.5');
     wp_enqueue_style('casting-main-cart-nav');
     wp_add_inline_style('casting-main-cart-nav', trim($css));
 
@@ -212,21 +214,33 @@ function casting_main_cart_enqueue_assets(): void
     }
     return null;
   }
+  function getSocials(parent) {
+    return qsAll("a[href]", parent || document).filter(function (el) {
+      return (
+        isSocialHref(el.getAttribute("href")) &&
+        !el.classList.contains("casting-main-cart-social")
+      );
+    });
+  }
   function findInsertPoint(anchor) {
     var node = anchor, k, parent, socials, last;
     for (k = 0; k < 6 && node; k++) {
       parent = node.parentElement;
       if (!parent) break;
-      socials = qsAll("a[href]", parent).filter(function (el) {
-        return isSocialHref(el.getAttribute("href"));
-      });
+      socials = getSocials(parent);
       if (socials.length >= 1) {
         last = socials[socials.length - 1];
-        return { parent: parent, after: last };
+        return { parent: parent, after: last, socials: socials };
       }
       node = parent;
     }
-    return { parent: anchor.parentElement, after: anchor };
+    return { parent: anchor.parentElement, after: anchor, socials: [anchor] };
+  }
+  function gapBetween(a, b) {
+    var ra = a.getBoundingClientRect();
+    var rb = b.getBoundingClientRect();
+    if (ra.left < rb.left) return rb.left - ra.right;
+    return ra.left - rb.right;
   }
   function matchSocialLook(link, ref) {
     if (!link || !ref) return;
@@ -237,6 +251,8 @@ function casting_main_cart_enqueue_assets(): void
       var icon = ref.querySelector("i, svg, img");
       var color = cs.color || "#666";
       var size = parseFloat(cs.fontSize) || 16;
+      var boxW = parseFloat(cs.width) || 0;
+      var boxH = parseFloat(cs.height) || 0;
       if (icon) {
         var ics = window.getComputedStyle(icon);
         if (ics.color && ics.color !== "rgba(0, 0, 0, 0)") color = ics.color;
@@ -248,23 +264,81 @@ function casting_main_cart_enqueue_assets(): void
         else if (ifs > 0) size = ifs;
       }
       size = Math.round(size);
+      if (!(boxW > 0)) boxW = size;
+      if (!(boxH > 0)) boxH = size;
+      boxW = Math.round(Math.max(boxW, size));
+      boxH = Math.round(Math.max(boxH, size));
+      link.style.cssText = "";
+      link.className = "casting-main-cart-social";
       link.style.color = color;
-      link.style.opacity = cs.opacity && cs.opacity !== "1" ? cs.opacity : "1";
       link.style.display = "inline-flex";
       link.style.alignItems = "center";
       link.style.justifyContent = "center";
       link.style.verticalAlign = "middle";
-      link.style.lineHeight = cs.lineHeight || "1";
-      if (cs.height && cs.height !== "auto" && parseFloat(cs.height) > 0) {
-        link.style.height = cs.height;
-      }
-      if (cs.width && cs.width !== "auto" && parseFloat(cs.width) > 0) {
-        link.style.width = cs.width;
-        link.style.minWidth = cs.width;
-      }
+      link.style.lineHeight = "1";
+      link.style.width = boxW + "px";
+      link.style.height = boxH + "px";
+      link.style.minWidth = boxW + "px";
+      link.style.minHeight = boxH + "px";
+      link.style.padding = "0";
+      link.style.margin = "0";
+      link.style.boxSizing = "border-box";
+      link.style.textDecoration = "none";
+      link.style.position = "relative";
       svg.style.width = size + "px";
       svg.style.height = size + "px";
     } catch (e) {}
+  }
+  function syncCartLayout(link, parent, socials) {
+    if (!link || !parent) return;
+    socials = socials && socials.length ? socials : getSocials(parent);
+    if (!socials.length) return;
+    var nearest = socials[0];
+    var linkR = link.getBoundingClientRect();
+    var best = Infinity;
+    socials.forEach(function (s) {
+      var r = s.getBoundingClientRect();
+      var d = Math.abs((r.left + r.right) / 2 - (linkR.left + linkR.right) / 2);
+      if (d < best) {
+        best = d;
+        nearest = s;
+      }
+    });
+    matchSocialLook(link, nearest);
+    var targetGap = 12;
+    if (socials.length >= 2) {
+      targetGap = Math.round(gapBetween(socials[0], socials[1]));
+      if (!(targetGap > 2)) {
+        var ms = window.getComputedStyle(socials[1]);
+        targetGap =
+          Math.round(
+            (parseFloat(ms.marginLeft) || 0) + (parseFloat(ms.marginRight) || 0)
+          ) || 12;
+      }
+    }
+    link.style.marginLeft = "0px";
+    link.style.marginRight = "0px";
+    link.style.transform = "none";
+    linkR = link.getBoundingClientRect();
+    var nearR = nearest.getBoundingClientRect();
+    var currentGap =
+      linkR.left < nearR.left ? nearR.left - linkR.right : linkR.left - nearR.right;
+    var fix = Math.round(targetGap - currentGap);
+    if (fix !== 0) {
+      if (linkR.left < nearR.left) {
+        link.style.marginRight = Math.max(0, fix) + "px";
+      } else {
+        link.style.marginLeft = Math.max(0, fix) + "px";
+      }
+    }
+    requestAnimationFrame(function () {
+      var lr = link.getBoundingClientRect();
+      var nr = nearest.getBoundingClientRect();
+      var dy = Math.round((nr.top + nr.height / 2) - (lr.top + lr.height / 2));
+      if (Math.abs(dy) >= 1) {
+        link.style.transform = "translateY(" + dy + "px)";
+      }
+    });
   }
   function setCount(n) {
     CFG.count = Math.max(0, parseInt(n, 10) || 0);
@@ -306,6 +380,10 @@ function casting_main_cart_enqueue_assets(): void
     } else {
       spot.parent.appendChild(link);
     }
+    syncCartLayout(link, spot.parent, spot.socials || getSocials(spot.parent));
+    requestAnimationFrame(function () {
+      syncCartLayout(link, spot.parent, spot.socials || getSocials(spot.parent));
+    });
     var fb = document.querySelector(".casting-main-cart-fallback");
     if (fb) fb.classList.remove("is-visible");
     return true;
@@ -360,7 +438,7 @@ function casting_main_cart_enqueue_assets(): void
 })();
 JS;
 
-    wp_register_script('casting-main-cart-nav', false, [], '1.4', true);
+    wp_register_script('casting-main-cart-nav', false, [], '1.5', true);
     wp_enqueue_script('casting-main-cart-nav');
     wp_add_inline_script(
         'casting-main-cart-nav',
