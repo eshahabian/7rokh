@@ -13,6 +13,7 @@
 |------|-----|
 | `casting-wp-admin-guard.php` | جداسازی ورود پورتال از wp-admin |
 | `casting-main-cart-nav.php` | لینک «سبد خرید» + badge در منوی سایت اصلی |
+| `casting-main-menu-sticky.php` | جلوگیری از دو ردیف شدن منو بعد از اسکرول (JNews) |
 
 ## نصب
 
@@ -22,6 +23,7 @@
 ```
 public_html/wp-content/mu-plugins/casting-wp-admin-guard.php
 public_html/wp-content/mu-plugins/casting-main-cart-nav.php
+public_html/wp-content/mu-plugins/casting-main-menu-sticky.php
 ```
 
 **مهم:** loader جدا نصب نکنید.
@@ -33,6 +35,9 @@ casting-portal/mu-plugin/casting-wp-admin-guard.php
 
 casting-portal/mu-plugin/casting-main-cart-nav.php
   → public_html/wp-content/mu-plugins/casting-main-cart-nav.php
+
+casting-portal/mu-plugin/casting-main-menu-sticky.php
+  → public_html/wp-content/mu-plugins/casting-main-menu-sticky.php
 ```
 
 ## سبد خرید در سایت اصلی
