@@ -2,24 +2,30 @@
 declare(strict_types=1);
 
 /**
- * سبد خرید — مرحله قبل از خلاصه سفارش
+ * سبد خرید — مهمان هم می‌تواند ببیند و انتخاب کند؛ پرداخت نیازمند ورود است
  */
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/checkout.php';
 require_once __DIR__ . '/includes/cart.php';
+require_once __DIR__ . '/includes/layout.php';
 require_once __DIR__ . '/includes/panel.php';
 
 casting_nocache();
-$user = casting_require_casting_user();
-$user_id = (int) $user->ID;
-$error = '';
 
-// همگام‌سازی شمارنده برای badge سایت اصلی (سبدهای قدیمی بدون کوکی)
+$user = casting_current_user();
+$user_id = $user ? (int) $user->ID : 0;
+$logged_in = $user_id > 0 && casting_get_user_role($user_id) !== '';
+$error = '';
+$auth_needed = false;
+
+if ($logged_in) {
+    casting_cart_claim_guest_cart();
+}
 casting_cart_sync_count_cookie();
 
 $action = sanitize_key((string) ($_GET['action'] ?? $_POST['cart_action'] ?? ''));
 
-// افزودن از لینک فروشگاه
+// افزودن از لینک / کاشی
 if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $service = sanitize_key((string) ($_GET['service'] ?? ''));
     $plan = sanitize_key((string) ($_GET['plan'] ?? ''));
@@ -49,11 +55,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             casting_redirect('cart.php');
         }
         if ($action === 'checkout') {
-            $created = casting_cart_create_order_from_cart($user_id);
-            if (!$created['ok']) {
-                $error = $created['error'];
+            if (!$logged_in) {
+                $auth_needed = true;
+                $error = 'برای ادامه پرداخت باید ورود یا ثبت‌نام انجام دهید.';
             } else {
-                casting_redirect('checkout.php?order=' . rawurlencode((string) $created['order']['order_code']));
+                $created = casting_cart_create_order_from_cart($user_id);
+                if (!$created['ok']) {
+                    $error = $created['error'];
+                } else {
+                    casting_redirect('checkout.php?order=' . rawurlencode((string) $created['order']['order_code']));
+                }
             }
         }
     }
@@ -61,22 +72,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $cart = casting_cart_get();
 $totals = casting_cart_totals($cart);
+$shop_tiles = casting_shop_catalog_tiles();
+$tiles_by_group = [];
+foreach ($shop_tiles as $tile) {
+    $g = (string) ($tile['group'] ?? 'سایر');
+    if (!isset($tiles_by_group[$g])) {
+        $tiles_by_group[$g] = [];
+    }
+    $tiles_by_group[$g][] = $tile;
+}
 
-casting_render_panel_start('سبد خرید', 'cart');
+if ($logged_in) {
+    casting_render_panel_start('سبد خرید', 'cart');
+} else {
+    casting_render_head('سبد خرید', 'page-cart-guest');
+    casting_render_header('cart');
+    echo '<main class="wrap panel-page cart-guest-page">';
+}
 casting_render_flash();
 ?>
 <section class="dash-card cart-card">
   <h1>سبد خرید</h1>
-  <p class="meta">اقلام انتخاب‌شده را بررسی کنید؛ سپس به خلاصه سفارش و درگاه بانکی بروید.</p>
+  <?php if ($logged_in) : ?>
+    <p class="meta">اقلام انتخاب‌شده را بررسی کنید؛ سپس به خلاصه سفارش و درگاه بانکی بروید.</p>
+  <?php else : ?>
+    <p class="meta">خدمات را ببینید و به سبد اضافه کنید. برای پرداخت نهایی باید وارد شوید یا ثبت‌نام کنید.</p>
+  <?php endif; ?>
 
   <?php if ($error !== '') : ?>
     <div class="flash flash-error" role="alert"><?= casting_e($error) ?></div>
   <?php endif; ?>
 
   <?php if ($cart['items'] === []) : ?>
-    <p class="empty-state">سبد خرید خالی است.</p>
-    <div class="cta-row">
-      <a class="btn btn-primary" href="premium.php">مشاهده خدمات و پلن‌ها</a>
+    <div class="cart-empty-hero">
+      <p class="empty-state">سبد خرید شما خالی است.</p>
     </div>
   <?php else : ?>
     <div class="cart-list">
@@ -122,18 +151,80 @@ casting_render_flash();
     </div>
 
     <div class="cta-row cart-actions">
-      <form method="post" action="cart.php">
-        <?php wp_nonce_field('casting_cart'); ?>
-        <input type="hidden" name="cart_action" value="checkout">
-        <button class="btn btn-primary" type="submit">ادامه به خلاصه سفارش</button>
-      </form>
+      <?php if ($logged_in) : ?>
+        <form method="post" action="cart.php">
+          <?php wp_nonce_field('casting_cart'); ?>
+          <input type="hidden" name="cart_action" value="checkout">
+          <button class="btn btn-primary" type="submit">ادامه به خلاصه سفارش</button>
+        </form>
+      <?php else : ?>
+        <form method="post" action="cart.php#cart-auth">
+          <?php wp_nonce_field('casting_cart'); ?>
+          <input type="hidden" name="cart_action" value="checkout">
+          <button class="btn btn-primary" type="submit">ادامه به پرداخت</button>
+        </form>
+      <?php endif; ?>
       <form method="post" action="cart.php" onsubmit="return confirm('سبد خرید خالی شود؟');">
         <?php wp_nonce_field('casting_cart'); ?>
         <input type="hidden" name="cart_action" value="clear">
         <button class="btn btn-ghost" type="submit">خالی کردن سبد</button>
       </form>
-      <a class="btn btn-ghost" href="premium.php">افزودن خدمت دیگر</a>
     </div>
   <?php endif; ?>
 </section>
-<?php casting_render_panel_end(); ?>
+
+<section class="dash-card cart-shop-card" id="cart-shop">
+  <h2>خدمات قابل خرید</h2>
+  <p class="meta">روی هر کاشی بزنید تا به سبد اضافه شود.</p>
+
+  <?php foreach ($tiles_by_group as $group => $tiles) : ?>
+    <h3 class="shop-group-title"><?= casting_e($group) ?></h3>
+    <div class="shop-tile-scroller" role="list">
+      <?php foreach ($tiles as $tile) :
+          $add_href = casting_cart_add_url((string) $tile['service'], (string) $tile['plan']);
+          ?>
+        <article class="shop-tile" role="listitem">
+          <div class="shop-tile-media shop-tile-media--<?= casting_e((string) $tile['service'] === 'premium' ? 'premium' : 'call') ?>" aria-hidden="true">
+            <span class="shop-tile-mark"><?= (string) $tile['service'] === 'premium' ? 'ویژه' : 'فراخوان' ?></span>
+            <?php if ((string) ($tile['badge'] ?? '') !== '') : ?>
+              <span class="shop-tile-badge"><?= casting_e((string) $tile['badge']) ?></span>
+            <?php endif; ?>
+          </div>
+          <div class="shop-tile-body">
+            <strong class="shop-tile-title"><?= casting_e((string) $tile['label']) ?></strong>
+            <p class="shop-tile-meta"><?= casting_e((string) $tile['meta']) ?></p>
+            <p class="shop-tile-price">
+              <strong><?= casting_e(casting_format_toman((int) $tile['price_final'])) ?></strong>
+              <span class="meta">با مالیات</span>
+            </p>
+            <a class="btn btn-primary btn-sm shop-tile-add" href="<?= casting_e($add_href) ?>">افزودن به سبد</a>
+          </div>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  <?php endforeach; ?>
+</section>
+
+<?php if (!$logged_in) : ?>
+  <section class="dash-card cart-auth-card" id="cart-auth">
+    <h2>ورود یا ثبت‌نام برای پرداخت</h2>
+    <?php if ($auth_needed || $cart['items'] !== []) : ?>
+      <div class="flash flash-error" role="status">برای ادامه پرداخت باید ورود یا ثبت‌نام انجام دهید. اقلام سبد شما بعد از ورود حفظ می‌شود.</div>
+    <?php else : ?>
+      <p class="meta">برای نهایی کردن خرید و پرداخت آنلاین، ابتدا وارد شوید یا عضو شوید.</p>
+    <?php endif; ?>
+    <div class="cta-row cart-auth-actions">
+      <a class="btn btn-primary" href="<?= casting_e(casting_url('login.php?intent=cart')) ?>">ورود</a>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('register.php?intent=cart')) ?>">ثبت‌نام / عضویت</a>
+    </div>
+  </section>
+<?php endif; ?>
+
+<?php
+if ($logged_in) {
+    casting_render_panel_end();
+} else {
+    echo '</main>';
+    casting_render_footer();
+}
+?>

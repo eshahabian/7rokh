@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Casting Portal — سبد خرید در هدر سایت
  * Description: آیکون سبد خرید کنار شبکه‌های اجتماعی هدر + شمارنده زنده
- * Version: 1.6
+ * Version: 1.7
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-cart-nav.php
  * (خودکار با deploy — .cpanel.yml)
@@ -127,7 +127,7 @@ function casting_main_cart_enqueue_assets(): void
 }
 ';
 
-    wp_register_style('casting-main-cart-nav', false, [], '1.6');
+    wp_register_style('casting-main-cart-nav', false, [], '1.7');
     wp_enqueue_style('casting-main-cart-nav');
     wp_add_inline_style('casting-main-cart-nav', trim($css));
 
@@ -307,10 +307,11 @@ function casting_main_cart_enqueue_assets(): void
         return r.json();
       })
       .then(function (data) {
-        if (!data || !data.ok || !data.logged_in) {
+        if (!data || !data.ok) {
           setCount(0);
           return;
         }
+        // مهمان هم می‌تواند سبد داشته باشد
         setCount(data.count || 0);
       })
       .catch(function () {});
@@ -338,7 +339,7 @@ function casting_main_cart_enqueue_assets(): void
 })();
 JS;
 
-    wp_register_script('casting-main-cart-nav', false, [], '1.6', true);
+    wp_register_script('casting-main-cart-nav', false, [], '1.7', true);
     wp_enqueue_script('casting-main-cart-nav');
     wp_add_inline_script(
         'casting-main-cart-nav',

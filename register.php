@@ -12,6 +12,11 @@ require_once __DIR__ . '/includes/layout.php';
 
 casting_nocache();
 
+$intent = sanitize_key((string) ($_GET['intent'] ?? $_POST['intent'] ?? ''));
+if ($intent === 'cart') {
+    $_SESSION['casting_login_intent'] = 'cart';
+}
+
 $error = '';
 $focus_field = '';
 $invalid_fields = [];
@@ -326,9 +331,14 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                 if ($login['ok']) {
                                     casting_rate_limit_clear('login');
                                     casting_set_flash('success', 'ثبت‌نام و ورود با موفقیت انجام شد.');
+                                    $after_intent = (string) ($_SESSION['casting_login_intent'] ?? '');
+                                    unset($_SESSION['casting_login_intent']);
+                                    if ($after_intent === 'cart') {
+                                        casting_redirect('cart.php');
+                                    }
                                     casting_redirect(casting_dashboard_for_role((string) $result['role']));
                                 }
-                                casting_redirect('login.php?registered=1');
+                                casting_redirect('login.php?registered=1' . (((string) ($_SESSION['casting_login_intent'] ?? '')) === 'cart' ? '&intent=cart' : ''));
                             }
                         }
                     } catch (Throwable $e) {

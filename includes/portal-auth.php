@@ -94,14 +94,16 @@ function casting_portal_login_user(WP_User $user, bool $remember = true): void
 
     wp_set_current_user($user_id);
 
-    // شمارنده سبد سایت اصلی = سبد همین کاربر
-    if (!function_exists('casting_cart_sync_count_cookie')) {
+    // سبد مهمان → کاربر + همگام‌سازی شمارنده سایت اصلی
+    if (!function_exists('casting_cart_claim_guest_cart')) {
         $cart_lib = __DIR__ . '/cart.php';
         if (is_file($cart_lib)) {
             require_once $cart_lib;
         }
     }
-    if (function_exists('casting_cart_sync_count_cookie')) {
+    if (function_exists('casting_cart_claim_guest_cart')) {
+        casting_cart_claim_guest_cart();
+    } elseif (function_exists('casting_cart_sync_count_cookie')) {
         casting_cart_sync_count_cookie();
     }
 }

@@ -20,8 +20,13 @@ function casting_cart_owner_id(): int
     return 0;
 }
 
+function casting_cart_guest_session_key(): string
+{
+    return 'casting_cart_v1_guest';
+}
+
 /**
- * کلید سبد به ازای هر کاربر — تا سبد کاربران قاطی نشود
+ * کلید سبد به ازای هر کاربر — مهمان هم سبد موقت دارد
  */
 function casting_cart_session_key(): string
 {
@@ -30,7 +35,7 @@ function casting_cart_session_key(): string
         return 'casting_cart_v1_u' . $uid;
     }
 
-    return casting_cart_legacy_session_key();
+    return casting_cart_guest_session_key();
 }
 
 function casting_cart_count_cookie_name(): string
@@ -71,7 +76,7 @@ function casting_cart_sync_count_cookie(int $count = -1): void
 {
     if ($count < 0) {
         try {
-            $count = casting_cart_owner_id() > 0 ? casting_cart_count() : 0;
+            $count = casting_cart_count();
         } catch (Throwable $e) {
             $count = 0;
         }
@@ -151,10 +156,9 @@ function casting_cart_get(): array
     if (!casting_cart_session_ready()) {
         return ['items' => []];
     }
-    if (casting_cart_owner_id() <= 0) {
-        return ['items' => []];
+    if (casting_cart_owner_id() > 0) {
+        casting_cart_migrate_legacy_if_needed();
     }
-    casting_cart_migrate_legacy_if_needed();
     $raw = $_SESSION[casting_cart_session_key()] ?? null;
     if (!is_array($raw) || !isset($raw['items']) || !is_array($raw['items'])) {
         return ['items' => []];
@@ -174,7 +178,7 @@ function casting_cart_get(): array
  */
 function casting_cart_save(array $cart): void
 {
-    if (!casting_cart_session_ready() || casting_cart_owner_id() <= 0) {
+    if (!casting_cart_session_ready()) {
         return;
     }
     $items = array_values(is_array($cart['items'] ?? null) ? $cart['items'] : []);
@@ -189,11 +193,77 @@ function casting_cart_clear(): void
     if (!casting_cart_session_ready()) {
         return;
     }
-    if (casting_cart_owner_id() > 0) {
-        unset($_SESSION[casting_cart_session_key()]);
-    }
+    unset($_SESSION[casting_cart_session_key()]);
     unset($_SESSION[casting_cart_legacy_session_key()]);
+    if (casting_cart_owner_id() > 0) {
+        unset($_SESSION[casting_cart_guest_session_key()]);
+    }
     casting_cart_sync_count_cookie(0);
+}
+
+/**
+ * بعد از ورود: سبد مهمان را به سبد کاربر منتقل کن
+ */
+function casting_cart_claim_guest_cart(): void
+{
+    if (!casting_cart_session_ready()) {
+        return;
+    }
+    $uid = casting_cart_owner_id();
+    if ($uid <= 0) {
+        return;
+    }
+    $guest_key = casting_cart_guest_session_key();
+    $user_key = 'casting_cart_v1_u' . $uid;
+    $guest = $_SESSION[$guest_key] ?? null;
+    if (!is_array($guest) || empty($guest['items']) || !is_array($guest['items'])) {
+        return;
+    }
+    $user_raw = $_SESSION[$user_key] ?? null;
+    $user_items = [];
+    if (is_array($user_raw) && isset($user_raw['items']) && is_array($user_raw['items'])) {
+        foreach ($user_raw['items'] as $it) {
+            if (is_array($it)) {
+                $user_items[] = $it;
+            }
+        }
+    }
+    foreach ($guest['items'] as $git) {
+        if (!is_array($git)) {
+            continue;
+        }
+        $replaced = false;
+        foreach ($user_items as $i => $uit) {
+            if (
+                (string) ($uit['service_key'] ?? '') === (string) ($git['service_key'] ?? '')
+                && (string) ($uit['plan_key'] ?? '') === (string) ($git['plan_key'] ?? '')
+                && (int) ($uit['project_id'] ?? 0) === (int) ($git['project_id'] ?? 0)
+            ) {
+                $user_items[$i] = $git;
+                $replaced = true;
+                break;
+            }
+        }
+        if (!$replaced) {
+            $user_items[] = $git;
+        }
+    }
+    // فقط یک پلن ویژه
+    $premium = null;
+    $kept = [];
+    foreach ($user_items as $it) {
+        if ((string) ($it['service_key'] ?? '') === 'premium') {
+            $premium = $it;
+            continue;
+        }
+        $kept[] = $it;
+    }
+    if ($premium !== null) {
+        $kept[] = $premium;
+    }
+    $_SESSION[$user_key] = ['items' => array_values($kept)];
+    unset($_SESSION[$guest_key]);
+    casting_cart_sync_count_cookie(count($kept));
 }
 
 function casting_cart_count(): int

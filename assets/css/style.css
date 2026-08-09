@@ -5910,6 +5910,113 @@ html[data-theme="day"] .cart-item {
   flex-wrap: wrap;
 }
 
+.cart-empty-hero {
+  padding: 1.25rem 0 0.5rem;
+  text-align: center;
+}
+
+.cart-shop-card {
+  margin-top: 1rem;
+}
+
+.shop-tile-scroller {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(11.5rem, 14rem);
+  gap: 0.85rem;
+  overflow-x: auto;
+  padding: 0.35rem 0.15rem 0.85rem;
+  margin: 0 -0.15rem 0.5rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shop-tile {
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.shop-tile-media {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, rgba(176, 141, 87, 0.22), rgba(0, 0, 0, 0.06));
+}
+
+.shop-tile-media--call {
+  background: linear-gradient(160deg, rgba(80, 120, 160, 0.22), rgba(0, 0, 0, 0.06));
+}
+
+.shop-tile-mark {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ink);
+  opacity: 0.85;
+}
+
+.shop-tile-badge {
+  position: absolute;
+  top: 0.55rem;
+  inset-inline-start: 0.55rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #c2410c;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.shop-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 0.9rem 1rem;
+  flex: 1 1 auto;
+}
+
+.shop-tile-title {
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.shop-tile-meta {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.shop-tile-price {
+  margin: 0.25rem 0 0;
+  font-size: 0.95rem;
+}
+
+.shop-tile-add {
+  margin-top: auto;
+  align-self: stretch;
+  text-align: center;
+}
+
+.cart-auth-card {
+  margin-top: 1rem;
+}
+
+.cart-auth-actions {
+  margin-top: 0.85rem;
+}
+
+.cart-guest-page .dash-card {
+  margin-bottom: 1rem;
+}
+
 .shop-list {
   display: grid;
   gap: 0.75rem;

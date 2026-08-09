@@ -161,6 +161,57 @@ function casting_checkout_calc_amounts(int $base, int $discount = 0): array
     ];
 }
 
+/**
+ * کاشی‌های فروشگاه برای سبد / مهمان
+ *
+ * @return list<array{group:string,label:string,meta:string,service:string,plan:string,price_base:int,vat:int,price_final:int,badge:string}>
+ */
+function casting_shop_catalog_tiles(): array
+{
+    if (!function_exists('casting_premium_plans')) {
+        require_once __DIR__ . '/premium.php';
+    }
+    $tiles = [];
+    foreach (casting_premium_plans() as $key => $p) {
+        if ($key === 'featured_30') {
+            continue;
+        }
+        $calc = casting_checkout_calc_amounts((int) $p['price']);
+        $tiles[] = [
+            'group'       => 'عضویت ویژه',
+            'label'       => 'عضویت ویژه — ' . (string) ($p['period_label'] ?? ''),
+            'meta'        => 'ارتقای حساب کاربری · ماهیانه ۷۰٬۰۰۰ تومان',
+            'service'     => 'premium',
+            'plan'        => (string) $key,
+            'price_base'  => $calc['base'],
+            'vat'         => $calc['vat'],
+            'price_final' => $calc['final'],
+            'badge'       => (string) ($p['period_label'] ?? ''),
+        ];
+    }
+    $catalog = casting_paid_services_catalog();
+    $call_types = is_array($catalog['casting_call']['types'] ?? null) ? $catalog['casting_call']['types'] : [];
+    foreach ($call_types as $type_key => $type) {
+        if (!is_array($type)) {
+            continue;
+        }
+        $calc = casting_checkout_calc_amounts((int) ($type['amount_base'] ?? 0));
+        $tiles[] = [
+            'group'       => 'فراخوان کستینگ',
+            'label'       => (string) ($type['label'] ?? $type_key),
+            'meta'        => 'انتشار یک فراخوان در پورتال ۷رخ',
+            'service'     => 'casting_call',
+            'plan'        => (string) $type_key,
+            'price_base'  => $calc['base'],
+            'vat'         => $calc['vat'],
+            'price_final' => $calc['final'],
+            'badge'       => '',
+        ];
+    }
+
+    return $tiles;
+}
+
 function casting_order_new_code(): string
 {
     $stamp = wp_date('Ymd');

@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=140">
+  <link rel="stylesheet" href="<?= $css ?>?v=141">
   <script>
     (function () {
       try {
@@ -65,22 +65,6 @@ function casting_render_nav_cart(?string $active = null): void
     $role = $user ? casting_get_user_role((int) $user->ID) : '';
     $logged_in = $role !== '';
 
-    if (!$logged_in) {
-        ?>
-      <a
-        href="<?= casting_e(casting_url('login.php?intent=cart')) ?>"
-        class="nav-cart<?= $active === 'cart' ? ' is-active' : '' ?>"
-        title="برای خرید ابتدا وارد شوید"
-      >
-        <span class="nav-cart-icon" aria-hidden="true">
-          <svg viewBox="0 0 576 512" width="16" height="16" focusable="false"><path fill="currentColor" d="M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1-96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></svg>
-        </span>
-        <span class="nav-cart-label">سبد خرید</span>
-      </a>
-        <?php
-        return;
-    }
-
     $cart_count = 0;
     try {
         if (!function_exists('casting_cart_count')) {
@@ -95,11 +79,13 @@ function casting_render_nav_cart(?string $active = null): void
     } catch (Throwable $e) {
         $cart_count = 0;
     }
+    $href = casting_url('cart.php');
+    $title = $logged_in ? 'سبد خرید' : 'مشاهده خدمات و سبد خرید';
     ?>
       <a
-        href="<?= casting_e(casting_url('cart.php')) ?>"
+        href="<?= casting_e($href) ?>"
         class="nav-cart<?= $active === 'cart' ? ' is-active' : '' ?><?= $cart_count > 0 ? ' has-notify' : '' ?>"
-        title="سبد خرید"
+        title="<?= casting_e($title) ?>"
       >
         <span class="nav-cart-icon" aria-hidden="true">
           <svg viewBox="0 0 576 512" width="16" height="16" focusable="false"><path fill="currentColor" d="M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1-96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></svg>
