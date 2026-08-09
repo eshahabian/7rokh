@@ -57,7 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'checkout') {
             if (!$logged_in) {
                 $auth_needed = true;
-                $error = 'برای ادامه پرداخت باید ورود یا ثبت‌نام انجام دهید.';
             } else {
                 $created = casting_cart_create_order_from_cart($user_id);
                 if (!$created['ok']) {
@@ -158,11 +157,7 @@ casting_render_flash();
           <button class="btn btn-primary" type="submit">ادامه به خلاصه سفارش</button>
         </form>
       <?php else : ?>
-        <form method="post" action="cart.php#cart-auth">
-          <?php wp_nonce_field('casting_cart'); ?>
-          <input type="hidden" name="cart_action" value="checkout">
-          <button class="btn btn-primary" type="submit">ادامه به پرداخت</button>
-        </form>
+        <button class="btn btn-primary" type="button" data-cart-auth-open>ادامه به پرداخت</button>
       <?php endif; ?>
       <form method="post" action="cart.php" onsubmit="return confirm('سبد خرید خالی شود؟');">
         <?php wp_nonce_field('casting_cart'); ?>
@@ -206,18 +201,57 @@ casting_render_flash();
 </section>
 
 <?php if (!$logged_in) : ?>
-  <section class="dash-card cart-auth-card" id="cart-auth">
-    <h2>ورود یا ثبت‌نام برای پرداخت</h2>
-    <?php if ($auth_needed || $cart['items'] !== []) : ?>
-      <div class="flash flash-error" role="status">برای ادامه پرداخت باید ورود یا ثبت‌نام انجام دهید. اقلام سبد شما بعد از ورود حفظ می‌شود.</div>
-    <?php else : ?>
-      <p class="meta">برای نهایی کردن خرید و پرداخت آنلاین، ابتدا وارد شوید یا عضو شوید.</p>
-    <?php endif; ?>
-    <div class="cta-row cart-auth-actions">
-      <a class="btn btn-primary" href="<?= casting_e(casting_url('login.php?intent=cart')) ?>">ورود</a>
-      <a class="btn btn-ghost" href="<?= casting_e(casting_url('register.php?intent=cart')) ?>">ثبت‌نام / عضویت</a>
+  <div
+    class="cart-auth-modal<?= $auth_needed ? ' is-open' : '' ?>"
+    id="cart-auth-modal"
+    data-cart-auth-modal
+    <?= $auth_needed ? '' : 'hidden' ?>
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cart-auth-title"
+  >
+    <button type="button" class="cart-auth-modal-backdrop" data-cart-auth-close aria-label="بستن"></button>
+    <div class="cart-auth-modal-panel">
+      <div class="cart-auth-modal-head">
+        <h2 id="cart-auth-title">ورود یا ثبت‌نام برای پرداخت</h2>
+        <button type="button" class="btn btn-ghost btn-sm" data-cart-auth-close>بستن</button>
+      </div>
+      <p class="meta">برای ادامه پرداخت باید ورود یا ثبت‌نام انجام دهید. اقلام سبد شما بعد از ورود حفظ می‌شود.</p>
+      <div class="cta-row cart-auth-actions">
+        <a class="btn btn-primary" href="<?= casting_e(casting_url('login.php?intent=cart')) ?>">ورود</a>
+        <a class="btn btn-ghost" href="<?= casting_e(casting_url('register.php?intent=cart')) ?>">ثبت‌نام / عضویت</a>
+      </div>
     </div>
-  </section>
+  </div>
+  <script>
+    (function () {
+      var modal = document.querySelector("[data-cart-auth-modal]");
+      if (!modal) return;
+      var open = function () {
+        modal.hidden = false;
+        modal.classList.add("is-open");
+        document.body.classList.add("cart-auth-modal-open");
+      };
+      var close = function () {
+        modal.classList.remove("is-open");
+        modal.hidden = true;
+        document.body.classList.remove("cart-auth-modal-open");
+      };
+      document.querySelectorAll("[data-cart-auth-open]").forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+          e.preventDefault();
+          open();
+        });
+      });
+      document.querySelectorAll("[data-cart-auth-close]").forEach(function (btn) {
+        btn.addEventListener("click", close);
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && modal.classList.contains("is-open")) close();
+      });
+      if (modal.classList.contains("is-open")) open();
+    })();
+  </script>
 <?php endif; ?>
 
 <?php

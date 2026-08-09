@@ -6005,16 +6005,69 @@ html[data-theme="day"] .cart-item {
   text-align: center;
 }
 
-.cart-auth-card {
-  margin-top: 1rem;
-}
-
 .cart-auth-actions {
   margin-top: 0.85rem;
 }
 
 .cart-guest-page .dash-card {
   margin-bottom: 1rem;
+}
+
+body.cart-auth-modal-open {
+  overflow: hidden;
+}
+
+.cart-auth-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.cart-auth-modal.is-open {
+  display: flex;
+}
+
+.cart-auth-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(10, 10, 12, 0.62);
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+}
+
+.cart-auth-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(26rem, 100%);
+  padding: 1.25rem 1.35rem 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg-elevated);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+}
+
+.cart-auth-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.cart-auth-modal-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+html[data-theme="day"] .cart-auth-modal-backdrop {
+  background: rgba(20, 18, 16, 0.45);
 }
 
 .shop-list {
