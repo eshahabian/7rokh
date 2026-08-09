@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Casting Portal — سبد خرید در هدر سایت
  * Description: آیکون سبد خرید کنار شبکه‌های اجتماعی هدر + شمارنده زنده
- * Version: 1.3
+ * Version: 1.4
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-cart-nav.php
  * (خودکار با deploy — .cpanel.yml)
@@ -79,25 +79,26 @@ function casting_main_cart_enqueue_assets(): void
   align-items:center;
   justify-content:center;
   position:relative;
-  vertical-align:middle;
+  vertical-align:middle !important;
   text-decoration:none !important;
-  line-height:1;
-  margin-inline:0.35em;
-  color:#111 !important;
+  line-height:1 !important;
+  margin:0 0.35em !important;
+  padding:0 !important;
+  color:#666 !important;
+  box-sizing:border-box;
 }
 .casting-main-cart-social:hover,
 .casting-main-cart-social:focus{
-  color:#111 !important;
-  opacity:.85;
+  color:#555 !important;
+  opacity:1;
 }
 .casting-main-cart-social svg{
-  width:1.35em;
-  height:1.35em;
-  min-width:20px;
-  min-height:20px;
+  width:1em;
+  height:1em;
   display:block;
   fill:currentColor;
   color:inherit;
+  flex:0 0 auto;
 }
 .casting-main-cart-badge{
   position:absolute;
@@ -151,7 +152,7 @@ function casting_main_cart_enqueue_assets(): void
 }
 ';
 
-    wp_register_style('casting-main-cart-nav', false, [], '1.3');
+    wp_register_style('casting-main-cart-nav', false, [], '1.4');
     wp_enqueue_style('casting-main-cart-nav');
     wp_add_inline_style('casting-main-cart-nav', trim($css));
 
@@ -232,17 +233,37 @@ function casting_main_cart_enqueue_assets(): void
     try {
       var svg = link.querySelector("svg");
       if (!svg) return;
-      var icon = ref.querySelector("i, svg, img, span");
-      var base = 18;
+      var cs = window.getComputedStyle(ref);
+      var icon = ref.querySelector("i, svg, img");
+      var color = cs.color || "#666";
+      var size = parseFloat(cs.fontSize) || 16;
       if (icon) {
         var ics = window.getComputedStyle(icon);
-        var raw = parseFloat(ics.width) || parseFloat(ics.fontSize) || 0;
-        if (raw > 0) base = raw;
+        if (ics.color && ics.color !== "rgba(0, 0, 0, 0)") color = ics.color;
+        var iw = parseFloat(ics.width);
+        var ih = parseFloat(ics.height);
+        var ifs = parseFloat(ics.fontSize);
+        if (iw > 0 && iw < 64) size = iw;
+        else if (ih > 0 && ih < 64) size = ih;
+        else if (ifs > 0) size = ifs;
       }
-      var size = Math.max(20, Math.round(base * 1.35));
+      size = Math.round(size);
+      link.style.color = color;
+      link.style.opacity = cs.opacity && cs.opacity !== "1" ? cs.opacity : "1";
+      link.style.display = "inline-flex";
+      link.style.alignItems = "center";
+      link.style.justifyContent = "center";
+      link.style.verticalAlign = "middle";
+      link.style.lineHeight = cs.lineHeight || "1";
+      if (cs.height && cs.height !== "auto" && parseFloat(cs.height) > 0) {
+        link.style.height = cs.height;
+      }
+      if (cs.width && cs.width !== "auto" && parseFloat(cs.width) > 0) {
+        link.style.width = cs.width;
+        link.style.minWidth = cs.width;
+      }
       svg.style.width = size + "px";
       svg.style.height = size + "px";
-      link.style.color = "#111";
     } catch (e) {}
   }
   function setCount(n) {
@@ -339,7 +360,7 @@ function casting_main_cart_enqueue_assets(): void
 })();
 JS;
 
-    wp_register_script('casting-main-cart-nav', false, [], '1.3', true);
+    wp_register_script('casting-main-cart-nav', false, [], '1.4', true);
     wp_enqueue_script('casting-main-cart-nav');
     wp_add_inline_script(
         'casting-main-cart-nav',
