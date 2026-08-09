@@ -130,9 +130,21 @@ function casting_sms_request(string $endpoint, array $body): array
     ];
 
     if ($http < 200 || $http >= 300) {
+        $err = 'پاسخ نامعتبر از پنل پیامک (HTTP ' . $http . ').';
+        if (is_array($data)) {
+            $api_msg = trim((string) ($data['message'] ?? $data['Message'] ?? ''));
+            $client_ip = trim((string) ($data['clientIp'] ?? $data['ClientIp'] ?? ''));
+            if ($api_msg !== '' && stripos($api_msg, 'IP') !== false) {
+                $err = 'IP سرور برای وب‌سرویس مجاز نیست'
+                    . ($client_ip !== '' ? (' (IP: ' . $client_ip . ')') : '')
+                    . '. در پنل WebOne: تنظیمات → آی‌پی‌های مجاز REST این IP را ثبت کنید.';
+            } elseif ($api_msg !== '') {
+                $err = $api_msg . ' (HTTP ' . $http . ')';
+            }
+        }
         $out = [
             'ok'    => false,
-            'error' => 'پاسخ نامعتبر از پنل پیامک (HTTP ' . $http . ').',
+            'error' => $err,
             'http'  => $http,
             'raw'   => is_array($data) ? $data : $raw_body,
         ];
