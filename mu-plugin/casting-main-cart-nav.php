@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Casting Portal — سبد خرید در هدر سایت
  * Description: آیکون سبد خرید کنار شبکه‌های اجتماعی هدر + شمارنده زنده
- * Version: 1.5
+ * Version: 1.6
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-cart-nav.php
  * (خودکار با deploy — .cpanel.yml)
@@ -17,9 +17,6 @@ if (defined('CASTING_MAIN_CART_NAV_LOADED')) {
 }
 define('CASTING_MAIN_CART_NAV_LOADED', true);
 
-/**
- * آدرس صفحهٔ سبد پورتال
- */
 function casting_main_cart_url(): string
 {
     if (defined('CASTING_PORTAL_CART_URL') && is_string(CASTING_PORTAL_CART_URL) && CASTING_PORTAL_CART_URL !== '') {
@@ -73,50 +70,26 @@ function casting_main_cart_enqueue_assets(): void
         return;
     }
 
+    // فقط badge — اندازه/فاصله/رنگ را از خود تم و Font Awesome می‌گیرد
     $css = '
 .casting-main-cart-social{
-  display:inline-flex !important;
-  align-items:center;
-  justify-content:center;
-  position:relative;
-  vertical-align:middle !important;
-  text-decoration:none !important;
-  line-height:1 !important;
-  margin:0 !important;
-  padding:0 !important;
-  color:#666 !important;
-  box-sizing:border-box !important;
-  float:none !important;
+  position:relative !important;
 }
-.casting-main-cart-social:hover,
-.casting-main-cart-social:focus{
-  color:#555 !important;
-  opacity:1;
-}
-.casting-main-cart-social svg{
-  width:1em;
-  height:1em;
-  display:block;
-  fill:currentColor;
-  color:inherit;
-  flex:0 0 auto;
-  margin:0 !important;
-}
-.casting-main-cart-badge{
+.casting-main-cart-social .casting-main-cart-badge{
   position:absolute;
-  top:-0.45em;
-  inset-inline-end:-0.55em;
-  min-width:1.1em;
+  top:-0.35em;
+  inset-inline-end:-0.45em;
+  min-width:1.05em;
   padding:0.05em 0.28em;
   border-radius:999px;
   background:#e85d04;
   color:#fff !important;
-  fill:none;
-  font-size:0.62em;
+  font-size:0.58em;
   font-weight:700;
   line-height:1.35;
   text-align:center;
   box-shadow:0 1px 2px rgba(0,0,0,.2);
+  pointer-events:none;
 }
 .casting-main-cart-badge.is-empty{
   display:none !important;
@@ -154,7 +127,7 @@ function casting_main_cart_enqueue_assets(): void
 }
 ';
 
-    wp_register_style('casting-main-cart-nav', false, [], '1.5');
+    wp_register_style('casting-main-cart-nav', false, [], '1.6');
     wp_enqueue_style('casting-main-cart-nav');
     wp_add_inline_style('casting-main-cart-nav', trim($css));
 
@@ -186,7 +159,19 @@ function casting_main_cart_enqueue_assets(): void
       h.indexOf("aparat.com") !== -1
     );
   }
-  function findAnchor() {
+  function isTwitter(h) {
+    h = (h || "").toLowerCase();
+    return h.indexOf("twitter.com") !== -1 || h.indexOf("x.com") !== -1;
+  }
+  function getSocials(parent) {
+    return qsAll("a[href]", parent || document).filter(function (el) {
+      return (
+        isSocialHref(el.getAttribute("href")) &&
+        !el.classList.contains("casting-main-cart-social")
+      );
+    });
+  }
+  function findSocialCluster() {
     var scopes = [
       "header",
       ".jeg_header",
@@ -199,146 +184,82 @@ function casting_main_cart_enqueue_assets(): void
       ".topbar",
       ".header-top",
     ];
-    var i, j, scope, links;
+    var i, scope, socials;
     for (i = 0; i < scopes.length; i++) {
       scope = document.querySelector(scopes[i]);
       if (!scope) continue;
-      links = qsAll("a[href]", scope);
-      for (j = 0; j < links.length; j++) {
-        if (isSocialHref(links[j].getAttribute("href"))) return links[j];
+      socials = getSocials(scope);
+      if (socials.length) {
+        return { root: scope, socials: socials };
       }
     }
-    links = qsAll("a[href]");
-    for (j = 0; j < links.length; j++) {
-      if (isSocialHref(links[j].getAttribute("href"))) return links[j];
+    socials = getSocials(document);
+    if (!socials.length) return null;
+    return { root: socials[0].parentElement, socials: socials };
+  }
+  function pickTemplate(socials) {
+    var i, href;
+    for (i = 0; i < socials.length; i++) {
+      href = socials[i].getAttribute("href") || "";
+      if (isTwitter(href)) return socials[i];
     }
-    return null;
+    return socials[socials.length - 1];
   }
-  function getSocials(parent) {
-    return qsAll("a[href]", parent || document).filter(function (el) {
-      return (
-        isSocialHref(el.getAttribute("href")) &&
-        !el.classList.contains("casting-main-cart-social")
-      );
-    });
+  function cleanBrandClasses(className) {
+    return (className || "")
+      .split(/\s+/)
+      .filter(function (c) {
+        if (!c) return false;
+        return !/facebook|twitter|instagram|linkedin|youtube|telegram|aparat|fa-facebook|fa-twitter|fa-x-twitter|fa-instagram|fa-linkedin|fa-youtube|fa-telegram/i.test(
+          c
+        );
+      });
   }
-  function findInsertPoint(anchor) {
-    var node = anchor, k, parent, socials, last;
-    for (k = 0; k < 6 && node; k++) {
-      parent = node.parentElement;
-      if (!parent) break;
-      socials = getSocials(parent);
-      if (socials.length >= 1) {
-        last = socials[socials.length - 1];
-        return { parent: parent, after: last, socials: socials };
-      }
-      node = parent;
+  function badgeHtml() {
+    return (
+      '<span class="casting-main-cart-badge' +
+      (CFG.count > 0 ? "" : " is-empty") +
+      '">' +
+      (CFG.count > 0 ? String(CFG.count) : "") +
+      "</span>"
+    );
+  }
+  function buildCartLink(template) {
+    var a = template.cloneNode(false);
+    var classes = cleanBrandClasses(template.className);
+    if (classes.indexOf("casting-main-cart-social") === -1) {
+      classes.push("casting-main-cart-social");
     }
-    return { parent: anchor.parentElement, after: anchor, socials: [anchor] };
-  }
-  function gapBetween(a, b) {
-    var ra = a.getBoundingClientRect();
-    var rb = b.getBoundingClientRect();
-    if (ra.left < rb.left) return rb.left - ra.right;
-    return ra.left - rb.right;
-  }
-  function matchSocialLook(link, ref) {
-    if (!link || !ref) return;
-    try {
-      var svg = link.querySelector("svg");
-      if (!svg) return;
-      var cs = window.getComputedStyle(ref);
-      var icon = ref.querySelector("i, svg, img");
-      var color = cs.color || "#666";
-      var size = parseFloat(cs.fontSize) || 16;
-      var boxW = parseFloat(cs.width) || 0;
-      var boxH = parseFloat(cs.height) || 0;
-      if (icon) {
-        var ics = window.getComputedStyle(icon);
-        if (ics.color && ics.color !== "rgba(0, 0, 0, 0)") color = ics.color;
-        var iw = parseFloat(ics.width);
-        var ih = parseFloat(ics.height);
-        var ifs = parseFloat(ics.fontSize);
-        if (iw > 0 && iw < 64) size = iw;
-        else if (ih > 0 && ih < 64) size = ih;
-        else if (ifs > 0) size = ifs;
+    a.className = classes.join(" ");
+    a.href = CFG.url || "#";
+    a.title = CFG.label || "سبد خرید";
+    a.setAttribute("aria-label", CFG.label || "سبد خرید");
+    a.removeAttribute("target");
+    a.removeAttribute("rel");
+
+    var icon = template.querySelector("i");
+    if (icon) {
+      var iEl = icon.cloneNode(false);
+      var ic = cleanBrandClasses(icon.className);
+      if (ic.indexOf("fa") === -1 && ic.indexOf("fas") === -1 && ic.indexOf("fab") === -1) {
+        ic.push("fa");
       }
-      size = Math.round(size);
-      if (!(boxW > 0)) boxW = size;
-      if (!(boxH > 0)) boxH = size;
-      boxW = Math.round(Math.max(boxW, size));
-      boxH = Math.round(Math.max(boxH, size));
-      link.style.cssText = "";
-      link.className = "casting-main-cart-social";
-      link.style.color = color;
-      link.style.display = "inline-flex";
-      link.style.alignItems = "center";
-      link.style.justifyContent = "center";
-      link.style.verticalAlign = "middle";
-      link.style.lineHeight = "1";
-      link.style.width = boxW + "px";
-      link.style.height = boxH + "px";
-      link.style.minWidth = boxW + "px";
-      link.style.minHeight = boxH + "px";
-      link.style.padding = "0";
-      link.style.margin = "0";
-      link.style.boxSizing = "border-box";
-      link.style.textDecoration = "none";
-      link.style.position = "relative";
-      svg.style.width = size + "px";
-      svg.style.height = size + "px";
-    } catch (e) {}
-  }
-  function syncCartLayout(link, parent, socials) {
-    if (!link || !parent) return;
-    socials = socials && socials.length ? socials : getSocials(parent);
-    if (!socials.length) return;
-    var nearest = socials[0];
-    var linkR = link.getBoundingClientRect();
-    var best = Infinity;
-    socials.forEach(function (s) {
-      var r = s.getBoundingClientRect();
-      var d = Math.abs((r.left + r.right) / 2 - (linkR.left + linkR.right) / 2);
-      if (d < best) {
-        best = d;
-        nearest = s;
+      ic = ic.filter(function (c) {
+        return !/^fa-(facebook|twitter|x-twitter|instagram|linkedin|youtube|telegram)/i.test(c);
+      });
+      if (ic.indexOf("fa-shopping-cart") === -1 && ic.indexOf("fa-cart-shopping") === -1) {
+        ic.push("fa-shopping-cart");
       }
-    });
-    matchSocialLook(link, nearest);
-    var targetGap = 12;
-    if (socials.length >= 2) {
-      targetGap = Math.round(gapBetween(socials[0], socials[1]));
-      if (!(targetGap > 2)) {
-        var ms = window.getComputedStyle(socials[1]);
-        targetGap =
-          Math.round(
-            (parseFloat(ms.marginLeft) || 0) + (parseFloat(ms.marginRight) || 0)
-          ) || 12;
-      }
+      iEl.className = ic.join(" ");
+      iEl.removeAttribute("aria-hidden");
+      iEl.setAttribute("aria-hidden", "true");
+      a.appendChild(iEl);
+    } else {
+      a.innerHTML =
+        '<i class="fa fa-shopping-cart" aria-hidden="true"></i>';
     }
-    link.style.marginLeft = "0px";
-    link.style.marginRight = "0px";
-    link.style.transform = "none";
-    linkR = link.getBoundingClientRect();
-    var nearR = nearest.getBoundingClientRect();
-    var currentGap =
-      linkR.left < nearR.left ? nearR.left - linkR.right : linkR.left - nearR.right;
-    var fix = Math.round(targetGap - currentGap);
-    if (fix !== 0) {
-      if (linkR.left < nearR.left) {
-        link.style.marginRight = Math.max(0, fix) + "px";
-      } else {
-        link.style.marginLeft = Math.max(0, fix) + "px";
-      }
-    }
-    requestAnimationFrame(function () {
-      var lr = link.getBoundingClientRect();
-      var nr = nearest.getBoundingClientRect();
-      var dy = Math.round((nr.top + nr.height / 2) - (lr.top + lr.height / 2));
-      if (Math.abs(dy) >= 1) {
-        link.style.transform = "translateY(" + dy + "px)";
-      }
-    });
+    a.insertAdjacentHTML("beforeend", badgeHtml());
+    return a;
   }
   function setCount(n) {
     CFG.count = Math.max(0, parseInt(n, 10) || 0);
@@ -352,38 +273,21 @@ function casting_main_cart_enqueue_assets(): void
       }
     });
   }
-  function buildLink(cls) {
-    var a = document.createElement("a");
-    a.className = cls;
-    a.href = CFG.url || "#";
-    a.title = CFG.label || "سبد خرید";
-    a.setAttribute("aria-label", CFG.label || "سبد خرید");
-    a.innerHTML =
-      '<svg viewBox="0 0 576 512" aria-hidden="true"><path d="M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1-96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></svg>' +
-      '<span class="casting-main-cart-badge' +
-      (CFG.count > 0 ? "" : " is-empty") +
-      '">' +
-      (CFG.count > 0 ? String(CFG.count) : "") +
-      "</span>";
-    return a;
-  }
   function place() {
     if (document.querySelector(".casting-main-cart-social")) return true;
-    var anchor = findAnchor();
-    if (!anchor) return false;
-    var spot = findInsertPoint(anchor);
-    if (!spot || !spot.parent || !spot.after) return false;
-    var link = buildLink("casting-main-cart-social");
-    matchSocialLook(link, spot.after);
-    if (spot.after.nextSibling) {
-      spot.parent.insertBefore(link, spot.after.nextSibling);
+    var cluster = findSocialCluster();
+    if (!cluster || !cluster.socials.length) return false;
+    var socials = cluster.socials;
+    var template = pickTemplate(socials);
+    var parent = template.parentElement;
+    if (!parent) return false;
+    var link = buildCartLink(template);
+    var last = socials[socials.length - 1];
+    if (last.nextSibling) {
+      parent.insertBefore(link, last.nextSibling);
     } else {
-      spot.parent.appendChild(link);
+      parent.appendChild(link);
     }
-    syncCartLayout(link, spot.parent, spot.socials || getSocials(spot.parent));
-    requestAnimationFrame(function () {
-      syncCartLayout(link, spot.parent, spot.socials || getSocials(spot.parent));
-    });
     var fb = document.querySelector(".casting-main-cart-fallback");
     if (fb) fb.classList.remove("is-visible");
     return true;
@@ -403,11 +307,7 @@ function casting_main_cart_enqueue_assets(): void
         return r.json();
       })
       .then(function (data) {
-        if (!data || !data.ok) {
-          setCount(0);
-          return;
-        }
-        if (!data.logged_in) {
+        if (!data || !data.ok || !data.logged_in) {
           setCount(0);
           return;
         }
@@ -438,7 +338,7 @@ function casting_main_cart_enqueue_assets(): void
 })();
 JS;
 
-    wp_register_script('casting-main-cart-nav', false, [], '1.5', true);
+    wp_register_script('casting-main-cart-nav', false, [], '1.6', true);
     wp_enqueue_script('casting-main-cart-nav');
     wp_add_inline_script(
         'casting-main-cart-nav',
@@ -446,9 +346,6 @@ JS;
     );
 }
 
-/**
- * لینک شناور پشتیبان — فقط اگر کنار سوشال پیدا نشد (با JS نمایش داده می‌شود)
- */
 function casting_main_cart_footer_markup(): void
 {
     if (!casting_main_cart_should_render()) {
