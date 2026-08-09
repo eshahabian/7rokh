@@ -44,13 +44,31 @@ function casting_cart_session_ready(): bool
 }
 
 /**
+ * دامنهٔ کوکی برای خوانده شدن روی کل سایت (مثلاً 7rokh.ir)
+ */
+function casting_cart_cookie_domain(): string
+{
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    $host = preg_replace('/:\d+$/', '', $host) ?? $host;
+    if ($host === '' || filter_var($host, FILTER_VALIDATE_IP)) {
+        return '';
+    }
+    if (substr($host, 0, 4) === 'www.') {
+        $host = substr($host, 4);
+    }
+    // دامنهٔ والد با نقطه — روی www و بدون www مشترک شود
+    if (substr_count($host, '.') >= 1) {
+        return '.' . $host;
+    }
+
+    return '';
+}
+
+/**
  * کوکی دامنهٔ ریشه برای نمایش شمارنده سبد در سایت اصلی وردپرس
  */
 function casting_cart_sync_count_cookie(int $count = -1): void
 {
-    if (headers_sent()) {
-        return;
-    }
     if ($count < 0) {
         try {
             $count = casting_cart_owner_id() > 0 ? casting_cart_count() : 0;
@@ -60,19 +78,36 @@ function casting_cart_sync_count_cookie(int $count = -1): void
     }
     $count = max(0, (int) $count);
     $name = casting_cart_count_cookie_name();
-    $secure = !empty($_SERVER['HTTPS']) && (string) $_SERVER['HTTPS'] !== 'off';
-    $params = [
-        'expires'  => $count > 0 ? (time() + (30 * DAY_IN_SECONDS)) : (time() - HOUR_IN_SECONDS),
-        'path'     => '/',
-        'secure'   => $secure,
-        'httponly' => false,
-        'samesite' => 'Lax',
-    ];
-    setcookie($name, $count > 0 ? (string) $count : '0', $params);
     if ($count > 0) {
         $_COOKIE[$name] = (string) $count;
     } else {
         unset($_COOKIE[$name]);
+    }
+    if (headers_sent()) {
+        return;
+    }
+    $secure = !empty($_SERVER['HTTPS']) && (string) $_SERVER['HTTPS'] !== 'off';
+    $domain = casting_cart_cookie_domain();
+    $expire = $count > 0 ? (time() + (30 * DAY_IN_SECONDS)) : (time() - YEAR_IN_SECONDS);
+    $value = $count > 0 ? (string) $count : '0';
+
+    $variants = [
+        ['path' => '/', 'domain' => $domain],
+        ['path' => '/', 'domain' => ''],
+        ['path' => '/casting-portal/', 'domain' => ''],
+    ];
+    foreach ($variants as $v) {
+        $params = [
+            'expires'  => $expire,
+            'path'     => $v['path'],
+            'secure'   => $secure,
+            'httponly' => false,
+            'samesite' => 'Lax',
+        ];
+        if ($v['domain'] !== '') {
+            $params['domain'] = $v['domain'];
+        }
+        setcookie($name, $value, $params);
     }
 }
 
