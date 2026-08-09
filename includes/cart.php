@@ -5,9 +5,32 @@ declare(strict_types=1);
  * سبد خرید جلسه — قبل از خلاصه سفارش و درگاه
  */
 
-function casting_cart_session_key(): string
+function casting_cart_legacy_session_key(): string
 {
     return 'casting_cart_v1';
+}
+
+/** شناسه کاربر صاحب سبد در session پورتال */
+function casting_cart_owner_id(): int
+{
+    if (function_exists('casting_portal_session_user_id')) {
+        return max(0, (int) casting_portal_session_user_id());
+    }
+
+    return 0;
+}
+
+/**
+ * کلید سبد به ازای هر کاربر — تا سبد کاربران قاطی نشود
+ */
+function casting_cart_session_key(): string
+{
+    $uid = casting_cart_owner_id();
+    if ($uid > 0) {
+        return 'casting_cart_v1_u' . $uid;
+    }
+
+    return casting_cart_legacy_session_key();
 }
 
 function casting_cart_count_cookie_name(): string
@@ -30,7 +53,7 @@ function casting_cart_sync_count_cookie(int $count = -1): void
     }
     if ($count < 0) {
         try {
-            $count = casting_cart_count();
+            $count = casting_cart_owner_id() > 0 ? casting_cart_count() : 0;
         } catch (Throwable $e) {
             $count = 0;
         }
@@ -54,6 +77,38 @@ function casting_cart_sync_count_cookie(int $count = -1): void
 }
 
 /**
+ * مهاجرت سبد مشترک قدیمی به کلید کاربر فعلی (یک‌بار)
+ */
+function casting_cart_migrate_legacy_if_needed(): void
+{
+    if (!casting_cart_session_ready()) {
+        return;
+    }
+    $uid = casting_cart_owner_id();
+    if ($uid <= 0) {
+        return;
+    }
+    $user_key = casting_cart_session_key();
+    $legacy_key = casting_cart_legacy_session_key();
+    if ($user_key === $legacy_key) {
+        return;
+    }
+    $user_raw = $_SESSION[$user_key] ?? null;
+    $has_user = is_array($user_raw) && !empty($user_raw['items']) && is_array($user_raw['items']);
+    if ($has_user) {
+        return;
+    }
+    $legacy = $_SESSION[$legacy_key] ?? null;
+    if (!is_array($legacy) || empty($legacy['items']) || !is_array($legacy['items'])) {
+        return;
+    }
+    $_SESSION[$user_key] = [
+        'items' => array_values($legacy['items']),
+    ];
+    unset($_SESSION[$legacy_key]);
+}
+
+/**
  * @return array{items: list<array<string, mixed>>}
  */
 function casting_cart_get(): array
@@ -61,6 +116,10 @@ function casting_cart_get(): array
     if (!casting_cart_session_ready()) {
         return ['items' => []];
     }
+    if (casting_cart_owner_id() <= 0) {
+        return ['items' => []];
+    }
+    casting_cart_migrate_legacy_if_needed();
     $raw = $_SESSION[casting_cart_session_key()] ?? null;
     if (!is_array($raw) || !isset($raw['items']) || !is_array($raw['items'])) {
         return ['items' => []];
@@ -80,7 +139,7 @@ function casting_cart_get(): array
  */
 function casting_cart_save(array $cart): void
 {
-    if (!casting_cart_session_ready()) {
+    if (!casting_cart_session_ready() || casting_cart_owner_id() <= 0) {
         return;
     }
     $items = array_values(is_array($cart['items'] ?? null) ? $cart['items'] : []);
@@ -95,7 +154,10 @@ function casting_cart_clear(): void
     if (!casting_cart_session_ready()) {
         return;
     }
-    unset($_SESSION[casting_cart_session_key()]);
+    if (casting_cart_owner_id() > 0) {
+        unset($_SESSION[casting_cart_session_key()]);
+    }
+    unset($_SESSION[casting_cart_legacy_session_key()]);
     casting_cart_sync_count_cookie(0);
 }
 

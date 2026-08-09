@@ -93,11 +93,34 @@ function casting_portal_login_user(WP_User $user, bool $remember = true): void
     }
 
     wp_set_current_user($user_id);
+
+    // شمارنده سبد سایت اصلی = سبد همین کاربر
+    if (!function_exists('casting_cart_sync_count_cookie')) {
+        $cart_lib = __DIR__ . '/cart.php';
+        if (is_file($cart_lib)) {
+            require_once $cart_lib;
+        }
+    }
+    if (function_exists('casting_cart_sync_count_cookie')) {
+        casting_cart_sync_count_cookie();
+    }
 }
 
 function casting_portal_logout_user(): void
 {
     $user_id = casting_portal_session_user_id();
+
+    // قبل از پاک کردن کاربر session: badge سایت اصلی صفر شود
+    if (!function_exists('casting_cart_sync_count_cookie')) {
+        $cart_lib = __DIR__ . '/cart.php';
+        if (is_file($cart_lib)) {
+            require_once $cart_lib;
+        }
+    }
+    if (function_exists('casting_cart_sync_count_cookie')) {
+        casting_cart_sync_count_cookie(0);
+    }
+
     if (function_exists('casting_session_clear')) {
         casting_session_clear($user_id);
     }
