@@ -6064,7 +6064,9 @@ body.cart-auth-modal-open {
 .cart-auth-modal-panel {
   position: relative;
   z-index: 1;
-  width: min(26rem, 100%);
+  width: min(28rem, 100%);
+  max-height: min(92vh, 44rem);
+  overflow: auto;
   padding: 1.25rem 1.35rem 1.4rem;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -6083,6 +6085,27 @@ body.cart-auth-modal-open {
 .cart-auth-modal-head h2 {
   margin: 0;
   font-size: 1.15rem;
+}
+
+.cart-auth-tabs {
+  margin: 0.85rem 0 0.75rem;
+}
+
+.cart-auth-flash {
+  margin: 0 0 0.75rem;
+}
+
+.cart-auth-pane[hidden] {
+  display: none !important;
+}
+
+.cart-auth-form .field {
+  margin-bottom: 0.75rem;
+}
+
+.cart-auth-submit {
+  width: 100%;
+  margin-top: 0.35rem;
 }
 
 html[data-theme="day"] .cart-auth-modal-backdrop {
