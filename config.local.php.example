@@ -23,5 +23,5 @@ define('CASTING_SMS_FROM', '1000xxxx');
 /** فعال‌سازی تأیید موبایل در ثبت‌نام (بعد از تست موفق) */
 // define('CASTING_MOBILE_OTP_ENABLED', true);
 
-/** اگر لازم شد آدرس API را عوض کنید (پیش‌فرض rest.payamakapi.ir است) */
-// define('CASTING_SMS_API_BASE', 'https://rest.payamakapi.ir/api/v1/');
+/** اگر لازم شد آدرس API را عوض کنید (پیش‌فرض api.payamakapi.ir است) */
+// define('CASTING_SMS_API_BASE', 'https://api.payamakapi.ir/api/v1/');

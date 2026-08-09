@@ -5,7 +5,7 @@ declare(strict_types=1);
  * ارسال پیامک از طریق WebOne SMS
  *
  * پنل: https://webone-sms.ir
- * Endpoint عملیاتی (درایور رسمی/تست‌شده): https://rest.payamakapi.ir/api/v1/
+ * Base API (مستند RestDocument v1.4): https://api.payamakapi.ir/api/v1/
  * هدر الزامی: X-API-KEY
  */
 
@@ -23,8 +23,8 @@ function casting_sms_api_base(): string
 {
     $base = defined('CASTING_SMS_API_BASE') ? trim((string) CASTING_SMS_API_BASE) : '';
     if ($base === '') {
-        // endpoint عملیاتی WebOne (نه فقط متن PDF)
-        $base = 'https://rest.payamakapi.ir/api/v1/';
+        // مستند رسمی WebOne RestDocument v1.4
+        $base = 'https://api.payamakapi.ir/api/v1/';
     }
     if ($base !== '' && substr($base, -1) !== '/') {
         $base .= '/';
@@ -323,18 +323,22 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
         ];
     }
 
-    // SmartOTP — مثل درایور رسمی: فقط ToNumber + Content
-    // OTPSender فقط اگر در کانفیگ صریحاً ست شده باشد
+    // SmartOTP — طبق RestDocument v1.4: ToNumber + Content + OTPSender (Auto یا شماره خط)
     $payload = [
         'ToNumber' => $mobile,
         'Content'  => $message,
     ];
     $otp_sender = casting_sms_otp_sender();
-    if ($otp_sender !== '') {
-        $payload['OTPSender'] = $otp_sender;
+    if ($otp_sender === '') {
+        $otp_sender = 'Auto';
     }
+    $payload['OTPSender'] = $otp_sender;
 
     $result = casting_sms_request('SMS/SmartOTP', $payload);
+    // اگر SmartOTP در دسترس نبود، با پیامک متنی همان کد را بفرست
+    if (!$result['ok'] && (int) ($result['http'] ?? 0) === 404) {
+        $result = casting_sms_send_text($mobile, $message);
+    }
 
     return [
         'ok'     => $result['ok'],
@@ -366,11 +370,11 @@ function casting_sms_send_text(string $mobile, string $message): array
         return ['ok' => false, 'error' => 'متن پیامک خالی است.'];
     }
 
-    // ToNumbers مطابق درایور رسمی WebOne
+    // ارسال تکی طبق مستند: ToNumber — گروهی: ToNumbers
     $result = casting_sms_request('SMS/Send', [
-        'From'      => $from,
-        'ToNumbers' => [$mobile],
-        'Content'   => $message,
+        'From'     => $from,
+        'ToNumber' => $mobile,
+        'Content'  => $message,
     ]);
 
     return [
