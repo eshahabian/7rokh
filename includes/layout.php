@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=144">
+  <link rel="stylesheet" href="<?= $css ?>?v=145">
   <script>
     (function () {
       try {
@@ -180,30 +180,66 @@ function casting_render_flash(): void
 
 /**
  * نشان اعتماد اینماد (فقط پورتال کستینگ)
+ *
+ * نکته: loading=lazy و دستکاری URL باعث می‌شود بار اول لوگو خالی بماند
+ * (سرور اینماد به Referer/زمان درخواست حساس است). کد نزدیک به نمونه رسمی اینماد است.
  */
 function casting_render_enamad_seal(string $extra_class = ''): void
 {
     $class = trim('enamad-seal ' . $extra_class);
+    $enamad_id = '4302477';
+    $enamad_code = 's5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS';
+    $enamad_href = 'https://trustseal.enamad.ir/?id=' . $enamad_id . '&Code=' . $enamad_code;
+    $enamad_src = 'https://trustseal.enamad.ir/logo.aspx?id=' . $enamad_id . '&Code=' . $enamad_code;
     ?>
   <a
     class="<?= casting_e($class) ?>"
     referrerpolicy="origin"
     target="_blank"
-    rel="noopener"
-    href="https://trustseal.enamad.ir/?id=4302477&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+    href="<?= casting_e($enamad_href) ?>"
     title="نماد اعتماد الکترونیکی"
   >
     <img
       referrerpolicy="origin"
-      src="https://trustseal.enamad.ir/logo.aspx?id=4302477&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
-      alt="نماد اعتماد الکترونیکی"
+      src="<?= casting_e($enamad_src) ?>"
+      alt=""
       width="125"
       height="136"
-      loading="lazy"
+      loading="eager"
+      decoding="sync"
+      fetchpriority="low"
       style="cursor:pointer"
-      code="s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+      code="<?= casting_e($enamad_code) ?>"
+      data-enamad-src="<?= casting_e($enamad_src) ?>"
+      data-enamad-seal
     >
   </a>
+  <script>
+    (function () {
+      var img = document.querySelector("[data-enamad-seal]");
+      if (!img) return;
+      var src = img.getAttribute("data-enamad-src") || img.getAttribute("src") || "";
+      var tries = 0;
+      var retry = function () {
+        if (!src || tries >= 3) return;
+        tries += 1;
+        img.removeAttribute("src");
+        window.setTimeout(function () {
+          img.setAttribute("referrerpolicy", "origin");
+          img.src = src;
+        }, 350 * tries);
+      };
+      img.addEventListener("error", retry);
+      img.addEventListener("load", function () {
+        if (img.naturalWidth < 2 || img.naturalHeight < 2) retry();
+      });
+      window.addEventListener("load", function () {
+        window.setTimeout(function () {
+          if (!img.complete || img.naturalWidth < 2) retry();
+        }, 600);
+      });
+    })();
+  </script>
     <?php
 }
 

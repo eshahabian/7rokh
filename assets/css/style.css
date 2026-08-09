@@ -430,6 +430,8 @@ html[data-theme="day"] .brand-mark-rokh {
   display: inline-flex;
   align-items: center;
   line-height: 0;
+  min-width: 72px;
+  min-height: 78px;
 }
 
 .enamad-seal img {
@@ -437,6 +439,9 @@ html[data-theme="day"] .brand-mark-rokh {
   width: 72px;
   height: auto;
   max-width: 100%;
+  min-height: 78px;
+  object-fit: contain;
+  background: transparent;
 }
 
 .page-home .site-footer {
