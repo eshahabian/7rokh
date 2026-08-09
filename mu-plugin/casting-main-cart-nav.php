@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Casting Portal — سبد خرید در هدر سایت
  * Description: آیکون سبد خرید کنار شبکه‌های اجتماعی هدر + شمارنده زنده
- * Version: 1.2
+ * Version: 1.3
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-cart-nav.php
  * (خودکار با deploy — .cpanel.yml)
@@ -82,12 +82,19 @@ function casting_main_cart_enqueue_assets(): void
   vertical-align:middle;
   text-decoration:none !important;
   line-height:1;
-  margin-inline:0.2em;
-  color:inherit;
+  margin-inline:0.35em;
+  color:#111 !important;
+}
+.casting-main-cart-social:hover,
+.casting-main-cart-social:focus{
+  color:#111 !important;
+  opacity:.85;
 }
 .casting-main-cart-social svg{
-  width:1em;
-  height:1em;
+  width:1.35em;
+  height:1.35em;
+  min-width:20px;
+  min-height:20px;
   display:block;
   fill:currentColor;
   color:inherit;
@@ -144,7 +151,7 @@ function casting_main_cart_enqueue_assets(): void
 }
 ';
 
-    wp_register_style('casting-main-cart-nav', false, [], '1.2');
+    wp_register_style('casting-main-cart-nav', false, [], '1.3');
     wp_enqueue_style('casting-main-cart-nav');
     wp_add_inline_style('casting-main-cart-nav', trim($css));
 
@@ -223,20 +230,19 @@ function casting_main_cart_enqueue_assets(): void
   function matchSocialLook(link, ref) {
     if (!link || !ref) return;
     try {
-      var cs = window.getComputedStyle(ref);
-      if (cs.color) link.style.color = cs.color;
-      if (cs.opacity) link.style.opacity = cs.opacity;
-      var icon = ref.querySelector("i, svg, img, span");
       var svg = link.querySelector("svg");
-      if (icon && svg) {
+      if (!svg) return;
+      var icon = ref.querySelector("i, svg, img, span");
+      var base = 18;
+      if (icon) {
         var ics = window.getComputedStyle(icon);
-        var size = ics.width && ics.width !== "auto" && ics.width !== "0px" ? ics.width : ics.fontSize;
-        if (size) {
-          svg.style.width = size;
-          svg.style.height = size;
-        }
-        if (ics.color) link.style.color = ics.color;
+        var raw = parseFloat(ics.width) || parseFloat(ics.fontSize) || 0;
+        if (raw > 0) base = raw;
       }
+      var size = Math.max(20, Math.round(base * 1.35));
+      svg.style.width = size + "px";
+      svg.style.height = size + "px";
+      link.style.color = "#111";
     } catch (e) {}
   }
   function setCount(n) {
@@ -258,7 +264,7 @@ function casting_main_cart_enqueue_assets(): void
     a.title = CFG.label || "سبد خرید";
     a.setAttribute("aria-label", CFG.label || "سبد خرید");
     a.innerHTML =
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zM7.16 14h9.69c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 21.33 5H6.21l-.94-2H1v2h2l3.6 7.59-1.35 2.44C4.52 16.37 5.48 18 7 18h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L7.16 14z"/></svg>' +
+      '<svg viewBox="0 0 576 512" aria-hidden="true"><path d="M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1-96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></svg>' +
       '<span class="casting-main-cart-badge' +
       (CFG.count > 0 ? "" : " is-empty") +
       '">' +
@@ -333,7 +339,7 @@ function casting_main_cart_enqueue_assets(): void
 })();
 JS;
 
-    wp_register_script('casting-main-cart-nav', false, [], '1.2', true);
+    wp_register_script('casting-main-cart-nav', false, [], '1.3', true);
     wp_enqueue_script('casting-main-cart-nav');
     wp_add_inline_script(
         'casting-main-cart-nav',
