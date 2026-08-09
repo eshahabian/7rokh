@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=139">
+  <link rel="stylesheet" href="<?= $css ?>?v=140">
   <script>
     (function () {
       try {
@@ -53,6 +53,62 @@ function casting_render_theme_toggle(): void
         <button type="button" class="theme-toggle-btn" data-theme-pick="night">شب</button>
         <button type="button" class="theme-toggle-btn is-active" data-theme-pick="day">روز</button>
       </div>
+    <?php
+}
+
+/**
+ * سبد خرید کنار دکمه روز/شب در منوی اصلی پورتال
+ */
+function casting_render_nav_cart(?string $active = null): void
+{
+    $user = casting_current_user();
+    $role = $user ? casting_get_user_role((int) $user->ID) : '';
+    $logged_in = $role !== '';
+
+    if (!$logged_in) {
+        ?>
+      <a
+        href="<?= casting_e(casting_url('login.php?intent=cart')) ?>"
+        class="nav-cart<?= $active === 'cart' ? ' is-active' : '' ?>"
+        title="برای خرید ابتدا وارد شوید"
+      >
+        <span class="nav-cart-icon" aria-hidden="true">
+          <svg viewBox="0 0 576 512" width="16" height="16" focusable="false"><path fill="currentColor" d="M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1-96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></svg>
+        </span>
+        <span class="nav-cart-label">سبد خرید</span>
+      </a>
+        <?php
+        return;
+    }
+
+    $cart_count = 0;
+    try {
+        if (!function_exists('casting_cart_count')) {
+            $cart_lib = __DIR__ . '/cart.php';
+            if (is_file($cart_lib)) {
+                require_once $cart_lib;
+            }
+        }
+        if (function_exists('casting_cart_count')) {
+            $cart_count = (int) casting_cart_count();
+        }
+    } catch (Throwable $e) {
+        $cart_count = 0;
+    }
+    ?>
+      <a
+        href="<?= casting_e(casting_url('cart.php')) ?>"
+        class="nav-cart<?= $active === 'cart' ? ' is-active' : '' ?><?= $cart_count > 0 ? ' has-notify' : '' ?>"
+        title="سبد خرید"
+      >
+        <span class="nav-cart-icon" aria-hidden="true">
+          <svg viewBox="0 0 576 512" width="16" height="16" focusable="false"><path fill="currentColor" d="M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1-96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></svg>
+        </span>
+        <span class="nav-cart-label">سبد خرید</span>
+        <?php if ($cart_count > 0) : ?>
+          <span class="nav-badge" aria-label="<?= (int) $cart_count ?> مورد در سبد"><?= (int) $cart_count ?></span>
+        <?php endif; ?>
+      </a>
     <?php
 }
 
@@ -102,28 +158,6 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت <?= casting_brand_html() ?></a>
       <?php if ($role !== '') : ?>
         <a href="home.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
-        <?php
-        $cart_count = 0;
-        try {
-            if (!function_exists('casting_cart_count')) {
-                $cartLib = __DIR__ . '/cart.php';
-                if (is_file($cartLib)) {
-                    require_once $cartLib;
-                }
-            }
-            if (function_exists('casting_cart_count')) {
-                $cart_count = (int) casting_cart_count();
-            }
-        } catch (Throwable $e) {
-            $cart_count = 0;
-        }
-        ?>
-        <a href="<?= casting_e(casting_url('cart.php')) ?>" class="<?= $active === 'cart' ? 'is-active' : '' ?><?= $cart_count > 0 ? ' has-notify' : '' ?>">
-          سبد خرید
-          <?php if ($cart_count > 0) : ?>
-            <span class="nav-badge" aria-label="<?= (int) $cart_count ?> مورد در سبد"><?= (int) $cart_count ?></span>
-          <?php endif; ?>
-        </a>
         <a href="<?= casting_e(casting_url($new_followers > 0 ? 'following.php?tab=followers' : 'panel.php')) ?>" class="<?= $active === 'panel' || $active === 'following' ? 'is-active' : '' ?><?= $new_followers > 0 ? ' has-notify' : '' ?>">
           پنل کاربری
           <?php if ($new_followers > 0) : ?>
@@ -139,6 +173,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
         <a href="faq.php" class="<?= $active === 'faq' ? 'is-active' : '' ?>">سوالات متداول</a>
         <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>
       <?php endif; ?>
+      <?php casting_render_nav_cart($active); ?>
       <?php casting_render_theme_toggle(); ?>
     </nav>
   </header>

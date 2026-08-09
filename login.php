@@ -25,6 +25,25 @@ $otp_sent = false;
 $need_confirm = false;
 $force_login = !empty($_POST['force_login']);
 
+$intent = sanitize_key((string) ($_GET['intent'] ?? $_POST['intent'] ?? ''));
+if ($intent === 'cart') {
+    $_SESSION['casting_login_intent'] = 'cart';
+}
+$login_intent = (string) ($_SESSION['casting_login_intent'] ?? '');
+$intent_notice = '';
+if ($login_intent === 'cart' && $error === '' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $intent_notice = 'برای خرید ابتدا وارد شوید.';
+}
+
+$login_redirect_after = static function (string $role): void {
+    $intent = (string) ($_SESSION['casting_login_intent'] ?? '');
+    unset($_SESSION['casting_login_intent']);
+    if ($intent === 'cart') {
+        casting_redirect('cart.php');
+    }
+    casting_redirect(casting_dashboard_for_role($role));
+};
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $mode = ((string) ($_POST['mode'] ?? 'password')) === 'otp' ? 'otp' : 'password';
     $otp_action = sanitize_key((string) ($_POST['otp_action'] ?? ''));
@@ -68,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     casting_rate_limit_clear('login_otp');
                     casting_rate_limit_clear('login');
                     casting_rate_limit_clear('otp_send');
-                    casting_redirect(casting_dashboard_for_role((string) $result['role']));
+                    $login_redirect_after((string) $result['role']);
                 }
             }
         }
@@ -92,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 casting_rate_limit_clear('login');
                 casting_rate_limit_clear('login_otp');
                 casting_rate_limit_clear('otp_send');
-                casting_redirect(casting_dashboard_for_role((string) $result['role']));
+                $login_redirect_after((string) $result['role']);
             }
         }
     }
@@ -106,6 +125,9 @@ if (isset($_GET['registered'])) {
 if ($error !== '') {
     echo '<div class="flash flash-error" role="alert">' . casting_e($error) . '</div>';
 }
+if ($intent_notice !== '') {
+    echo '<div class="flash flash-error" role="status">' . casting_e($intent_notice) . '</div>';
+}
 if ($success !== '') {
     echo '<div class="flash flash-success" role="alert">' . casting_e($success) . '</div>';
 }
@@ -115,15 +137,18 @@ casting_render_flash();
   <section class="panel">
     <h1>ورود</h1>
     <nav class="admin-tabs" aria-label="روش ورود">
-      <a class="admin-tab <?= $mode === 'password' ? 'is-active' : '' ?>" href="login.php">ورود با رمز</a>
-      <a class="admin-tab <?= $mode === 'otp' ? 'is-active' : '' ?>" href="login.php?mode=otp">ورود با پیامک</a>
+      <a class="admin-tab <?= $mode === 'password' ? 'is-active' : '' ?>" href="login.php<?= $login_intent === 'cart' ? '?intent=cart' : '' ?>">ورود با رمز</a>
+      <a class="admin-tab <?= $mode === 'otp' ? 'is-active' : '' ?>" href="login.php?mode=otp<?= $login_intent === 'cart' ? '&intent=cart' : '' ?>">ورود با پیامک</a>
     </nav>
 
     <?php if ($mode === 'otp') : ?>
       <p class="lede">شماره موبایل ثبت‌شده در حساب را وارد کنید تا کد تأیید برایتان پیامک شود.</p>
-      <form class="form" method="post" action="login.php?mode=otp">
+      <form class="form" method="post" action="login.php?mode=otp<?= $login_intent === 'cart' ? '&intent=cart' : '' ?>">
         <?php wp_nonce_field('casting_login_otp'); ?>
         <input type="hidden" name="mode" value="otp">
+        <?php if ($login_intent === 'cart') : ?>
+          <input type="hidden" name="intent" value="cart">
+        <?php endif; ?>
         <div class="field">
           <label for="mobile">موبایل</label>
           <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e(casting_normalize_mobile($mobile)) ?>" placeholder="09121234567" autocomplete="tel-national">
@@ -152,9 +177,12 @@ casting_render_flash();
       </form>
     <?php else : ?>
       <p class="lede">با نام کاربری یا ایمیل وارد شوید. بعد از ورود به پنل خودتان هدایت می‌شوید.</p>
-      <form class="form" method="post" action="login.php">
+      <form class="form" method="post" action="login.php<?= $login_intent === 'cart' ? '?intent=cart' : '' ?>">
         <?php wp_nonce_field('casting_login'); ?>
         <input type="hidden" name="mode" value="password">
+        <?php if ($login_intent === 'cart') : ?>
+          <input type="hidden" name="intent" value="cart">
+        <?php endif; ?>
 
         <div class="field">
           <label for="login">نام کاربری یا ایمیل</label>

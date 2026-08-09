@@ -219,6 +219,31 @@ a:hover {
   margin-inline-start: 0.15rem;
 }
 
+.nav-cart {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-inline-start: 0.25rem;
+  white-space: nowrap;
+}
+
+.nav-cart-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.nav-cart-icon svg {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+.nav-cart .nav-badge {
+  margin-inline-start: 0;
+}
+
 .theme-toggle-btn {
   appearance: none;
   border: 0;
