@@ -179,8 +179,12 @@ casting_render_flash();
           $add_href = casting_cart_add_url((string) $tile['service'], (string) $tile['plan']);
           ?>
         <article class="shop-tile" role="listitem">
-          <div class="shop-tile-media shop-tile-media--<?= casting_e((string) $tile['service'] === 'premium' ? 'premium' : 'call') ?>" aria-hidden="true">
-            <span class="shop-tile-mark"><?= (string) $tile['service'] === 'premium' ? 'ویژه' : 'فراخوان' ?></span>
+          <div class="shop-tile-media shop-tile-media--<?= casting_e((string) $tile['service'] === 'premium' ? 'premium' : 'call') ?><?= (string) ($tile['image'] ?? '') !== '' ? ' has-image' : '' ?>">
+            <?php if ((string) ($tile['image'] ?? '') !== '') : ?>
+              <img class="shop-tile-img" src="<?= casting_e((string) $tile['image']) ?>" alt="<?= casting_e((string) $tile['label']) ?>" loading="lazy" width="400" height="400">
+            <?php else : ?>
+              <span class="shop-tile-mark" aria-hidden="true"><?= (string) $tile['service'] === 'premium' ? 'ویژه' : 'فراخوان' ?></span>
+            <?php endif; ?>
             <?php if ((string) ($tile['badge'] ?? '') !== '') : ?>
               <span class="shop-tile-badge"><?= casting_e((string) $tile['badge']) ?></span>
             <?php endif; ?>

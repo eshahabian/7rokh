@@ -164,19 +164,33 @@ function casting_checkout_calc_amounts(int $base, int $discount = 0): array
 /**
  * کاشی‌های فروشگاه برای سبد / مهمان
  *
- * @return list<array{group:string,label:string,meta:string,service:string,plan:string,price_base:int,vat:int,price_final:int,badge:string}>
+ * @return list<array{group:string,label:string,meta:string,service:string,plan:string,price_base:int,vat:int,price_final:int,badge:string,image:string}>
  */
 function casting_shop_catalog_tiles(): array
 {
     if (!function_exists('casting_premium_plans')) {
         require_once __DIR__ . '/premium.php';
     }
+    $tile_images = [
+        'premium' => [
+            'featured_90'  => 'images/shop-premium-3m.webp',
+            'featured_180' => 'images/shop-premium-6m.webp',
+            'featured_365' => 'images/shop-premium-12m.webp',
+        ],
+        'casting_call' => [
+            'theater'    => 'images/shop-call-theater.webp',
+            'short_film' => 'images/shop-call-short-film.webp',
+            'cinema'     => 'images/shop-call-cinema.webp',
+            'tv'         => 'images/shop-call-tv.webp',
+        ],
+    ];
     $tiles = [];
     foreach (casting_premium_plans() as $key => $p) {
         if ($key === 'featured_30') {
             continue;
         }
         $calc = casting_checkout_calc_amounts((int) $p['price']);
+        $img = (string) ($tile_images['premium'][$key] ?? '');
         $tiles[] = [
             'group'       => 'عضویت ویژه',
             'label'       => 'عضویت ویژه — ' . (string) ($p['period_label'] ?? ''),
@@ -187,6 +201,7 @@ function casting_shop_catalog_tiles(): array
             'vat'         => $calc['vat'],
             'price_final' => $calc['final'],
             'badge'       => (string) ($p['period_label'] ?? ''),
+            'image'       => $img !== '' ? casting_asset($img) : '',
         ];
     }
     $catalog = casting_paid_services_catalog();
@@ -196,6 +211,7 @@ function casting_shop_catalog_tiles(): array
             continue;
         }
         $calc = casting_checkout_calc_amounts((int) ($type['amount_base'] ?? 0));
+        $img = (string) ($tile_images['casting_call'][$type_key] ?? '');
         $tiles[] = [
             'group'       => 'فراخوان کستینگ',
             'label'       => (string) ($type['label'] ?? $type_key),
@@ -206,6 +222,7 @@ function casting_shop_catalog_tiles(): array
             'vat'         => $calc['vat'],
             'price_final' => $calc['final'],
             'badge'       => '',
+            'image'       => $img !== '' ? casting_asset($img) : '',
         ];
     }
 
