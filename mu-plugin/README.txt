@@ -38,8 +38,9 @@ casting-portal/mu-plugin/casting-main-cart-nav.php
 ## سبد خرید در سایت اصلی
 
 - لینک به `/casting-portal/cart.php`
+- آیکون سبد **کنار فیسبوک/توییتر** در نوار بالای هدر تزریق می‌شود (JS)
 - شمارنده از کوکی `casting_cart_count` (path=`/`) که پورتال هنگام تغییر سبد ست می‌کند
-- اگر تم منوی استاندارد WP نداشته باشد، لینک شناور پایین صفحه نشان داده می‌شود
+- اگر سوشال‌ها پیدا نشوند، لینک شناور پایین صفحه به‌عنوان پشتیبان می‌آید
 - آدرس سفارشی (اختیاری): در `wp-config.php` تعریف کنید  
   `define('CASTING_PORTAL_CART_URL', 'https://7rokh.ir/casting-portal/cart.php');`
 
