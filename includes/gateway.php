@@ -30,7 +30,7 @@ function casting_gateway_start_payment(array $order): array
     }
     $mode = casting_gateway_mode();
     if ($mode === 'off') {
-        return ['ok' => false, 'error' => 'درگاه پرداخت فعلاً غیرفعال است.'];
+        return ['ok' => false, 'error' => 'درگاه بانکی هنوز فعال نشده است. سفارش شما ثبت شد؛ به‌محض اتصال درگاه می‌توانید پرداخت کنید.'];
     }
 
     $order_id = (int) ($order['id'] ?? 0);
@@ -66,6 +66,9 @@ function casting_gateway_start_payment(array $order): array
  */
 function casting_gateway_complete_payment(string $order_code, string $token, bool $success, string $trace = ''): array
 {
+    if (casting_gateway_mode() === 'off') {
+        return ['ok' => false, 'error' => 'درگاه پرداخت فعلاً غیرفعال است.'];
+    }
     if (!function_exists('casting_get_order_by_code')) {
         require_once __DIR__ . '/checkout.php';
     }

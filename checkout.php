@@ -60,9 +60,14 @@ if ((string) ($order['service_key'] ?? '') === 'cart' || !empty($order['meta']['
     $cancel_url = 'director-desk.php?project=' . (int) $order['project_id'];
 }
 
-// پرداخت
+$gateway_mode = casting_gateway_mode();
+$gateway_ready = $gateway_mode === 'live' || $gateway_mode === 'sandbox';
+
+// پرداخت — فقط وقتی درگاه آماده باشد (فعلاً off تا دریافت درگاه بانکی)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_pay'])) {
-    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_checkout_pay_' . $order['order_code'])) {
+    if (!$gateway_ready) {
+        $error = 'درگاه بانکی هنوز فعال نشده است. فعلاً بعد از خلاصه سفارش پرداختی انجام نمی‌شود.';
+    } elseif (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_checkout_pay_' . $order['order_code'])) {
         $error = 'درخواست نامعتبر است.';
     } elseif (empty($_POST['rules_accepted'])) {
         $error = 'برای ادامه، پذیرش قوانین و شرایط استفاده الزامی است.';
@@ -91,10 +96,14 @@ casting_render_flash();
 ?>
 <section class="dash-card checkout-card">
   <h1>خلاصه سفارش</h1>
-  <p class="meta">قبل از انتقال به درگاه بانکی، جزئیات سفارش را بررسی کنید. این صفحه نقش سبد خرید و Checkout خدمات ۷رخ را دارد.</p>
+  <p class="meta">جزئیات سفارش را بررسی کنید. پرداخت آنلاین پس از اتصال درگاه بانکی فعال می‌شود.</p>
 
   <?php if ($error !== '') : ?>
     <div class="flash flash-error" role="alert"><?= casting_e($error) ?></div>
+  <?php endif; ?>
+
+  <?php if (!$gateway_ready) : ?>
+    <div class="flash flash-error" role="status">درگاه بانکی هنوز فعال نشده است. سفارش ثبت شده؛ تا زمان دریافت درگاه از بانک، پرداخت و فعال‌سازی اعتبار انجام نمی‌شود.</div>
   <?php endif; ?>
 
   <div class="checkout-summary">
@@ -128,24 +137,31 @@ casting_render_flash();
     <?php endif; ?>
   </div>
 
-  <form class="form checkout-pay-form" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>">
-    <?php wp_nonce_field('casting_checkout_pay_' . $order['order_code']); ?>
-    <input type="hidden" name="order_code" value="<?= casting_e((string) $order['order_code']) ?>">
-    <input type="hidden" name="checkout_pay" value="1">
+  <?php if ($gateway_ready) : ?>
+    <form class="form checkout-pay-form" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>">
+      <?php wp_nonce_field('casting_checkout_pay_' . $order['order_code']); ?>
+      <input type="hidden" name="order_code" value="<?= casting_e((string) $order['order_code']) ?>">
+      <input type="hidden" name="checkout_pay" value="1">
 
-    <p class="checkout-rules-link">
-      <a href="rules.php" target="_blank" rel="noopener">قوانین و شرایط استفاده</a>
-    </p>
+      <p class="checkout-rules-link">
+        <a href="rules.php" target="_blank" rel="noopener">قوانین و شرایط استفاده</a>
+      </p>
 
-    <label class="checkout-rules-accept">
-      <input type="checkbox" name="rules_accepted" value="1" required>
-      <span>قوانین و شرایط استفاده از خدمات ۷رخ را مطالعه کرده و می‌پذیرم.</span>
-    </label>
+      <label class="checkout-rules-accept">
+        <input type="checkbox" name="rules_accepted" value="1" required>
+        <span>قوانین و شرایط استفاده از خدمات ۷رخ را مطالعه کرده و می‌پذیرم.</span>
+      </label>
 
+      <div class="cta-row checkout-actions">
+        <button class="btn btn-primary" type="submit">پرداخت و انتقال به درگاه بانکی</button>
+        <a class="btn btn-ghost" href="<?= casting_e($cancel_url) ?>">انصراف از خرید / بازگشت</a>
+      </div>
+    </form>
+  <?php else : ?>
     <div class="cta-row checkout-actions">
-      <button class="btn btn-primary" type="submit">پرداخت و انتقال به درگاه بانکی</button>
-      <a class="btn btn-ghost" href="<?= casting_e($cancel_url) ?>">انصراف از خرید / بازگشت</a>
+      <button class="btn btn-primary" type="button" disabled>پرداخت به‌زودی فعال می‌شود</button>
+      <a class="btn btn-ghost" href="<?= casting_e($cancel_url) ?>">بازگشت به سبد / انصراف</a>
     </div>
-  </form>
+  <?php endif; ?>
 </section>
 <?php casting_render_panel_end(); ?>

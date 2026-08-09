@@ -14,6 +14,13 @@ casting_nocache();
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 
+// تا فعال‌سازی درگاه واقعی، شبیه‌سازی پرداخت بسته است
+if (casting_gateway_mode() === 'off') {
+    $back = sanitize_text_field((string) ($_GET['order'] ?? ''));
+    casting_set_flash('error', 'درگاه بانکی هنوز فعال نشده است.');
+    casting_redirect($back !== '' ? ('checkout.php?order=' . rawurlencode($back)) : 'cart.php');
+}
+
 $order_code = sanitize_text_field((string) ($_GET['order'] ?? $_POST['order_code'] ?? ''));
 $token = sanitize_text_field((string) ($_GET['token'] ?? $_POST['token'] ?? ''));
 $order = casting_get_order_by_code($order_code);

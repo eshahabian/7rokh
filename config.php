@@ -33,9 +33,9 @@ define('CASTING_EMPLOYER_ROLES', ['director', 'producer']);
 define('CASTING_PAYMENT_CARD', '6037-9971-0000-0000');
 define('CASTING_PAYMENT_HOLDER', '۷ رخ');
 
-/** حالت درگاه پرداخت: sandbox | live | off */
+/** حالت درگاه پرداخت: sandbox | live | off — تا دریافت درگاه بانکی، off بماند */
 if (!defined('CASTING_GATEWAY_MODE')) {
-    define('CASTING_GATEWAY_MODE', 'sandbox');
+    define('CASTING_GATEWAY_MODE', 'off');
 }
 if (!defined('CASTING_BEHPARDAKHT_TERMINAL_ID')) {
     define('CASTING_BEHPARDAKHT_TERMINAL_ID', '');
