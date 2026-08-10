@@ -2121,6 +2121,116 @@ legend .req-mark {
   margin: 0.15rem 0 0.1rem;
 }
 
+.saved-searches {
+  margin: 0 0 1rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-panel) 90%, transparent);
+}
+
+.saved-searches-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+}
+
+.saved-searches-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.saved-search-compose {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.8rem;
+  border: 1px dashed color-mix(in srgb, var(--line) 75%, var(--accent) 25%);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+}
+
+.saved-search-compose[hidden] {
+  display: none !important;
+}
+
+.saved-search-compose input[type="text"] {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: var(--ink);
+  padding: 0.55rem 0.95rem;
+  font: inherit;
+}
+
+.saved-searches-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.saved-searches-empty {
+  margin: 0;
+}
+
+.saved-search-chip {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.saved-search-chip.is-active {
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+  background: color-mix(in srgb, var(--accent-dim) 75%, var(--bg-elevated));
+}
+
+.saved-search-chip-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  max-width: 16rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.saved-search-chip.is-active .saved-search-chip-link {
+  color: var(--accent-strong);
+}
+
+.saved-search-chip-delete {
+  appearance: none;
+  border: 0;
+  border-inline-start: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-muted);
+  padding: 0 0.55rem;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.saved-search-chip-delete:hover,
+.saved-search-chip-delete:focus-visible {
+  color: var(--reject-fg, #e07a6a);
+  background: rgba(224, 122, 106, 0.08);
+}
+
 .search-quick-chip {
   appearance: none;
   display: inline-flex;

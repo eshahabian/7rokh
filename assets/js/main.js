@@ -1061,8 +1061,24 @@
       }
     }
 
+    const savedSearchesRoot = document.querySelector("[data-saved-searches]");
+    const savedCompose = savedSearchesRoot?.querySelector("[data-saved-search-compose]");
+    const savedNameInput = savedSearchesRoot?.querySelector("[data-saved-search-name]");
+    const savedList = savedSearchesRoot?.querySelector("[data-saved-searches-list]");
+    const savedNonce = memberSearchForm.getAttribute("data-saved-search-nonce") || "";
+
+    const syncSavedSearchOpenButtons = () => {
+      const canSave = formHasActiveSearch();
+      document.querySelectorAll("[data-saved-search-open]").forEach((btn) => {
+        if (!(btn instanceof HTMLButtonElement)) return;
+        btn.disabled = !canSave;
+        btn.title = canSave ? "ذخیره فیلترهای فعلی" : "اول یک فیلتر انتخاب کنید";
+      });
+    };
+
     memberSearchForm.addEventListener("change", () => {
       syncSearchChips();
+      syncSavedSearchOpenButtons();
       refreshResults();
     });
     memberSearchForm.addEventListener("input", (e) => {
@@ -1070,6 +1086,7 @@
       if (!(el instanceof HTMLElement)) return;
       if (el.matches("input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea")) {
         syncSearchChips();
+        syncSavedSearchOpenButtons();
         refreshResults();
       }
     });
@@ -1078,6 +1095,96 @@
       refreshResults();
     });
     syncSearchChips();
+
+    const renderSavedSearches = (searches) => {
+      if (!savedList) return;
+      const items = Array.isArray(searches) ? searches : [];
+      if (items.length === 0) {
+        savedList.innerHTML = '<p class="saved-searches-empty meta" data-saved-searches-empty>هنوز جستجویی ذخیره نکرده‌اید.</p>';
+        return;
+      }
+      savedList.innerHTML = items.map((item) => {
+        const id = String(item.id || "");
+        const name = String(item.name || "جستجو");
+        const href = String(item.href || "search-users.php");
+        return `<div class="saved-search-chip" data-saved-search-item="${id.replace(/"/g, "&quot;")}">
+          <a class="saved-search-chip-link" href="${href.replace(/"/g, "&quot;")}">${name.replace(/</g, "&lt;")}</a>
+          <button type="button" class="saved-search-chip-delete" data-saved-search-delete="${id.replace(/"/g, "&quot;")}" aria-label="حذف ${name.replace(/"/g, "&quot;")}">×</button>
+        </div>`;
+      }).join("");
+    };
+
+    const postSavedSearch = async (payload) => {
+      const body = new FormData();
+      body.set("saved_search_ajax", "1");
+      body.set("_wpnonce", savedNonce);
+      Object.entries(payload).forEach(([key, value]) => body.set(key, String(value)));
+      if (payload.saved_search_action === "save") {
+        const params = new URLSearchParams(new FormData(memberSearchForm));
+        params.forEach((value, key) => {
+          body.append(`filters[${key}]`, value);
+        });
+      }
+      const res = await fetch("search-users.php", {
+        method: "POST",
+        body,
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        window.alert(data?.error || "ذخیره جستجو انجام نشد.");
+        return null;
+      }
+      return data;
+    };
+
+    document.querySelectorAll("[data-saved-search-open]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (!(btn instanceof HTMLButtonElement) || btn.disabled) return;
+        if (!savedCompose || !savedNameInput) return;
+        savedCompose.hidden = false;
+        if (!savedNameInput.value.trim()) {
+          savedNameInput.placeholder = "مثلاً بازیگر زن تهران ۲۵–۳۵";
+        }
+        savedNameInput.focus();
+      });
+    });
+
+    savedSearchesRoot?.querySelector("[data-saved-search-cancel]")?.addEventListener("click", () => {
+      if (savedCompose) savedCompose.hidden = true;
+    });
+
+    savedSearchesRoot?.querySelector("[data-saved-search-save]")?.addEventListener("click", async () => {
+      if (!formHasActiveSearch()) {
+        window.alert("اول حداقل یک فیلتر انتخاب کنید.");
+        return;
+      }
+      const data = await postSavedSearch({
+        saved_search_action: "save",
+        saved_search_name: savedNameInput?.value || "",
+      });
+      if (!data) return;
+      renderSavedSearches(data.searches);
+      if (savedCompose) savedCompose.hidden = true;
+      if (savedNameInput) savedNameInput.value = "";
+    });
+
+    savedSearchesRoot?.addEventListener("click", async (e) => {
+      const del = e.target.closest("[data-saved-search-delete]");
+      if (!del) return;
+      e.preventDefault();
+      const id = del.getAttribute("data-saved-search-delete") || "";
+      if (!id) return;
+      if (!window.confirm("این جستجوی ذخیره‌شده حذف شود؟")) return;
+      const data = await postSavedSearch({
+        saved_search_action: "delete",
+        saved_search_id: id,
+      });
+      if (!data) return;
+      renderSavedSearches(data.searches);
+    });
+
+    syncSavedSearchOpenButtons();
   }
 
   document.querySelectorAll("[data-password-confirm-field]").forEach((field) => {
