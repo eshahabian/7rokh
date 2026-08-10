@@ -580,7 +580,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
             </div>
           <?php endif; ?>
           <?php if ($video_link !== '') : ?>
-            <p class="meta"><a href="<?= casting_e($video_link) ?>" target="_blank" rel="noopener">مشاهده لینک ویدیو</a></p>
+            <p class="meta"><a href="<?= casting_e($video_link) ?>">مشاهده لینک ویدیو</a></p>
           <?php endif; ?>
         </div>
       <?php endif; ?>
@@ -985,7 +985,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       <input id="video" name="video" type="file" accept="video/mp4,video/webm,video/quicktime" data-file-preview-input data-file-preview-kind="video" data-upload-kind="video" data-max-bytes="<?= (int) casting_upload_max_bytes('video') ?>">
       <p class="field-hint">MP4 / WebM / MOV — حداکثر <?= casting_e(casting_upload_max_label_fa('video')) ?></p>
       <?php if ($profile['video_file_url'] !== '') : ?>
-        <p class="field-hint"><a href="<?= casting_e($profile['video_file_url']) ?>" target="_blank" rel="noopener">ویدیو فعلی</a></p>
+        <p class="field-hint"><a href="<?= casting_e($profile['video_file_url']) ?>">ویدیو فعلی</a></p>
       <?php endif; ?>
     </div>
 

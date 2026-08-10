@@ -141,7 +141,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <a class="brand" href="index.php"><?= casting_brand_html() ?></a>
     </div>
     <nav class="nav" aria-label="منوی اصلی">
-      <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external" target="_blank" rel="noopener">سایت <?= casting_brand_html() ?></a>
+      <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external">سایت <?= casting_brand_html() ?></a>
       <?php if ($role !== '') : ?>
         <a href="home.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <a href="<?= casting_e(casting_url($new_followers > 0 ? 'following.php?tab=followers' : 'panel.php')) ?>" class="<?= $active === 'panel' || $active === 'following' ? 'is-active' : '' ?><?= $new_followers > 0 ? ' has-notify' : '' ?>">
@@ -281,7 +281,7 @@ function casting_render_footer(): void
       logoutUrl: <?= wp_json_encode(casting_url('logout.php?reason=idle')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=96" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=97" defer></script>
 </body>
 </html>
 <?php

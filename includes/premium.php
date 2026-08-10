@@ -594,7 +594,7 @@ function casting_render_receipt_thumbnail(int $attachment_id, string $alt = 'ÙÛ
     }
     ?>
 <div class="receipt-thumb-wrap">
-  <a class="receipt-thumb-link" href="<?= casting_e($full_url) ?>" target="_blank" rel="noopener">
+  <a class="receipt-thumb-link" href="<?= casting_e($full_url) ?>">
     <span class="receipt-thumb-frame">
       <img class="receipt-thumb-img" src="<?= casting_e($thumb_url) ?>" alt="<?= casting_e($alt) ?>">
     </span>

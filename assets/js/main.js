@@ -26,7 +26,7 @@
 
   const castingIsAppShell = () => castingIsPwaShell() || castingIsNativeAppShell();
 
-  const castingIsInAppHref = (href) => {
+  const castingIsSiteHref = (href) => {
     try {
       const u = new URL(href, window.location.href);
       if (u.protocol !== "http:" && u.protocol !== "https:") return false;
@@ -38,48 +38,48 @@
     }
   };
 
-  // در اپ/PWA لینک‌ها داخل همان WebView بمانند؛ صفحه/تب جدید باز نشود
   if (castingIsAppShell()) {
     document.documentElement.classList.add("is-pwa");
     if (castingIsNativeAppShell()) {
       document.documentElement.classList.add("is-native-app");
     }
-
-    document.addEventListener(
-      "click",
-      (e) => {
-        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
-          return;
-        }
-        const a = e.target.closest("a[href]");
-        if (!a || a.hasAttribute("download")) return;
-        const href = a.getAttribute("href") || "";
-        if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) {
-          return;
-        }
-        const target = (a.getAttribute("target") || "").toLowerCase();
-        if (target !== "_blank" && target !== "_system") return;
-        if (!castingIsInAppHref(href)) return;
-        e.preventDefault();
-        a.removeAttribute("target");
-        window.location.assign(a.href);
-      },
-      true
-    );
-
-    const nativeOpen = window.open;
-    window.open = function castingAppWindowOpen(url, target, features) {
-      const href = String(url || "");
-      if (href && castingIsInAppHref(href)) {
-        window.location.assign(href);
-        return null;
-      }
-      if (typeof nativeOpen === "function") {
-        return nativeOpen.call(window, url, target, features);
-      }
-      return null;
-    };
   }
+
+  // در سایت/اپ: لینک‌های ۷رخ در همان صفحه باز شوند؛ تب/صفحه جدید نه
+  document.addEventListener(
+    "click",
+    (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+        return;
+      }
+      const a = e.target.closest("a[href]");
+      if (!a || a.hasAttribute("download")) return;
+      const href = a.getAttribute("href") || "";
+      if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) {
+        return;
+      }
+      const target = (a.getAttribute("target") || "").toLowerCase();
+      if (target !== "_blank" && target !== "_system") return;
+      if (!castingIsSiteHref(href)) return;
+      e.preventDefault();
+      a.removeAttribute("target");
+      window.location.assign(a.href);
+    },
+    true
+  );
+
+  const nativeOpen = window.open;
+  window.open = function castingSiteWindowOpen(url, target, features) {
+    const href = String(url || "");
+    if (href && castingIsSiteHref(href)) {
+      window.location.assign(href);
+      return null;
+    }
+    if (typeof nativeOpen === "function") {
+      return nativeOpen.call(window, url, target, features);
+    }
+    return null;
+  };
 
   const applyTheme = (theme) => {
     const isDay = theme === "day";

@@ -141,7 +141,7 @@ casting_render_flash();
       <input type="hidden" name="checkout_pay" value="1">
 
       <p class="checkout-rules-link">
-        <a href="rules.php" target="_blank" rel="noopener">قوانین و شرایط استفاده</a>
+        <a href="rules.php">قوانین و شرایط استفاده</a>
       </p>
 
       <label class="checkout-rules-accept">
