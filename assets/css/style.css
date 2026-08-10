@@ -468,6 +468,26 @@ html[data-theme="day"] .brand-mark-rokh {
   margin-bottom: 0.5rem;
 }
 
+.page-home .gates {
+  margin-top: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.page-home .gate-card {
+  background: var(--surface-glass);
+}
+
+.hero-login-hint {
+  margin: 0 auto 0.25rem;
+  color: var(--ink-muted);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.hero-login-hint a {
+  font-weight: 600;
+}
+
 .home-stats {
   display: flex;
   flex-wrap: nowrap;

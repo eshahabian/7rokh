@@ -17,6 +17,12 @@ if ($intent === 'cart') {
     $_SESSION['casting_login_intent'] = 'cart';
 }
 
+$register_path = sanitize_key((string) ($_GET['path'] ?? $_POST['path'] ?? ''));
+if (!in_array($register_path, ['talent', 'hire'], true)) {
+    $register_path = '';
+}
+$prefer_activity_category = $register_path === 'talent' ? 'acting' : ($register_path === 'hire' ? 'directing' : '');
+
 $error = '';
 $focus_field = '';
 $invalid_fields = [];
@@ -378,15 +384,30 @@ $pending_video = $pending_media['video'];
 ?>
 <main class="wrap panel-page">
   <section class="panel panel-wide">
-    <h1>ثبت‌نام</h1>
-    <p class="lede"><?= $otp_enabled
-        ? 'اطلاعات پایه، عکس و ویدیو را وارد کنید. قبل از ایجاد حساب، موبایل را با کد پیامک تأیید کنید.'
-        : 'اطلاعات پایه، عکس و ویدیو را وارد کنید و ثبت‌نام را کامل کنید.' ?></p>
+    <h1><?= $register_path === 'hire' ? 'ثبت‌نام کارفرما' : ($register_path === 'talent' ? 'ثبت‌نام هنرمند' : 'ثبت‌نام') ?></h1>
+    <p class="lede"><?php
+    if ($register_path === 'talent') {
+        echo $otp_enabled
+            ? 'برای دیده شدن، پروفایل هنری‌ات را بساز. قبل از ایجاد حساب، موبایل را با کد پیامک تأیید کن.'
+            : 'برای دیده شدن، پروفایل هنری‌ات را بساز و ثبت‌نام را کامل کن.';
+    } elseif ($register_path === 'hire') {
+        echo $otp_enabled
+            ? 'برای پیدا کردن استعداد، حساب کارگردانی یا تهیه بساز. قبل از ایجاد حساب، موبایل را با کد پیامک تأیید کن.'
+            : 'برای پیدا کردن استعداد، حساب کارگردانی یا تهیه بساز و ثبت‌نام را کامل کن.';
+    } else {
+        echo $otp_enabled
+            ? 'اطلاعات پایه، عکس و ویدیو را وارد کنید. قبل از ایجاد حساب، موبایل را با کد پیامک تأیید کنید.'
+            : 'اطلاعات پایه، عکس و ویدیو را وارد کنید و ثبت‌نام را کامل کنید.';
+    }
+    ?></p>
 
     <form class="form" method="post" action="register.php" enctype="multipart/form-data" autocomplete="on" data-talent-profile-toggle data-register-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?><?= $invalid_fields !== [] ? ' data-invalid-fields="' . casting_e(implode(',', $invalid_fields)) . '"' : '' ?>>
       <?php wp_nonce_field('casting_register'); ?>
+      <?php if ($register_path !== '') : ?>
+        <input type="hidden" name="path" value="<?= casting_e($register_path) ?>">
+      <?php endif; ?>
 
-      <?php casting_render_activity_fields($activities, true); ?>
+      <?php casting_render_activity_fields($activities, true, 0, $prefer_activity_category); ?>
 
       <div class="field<?= $reg_invalid('name') ?>">
         <label for="name">نام و نام خانوادگی <span class="req-mark">*</span></label>

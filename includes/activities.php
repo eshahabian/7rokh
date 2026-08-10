@@ -650,21 +650,37 @@ function casting_activity_categories_for_search(): array
 /**
  * @param list<string> $selected
  */
-function casting_render_activity_fields(array $selected = [], bool $required = false, int $user_id = 0): void
+function casting_render_activity_fields(array $selected = [], bool $required = false, int $user_id = 0, string $prefer_category = ''): void
 {
     $rows = casting_activities_to_rows($selected, $user_id);
     $categories = $user_id > 0
         ? casting_activity_categories_for_user($user_id)
         : casting_activity_categories();
+    $prefer_category = sanitize_key($prefer_category);
+    if (
+        $prefer_category !== ''
+        && isset($categories[$prefer_category])
+        && count($rows) === 1
+        && ($rows[0]['category'] ?? '') === ''
+        && ($rows[0]['specialty'] ?? '') === ''
+    ) {
+        $rows[0]['category'] = $prefer_category;
+    }
     $map = [];
     foreach ($categories as $cat_key => $cat) {
         $map[$cat_key] = $cat['items'];
     }
     $map_json = wp_json_encode($map, JSON_UNESCAPED_UNICODE);
+    $hint = 'اول تخصص هنری را انتخاب کنید (مثلاً کارگردانی)، بعد تخصص همان رشته را انتخاب کنید. با + مورد بعدی را اضافه کنید.';
+    if ($prefer_category === 'acting') {
+        $hint = 'دسته بازیگری از قبل انتخاب شده؛ تخصص خود را مشخص کنید. در صورت نیاز می‌توانید دسته را عوض کنید.';
+    } elseif ($prefer_category === 'directing') {
+        $hint = 'دسته کارگردانی از قبل انتخاب شده؛ تخصص خود را مشخص کنید. برای تهیه یا انتخاب بازیگر، دسته را عوض کنید.';
+    }
     ?>
   <div class="field work-credits activity-fields" data-activity-items<?= $required ? ' data-activities-required' : '' ?> data-activity-map="<?= casting_e((string) $map_json) ?>">
     <span class="jalali-label">نوع فعالیت<?= $required ? ' <span class="req-mark">*</span>' : '' ?></span>
-    <p class="field-hint">اول تخصص هنری را انتخاب کنید (مثلاً کارگردانی)، بعد تخصص همان رشته را انتخاب کنید. با + مورد بعدی را اضافه کنید.</p>
+    <p class="field-hint"><?= casting_e($hint) ?></p>
     <div class="work-credits-list" data-activity-list>
       <?php foreach ($rows as $i => $row) :
           $cat_key = (string) ($row['category'] ?? '');

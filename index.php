@@ -55,10 +55,19 @@ casting_render_flash();
     </section>
 
     <p class="hero-lead"><?= casting_brand_html() ?> - پرتابل ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
-    <div class="cta-row hero-cta">
-      <a class="btn btn-primary" href="register.php">عضویت</a>
-      <a class="btn btn-primary" href="login.php">ورود</a>
+    <div class="gates" aria-label="مسیر شروع">
+      <article class="gate-card">
+        <h2>می‌خواهم دیده شوم</h2>
+        <p>پروفایل هنری بساز و برای نقش‌ها و پروژه‌ها دیده شو.</p>
+        <a class="btn btn-primary" href="register.php?path=talent">شروع به‌عنوان هنرمند</a>
+      </article>
+      <article class="gate-card">
+        <h2>می‌خواهم استعداد پیدا کنم</h2>
+        <p>استعدادها را جستجو کن و برای پروژه‌ات دعوت کن.</p>
+        <a class="btn btn-primary" href="register.php?path=hire">شروع به‌عنوان کارفرما</a>
+      </article>
     </div>
+    <p class="hero-login-hint">قبلاً عضو شده‌اید؟ <a href="login.php">ورود</a></p>
 
     <div class="home-stats" aria-label="آمار تخصص‌های هنری">
       <?php foreach (($counts['tiles'] ?? []) as $tile) : ?>
