@@ -43,7 +43,7 @@ function casting_sms_otp_sender(): string
 /**
  * true فقط وقتی مقدار واقعاً موفق باشد (نه رشتهٔ غیرخالی تصادفی)
  */
-function casting_sms_is_truthy_success(mixed $value): bool
+function casting_sms_is_truthy_success($value): bool
 {
     if ($value === true || $value === 1 || $value === '1') {
         return true;
@@ -86,28 +86,142 @@ function casting_sms_last_debug(): ?array
  */
 function casting_sms_request(string $endpoint, array $body): array
 {
-    if (!casting_sms_is_configured()) {
-        return ['ok' => false, 'error' => 'ارسال پیامک پیکربندی نشده است. کلید API را در config.local.php بگذارید.'];
-    }
+    try {
+        if (!casting_sms_is_configured()) {
+            return ['ok' => false, 'error' => 'ارسال پیامک پیکربندی نشده است. کلید API را در config.local.php بگذارید.'];
+        }
 
-    $api_key = trim((string) CASTING_SMS_API_KEY);
-    $url = casting_sms_api_base() . ltrim($endpoint, '/');
+        $api_key = trim((string) CASTING_SMS_API_KEY);
+        $url = casting_sms_api_base() . ltrim($endpoint, '/');
 
-    $response = wp_remote_post($url, [
-        'timeout' => 25,
-        'headers' => [
-            'Content-Type' => 'application/json; charset=utf-8',
-            'Accept'       => 'application/json',
-            'X-API-KEY'    => $api_key,
-        ],
-        'body' => wp_json_encode($body, JSON_UNESCAPED_UNICODE),
-    ]);
+        $response = wp_remote_post($url, [
+            'timeout' => 25,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'Accept'       => 'application/json',
+                'X-API-KEY'    => $api_key,
+            ],
+            'body' => wp_json_encode($body, JSON_UNESCAPED_UNICODE),
+        ]);
 
-    if (is_wp_error($response)) {
-        $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
-        casting_sms_remember_last([
+        if (is_wp_error($response)) {
+            $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
+            casting_sms_remember_last([
+                'at'       => current_time('mysql'),
+                'url'      => $url,
+                'endpoint' => $endpoint,
+                'request'  => $body,
+                'error'    => $out['error'],
+            ]);
+
+            return $out;
+        }
+
+        $http = (int) wp_remote_retrieve_response_code($response);
+        $raw_body = (string) wp_remote_retrieve_body($response);
+        $data = json_decode($raw_body, true);
+        $raw_clip = function_exists('mb_substr')
+            ? (string) mb_substr($raw_body, 0, 800, 'UTF-8')
+            : substr($raw_body, 0, 800);
+
+        $debug = [
             'at'       => current_time('mysql'),
             'url'      => $url,
+            'endpoint' => $endpoint,
+            'request'  => $body,
+            'http'     => $http,
+            'body'     => is_array($data) ? $data : $raw_clip,
+        ];
+
+        if ($http < 200 || $http >= 300) {
+            $err = 'پاسخ نامعتبر از پنل پیامک (HTTP ' . $http . ').';
+            if (is_array($data)) {
+                $api_msg = trim((string) ($data['message'] ?? $data['Message'] ?? ''));
+                $client_ip = trim((string) ($data['clientIp'] ?? $data['ClientIp'] ?? ''));
+                if ($api_msg !== '' && stripos($api_msg, 'IP') !== false) {
+                    $err = 'IP سرور برای وب‌سرویس مجاز نیست'
+                        . ($client_ip !== '' ? (' (IP: ' . $client_ip . ')') : '')
+                        . '. در پنل WebOne: تنظیمات → آی‌پی‌های مجاز REST این IP را ثبت کنید.';
+                } elseif ($api_msg !== '') {
+                    $err = $api_msg . ' (HTTP ' . $http . ')';
+                }
+            }
+            $out = [
+                'ok'    => false,
+                'error' => $err,
+                'http'  => $http,
+                'raw'   => is_array($data) ? $data : $raw_body,
+            ];
+            $debug['ok'] = false;
+            $debug['parsed_error'] = $out['error'];
+            casting_sms_remember_last($debug);
+
+            return $out;
+        }
+
+        if (!is_array($data)) {
+            $out = [
+                'ok'    => false,
+                'error' => 'پاسخ JSON نامعتبر از پنل پیامک (HTTP ' . $http . ').',
+                'http'  => $http,
+                'raw'   => $raw_body,
+            ];
+            $debug['ok'] = false;
+            $debug['parsed_error'] = $out['error'];
+            casting_sms_remember_last($debug);
+
+            return $out;
+        }
+
+        $succeeded_raw = $data['succeeded'] ?? $data['Succeeded'] ?? null;
+        $succeeded = casting_sms_is_truthy_success($succeeded_raw);
+        $has_code = array_key_exists('resultCode', $data) || array_key_exists('ResultCode', $data);
+        $result_code = $has_code
+            ? (int) ($data['resultCode'] ?? $data['ResultCode'])
+            : null;
+        $ref_id = trim((string) ($data['refId'] ?? $data['RefId'] ?? ''));
+
+        // موفق فقط وقتی succeeded=true و (اگر کد آمده) resultCode=0
+        $ok = $succeeded && ($result_code === null || $result_code === 0);
+        // اگر کد خطا غیرصفر باشد حتی با succeeded عجیب، ناموفق
+        if ($result_code !== null && $result_code !== 0) {
+            $ok = false;
+        }
+
+        if ($ok) {
+            $out = [
+                'ok'     => true,
+                'error'  => '',
+                'code'   => 0,
+                'raw'    => $data,
+                'ref_id' => $ref_id,
+                'http'   => $http,
+            ];
+            $debug['ok'] = true;
+            $debug['ref_id'] = $ref_id;
+            casting_sms_remember_last($debug);
+
+            return $out;
+        }
+
+        $code = $result_code ?? -1;
+        $out = [
+            'ok'     => false,
+            'error'  => casting_sms_error_message($code),
+            'code'   => $code,
+            'raw'    => $data,
+            'ref_id' => $ref_id,
+            'http'   => $http,
+        ];
+        $debug['ok'] = false;
+        $debug['parsed_error'] = $out['error'];
+        casting_sms_remember_last($debug);
+
+        return $out;
+    } catch (Throwable $e) {
+        $out = ['ok' => false, 'error' => 'خطای داخلی پیامک: ' . $e->getMessage()];
+        casting_sms_remember_last([
+            'at'       => function_exists('current_time') ? current_time('mysql') : date('c'),
             'endpoint' => $endpoint,
             'request'  => $body,
             'error'    => $out['error'],
@@ -115,108 +229,6 @@ function casting_sms_request(string $endpoint, array $body): array
 
         return $out;
     }
-
-    $http = (int) wp_remote_retrieve_response_code($response);
-    $raw_body = (string) wp_remote_retrieve_body($response);
-    $data = json_decode($raw_body, true);
-    $raw_clip = function_exists('mb_substr')
-        ? (string) mb_substr($raw_body, 0, 800, 'UTF-8')
-        : substr($raw_body, 0, 800);
-
-    $debug = [
-        'at'       => current_time('mysql'),
-        'url'      => $url,
-        'endpoint' => $endpoint,
-        'request'  => $body,
-        'http'     => $http,
-        'body'     => is_array($data) ? $data : $raw_clip,
-    ];
-
-    if ($http < 200 || $http >= 300) {
-        $err = 'پاسخ نامعتبر از پنل پیامک (HTTP ' . $http . ').';
-        if (is_array($data)) {
-            $api_msg = trim((string) ($data['message'] ?? $data['Message'] ?? ''));
-            $client_ip = trim((string) ($data['clientIp'] ?? $data['ClientIp'] ?? ''));
-            if ($api_msg !== '' && stripos($api_msg, 'IP') !== false) {
-                $err = 'IP سرور برای وب‌سرویس مجاز نیست'
-                    . ($client_ip !== '' ? (' (IP: ' . $client_ip . ')') : '')
-                    . '. در پنل WebOne: تنظیمات → آی‌پی‌های مجاز REST این IP را ثبت کنید.';
-            } elseif ($api_msg !== '') {
-                $err = $api_msg . ' (HTTP ' . $http . ')';
-            }
-        }
-        $out = [
-            'ok'    => false,
-            'error' => $err,
-            'http'  => $http,
-            'raw'   => is_array($data) ? $data : $raw_body,
-        ];
-        $debug['ok'] = false;
-        $debug['parsed_error'] = $out['error'];
-        casting_sms_remember_last($debug);
-
-        return $out;
-    }
-
-    if (!is_array($data)) {
-        $out = [
-            'ok'    => false,
-            'error' => 'پاسخ JSON نامعتبر از پنل پیامک (HTTP ' . $http . ').',
-            'http'  => $http,
-            'raw'   => $raw_body,
-        ];
-        $debug['ok'] = false;
-        $debug['parsed_error'] = $out['error'];
-        casting_sms_remember_last($debug);
-
-        return $out;
-    }
-
-    $succeeded_raw = $data['succeeded'] ?? $data['Succeeded'] ?? null;
-    $succeeded = casting_sms_is_truthy_success($succeeded_raw);
-    $has_code = array_key_exists('resultCode', $data) || array_key_exists('ResultCode', $data);
-    $result_code = $has_code
-        ? (int) ($data['resultCode'] ?? $data['ResultCode'])
-        : null;
-    $ref_id = trim((string) ($data['refId'] ?? $data['RefId'] ?? ''));
-
-    // موفق فقط وقتی succeeded=true و (اگر کد آمده) resultCode=0
-    $ok = $succeeded && ($result_code === null || $result_code === 0);
-    // اگر کد خطا غیرصفر باشد حتی با succeeded عجیب، ناموفق
-    if ($result_code !== null && $result_code !== 0) {
-        $ok = false;
-    }
-
-    if ($ok) {
-        $out = [
-            'ok'     => true,
-            'error'  => '',
-            'code'   => 0,
-            'raw'    => $data,
-            'ref_id' => $ref_id,
-            'http'   => $http,
-        ];
-        $debug['ok'] = true;
-        $debug['ref_id'] = $ref_id;
-        casting_sms_remember_last($debug);
-
-        return $out;
-    }
-
-    $code = $result_code ?? -1;
-    $out = [
-        'ok'     => false,
-        'error'  => casting_sms_error_message($code),
-        'code'   => $code,
-        'raw'    => $data,
-        'ref_id' => $ref_id,
-        'http'   => $http,
-    ];
-    $debug['ok'] = false;
-    $debug['parsed_error'] = $out['error'];
-    casting_sms_remember_last($debug);
-
-    return $out;
 }
 
 /**
@@ -224,42 +236,52 @@ function casting_sms_request(string $endpoint, array $body): array
  */
 function casting_sms_get_credit(): array
 {
-    if (!casting_sms_is_configured()) {
-        return ['ok' => false, 'error' => 'کلید API تنظیم نشده است.'];
-    }
-
-    $api_key = trim((string) CASTING_SMS_API_KEY);
-    $url = casting_sms_api_base() . 'SMS/GetCredit';
-    $response = wp_remote_get($url, [
-        'timeout' => 20,
-        'headers' => [
-            'Accept'    => 'application/json',
-            'X-API-KEY' => $api_key,
-        ],
-    ]);
-
-    if (is_wp_error($response)) {
-        return ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
-    }
-
-    $http = (int) wp_remote_retrieve_response_code($response);
-    $raw_body = trim((string) wp_remote_retrieve_body($response));
-    if ($http < 200 || $http >= 300) {
-        return ['ok' => false, 'error' => 'خواندن اعتبار ناموفق بود (HTTP ' . $http . ').'];
-    }
-
-    $data = json_decode($raw_body, true);
-    if (is_array($data)) {
-        $credit = $data['credit'] ?? $data['Credit'] ?? $data['result'] ?? null;
-        if (is_numeric($credit)) {
-            return ['ok' => true, 'error' => '', 'credit' => (float) $credit];
+    try {
+        if (!casting_sms_is_configured()) {
+            return ['ok' => false, 'error' => 'کلید API تنظیم نشده است.'];
         }
-    }
-    if (is_numeric($raw_body)) {
-        return ['ok' => true, 'error' => '', 'credit' => (float) $raw_body];
-    }
 
-    return ['ok' => false, 'error' => 'پاسخ اعتبار نامعتبر بود.'];
+        $api_key = trim((string) CASTING_SMS_API_KEY);
+        $url = casting_sms_api_base() . 'SMS/GetCredit';
+        $response = wp_remote_get($url, [
+            'timeout' => 12,
+            'headers' => [
+                'Accept'    => 'application/json',
+                'X-API-KEY' => $api_key,
+            ],
+        ]);
+
+        if (is_wp_error($response)) {
+            return ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
+        }
+
+        $http = (int) wp_remote_retrieve_response_code($response);
+        $raw_body = trim((string) wp_remote_retrieve_body($response));
+        if ($http < 200 || $http >= 300) {
+            $data = json_decode($raw_body, true);
+            $api_msg = is_array($data) ? trim((string) ($data['message'] ?? $data['Message'] ?? '')) : '';
+            if ($api_msg !== '') {
+                return ['ok' => false, 'error' => $api_msg . ' (HTTP ' . $http . ')'];
+            }
+
+            return ['ok' => false, 'error' => 'خواندن اعتبار ناموفق بود (HTTP ' . $http . ').'];
+        }
+
+        $data = json_decode($raw_body, true);
+        if (is_array($data)) {
+            $credit = $data['credit'] ?? $data['Credit'] ?? $data['result'] ?? null;
+            if (is_numeric($credit)) {
+                return ['ok' => true, 'error' => '', 'credit' => (float) $credit];
+            }
+        }
+        if (is_numeric($raw_body)) {
+            return ['ok' => true, 'error' => '', 'credit' => (float) $raw_body];
+        }
+
+        return ['ok' => false, 'error' => 'پاسخ اعتبار نامعتبر بود.'];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'خطا در خواندن اعتبار: ' . $e->getMessage()];
+    }
 }
 
 function casting_sms_error_message(int $code): string

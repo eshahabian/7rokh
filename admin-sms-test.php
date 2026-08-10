@@ -17,53 +17,86 @@ casting_nocache();
 
 $error = '';
 $success = '';
-$test_mobile = casting_normalize_mobile((string) get_user_meta($user_id, 'casting_mobile', true));
+$test_mobile = '';
+try {
+    $test_mobile = casting_normalize_mobile((string) get_user_meta($user_id, 'casting_mobile', true));
+} catch (Throwable $e) {
+    $test_mobile = '';
+}
 $mode = 'otp';
 $last_ref = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_sms_test')) {
-        $error = 'درخواست نامعتبر است.';
-    } else {
-        $mode = ((string) ($_POST['mode'] ?? 'otp')) === 'text' ? 'text' : 'otp';
-        $test_mobile = casting_normalize_mobile((string) ($_POST['mobile'] ?? ''));
-        if ($test_mobile === '' || !preg_match('/^09\d{9}$/', $test_mobile)) {
-            $error = 'شماره موبایل معتبر وارد کنید.';
-        } elseif (!casting_sms_is_configured()) {
-            $error = 'CASTING_SMS_API_KEY در config.local.php روی سرور تنظیم نشده است.';
-        } elseif ($mode === 'otp') {
-            $result = casting_otp_send('admin_test', $test_mobile);
-            $debug = casting_sms_last_debug();
-            $last_ref = is_array($debug) ? (string) ($debug['ref_id'] ?? '') : '';
-            if (!$result['ok']) {
-                $error = $result['error'];
-            } else {
-                $success = 'کد OTP تست به ' . $test_mobile . ' ارسال شد.'
-                    . ($last_ref !== '' ? ' (refId: ' . $last_ref . ')' : '');
-            }
+    try {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_sms_test')) {
+            $error = 'درخواست نامعتبر است.';
         } else {
-            $result = casting_sms_send_text(
-                $test_mobile,
-                'تست پیامک متنی پورتال ' . casting_brand() . ' — ' . current_time('mysql')
-            );
-            $last_ref = (string) ($result['ref_id'] ?? '');
-            if (!$result['ok']) {
-                $error = $result['error'];
+            $mode = ((string) ($_POST['mode'] ?? 'otp')) === 'text' ? 'text' : 'otp';
+            $test_mobile = casting_normalize_mobile((string) ($_POST['mobile'] ?? ''));
+            if ($test_mobile === '' || !preg_match('/^09\d{9}$/', $test_mobile)) {
+                $error = 'شماره موبایل معتبر وارد کنید.';
+            } elseif (!casting_sms_is_configured()) {
+                $error = 'CASTING_SMS_API_KEY در config.local.php روی سرور تنظیم نشده است.';
+            } elseif ($mode === 'otp') {
+                $result = casting_otp_send('admin_test', $test_mobile);
+                $debug = casting_sms_last_debug();
+                $last_ref = is_array($debug) ? (string) ($debug['ref_id'] ?? '') : '';
+                if (empty($result['ok'])) {
+                    $error = (string) ($result['error'] ?? 'ارسال OTP ناموفق بود.');
+                } else {
+                    $success = 'کد OTP تست به ' . $test_mobile . ' ارسال شد.'
+                        . ($last_ref !== '' ? ' (refId: ' . $last_ref . ')' : '');
+                }
             } else {
-                $success = 'پیامک متنی تست به ' . $test_mobile . ' ارسال شد.'
-                    . ($last_ref !== '' ? ' (refId: ' . $last_ref . ')' : '');
+                $result = casting_sms_send_text(
+                    $test_mobile,
+                    'تست پیامک متنی پورتال ' . casting_brand() . ' — ' . current_time('mysql')
+                );
+                $last_ref = (string) ($result['ref_id'] ?? '');
+                if (empty($result['ok'])) {
+                    $error = (string) ($result['error'] ?? 'ارسال پیامک متنی ناموفق بود.');
+                } else {
+                    $success = 'پیامک متنی تست به ' . $test_mobile . ' ارسال شد.'
+                        . ($last_ref !== '' ? ' (refId: ' . $last_ref . ')' : '');
+                }
             }
+        }
+    } catch (Throwable $e) {
+        $error = 'خطای داخلی هنگام ارسال پیامک: ' . $e->getMessage();
+        if (function_exists('error_log')) {
+            error_log('[casting-sms-test] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
         }
     }
 }
 
 $api_set = defined('CASTING_SMS_API_KEY') && trim((string) CASTING_SMS_API_KEY) !== '';
 $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
-$otp_sender = casting_sms_otp_sender();
-$api_base = casting_sms_api_base();
-$pattern_id = defined('CASTING_SMS_OTP_PATTERN_ID') ? trim((string) CASTING_SMS_OTP_PATTERN_ID) : '';
-$credit_info = casting_sms_is_configured() ? casting_sms_get_credit() : ['ok' => false, 'error' => 'کلید تنظیم نشده'];
-$debug = casting_sms_last_debug();
+$otp_sender = '';
+$api_base = '';
+$pattern_id = '';
+$credit_info = ['ok' => false, 'error' => 'بررسی نشده'];
+$debug = null;
+
+try {
+    $otp_sender = casting_sms_otp_sender();
+    $api_base = casting_sms_api_base();
+    $pattern_id = defined('CASTING_SMS_OTP_PATTERN_ID') ? trim((string) CASTING_SMS_OTP_PATTERN_ID) : '';
+    // اعتبار را فقط وقتی کاربر خواست بخوان (جلوگیری از fatal/timeout هنگام باز کردن صفحه)
+    $want_credit = isset($_GET['credit']) || isset($_POST['check_credit']);
+    if ($want_credit && casting_sms_is_configured()) {
+        $credit_info = casting_sms_get_credit();
+    } elseif (casting_sms_is_configured()) {
+        $credit_info = ['ok' => false, 'error' => 'برای مشاهده اعتبار، «بررسی اعتبار» را بزنید.'];
+    } else {
+        $credit_info = ['ok' => false, 'error' => 'کلید تنظیم نشده'];
+    }
+    $debug = casting_sms_last_debug();
+} catch (Throwable $e) {
+    $error = $error !== '' ? $error : ('خطا در آماده‌سازی صفحه: ' . $e->getMessage());
+    if (function_exists('error_log')) {
+        error_log('[casting-sms-test-boot] ' . $e->getMessage());
+    }
+}
 
 casting_render_panel_start('تست پیامک', 'admin-sms');
 if ($error !== '') {
@@ -92,7 +125,7 @@ casting_render_flash();
     <dt>مانده اعتبار</dt>
     <dd><?php
     if (!empty($credit_info['ok'])) {
-        echo '<code dir="ltr">' . casting_e(number_format((float) $credit_info['credit'], 0)) . '</code> ریال';
+        echo '<code dir="ltr">' . casting_e(number_format((float) ($credit_info['credit'] ?? 0), 0)) . '</code> ریال';
     } else {
         echo '✗ ' . casting_e((string) ($credit_info['error'] ?? 'نامشخص'));
     }
@@ -100,6 +133,10 @@ casting_render_flash();
     <dt>ارسال فعال</dt>
     <dd><?= casting_sms_is_configured() ? '✓ بله' : '✗ خیر' ?></dd>
   </dl>
+
+  <p class="cta-row" style="margin:0.75rem 0">
+    <a class="btn btn-ghost btn-sm" href="admin-sms-test.php?credit=1">بررسی اعتبار</a>
+  </p>
 
   <?php if (is_array($debug)) : ?>
     <details class="dash-card" open style="margin:1rem 0;padding:1rem;">
@@ -109,7 +146,7 @@ casting_render_flash();
       <?php if (!empty($debug['parsed_error'])) : ?>
         <p class="flash flash-error"><?= casting_e((string) $debug['parsed_error']) ?></p>
       <?php endif; ?>
-      <pre dir="ltr" style="white-space:pre-wrap;overflow:auto;max-height:280px;font-size:0.8rem;"><?= casting_e(wp_json_encode([
+      <pre dir="ltr" style="white-space:pre-wrap;overflow:auto;max-height:280px;font-size:0.8rem;"><?= casting_e((string) wp_json_encode([
           'request' => $debug['request'] ?? null,
           'body'    => $debug['body'] ?? null,
           'ref_id'  => $debug['ref_id'] ?? null,
