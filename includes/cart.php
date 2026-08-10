@@ -289,6 +289,10 @@ function casting_cart_build_item(string $service_key, string $plan_key = '', int
     }
     $draft = $built['draft'];
     $id = substr(hash('sha256', $service_key . '|' . ($draft['plan_key'] ?? '') . '|' . $project_id . '|' . microtime(true)), 0, 12);
+    // در سفارش‌ها هنوز مالیات اعمال نمی‌شود؛ فقط مبلغ پایه ذخیره می‌شود
+    $base = max(0, (int) ($draft['amount_base'] ?? 0));
+    $discount = max(0, min((int) ($draft['discount'] ?? 0), $base));
+    $pre_vat = max(0, $base - $discount);
 
     return [
         'ok'    => true,
@@ -303,10 +307,10 @@ function casting_cart_build_item(string $service_key, string $plan_key = '', int
             'plan_label'     => (string) ($draft['plan_label'] ?? ''),
             'duration_label' => (string) ($draft['duration_label'] ?? ''),
             'description'    => (string) ($draft['description'] ?? ''),
-            'amount_base'    => (int) ($draft['amount_base'] ?? 0),
-            'discount'       => (int) ($draft['discount'] ?? 0),
-            'vat_amount'     => (int) ($draft['vat_amount'] ?? 0),
-            'amount_final'   => (int) ($draft['amount_final'] ?? 0),
+            'amount_base'    => $base,
+            'discount'       => $discount,
+            'vat_amount'     => 0,
+            'amount_final'   => $pre_vat,
             'meta'           => is_array($draft['meta'] ?? null) ? $draft['meta'] : [],
             'qty'            => 1,
         ],
@@ -385,6 +389,8 @@ function casting_cart_remove(string $item_id): array
 }
 
 /**
+ * جمع سفارش‌ها (بدون مالیات — مالیات فقط در خلاصه سفارش)
+ *
  * @return array{base:int,discount:int,vat:int,final:int,count:int}
  */
 function casting_cart_totals(?array $cart = null): array
@@ -394,8 +400,6 @@ function casting_cart_totals(?array $cart = null): array
     }
     $base = 0;
     $discount = 0;
-    $vat = 0;
-    $final = 0;
     foreach ($cart['items'] as $it) {
         if (!is_array($it)) {
             continue;
@@ -403,15 +407,14 @@ function casting_cart_totals(?array $cart = null): array
         $qty = max(1, (int) ($it['qty'] ?? 1));
         $base += (int) ($it['amount_base'] ?? 0) * $qty;
         $discount += (int) ($it['discount'] ?? 0) * $qty;
-        $vat += (int) ($it['vat_amount'] ?? 0) * $qty;
-        $final += (int) ($it['amount_final'] ?? 0) * $qty;
     }
+    $subtotal = max(0, $base - $discount);
 
     return [
         'base'     => $base,
         'discount' => $discount,
-        'vat'      => $vat,
-        'final'    => $final,
+        'vat'      => 0,
+        'final'    => $subtotal,
         'count'    => count($cart['items']),
     ];
 }
@@ -432,6 +435,8 @@ function casting_cart_create_order_from_cart(int $user_id): array
     }
 
     $totals = casting_cart_totals($cart);
+    // مالیات بر ارزش افزوده فقط هنگام ورود به خلاصه سفارش / درگاه
+    $amounts = casting_checkout_calc_amounts((int) $totals['base'], (int) $totals['discount']);
     $titles = [];
     $types = [];
     $durations = [];
@@ -439,11 +444,17 @@ function casting_cart_create_order_from_cart(int $user_id): array
     $project_id = 0;
     $primary_service = (string) ($cart['items'][0]['service_key'] ?? 'cart');
     $primary_plan = (string) ($cart['items'][0]['plan_key'] ?? 'cart');
+    $cart_items_checkout = [];
 
     foreach ($cart['items'] as $it) {
         if (!is_array($it)) {
             continue;
         }
+        $item_amounts = casting_checkout_calc_amounts((int) ($it['amount_base'] ?? 0), (int) ($it['discount'] ?? 0));
+        $it['vat_amount'] = $item_amounts['vat'];
+        $it['amount_final'] = $item_amounts['final'];
+        $cart_items_checkout[] = $it;
+
         $titles[] = (string) ($it['title'] ?? '');
         if ((string) ($it['service_type'] ?? '') !== '') {
             $types[] = (string) $it['service_type'];
@@ -469,9 +480,9 @@ function casting_cart_create_order_from_cart(int $user_id): array
     $duration = count($durations) === 1 ? $durations[0] : '';
     $description = implode("\n", $descs);
 
-    $service_key = count($cart['items']) === 1 ? $primary_service : 'cart';
-    $plan_key = count($cart['items']) === 1 ? $primary_plan : 'multi';
-    $first_meta = is_array($cart['items'][0]['meta'] ?? null) ? $cart['items'][0]['meta'] : [];
+    $service_key = count($cart_items_checkout) === 1 ? $primary_service : 'cart';
+    $plan_key = count($cart_items_checkout) === 1 ? $primary_plan : 'multi';
+    $first_meta = is_array($cart_items_checkout[0]['meta'] ?? null) ? $cart_items_checkout[0]['meta'] : [];
 
     $draft = [
         'service_key'    => $service_key,
@@ -480,18 +491,18 @@ function casting_cart_create_order_from_cart(int $user_id): array
         'service_type'   => $service_type,
         'duration_label' => $duration,
         'description'    => $description !== '' ? $description : 'اقلام سفارش خدمات پورتال ۷رخ.',
-        'amount_base'    => $totals['base'],
-        'discount'       => $totals['discount'],
-        'vat_amount'     => $totals['vat'],
-        'amount_final'   => $totals['final'],
+        'amount_base'    => $amounts['base'],
+        'discount'       => $amounts['discount'],
+        'vat_amount'     => $amounts['vat'],
+        'amount_final'   => $amounts['final'],
         'project_id'     => $project_id,
         'cancel_url'     => 'cart.php',
         'meta'           => [
             'from_cart'    => true,
-            'cart_items'   => $cart['items'],
+            'cart_items'   => $cart_items_checkout,
             'days'         => (int) (($first_meta['days'] ?? 0) ?: 0),
             'months'       => (int) (($first_meta['months'] ?? 0) ?: 0),
-            'project_type' => (string) (($first_meta['project_type'] ?? '') ?: ($cart['items'][0]['plan_key'] ?? '')),
+            'project_type' => (string) (($first_meta['project_type'] ?? '') ?: ($cart_items_checkout[0]['plan_key'] ?? '')),
         ],
     ];
 

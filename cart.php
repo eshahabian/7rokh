@@ -211,14 +211,12 @@ casting_render_flash();
               <?= casting_e((string) ($item['service_type'] ?? '')) ?>
               <?php if ((string) ($item['plan_label'] ?? '') !== '') : ?>
                 · <?= casting_e((string) $item['plan_label']) ?>
-              <?php endif; ?>
-              <?php if ((string) ($item['duration_label'] ?? '') !== '') : ?>
+              <?php elseif ((string) ($item['duration_label'] ?? '') !== '') : ?>
                 · <?= casting_e((string) $item['duration_label']) ?>
               <?php endif; ?>
             </p>
             <p class="cart-item-price">
-              مبلغ بسته: <?= casting_e(casting_format_toman((int) ($item['amount_base'] ?? 0))) ?>
-              · قابل پرداخت: <strong><?= casting_e(casting_format_toman((int) ($item['amount_final'] ?? 0))) ?></strong>
+              <strong><?= casting_e(casting_format_toman((int) ($item['amount_base'] ?? 0))) ?></strong>
             </p>
           </div>
           <form method="post" action="cart.php" class="cart-item-remove">
@@ -234,11 +232,10 @@ casting_render_flash();
     <div class="cart-totals bio-block">
       <ul class="info-list">
         <li><strong>تعداد اقلام:</strong> <?= (int) $totals['count'] ?></li>
-        <li><strong>جمع مبلغ اصلی:</strong> <?= casting_e(casting_format_toman((int) $totals['base'])) ?></li>
+        <li><strong>جمع مبلغ:</strong> <?= casting_e(casting_format_toman((int) $totals['base'])) ?></li>
         <?php if ((int) $totals['discount'] > 0) : ?>
           <li><strong>تخفیف:</strong> <?= casting_e(casting_format_toman((int) $totals['discount'])) ?></li>
         <?php endif; ?>
-        <li class="checkout-total"><strong>مبلغ قابل پرداخت:</strong> <?= casting_e(casting_format_toman((int) $totals['final'])) ?></li>
       </ul>
     </div>
 
@@ -286,7 +283,12 @@ casting_render_flash();
             <strong class="shop-tile-title"><?= casting_e((string) $tile['label']) ?></strong>
             <p class="shop-tile-meta"><?= casting_e((string) $tile['meta']) ?></p>
             <p class="shop-tile-price">
-              <strong><?= casting_e(casting_format_toman((int) $tile['price_base'])) ?></strong>
+              <?php if ((string) $tile['service'] === 'casting_call') : ?>
+                <strong><?= casting_e(casting_format_toman((int) $tile['price_final'])) ?></strong>
+                <span class="meta">با مالیات</span>
+              <?php else : ?>
+                <strong><?= casting_e(casting_format_toman((int) $tile['price_base'])) ?></strong>
+              <?php endif; ?>
             </p>
             <a class="btn btn-primary btn-sm shop-tile-add" href="<?= casting_e($add_href) ?>">افزودن</a>
           </div>

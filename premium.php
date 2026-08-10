@@ -108,7 +108,12 @@ casting_render_flash();
         <strong><?= casting_e($item['label']) ?></strong>
         <p class="meta"><?= casting_e($item['meta']) ?></p>
         <p class="shop-item-price">
-          <strong><?= casting_e(number_format((int) $item['price_base'])) ?> تومان</strong>
+          <?php if ((string) ($item['group'] ?? '') === 'فراخوان کستینگ') : ?>
+            <?= casting_e(number_format((int) $item['price_base'])) ?> + مالیات
+            = <strong><?= casting_e(number_format((int) $item['price_final'])) ?> تومان</strong>
+          <?php else : ?>
+            <strong><?= casting_e(number_format((int) $item['price_base'])) ?> تومان</strong>
+          <?php endif; ?>
         </p>
       </div>
       <a class="btn btn-primary" href="<?= casting_e($item['href']) ?>">افزودن به سفارش‌ها</a>
@@ -121,7 +126,7 @@ casting_render_flash();
     <ul class="info-list">
       <li>با زدن «افزودن به سفارش‌ها» وارد فهرست سفارش می‌شوید؛ سپس خلاصه سفارش و درگاه. تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
       <li>عضویت ویژه: ۳ ماه ۲۱۰٬۰۰۰ · ۶ ماه ۳۷۰٬۰۰۰ · ۱۲ ماه ۷۰۰٬۰۰۰ تومان.</li>
-      <li>فراخوان تئاتر و فیلم کوتاه: ۷۰۰٬۰۰۰ تومان · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان.</li>
+      <li>فراخوان تئاتر و فیلم کوتاه: ۷۰۰٬۰۰۰ تومان (+ مالیات) · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان (+ مالیات).</li>
     </ul>
   </div>
 </section>

@@ -122,6 +122,7 @@ casting_render_flash();
       <?php else : ?>
         <li><strong>تخفیف:</strong> —</li>
       <?php endif; ?>
+      <li><strong>مالیات بر ارزش افزوده (۱۰٪):</strong> <?= casting_e(casting_format_toman((int) $order['vat_amount'])) ?></li>
       <li class="checkout-total"><strong>مبلغ نهایی قابل پرداخت:</strong> <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></li>
     </ul>
 
