@@ -119,6 +119,9 @@ function casting_sms_request(string $endpoint, array $body): array
     $http = (int) wp_remote_retrieve_response_code($response);
     $raw_body = (string) wp_remote_retrieve_body($response);
     $data = json_decode($raw_body, true);
+    $raw_clip = function_exists('mb_substr')
+        ? (string) mb_substr($raw_body, 0, 800, 'UTF-8')
+        : substr($raw_body, 0, 800);
 
     $debug = [
         'at'       => current_time('mysql'),
@@ -126,7 +129,7 @@ function casting_sms_request(string $endpoint, array $body): array
         'endpoint' => $endpoint,
         'request'  => $body,
         'http'     => $http,
-        'body'     => is_array($data) ? $data : mb_substr($raw_body, 0, 800),
+        'body'     => is_array($data) ? $data : $raw_clip,
     ];
 
     if ($http < 200 || $http >= 300) {
