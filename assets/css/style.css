@@ -2096,6 +2096,28 @@ legend .req-mark {
   border-bottom: 1px solid var(--line);
 }
 
+.filter-bar--sticky {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 45;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 0.95rem 0.95rem;
+  border: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+  max-height: min(72vh, 40rem);
+  overflow: auto;
+  scroll-margin-top: 0.75rem;
+}
+
+html[data-theme="day"] .filter-bar--sticky {
+  background: color-mix(in srgb, var(--bg-panel) 94%, #fff 6%);
+  box-shadow: 0 10px 24px rgba(40, 32, 20, 0.1);
+}
+
 .filter-bar-wide {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: visible;
@@ -2299,18 +2321,9 @@ legend .req-mark {
   grid-column: span 2;
 }
 
-.member-search-results-anchor--top {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--line);
-}
-
-.member-search-results-anchor--bottom {
-  margin-top: 1.5rem;
-}
-
-.member-search-results-anchor[hidden] {
-  display: none !important;
+.member-search-results {
+  margin-top: 0.35rem;
+  scroll-margin-top: 6rem;
 }
 
 .dash-card-search > h1 {
@@ -2481,6 +2494,48 @@ legend .req-mark {
 .empty-state {
   color: var(--ink-muted);
   padding: 1rem 0;
+}
+
+.empty-state--search {
+  display: grid;
+  gap: 0.65rem;
+  justify-items: start;
+  margin: 0.85rem 0 1.25rem;
+  padding: 1.35rem 1.2rem;
+  border: 1px dashed color-mix(in srgb, var(--line) 80%, var(--accent) 20%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-muted, var(--bg-elevated)) 88%, transparent);
+}
+
+.empty-state-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--display);
+}
+
+.empty-state-text {
+  margin: 0;
+  max-width: 34rem;
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.empty-state-actions {
+  margin-top: 0.25rem;
+}
+
+.empty-state-tips {
+  margin: 0.15rem 0 0;
+  padding: 0 1.1rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.empty-state-tips li + li {
+  margin-top: 0.2rem;
 }
 
 .pager {

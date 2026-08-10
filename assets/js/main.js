@@ -818,30 +818,6 @@
     let resultsAbort = null;
     let suggestAbort = null;
     let predictedFull = "";
-    const resultsAnchorTop = document.querySelector('[data-member-search-results-anchor="top"]');
-    const resultsAnchorBottom = document.querySelector('[data-member-search-results-anchor="bottom"]');
-
-    const formHasActiveSearch = () => {
-      const params = new URLSearchParams(new FormData(memberSearchForm));
-      for (const [key, value] of params.entries()) {
-        const trimmed = String(value).trim();
-        if (trimmed === "") continue;
-        if (key === "city" && trimmed === "همه") continue;
-        return true;
-      }
-      return false;
-    };
-
-    const placeSearchResults = (active) => {
-      const results = document.querySelector("[data-member-search-results]");
-      if (!results || !resultsAnchorTop || !resultsAnchorBottom) return;
-      const target = active ? resultsAnchorTop : resultsAnchorBottom;
-      if (results.parentElement !== target) {
-        target.appendChild(results);
-      }
-      resultsAnchorTop.hidden = !active;
-      resultsAnchorBottom.hidden = active;
-    };
 
     const clearPrediction = () => {
       predictedFull = "";
@@ -878,7 +854,6 @@
           });
           if (!res.ok) return;
           resultsEl.innerHTML = await res.text();
-          placeSearchResults(formHasActiveSearch());
           const query = buildFormQuery(false);
           window.history.replaceState({}, "", query ? `search-users.php?${query}` : "search-users.php");
         } catch (err) {
@@ -992,7 +967,6 @@
       e.preventDefault();
       refreshResults();
     });
-    placeSearchResults(formHasActiveSearch());
   }
 
   document.querySelectorAll("[data-password-confirm-field]").forEach((field) => {

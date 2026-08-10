@@ -1541,7 +1541,11 @@ function casting_render_member_search_talent_cluster(array $filters): void
  */
 function casting_member_search_filters_active(array $filters): bool
 {
+    $skip = ['viewer_id', 'page', 'ajax'];
     foreach ($filters as $key => $value) {
+        if (in_array((string) $key, $skip, true)) {
+            continue;
+        }
         $value = trim((string) $value);
         if ($value === '') {
             continue;
@@ -2100,9 +2104,29 @@ function casting_render_member_search_results(array $members, int $viewer_id, in
         $director_scores = casting_director_best_scores_for_talents($viewer_id, $talent_ids);
     }
     ?>
+  <?php $filters_active = casting_member_search_filters_active($filters); ?>
   <p class="meta member-search-count"><?= (int) $total ?> کاربر · اعضای ویژه در اولویت نمایش</p>
   <?php if (!$members) : ?>
-    <p class="empty-state">کاربری پیدا نشد.</p>
+    <div class="empty-state empty-state--search" role="status">
+      <?php if ($filters_active) : ?>
+        <h2 class="empty-state-title">نتیجه‌ای پیدا نشد</h2>
+        <p class="empty-state-text">با این فیلترها کسی پیدا نشد. فیلترها را کمی بازتر کنید یا از نو شروع کنید.</p>
+        <div class="cta-row empty-state-actions">
+          <a class="btn btn-primary" href="search-users.php">پاک کردن فیلترها</a>
+        </div>
+        <ul class="empty-state-tips">
+          <li>فقط تخصص یا شهر را نگه دارید</li>
+          <li>بازهٔ سن را وسیع‌تر کنید</li>
+          <li>فیلترهای پیشرفته را موقتاً خاموش کنید</li>
+        </ul>
+      <?php else : ?>
+        <h2 class="empty-state-title">هنوز عضوی برای نمایش نیست</h2>
+        <p class="empty-state-text">به‌زودی استعدادها اینجا دیده می‌شوند. یک تخصص یا شهر انتخاب کنید و دوباره جستجو کنید.</p>
+        <div class="cta-row empty-state-actions">
+          <a class="btn btn-ghost" href="#member-search-filters">تنظیم فیلتر</a>
+        </div>
+      <?php endif; ?>
+    </div>
   <?php else : ?>
     <div class="member-grid">
       <?php foreach ($members as $member) : ?>

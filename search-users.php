@@ -26,7 +26,6 @@ $result = casting_query_members($user_id, $filters, $page, 24);
 $members = $result['users'];
 $total = $result['total'];
 $pages = max(1, (int) ceil($total / 24));
-$search_active = casting_member_search_filters_active($filters);
 $advanced_open = casting_member_search_advanced_filters_active($filters);
 
 if (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1') {
@@ -38,18 +37,10 @@ casting_render_panel_start('جستجوی کاربران', 'search');
 casting_render_flash();
 ?>
 <section class="dash-card dash-card-search">
-  <div class="member-search-results-anchor member-search-results-anchor--top" data-member-search-results-anchor="top"<?= $search_active ? '' : ' hidden' ?>>
-    <?php if ($search_active) : ?>
-      <div id="member-search-results" data-member-search-results>
-        <?php casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters); ?>
-      </div>
-    <?php endif; ?>
-  </div>
-
   <h1>کشف استعداد</h1>
   <p class="lede">عکس‌ها را اسکن کنید؛ برای جزئیات، پیام و دنبال کردن روی هدشات بزنید.</p>
 
-  <form class="filter-bar filter-bar-wide filter-bar-headshot" method="get" action="search-users.php" data-member-search-form>
+  <form id="member-search-filters" class="filter-bar filter-bar-wide filter-bar-headshot filter-bar--sticky" method="get" action="search-users.php" data-member-search-form>
     <div class="filter-primary">
       <?php casting_render_member_search_activity_fields($filters); ?>
       <?php casting_render_member_search_gender_field($filters); ?>
@@ -73,12 +64,8 @@ casting_render_flash();
     </div>
   </form>
 
-  <div class="member-search-results-anchor member-search-results-anchor--bottom" data-member-search-results-anchor="bottom"<?= $search_active ? ' hidden' : '' ?>>
-    <?php if (!$search_active) : ?>
-      <div id="member-search-results" data-member-search-results>
-        <?php casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters); ?>
-      </div>
-    <?php endif; ?>
+  <div id="member-search-results" class="member-search-results" data-member-search-results>
+    <?php casting_render_member_search_results($members, $user_id, $total, $page, $pages, $filters); ?>
   </div>
 </section>
 <?php casting_render_panel_end(); ?>
