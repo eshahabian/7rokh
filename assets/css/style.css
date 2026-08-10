@@ -469,9 +469,9 @@ html[data-theme="day"] .brand-mark-rokh {
 
 .home-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   gap: 0.75rem;
-  width: min(520px, 100%);
+  width: min(720px, 100%);
   margin: 1.5rem auto 0;
 }
 
@@ -484,16 +484,25 @@ html[data-theme="day"] .brand-mark-rokh {
   box-shadow: var(--shadow);
 }
 
+.stat-item--discovery {
+  border-color: color-mix(in srgb, var(--accent-strong) 35%, var(--line));
+}
+
+.stat-item--total {
+  border-color: color-mix(in srgb, var(--accent-strong) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent-strong) 10%, var(--surface-glass));
+}
+
 .stat-item strong {
   display: block;
-  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
   color: var(--accent-strong);
   line-height: 1.2;
 }
 
 .stat-item span {
   color: var(--ink-muted);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
 }
 
 .quick-filters {
@@ -3069,7 +3078,7 @@ legend .req-mark {
   }
 
   .home-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.45rem;
   }
 

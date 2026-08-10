@@ -60,19 +60,13 @@ casting_render_flash();
       <a class="btn btn-primary" href="login.php">ورود</a>
     </div>
 
-    <div class="home-stats" aria-label="آمار اعضا">
-      <div class="stat-item">
-        <strong><?= (int) $counts['talents'] ?></strong>
-        <span>هنرمند</span>
-      </div>
-      <div class="stat-item">
-        <strong><?= (int) $counts['employers'] ?></strong>
-        <span>کارفرما</span>
-      </div>
-      <div class="stat-item">
-        <strong><?= (int) $counts['total'] ?></strong>
-        <span>کل اعضا</span>
-      </div>
+    <div class="home-stats" aria-label="آمار تخصص‌های هنری">
+      <?php foreach (($counts['tiles'] ?? []) as $tile) : ?>
+        <div class="stat-item<?= ($tile['key'] ?? '') === 'total' ? ' stat-item--total' : '' ?><?= ($tile['key'] ?? '') === 'discovery' ? ' stat-item--discovery' : '' ?>">
+          <strong><?= (int) ($tile['count'] ?? 0) ?></strong>
+          <span><?= casting_e((string) ($tile['label'] ?? '')) ?></span>
+        </div>
+      <?php endforeach; ?>
     </div>
   </div>
 </main>

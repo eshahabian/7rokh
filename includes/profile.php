@@ -3518,38 +3518,210 @@ function casting_profile_complete(array $profile): bool
 }
 
 /**
- * @return array{talents:int,employers:int,total:int}
+ * کلید تخصص → دستهٔ تخصص هنری
+ *
+ * @return array<string, string>
+ */
+function casting_activity_specialty_category_map(): array
+{
+    if (!function_exists('casting_activity_categories')) {
+        $file = __DIR__ . '/activities.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
+    $map = [];
+    if (!function_exists('casting_activity_categories')) {
+        return $map;
+    }
+    foreach (casting_activity_categories() as $cat_key => $cat) {
+        if (!is_array($cat)) {
+            continue;
+        }
+        foreach (array_keys($cat['items'] ?? []) as $specialty) {
+            $map[(string) $specialty] = (string) $cat_key;
+        }
+    }
+
+    return $map;
+}
+
+/**
+ * آمار صفحهٔ اصلی بر اساس تخصص هنری (زنده با ثبت‌نام)
+ *
+ * @return array{
+ *   total:int,
+ *   talents:int,
+ *   employers:int,
+ *   tiles:list<array{key:string,label:string,count:int}>
+ * }
  */
 function casting_member_counts(): array
 {
-    $talents = new WP_User_Query([
-        'number'      => 1,
-        'count_total' => true,
-        'fields'      => 'ID',
-        'meta_key'    => 'casting_role',
-        'meta_value'  => 'talent',
-    ]);
+    if (!function_exists('casting_normalize_activities')) {
+        $file = __DIR__ . '/activities.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
+    if (!function_exists('casting_user_is_suspended')) {
+        $file = __DIR__ . '/admin-access.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
 
-    $employers = new WP_User_Query([
-        'number'      => 1,
-        'count_total' => true,
-        'fields'      => 'ID',
-        'meta_query'  => [
+    $query = new WP_User_Query([
+        'number'     => 5000,
+        'fields'     => 'ID',
+        'meta_query' => [
             [
                 'key'     => 'casting_role',
-                'value'   => ['director', 'producer'],
+                'value'   => ['talent', 'director', 'producer'],
                 'compare' => 'IN',
             ],
         ],
     ]);
+    $ids = $query->get_results();
+    if (!is_array($ids)) {
+        $ids = [];
+    }
 
-    $talent_n = (int) $talents->get_total();
-    $employer_n = (int) $employers->get_total();
+    $categories = function_exists('casting_activity_categories') ? casting_activity_categories() : [];
+    $specialty_map = casting_activity_specialty_category_map();
+
+    // برچسب‌های دوستانه برای کشف استعداد در صفحهٔ اول
+    $tile_labels = [
+        'acting'     => 'بازیگری',
+        'directing'  => 'کارگردانی',
+        'production' => 'تهیه و تولید',
+        'writing'    => 'نویسندگی',
+        'camera'     => 'فیلمبرداری',
+        'sound'      => 'صدا',
+        'post'       => 'تدوین',
+        'art'        => 'طراحی هنری',
+        'lighting'   => 'نور',
+        'music'      => 'موسیقی',
+        'promo'      => 'رسانه',
+        'set_crew'   => 'عوامل صحنه',
+        'other'      => 'سایر تخصص‌ها',
+        'discovery'  => 'کشف استعداد',
+    ];
+
+    $by_cat = [];
+    foreach (array_keys($tile_labels) as $key) {
+        $by_cat[$key] = 0;
+    }
+
+    $total = 0;
+    $talents = 0;
+    $employers = 0;
+
+    foreach ($ids as $raw_id) {
+        $user_id = (int) $raw_id;
+        if ($user_id <= 0) {
+            continue;
+        }
+        if (function_exists('casting_user_is_suspended') && casting_user_is_suspended($user_id)) {
+            continue;
+        }
+
+        $role = casting_get_user_role($user_id);
+        if ($role === '') {
+            continue;
+        }
+
+        $activities = function_exists('casting_normalize_activities')
+            ? casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id)
+            : [];
+        $activities = array_values(array_filter(array_map('strval', is_array($activities) ? $activities : [])));
+
+        // حساب فنی/IT عمومی در آمار صفحهٔ اول نیاید
+        $public_activities = array_values(array_filter(
+            $activities,
+            static fn(string $key): bool => $key !== 'it'
+        ));
+        if ($public_activities === [] && in_array('it', $activities, true)) {
+            continue;
+        }
+
+        $total++;
+        if ($role === 'talent') {
+            $talents++;
+        } elseif (in_array($role, ['director', 'producer'], true)) {
+            $employers++;
+        }
+
+        $matched_cats = [];
+        $is_discovery = $public_activities === []
+            || $public_activities === ['activity_none']
+            || (function_exists('casting_activities_has_none') && casting_activities_has_none($public_activities) && count($public_activities) === 1);
+
+        if ($is_discovery) {
+            $matched_cats['discovery'] = true;
+        } else {
+            foreach ($public_activities as $specialty) {
+                if ($specialty === 'activity_none') {
+                    continue;
+                }
+                $cat = (string) ($specialty_map[$specialty] ?? '');
+                if ($cat === '' || $cat === 'none' || !isset($by_cat[$cat])) {
+                    continue;
+                }
+                $matched_cats[$cat] = true;
+            }
+            if ($matched_cats === []) {
+                $matched_cats['discovery'] = true;
+            }
+        }
+
+        foreach (array_keys($matched_cats) as $cat_key) {
+            $by_cat[$cat_key] = (int) ($by_cat[$cat_key] ?? 0) + 1;
+        }
+    }
+
+    // ترتیب نمایش: دسته‌های اصلی اول، بعد بقیهٔ دارای عضو، بعد کشف استعداد
+    $preferred = ['acting', 'directing', 'production', 'writing', 'camera', 'sound', 'post', 'art', 'music'];
+    $tiles = [];
+    $seen = [];
+    foreach ($preferred as $key) {
+        $count = (int) ($by_cat[$key] ?? 0);
+        if ($count <= 0) {
+            continue;
+        }
+        $tiles[] = [
+            'key'   => $key,
+            'label' => (string) ($tile_labels[$key] ?? ($categories[$key]['label'] ?? $key)),
+            'count' => $count,
+        ];
+        $seen[$key] = true;
+    }
+    foreach ($by_cat as $key => $count) {
+        if ($key === 'discovery' || isset($seen[$key]) || (int) $count <= 0) {
+            continue;
+        }
+        $tiles[] = [
+            'key'   => (string) $key,
+            'label' => (string) ($tile_labels[$key] ?? ($categories[$key]['label'] ?? $key)),
+            'count' => (int) $count,
+        ];
+    }
+    $tiles[] = [
+        'key'   => 'discovery',
+        'label' => (string) $tile_labels['discovery'],
+        'count' => (int) ($by_cat['discovery'] ?? 0),
+    ];
+    $tiles[] = [
+        'key'   => 'total',
+        'label' => 'اعضای پورتال',
+        'count' => $total,
+    ];
 
     return [
-        'talents'   => $talent_n,
-        'employers' => $employer_n,
-        'total'     => $talent_n + $employer_n,
+        'talents'   => $talents,
+        'employers' => $employers,
+        'total'     => $total,
+        'tiles'     => $tiles,
     ];
 }
 
