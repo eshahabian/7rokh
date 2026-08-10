@@ -143,6 +143,25 @@ function casting_paid_services_catalog(): array
             ],
             'success_note' => 'پس از پرداخت موفق می‌توانید فراخوان را ارسال و در فید فرصت‌ها منتشر کنید.',
         ],
+        'advertising' => [
+            'key'          => 'advertising',
+            'title'        => 'تبلیغات',
+            'service_type' => 'بنر و پوستر تبلیغاتی',
+            'duration'     => '',
+            'description'  => 'نمایش بنر/پوستر تبلیغاتی در محل ویژه صفحهٔ اصلی پورتال ۷رخ.',
+            'cancel_url'   => 'cart.php',
+            'types'        => [
+                'banner_theater' => [
+                    'label'       => 'بنر پوستر تئاتر',
+                    'amount_base' => 1000000,
+                ],
+                'banner_film' => [
+                    'label'       => 'بنر پوستر فیلم',
+                    'amount_base' => 3000000,
+                ],
+            ],
+            'success_note' => 'پس از پرداخت موفق، تیم پشتیبانی برای هماهنگی نمایش بنر با شما تماس می‌گیرد.',
+        ],
     ];
 }
 
@@ -187,6 +206,10 @@ function casting_shop_catalog_tiles(): array
             'cinema'     => 'images/shop-call-cinema.webp',
             'tv'         => 'images/shop-call-tv.webp',
         ],
+        'advertising' => [
+            'banner_theater' => 'images/shop-call-theater.webp',
+            'banner_film'    => 'images/shop-call-cinema.webp',
+        ],
     ];
     $tiles = [];
     foreach (casting_premium_plans() as $key => $p) {
@@ -226,6 +249,26 @@ function casting_shop_catalog_tiles(): array
             'vat'         => $calc['vat'],
             'price_final' => $calc['final'],
             'badge'       => '',
+            'image'       => $img !== '' ? casting_asset($img) : '',
+        ];
+    }
+    $ad_types = is_array($catalog['advertising']['types'] ?? null) ? $catalog['advertising']['types'] : [];
+    foreach ($ad_types as $type_key => $type) {
+        if (!is_array($type)) {
+            continue;
+        }
+        $calc = casting_checkout_calc_amounts((int) ($type['amount_base'] ?? 0));
+        $img = (string) ($tile_images['advertising'][$type_key] ?? '');
+        $tiles[] = [
+            'group'       => 'تبلیغات',
+            'label'       => (string) ($type['label'] ?? $type_key),
+            'meta'        => 'نمایش در محل ویژه صفحهٔ اصلی',
+            'service'     => 'advertising',
+            'plan'        => (string) $type_key,
+            'price_base'  => $calc['base'],
+            'vat'         => $calc['vat'],
+            'price_final' => $calc['final'],
+            'badge'       => 'تبلیغات',
             'image'       => $img !== '' ? casting_asset($img) : '',
         ];
     }
@@ -408,6 +451,39 @@ function casting_checkout_build_draft(string $service_key, string $plan_or_type 
                 'cancel_url'     => $cancel,
                 'meta'           => [
                     'project_type' => $type_key,
+                ],
+            ],
+        ];
+    }
+
+    if ($service_key === 'advertising') {
+        $types = is_array($svc['types'] ?? null) ? $svc['types'] : [];
+        $type_key = sanitize_key($plan_or_type);
+        if ($type_key === '' || !isset($types[$type_key]) || !is_array($types[$type_key])) {
+            return ['ok' => false, 'error' => 'نوع تبلیغات نامعتبر است.'];
+        }
+        $type = $types[$type_key];
+        $amounts = casting_checkout_calc_amounts((int) ($type['amount_base'] ?? 0), $discount);
+
+        return [
+            'ok'    => true,
+            'error' => '',
+            'draft' => [
+                'service_key'    => 'advertising',
+                'plan_key'       => $type_key,
+                'title'          => (string) ($type['label'] ?? 'تبلیغات'),
+                'service_type'   => (string) ($svc['service_type'] ?? 'تبلیغات'),
+                'duration_label' => 'نمایش تبلیغاتی',
+                'description'    => (string) ($svc['description'] ?? '') . ' نوع انتخابی: ' . (string) ($type['label'] ?? '') . '.',
+                'plan_label'     => (string) ($type['label'] ?? ''),
+                'amount_base'    => $amounts['base'],
+                'discount'       => $amounts['discount'],
+                'vat_amount'     => $amounts['vat'],
+                'amount_final'   => $amounts['final'],
+                'project_id'     => 0,
+                'cancel_url'     => (string) ($svc['cancel_url'] ?? 'cart.php'),
+                'meta'           => [
+                    'ad_type' => $type_key,
                 ],
             ],
         ];

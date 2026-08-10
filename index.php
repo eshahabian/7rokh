@@ -39,7 +39,7 @@ casting_render_flash();
       </div>
       <div class="panel-promo-banner-copy">
         <h1>محل نمایش تبلیغات اعضای ویژه</h1>
-        <p>اینجا بهترین مکان برای دیده شدن استعداد شماست</p>
+        <p>مکانی برای دیده شدن</p>
       </div>
       <div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدها">
         <?php foreach ($home_slides as $i => $slide) : ?>

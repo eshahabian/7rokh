@@ -39,7 +39,7 @@ if ($order === [] && $service !== '') {
         casting_redirect($service === 'casting_call' ? 'director-desk.php' : 'premium.php');
     }
     casting_set_flash('success', 'به سفارش‌ها اضافه شد.');
-    casting_redirect('cart.php');
+    casting_redirect('cart.php?continue=1');
 }
 
 if ($order === [] || (int) ($order['user_id'] ?? 0) !== $user_id) {

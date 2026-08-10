@@ -70,6 +70,19 @@ foreach ($call_types as $type_key => $type) {
         'vat'         => $calc['vat'],
     ];
 }
+$ad_types = $catalog['advertising']['types'] ?? [];
+foreach ($ad_types as $type_key => $type) {
+    $calc = casting_checkout_calc_amounts((int) $type['amount_base']);
+    $shop_items[] = [
+        'group'       => 'تبلیغات',
+        'label'       => (string) $type['label'],
+        'meta'        => 'نمایش در محل ویژه صفحهٔ اصلی',
+        'href'        => casting_cart_add_url('advertising', (string) $type_key),
+        'price_final' => $calc['final'],
+        'price_base'  => $calc['base'],
+        'vat'         => $calc['vat'],
+    ];
+}
 
 casting_render_panel_start('خرید اشتراک', 'premium');
 casting_render_flash();
@@ -108,7 +121,7 @@ casting_render_flash();
         <strong><?= casting_e($item['label']) ?></strong>
         <p class="meta"><?= casting_e($item['meta']) ?></p>
         <p class="shop-item-price">
-          <?php if ((string) ($item['group'] ?? '') === 'فراخوان کستینگ') : ?>
+          <?php if (in_array((string) ($item['group'] ?? ''), ['فراخوان کستینگ', 'تبلیغات'], true)) : ?>
             <?= casting_e(number_format((int) $item['price_base'])) ?> + مالیات
             = <strong><?= casting_e(number_format((int) $item['price_final'])) ?> تومان</strong>
           <?php else : ?>
@@ -127,6 +140,7 @@ casting_render_flash();
       <li>با زدن «افزودن به سفارش‌ها» وارد فهرست سفارش می‌شوید؛ سپس خلاصه سفارش و درگاه. تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
       <li>عضویت ویژه: ۳ ماه ۲۱۰٬۰۰۰ · ۶ ماه ۳۷۰٬۰۰۰ · ۱۲ ماه ۷۰۰٬۰۰۰ تومان.</li>
       <li>فراخوان تئاتر و فیلم کوتاه: ۷۰۰٬۰۰۰ تومان (+ مالیات) · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان (+ مالیات).</li>
+      <li>تبلیغات: بنر پوستر تئاتر ۱٬۰۰۰٬۰۰۰ · بنر پوستر فیلم ۳٬۰۰۰٬۰۰۰ تومان (+ مالیات در خلاصه سفارش).</li>
     </ul>
   </div>
 </section>

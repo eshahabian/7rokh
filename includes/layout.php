@@ -79,7 +79,7 @@ function casting_render_nav_cart(?string $active = null): void
     } catch (Throwable $e) {
         $cart_count = 0;
     }
-    $href = casting_url('cart.php');
+    $href = casting_url('cart.php?continue=1');
     $title = $logged_in ? 'سفارش‌ها' : 'مشاهده خدمات و سفارش‌ها';
     ?>
       <a

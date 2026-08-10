@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Casting Portal — سفارش‌ها در هدر سایت
  * Description: آیکون سفارش‌ها کنار شبکه‌های اجتماعی هدر + شمارنده زنده
- * Version: 1.8
+ * Version: 1.9
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-cart-nav.php
  * (خودکار با deploy — .cpanel.yml)
@@ -23,7 +23,7 @@ function casting_main_cart_url(): string
         return CASTING_PORTAL_CART_URL;
     }
 
-    return home_url('/casting-portal/cart.php');
+    return home_url('/casting-portal/cart.php?continue=1');
 }
 
 function casting_main_cart_count_url(): string
@@ -127,7 +127,7 @@ function casting_main_cart_enqueue_assets(): void
 }
 ';
 
-    wp_register_style('casting-main-cart-nav', false, [], '1.8');
+    wp_register_style('casting-main-cart-nav', false, [], '1.9');
     wp_enqueue_style('casting-main-cart-nav');
     wp_add_inline_style('casting-main-cart-nav', trim($css));
 
@@ -339,7 +339,7 @@ function casting_main_cart_enqueue_assets(): void
 })();
 JS;
 
-    wp_register_script('casting-main-cart-nav', false, [], '1.8', true);
+    wp_register_script('casting-main-cart-nav', false, [], '1.9', true);
     wp_enqueue_script('casting-main-cart-nav');
     wp_add_inline_script(
         'casting-main-cart-nav',

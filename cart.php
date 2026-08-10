@@ -65,10 +65,25 @@ if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $result = casting_cart_add($service, $plan, $project_id);
     if ($result['ok']) {
         casting_set_flash('success', 'به سفارش‌ها اضافه شد.');
-    } else {
-        casting_set_flash('error', $result['error']);
+        casting_redirect('cart.php?continue=1');
     }
+    casting_set_flash('error', $result['error']);
     casting_redirect('cart.php');
+}
+
+// کلیک روی «سفارش‌ها» → مستقیم ادامه خرید (خلاصه سفارش + مالیات)
+if (
+    $_SERVER['REQUEST_METHOD'] === 'GET'
+    && $action === ''
+    && isset($_GET['continue'])
+) {
+    $pending = casting_cart_get();
+    if (($pending['items'] ?? []) !== []) {
+        if ($logged_in) {
+            $cart_continue_checkout($user_id);
+        }
+        $auth_needed = true;
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -269,11 +284,16 @@ casting_render_flash();
           $add_href = casting_cart_add_url((string) $tile['service'], (string) $tile['plan']);
           ?>
         <article class="shop-tile" role="listitem">
-          <div class="shop-tile-media shop-tile-media--<?= casting_e((string) $tile['service'] === 'premium' ? 'premium' : 'call') ?><?= (string) ($tile['image'] ?? '') !== '' ? ' has-image' : '' ?>">
+          <?php
+            $tile_service = (string) ($tile['service'] ?? '');
+            $tile_media = $tile_service === 'premium' ? 'premium' : ($tile_service === 'advertising' ? 'ad' : 'call');
+            $tile_mark = $tile_service === 'premium' ? 'ویژه' : ($tile_service === 'advertising' ? 'تبلیغ' : 'فراخوان');
+          ?>
+          <div class="shop-tile-media shop-tile-media--<?= casting_e($tile_media) ?><?= (string) ($tile['image'] ?? '') !== '' ? ' has-image' : '' ?>">
             <?php if ((string) ($tile['image'] ?? '') !== '') : ?>
               <img class="shop-tile-img" src="<?= casting_e((string) $tile['image']) ?>" alt="<?= casting_e((string) $tile['label']) ?>" loading="lazy" width="400" height="400">
             <?php else : ?>
-              <span class="shop-tile-mark" aria-hidden="true"><?= (string) $tile['service'] === 'premium' ? 'ویژه' : 'فراخوان' ?></span>
+              <span class="shop-tile-mark" aria-hidden="true"><?= casting_e($tile_mark) ?></span>
             <?php endif; ?>
             <?php if ((string) ($tile['badge'] ?? '') !== '') : ?>
               <span class="shop-tile-badge"><?= casting_e((string) $tile['badge']) ?></span>
@@ -283,9 +303,9 @@ casting_render_flash();
             <strong class="shop-tile-title"><?= casting_e((string) $tile['label']) ?></strong>
             <p class="shop-tile-meta"><?= casting_e((string) $tile['meta']) ?></p>
             <p class="shop-tile-price">
-              <?php if ((string) $tile['service'] === 'casting_call') : ?>
-                <strong><?= casting_e(casting_format_toman((int) $tile['price_final'])) ?></strong>
-                <span class="meta">با مالیات</span>
+              <?php if ($tile_service === 'casting_call' || $tile_service === 'advertising') : ?>
+                <strong><?= casting_e(casting_format_toman((int) $tile['price_base'])) ?></strong>
+                <span class="meta">+ مالیات در پرداخت</span>
               <?php else : ?>
                 <strong><?= casting_e(casting_format_toman((int) $tile['price_base'])) ?></strong>
               <?php endif; ?>
