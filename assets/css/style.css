@@ -2113,6 +2113,44 @@ legend .req-mark {
   scroll-margin-top: 0.75rem;
 }
 
+.search-quick-chips {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.15rem 0 0.1rem;
+}
+
+.search-quick-chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.search-quick-chip:hover,
+.search-quick-chip:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.search-quick-chip.is-active {
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+  background: color-mix(in srgb, var(--accent-dim) 80%, var(--bg-elevated));
+  color: var(--accent-strong);
+}
+
 html[data-theme="day"] .filter-bar--sticky {
   background: color-mix(in srgb, var(--bg-panel) 94%, #fff 6%);
   box-shadow: 0 10px 24px rgba(40, 32, 20, 0.1);

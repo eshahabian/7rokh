@@ -818,6 +818,107 @@
     let resultsAbort = null;
     let suggestAbort = null;
     let predictedFull = "";
+    const searchQuickChips = [...memberSearchForm.querySelectorAll("[data-search-chip]")];
+
+    const formHasActiveSearch = () => {
+      const params = new URLSearchParams(new FormData(memberSearchForm));
+      for (const [key, value] of params.entries()) {
+        const trimmed = String(value).trim();
+        if (trimmed === "") continue;
+        if (key === "city" && trimmed === "همه") continue;
+        return true;
+      }
+      return false;
+    };
+
+    const setFieldValue = (name, value) => {
+      const field = memberSearchForm.querySelector(`[name="${name}"]`);
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)) {
+        return;
+      }
+      field.disabled = false;
+      field.value = value;
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+
+    const clearSearchForm = () => {
+      memberSearchForm.querySelectorAll("input, select, textarea").forEach((el) => {
+        if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) return;
+        if (el.type === "hidden" || el.type === "submit" || el.type === "button") return;
+        if (el.type === "checkbox" || el.type === "radio") {
+          el.checked = false;
+          return;
+        }
+        el.value = "";
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    };
+
+    const chipMatches = (chip) => {
+      let spec = {};
+      try {
+        spec = JSON.parse(chip.getAttribute("data-search-chip") || "{}");
+      } catch (err) {
+        spec = {};
+      }
+      if (spec.clear === "1" || spec.clear === 1) {
+        return !formHasActiveSearch();
+      }
+      return Object.keys(spec).every((key) => {
+        const field = memberSearchForm.querySelector(`[name="${key}"]`);
+        if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)) {
+          return false;
+        }
+        return String(field.value || "") === String(spec[key]);
+      });
+    };
+
+    const syncSearchChips = () => {
+      searchQuickChips.forEach((chip) => {
+        const active = chipMatches(chip);
+        chip.classList.toggle("is-active", active);
+        chip.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    };
+
+    const applySearchChip = (chip) => {
+      let spec = {};
+      try {
+        spec = JSON.parse(chip.getAttribute("data-search-chip") || "{}");
+      } catch (err) {
+        spec = {};
+      }
+      const isActive = chip.classList.contains("is-active");
+      if (spec.clear === "1" || spec.clear === 1) {
+        clearSearchForm();
+        refreshResults();
+        syncSearchChips();
+        return;
+      }
+      if (isActive) {
+        Object.keys(spec).forEach((key) => setFieldValue(key, ""));
+      } else {
+        if (Object.prototype.hasOwnProperty.call(spec, "province")) {
+          setFieldValue("province", String(spec.province || ""));
+          window.setTimeout(() => {
+            if (Object.prototype.hasOwnProperty.call(spec, "city")) {
+              setFieldValue("city", String(spec.city || ""));
+            }
+            Object.keys(spec).forEach((key) => {
+              if (key === "province" || key === "city") return;
+              setFieldValue(key, String(spec[key] ?? ""));
+            });
+            refreshResults();
+            syncSearchChips();
+          }, 0);
+          return;
+        }
+        Object.keys(spec).forEach((key) => setFieldValue(key, String(spec[key] ?? "")));
+      }
+      refreshResults();
+      syncSearchChips();
+    };
 
     const clearPrediction = () => {
       predictedFull = "";
@@ -856,6 +957,7 @@
           resultsEl.innerHTML = await res.text();
           const query = buildFormQuery(false);
           window.history.replaceState({}, "", query ? `search-users.php?${query}` : "search-users.php");
+          syncSearchChips();
         } catch (err) {
           if (err?.name !== "AbortError") {
             /* ignore */
@@ -865,6 +967,10 @@
         }
       }, 280);
     };
+
+    searchQuickChips.forEach((chip) => {
+      chip.addEventListener("click", () => applySearchChip(chip));
+    });
 
     const pickPrediction = (items, query) => {
       const q = query.trim().toLocaleLowerCase("fa");
@@ -955,11 +1061,15 @@
       }
     }
 
-    memberSearchForm.addEventListener("change", refreshResults);
+    memberSearchForm.addEventListener("change", () => {
+      syncSearchChips();
+      refreshResults();
+    });
     memberSearchForm.addEventListener("input", (e) => {
       const el = e.target;
       if (!(el instanceof HTMLElement)) return;
       if (el.matches("input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea")) {
+        syncSearchChips();
         refreshResults();
       }
     });
@@ -967,6 +1077,7 @@
       e.preventDefault();
       refreshResults();
     });
+    syncSearchChips();
   }
 
   document.querySelectorAll("[data-password-confirm-field]").forEach((field) => {

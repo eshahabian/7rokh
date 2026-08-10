@@ -48,6 +48,8 @@ casting_render_flash();
       <?php casting_render_location_fields($filters['province'], $filters['city'], '', false, 'filter-activity-fields'); ?>
     </div>
 
+    <?php casting_render_member_search_quick_chips($filters); ?>
+
     <details class="filter-details"<?= $advanced_open ? ' open' : '' ?>>
       <summary>فیلترهای بیشتر</summary>
       <div class="filter-advanced">

@@ -1560,6 +1560,139 @@ function casting_member_search_filters_active(array $filters): bool
 }
 
 /**
+ * میانبرهای یک‌کلیکی زیر فیلتر اصلی جستجو
+ *
+ * @param array<string, string> $filters
+ * @return list<array{key:string,label:string,set:array<string,string>,match:array<string,string>}>
+ */
+function casting_member_search_quick_chips(array $filters = []): array
+{
+    unset($filters);
+    $cats = casting_activity_categories();
+
+    return [
+        [
+            'key'   => 'all',
+            'label' => 'همه',
+            'set'   => ['clear' => '1'],
+            'match' => ['clear' => '1'],
+        ],
+        [
+            'key'   => 'acting',
+            'label' => (string) ($cats['acting']['label'] ?? 'بازیگری'),
+            'set'   => [
+                'activity_category'  => 'acting',
+                'activity_specialty' => '',
+            ],
+            'match' => ['activity_category' => 'acting'],
+        ],
+        [
+            'key'   => 'directing',
+            'label' => (string) ($cats['directing']['label'] ?? 'کارگردانی'),
+            'set'   => [
+                'activity_category'  => 'directing',
+                'activity_specialty' => '',
+            ],
+            'match' => ['activity_category' => 'directing'],
+        ],
+        [
+            'key'   => 'tehran',
+            'label' => 'تهران',
+            'set'   => [
+                'province' => 'tehran',
+                'city'     => 'تهران',
+            ],
+            'match' => ['province' => 'tehran'],
+        ],
+        [
+            'key'   => 'age_25_35',
+            'label' => '۲۵–۳۵',
+            'set'   => [
+                'age_min' => '25',
+                'age_max' => '35',
+            ],
+            'match' => [
+                'age_min' => '25',
+                'age_max' => '35',
+            ],
+        ],
+        [
+            'key'   => 'has_video',
+            'label' => 'دارای ویدیو',
+            'set'   => ['has_video' => 'yes'],
+            'match' => ['has_video' => 'yes'],
+        ],
+    ];
+}
+
+/**
+ * @param array<string, string> $filters
+ */
+function casting_member_search_quick_chip_is_active(array $chip, array $filters): bool
+{
+    $match = $chip['match'] ?? [];
+    if (!is_array($match) || $match === []) {
+        return false;
+    }
+    if (($match['clear'] ?? '') === '1') {
+        return !casting_member_search_filters_active($filters);
+    }
+
+    $age_range = trim((string) ($filters['age_range'] ?? ''));
+    $age_parts = $age_range !== '' ? casting_parse_search_metric_range($age_range, 0, 200) : ['min' => null, 'max' => null];
+
+    foreach ($match as $key => $expected) {
+        $expected = (string) $expected;
+        if ($key === 'age_min') {
+            $actual = $age_parts['min'] !== null ? (string) $age_parts['min'] : '';
+            if ($actual !== $expected) {
+                return false;
+            }
+            continue;
+        }
+        if ($key === 'age_max') {
+            $actual = $age_parts['max'] !== null ? (string) $age_parts['max'] : '';
+            if ($actual !== $expected) {
+                return false;
+            }
+            continue;
+        }
+        if (trim((string) ($filters[$key] ?? '')) !== $expected) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @param array<string, string> $filters
+ */
+function casting_render_member_search_quick_chips(array $filters): void
+{
+    $chips = casting_member_search_quick_chips($filters);
+    ?>
+  <nav class="search-quick-chips" aria-label="فیلتر سریع">
+    <?php foreach ($chips as $chip) :
+        $payload = wp_json_encode($chip['set'], JSON_UNESCAPED_UNICODE);
+        if (!is_string($payload)) {
+            $payload = '{}';
+        }
+        $active = casting_member_search_quick_chip_is_active($chip, $filters);
+        ?>
+      <button
+        type="button"
+        class="search-quick-chip<?= $active ? ' is-active' : '' ?>"
+        data-search-chip="<?= casting_e($payload) ?>"
+        data-search-chip-key="<?= casting_e((string) $chip['key']) ?>"
+        aria-pressed="<?= $active ? 'true' : 'false' ?>"
+      ><?= casting_e((string) $chip['label']) ?></button>
+    <?php endforeach; ?>
+  </nav>
+    <?php
+}
+
+/**
  * آیا فیلترهای پیشرفته (غیر از اصلی) فعال‌اند؟
  */
 function casting_member_search_advanced_filters_active(array $filters): bool
