@@ -1,4 +1,4 @@
-const SW_VERSION = "casting-pwa-v7";
+const SW_VERSION = "casting-pwa-v8";
 const BASE = new URL("./", self.location).pathname;
 
 const PRECACHE = [
@@ -24,7 +24,7 @@ const OFFLINE_HTML = `<!DOCTYPE html>
 <body>
   <div>
     <h1>اتصال اینترنت نیست</h1>
-    <p>برای استفاده از پورتال ۷ رخ به اینترنت نیاز دارید. اتصال را بررسی کنید و دوباره تلاش کنید.</p>
+    <p>برای استفاده از پورتال ۷ رخ، از خاموش بودن فیلترشکن خود مطمئن شوید و دوباره تلاش کنید.</p>
   </div>
 </body>
 </html>`;
