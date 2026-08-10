@@ -1838,6 +1838,26 @@ function casting_primary_portrait(array $portraits): array
 }
 
 /**
+ * عکس کارت استعداد — اولویت با کلوزآپ برای چهره‌محوری
+ *
+ * @param array<string, mixed> $profile
+ */
+function casting_member_card_photo_url(int $user_id, array $profile = []): string
+{
+    if ($user_id <= 0) {
+        return '';
+    }
+    foreach (['closeup', 'medium', 'profile', 'long'] as $slot) {
+        $shot = casting_load_portrait($user_id, $slot);
+        $url = trim((string) ($shot['url'] ?? ''));
+        if ($url !== '') {
+            return $url;
+        }
+    }
+    return trim((string) ($profile['photo_url'] ?? ''));
+}
+
+/**
  * @param array<string, array{id:int,url:string,full:string}> $portraits
  */
 function casting_portraits_complete(array $portraits): bool

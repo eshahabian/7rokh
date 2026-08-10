@@ -185,6 +185,10 @@ body {
     animation: none !important;
   }
 
+  .member-card--portrait:hover .member-card-photo img {
+    transform: none;
+  }
+
   .bg-atmosphere {
     background-attachment: scroll;
   }
@@ -4819,7 +4823,7 @@ a.panel-home-filter-chip:focus-visible {
 .panel-ads-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 .panel-ad-card {
@@ -4830,6 +4834,10 @@ a.panel-home-filter-chip:focus-visible {
   border-radius: 12px;
   background: var(--bg-panel);
   overflow: hidden;
+}
+
+.panel-ad-card--portrait {
+  background: var(--bg-elevated);
 }
 
 .panel-ad-card-media {
@@ -4845,12 +4853,23 @@ a.panel-home-filter-chip:focus-visible {
     linear-gradient(160deg, rgba(212, 165, 116, 0.28), transparent 55%),
     linear-gradient(20deg, #1a2030, #2a3344);
   background-size: cover;
-  background-position: center;
+  background-position: center top;
+  overflow: hidden;
+  color: inherit;
+}
+
+.panel-ad-card--portrait .panel-ad-card-media {
+  aspect-ratio: 3 / 4;
 }
 
 .panel-ad-card-media .presence-dot {
   inset-inline-end: 8px;
   bottom: 8px;
+  z-index: 3;
+}
+
+.panel-ad-card--portrait .panel-ad-card-media .presence-dot {
+  bottom: 3.15rem;
 }
 
 .panel-ad-card-media.has-photo {
@@ -4862,7 +4881,7 @@ a.panel-home-filter-chip:focus-visible {
     linear-gradient(160deg, rgba(154, 104, 40, 0.2), transparent 55%),
     linear-gradient(20deg, #d9d0c0, #b8ae9c);
   background-size: cover;
-  background-position: center;
+  background-position: center top;
 }
 
 [data-theme="day"] .panel-ad-card-media.has-photo {
@@ -4871,14 +4890,63 @@ a.panel-home-filter-chip:focus-visible {
 
 .panel-ad-badge {
   position: absolute;
-  top: 0.55rem;
-  inset-inline-end: 0.55rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  background: rgba(26, 18, 8, 0.72);
+  top: 0.45rem;
+  inset-inline-end: 0.45rem;
+  z-index: 3;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(8, 10, 14, 0.72);
   color: var(--accent-strong);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
+}
+
+.panel-ad-card-media .chip-official {
+  position: absolute;
+  top: 0.45rem;
+  inset-inline-start: 0.45rem;
+  z-index: 3;
+  margin: 0;
+  font-size: 0.65rem;
+  padding: 0.12rem 0.4rem;
+  background: rgba(8, 10, 14, 0.72);
+  border-color: rgba(232, 184, 122, 0.35);
+  color: #f3eee4;
+}
+
+.panel-ad-card-overlay {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 2.1rem 0.65rem 0.65rem;
+  text-align: right;
+  background: linear-gradient(to top, rgba(8, 10, 14, 0.88) 10%, rgba(8, 10, 14, 0.35) 70%, transparent);
+  color: #f7f2ea;
+  pointer-events: none;
+}
+
+.panel-ad-card-name {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-ad-card-meta {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .panel-ad-card-body {
@@ -4915,7 +4983,8 @@ a.panel-home-filter-chip:focus-visible {
   align-items: center;
   justify-content: stretch;
   gap: 0.3rem;
-  margin-top: auto;
+  margin-top: 0;
+  padding: 0.4rem 0.45rem 0.5rem;
 }
 
 .panel-ad-card-actions .btn {
@@ -5172,7 +5241,8 @@ a.panel-home-filter-chip:focus-visible {
   }
 
   .panel-ads-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
   }
 
   .panel-stat-grid {
@@ -5508,7 +5578,7 @@ a.panel-home-filter-chip:focus-visible {
 
 .member-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 0.65rem;
   margin-top: 1rem;
   align-items: start;
@@ -5524,7 +5594,8 @@ a.panel-home-filter-chip:focus-visible {
   background: rgba(0, 0, 0, 0.14);
 }
 
-.member-card--headshot {
+.member-card--headshot,
+.member-card--portrait {
   border-radius: 10px;
   background: var(--bg-elevated);
 }
@@ -5567,11 +5638,94 @@ a.panel-home-filter-chip:focus-visible {
   color: inherit;
 }
 
+.member-card--portrait .member-card-photo {
+  aspect-ratio: 3 / 4;
+}
+
 .member-card-photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center top;
   display: block;
+  transition: transform 0.35s var(--ease);
+}
+
+.member-card--portrait:hover .member-card-photo img {
+  transform: scale(1.04);
+}
+
+.member-card-overlay {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 2.2rem 0.6rem 0.6rem;
+  text-align: right;
+  background: linear-gradient(to top, rgba(8, 10, 14, 0.9) 12%, rgba(8, 10, 14, 0.4) 68%, transparent);
+  color: #f7f2ea;
+  pointer-events: none;
+}
+
+.member-card-overlay .member-card-name {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #f7f2ea;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
+}
+
+.member-card-overlay .member-card-meta {
+  display: block;
+  min-height: 0;
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: rgba(247, 242, 234, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-card-photo .chip-official {
+  position: absolute;
+  top: 0.4rem;
+  inset-inline-start: 0.4rem;
+  z-index: 3;
+  margin: 0;
+  font-size: 0.65rem;
+  padding: 0.12rem 0.4rem;
+  background: rgba(8, 10, 14, 0.72);
+  border-color: rgba(232, 184, 122, 0.35);
+  color: #f3eee4;
+}
+
+.member-card-photo:has(.chip-official) .member-card-photo-chip {
+  inset-inline-start: auto;
+  inset-inline-end: 0.4rem;
+}
+
+.member-card-photo:has(.chip-official):has(.member-card-photo-score) .member-card-photo-chip {
+  top: 1.85rem;
+}
+
+.member-card-photo .director-viewed-badge {
+  top: auto;
+  bottom: 2.9rem;
+  inset-inline-start: 0.4rem;
+}
+
+.member-card--portrait .member-card-photo .presence-dot {
+  bottom: 3.15rem;
+  inset-inline-end: 0.45rem;
+  z-index: 3;
 }
 
 .member-card-photo-chip,
@@ -5727,6 +5881,10 @@ html[data-theme="day"] .member-card-photo-score {
 
 .member-preview-head-text .chip-official {
   margin: 0.2rem 0 0.35rem;
+}
+
+.panel-ad-card--portrait:hover .panel-ad-card-media.has-photo {
+  filter: brightness(1.03);
 }
 
 .panel-ad-card-body .member-card-badge-row,

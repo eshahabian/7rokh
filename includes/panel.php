@@ -1893,38 +1893,34 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
     }
     $id = (int) $member->ID;
     $profile = casting_get_profile($id);
-    $photo = (string) ($profile['photo_url'] ?? '');
-    if ($photo === '') {
-        $closeup = casting_load_portrait($id, 'closeup');
-        $photo = (string) ($closeup['url'] ?? '');
-    }
+    $photo = casting_member_card_photo_url($id, $profile);
     $city = trim((string) ($profile['city'] ?? ''));
     $role_label = casting_user_public_role_label($id);
     $can_follow = $viewer_id > 0 && casting_follow_can_target($viewer_id, $id);
+    $meta_bits = array_values(array_filter([
+        $role_label !== '' ? $role_label : '',
+        $city !== '' ? $city : '',
+    ]));
     ?>
-    <article class="panel-ad-card" data-home-card="<?= $id ?>">
+    <article class="panel-ad-card panel-ad-card--portrait" data-home-card="<?= $id ?>">
       <button type="button" class="panel-ad-card-media<?= $photo !== '' ? ' has-photo' : '' ?>" data-member-preview="<?= $id ?>" aria-label="پیش‌نمایش <?= casting_e($member->display_name) ?>"<?= $photo !== '' ? ' style="background-image:url(' . casting_e($photo) . ')"' : '' ?>>
         <?php if ($premium_badge || casting_user_is_premium($id)) : ?>
-          <span class="panel-ad-badge">عضو ویژه</span>
+          <span class="panel-ad-badge">ویژه</span>
         <?php endif; ?>
+        <?php casting_render_official_page_badge($id); ?>
         <?php casting_render_presence_dot($id, 'md'); ?>
-      </button>
-      <div class="panel-ad-card-body">
-        <div class="member-card-badge-row">
-          <?php casting_render_official_page_badge($id); ?>
-        </div>
-        <h3>
-          <button type="button" class="link-button" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button>
-        </h3>
-        <p class="member-card-role"><?= casting_e($role_label !== '' ? $role_label : '—') ?></p>
-        <p class="panel-ad-place"><?= casting_e($city !== '' ? $city : '—') ?></p>
-        <div class="panel-ad-card-actions">
-          <button type="button" class="btn btn-ghost btn-sm" data-member-preview="<?= $id ?>">مشاهده</button>
-          <?php if ($can_follow) : ?>
-            <?php casting_render_follow_button($viewer_id, $id, 'btn-sm'); ?>
+        <span class="panel-ad-card-overlay">
+          <span class="panel-ad-card-name"><?= casting_e($member->display_name) ?></span>
+          <?php if ($meta_bits !== []) : ?>
+            <span class="panel-ad-card-meta"><?= casting_e(implode(' · ', $meta_bits)) ?></span>
           <?php endif; ?>
+        </span>
+      </button>
+      <?php if ($can_follow) : ?>
+        <div class="panel-ad-card-actions">
+          <?php casting_render_follow_button($viewer_id, $id, 'btn-sm'); ?>
         </div>
-      </div>
+      <?php endif; ?>
     </article>
     <?php
 }
@@ -1966,13 +1962,17 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
     $id = (int) $member->ID;
     $profile = casting_get_profile($id);
     $premium = casting_user_is_premium($id);
-    $photo = $profile['photo_url'] !== '' ? $profile['photo_url'] : '';
+    $photo = casting_member_card_photo_url($id, $profile);
     $viewed = !empty($director_flags['viewed']);
     $highlight = !empty($director_flags['is_highlight']);
     $city = trim((string) ($profile['city'] ?? ''));
     $age = (int) ($profile['age'] ?? 0);
+    $role_label = casting_user_public_role_label($id);
     $is_official = function_exists('casting_follow_target_is_required') && casting_follow_target_is_required($id);
     $meta_bits = [];
+    if ($role_label !== '') {
+        $meta_bits[] = $role_label;
+    }
     if ($age > 0) {
         $meta_bits[] = (string) $age . ' سال';
     }
@@ -1980,7 +1980,7 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
         $meta_bits[] = $city;
     }
     ?>
-    <article class="member-card member-card--headshot<?= $highlight ? ' member-card--highlight' : '' ?><?= $is_official ? ' member-card--official' : '' ?>" data-member-preview="<?= $id ?>">
+    <article class="member-card member-card--headshot member-card--portrait<?= $highlight ? ' member-card--highlight' : '' ?><?= $is_official ? ' member-card--official' : '' ?>" data-member-preview="<?= $id ?>">
       <button type="button" class="member-card-photo" data-member-preview="<?= $id ?>" aria-label="نمایش پروفایل <?= casting_e($member->display_name) ?>">
         <?php if ($photo !== '') : ?>
           <img src="<?= casting_e($photo) ?>" alt="" loading="lazy">
@@ -1997,20 +1997,14 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
         <?php if ($director_score > 0) : ?>
           <span class="member-card-photo-score" title="بهترین امتیاز شما">★ <?= casting_e(casting_director_format_score($director_score)) ?></span>
         <?php endif; ?>
-      </button>
-      <div class="member-card-body">
-        <h3>
-          <button type="button" class="link-button member-card-name" data-member-preview="<?= $id ?>"><?= casting_e($member->display_name) ?></button>
-        </h3>
-        <p class="meta member-card-meta">
-          <?php if ($meta_bits !== []) : ?>
-            <?= casting_e(implode(' · ', $meta_bits)) ?>
-          <?php else : ?>
-            <span class="member-card-city">—</span>
-          <?php endif; ?>
-        </p>
         <?php casting_render_official_page_badge($id); ?>
-      </div>
+        <span class="member-card-overlay">
+          <span class="member-card-name"><?= casting_e($member->display_name) ?></span>
+          <?php if ($meta_bits !== []) : ?>
+            <span class="member-card-meta"><?= casting_e(implode(' · ', $meta_bits)) ?></span>
+          <?php endif; ?>
+        </span>
+      </button>
     </article>
     <?php
 }
