@@ -122,35 +122,23 @@ function casting_render_home_opportunities_section(int $user_id): void
     </header>
 
     <?php if ($open === [] && $personal === []) : ?>
-      <p class="empty-state">فعلاً فراخوان بازی نیست. کارگردان‌ها می‌توانند از «پروژه‌ها» فراخوان منتشر کنند.</p>
+      <div class="empty-state empty-state--search" role="status">
+        <h2 class="empty-state-title">فعلاً فراخوانی نیست</h2>
+        <p class="empty-state-text">کارگردان‌ها می‌توانند از «پروژه‌ها» فراخوان منتشر کنند. بعداً دوباره سر بزنید.</p>
+      </div>
     <?php else : ?>
       <?php if ($open !== []) : ?>
-        <h3 class="panel-section-title" style="font-size:1rem;margin:0.35rem 0 0.65rem;">فراخوان‌های باز</h3>
-        <div class="home-opportunity-list">
+        <h3 class="panel-section-title opp-home-subtitle">فراخوان‌های باز</h3>
+        <div class="home-opportunity-list opp-card-list">
           <?php foreach ($open as $op) :
               $oid = (int) ($op['id'] ?? 0);
-              $director = get_user_by('id', (int) ($op['director_id'] ?? 0));
               $mine = casting_opportunity_get_application($oid, $user_id);
               $already = $mine && (string) ($mine['status'] ?? '') !== 'withdrawn';
-              ?>
-            <article class="home-opportunity-card">
-              <div class="home-opportunity-body">
-                <h3><?= casting_e((string) ($op['title'] ?? 'فراخوان')) ?></h3>
-                <p class="meta">
-                  <?= $director ? casting_e((string) $director->display_name) : 'کارگردان' ?>
-                  <?php if (!empty($op['project_type'])) : ?> · <?= casting_e((string) $op['project_type']) ?><?php endif; ?>
-                  <?php if (!empty($op['role_title'])) : ?> · <?= casting_e((string) $op['role_title']) ?><?php endif; ?>
-                  <?php if (!empty($op['location'])) : ?> · <?= casting_e((string) $op['location']) ?><?php endif; ?>
-                </p>
-                <p class="home-opportunity-status"><?= $already ? 'اپلای کرده‌اید' : 'باز برای اپلای' ?></p>
-              </div>
-              <div class="home-opportunity-actions">
-                <a class="btn btn-primary btn-sm" href="<?= casting_e(casting_url('opportunities.php?tab=open&id=' . $oid . '#opp-' . $oid)) ?>">
-                  <?= $already ? 'مشاهده' : 'اپلای' ?>
-                </a>
-              </div>
-            </article>
-          <?php endforeach; ?>
+              casting_render_opportunity_card($op, [
+                  'compact' => true,
+                  'already' => $already,
+              ]);
+          endforeach; ?>
         </div>
       <?php endif; ?>
 

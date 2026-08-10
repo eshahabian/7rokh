@@ -4555,12 +4555,14 @@ a.panel-home-filter-chip:focus-visible {
 
 /* Home opportunities + following feed */
 .home-opportunity-list,
-.home-following-feed {
+.home-following-feed,
+.opp-card-list {
   display: grid;
   gap: 0.85rem;
 }
 
-.home-opportunity-card {
+.home-opportunity-card,
+.opp-card {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -4572,37 +4574,148 @@ a.panel-home-filter-chip:focus-visible {
   background: var(--bg-panel);
 }
 
-.home-opportunity-card.is-unread {
+.opp-card {
+  align-items: stretch;
+  padding: 1rem 1.05rem 1.05rem;
+  transition: border-color 0.2s ease, transform 0.2s var(--ease);
+}
+
+.opp-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.home-opportunity-card.is-unread,
+.opp-card.is-unread,
+.opp-card.is-expanded {
   border-color: rgba(212, 165, 116, 0.55);
   box-shadow: 0 0 0 1px rgba(212, 165, 116, 0.18);
 }
 
-.home-opportunity-body {
+.opp-card--applied {
+  background: color-mix(in srgb, var(--bg-panel) 92%, var(--accent-dim));
+}
+
+.home-opportunity-body,
+.opp-card-main {
   min-width: 0;
   flex: 1 1 14rem;
 }
 
-.home-opportunity-body h3 {
+.home-opportunity-body h3,
+.opp-card-title {
   margin: 0 0 0.35rem;
-  font-size: 1rem;
+  font-size: 1.05rem;
   line-height: 1.4;
 }
 
+.opp-card-title {
+  margin-top: 0.15rem;
+}
+
 .home-opportunity-body .meta,
-.home-opportunity-status {
+.home-opportunity-status,
+.opp-card-meta,
+.opp-card-status {
   margin: 0.2rem 0 0;
   font-size: 0.86rem;
   color: var(--ink-muted);
 }
 
-.home-opportunity-actions {
-  flex: 0 0 auto;
-  max-width: 100%;
+.opp-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
 }
 
-.home-opportunity-actions .form {
+.opp-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.opp-chip--type {
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent-dim) 70%, var(--bg-elevated));
+}
+
+.opp-chip--role {
+  color: var(--ink);
+}
+
+.opp-chip--place,
+.opp-chip--date {
+  font-weight: 600;
+}
+
+.opp-card-excerpt,
+.opp-card-message {
+  margin: 0.45rem 0 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.opp-card-excerpt {
+  color: var(--ink-muted);
+}
+
+.opp-card--compact .opp-card-title {
+  font-size: 0.98rem;
+}
+
+.opp-card--compact .opp-chip {
+  font-size: 0.68rem;
+}
+
+.opp-filter-chips {
+  margin: 0.85rem 0 1rem;
+}
+
+.opp-board-lede {
+  margin: 0 0 1rem;
+}
+
+.opp-home-subtitle {
+  font-size: 1rem;
+  margin: 0.35rem 0 0.65rem;
+}
+
+.home-opportunity-actions,
+.opp-card-actions {
+  flex: 0 0 auto;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  min-width: 7.5rem;
+}
+
+.home-opportunity-actions .form,
+.opp-card-actions .form {
   margin: 0;
   min-width: min(100%, 18rem);
+}
+
+@media (max-width: 720px) {
+  .opp-card-actions {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .opp-card-actions .btn {
+    width: 100%;
+  }
 }
 
 .home-feed-followers-hint {

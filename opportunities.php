@@ -12,6 +12,10 @@ $user_id = (int) $user->ID;
 casting_opportunities_ensure_tables();
 
 $tab = ((string) ($_GET['tab'] ?? 'open')) === 'mine' ? 'mine' : 'open';
+$type_filter = sanitize_key((string) ($_GET['type'] ?? 'all'));
+if ($type_filter !== 'all' && !isset(casting_opportunity_filter_type_labels()[$type_filter])) {
+    $type_filter = 'all';
+}
 $error = '';
 $open_id = max(0, (int) ($_GET['id'] ?? 0));
 $can_admin_delete = casting_user_can_admin_delete_opportunity($user_id);
@@ -56,7 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$open_list = casting_opportunities_list_open(40);
+$open_list_all = casting_opportunities_list_open(40);
+$open_list = casting_opportunities_filter_by_type($open_list_all, $type_filter);
 $my_apps = casting_opportunity_list_my_applications($user_id, 40);
 $app_labels = casting_opportunity_application_status_labels();
 
@@ -66,119 +71,68 @@ if ($error !== '') {
 }
 casting_render_flash();
 ?>
-<section class="dash-card panel-wide">
+<section class="dash-card panel-wide opp-board">
   <?php casting_render_panel_heading('فرصت‌ها و فراخوان‌های باز'); ?>
-  <p class="meta">فراخوان‌های عمومی را ببینید و اپلای کنید — مثل بورد فرصت‌های کستینگ.</p>
+  <p class="lede opp-board-lede">عنوان، نوع پروژه، نقش و مکان را یک‌نگاه ببینید؛ بعد اپلای کنید.</p>
 
   <div class="admin-tabs" role="tablist">
-    <a class="admin-tab<?= $tab === 'open' ? ' is-active' : '' ?>" href="opportunities.php?tab=open">فراخوان‌های باز (<?= count($open_list) ?>)</a>
+    <a class="admin-tab<?= $tab === 'open' ? ' is-active' : '' ?>" href="opportunities.php?tab=open">فراخوان‌های باز (<?= count($open_list_all) ?>)</a>
     <a class="admin-tab<?= $tab === 'mine' ? ' is-active' : '' ?>" href="opportunities.php?tab=mine">اپلای‌های من (<?= count($my_apps) ?>)</a>
   </div>
 
   <?php if ($tab === 'mine') : ?>
     <?php if ($my_apps === []) : ?>
-      <p class="empty-state">هنوز اپلایی ثبت نکرده‌اید. از تب «فراخوان‌های باز» یکی را انتخاب کنید.</p>
+      <div class="empty-state empty-state--search" role="status">
+        <h2 class="empty-state-title">هنوز اپلایی ندارید</h2>
+        <p class="empty-state-text">از تب فراخوان‌های باز یک فرصت مناسب انتخاب کنید و اپلای بفرستید.</p>
+        <div class="cta-row empty-state-actions">
+          <a class="btn btn-primary" href="opportunities.php?tab=open">مشاهده فراخوان‌ها</a>
+        </div>
+      </div>
     <?php else : ?>
-      <div class="home-opportunity-list">
-        <?php foreach ($my_apps as $app) :
-            $oid = (int) ($app['opportunity_id'] ?? 0);
-            $st = (string) ($app['status'] ?? 'pending');
-            $director = get_user_by('id', (int) ($app['director_id'] ?? 0));
-            ?>
-          <article class="home-opportunity-card">
-            <div class="home-opportunity-body">
-              <h3><?= casting_e((string) ($app['opp_title'] ?? 'فراخوان')) ?></h3>
-              <p class="meta">
-                <?= $director ? casting_e((string) $director->display_name) : 'کارگردان' ?>
-                <?php if (!empty($app['project_type'])) : ?> · <?= casting_e((string) $app['project_type']) ?><?php endif; ?>
-                <?php if (!empty($app['role_title'])) : ?> · <?= casting_e((string) $app['role_title']) ?><?php endif; ?>
-                <?php if (!empty($app['location'])) : ?> · <?= casting_e((string) $app['location']) ?><?php endif; ?>
-              </p>
-              <p class="home-opportunity-status">
-                <?= casting_e($app_labels[$st] ?? $st) ?>
-                · <?= casting_e(casting_opportunity_format_date((string) ($app['created_at'] ?? ''))) ?>
-                <?php if ((string) ($app['opp_status'] ?? '') !== 'open') : ?> · فراخوان بسته شده<?php endif; ?>
-              </p>
-              <?php if (trim((string) ($app['note'] ?? '')) !== '') : ?>
-                <p class="meta"><?= nl2br(casting_e((string) $app['note'])) ?></p>
-              <?php endif; ?>
-            </div>
-            <?php if ($st === 'pending') : ?>
-              <div class="home-opportunity-actions">
-                <form method="post" action="opportunities.php?tab=mine" onsubmit="return confirm('اپلای لغو شود؟');">
-                  <?php wp_nonce_field('casting_opportunity_apply'); ?>
-                  <input type="hidden" name="opp_action" value="withdraw">
-                  <input type="hidden" name="opportunity_id" value="<?= $oid ?>">
-                  <button class="btn btn-ghost btn-sm" type="submit">انصراف</button>
-                </form>
-              </div>
-            <?php endif; ?>
-          </article>
+      <div class="home-opportunity-list opp-card-list">
+        <?php foreach ($my_apps as $app) : ?>
+          <?php casting_render_opportunity_application_card($app, $app_labels); ?>
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
 
   <?php else : ?>
-    <?php if ($open_list === []) : ?>
-      <p class="empty-state">فعلاً فراخوان بازی در فید عمومی نیست.</p>
+    <?php casting_render_opportunity_type_chips($type_filter); ?>
+
+    <?php if ($open_list_all === []) : ?>
+      <div class="empty-state empty-state--search" role="status">
+        <h2 class="empty-state-title">فعلاً فراخوان بازی نیست</h2>
+        <p class="empty-state-text">به‌زودی فرصت‌های جدید اینجا می‌آیند. کارگردان‌ها می‌توانند از «پروژه‌ها» فراخوان منتشر کنند.</p>
+      </div>
+    <?php elseif ($open_list === []) : ?>
+      <div class="empty-state empty-state--search" role="status">
+        <h2 class="empty-state-title">در این دسته فراخوانی نیست</h2>
+        <p class="empty-state-text">نوع دیگری را انتخاب کنید یا همه فراخوان‌ها را ببینید.</p>
+        <div class="cta-row empty-state-actions">
+          <a class="btn btn-primary" href="opportunities.php?tab=open">همه فراخوان‌ها</a>
+        </div>
+      </div>
     <?php else : ?>
-      <div class="home-opportunity-list">
+      <p class="meta member-search-count"><?= count($open_list) ?> فراخوان<?= $type_filter !== 'all' ? ' در این دسته' : '' ?></p>
+      <div class="home-opportunity-list opp-card-list">
         <?php foreach ($open_list as $op) :
             $oid = (int) ($op['id'] ?? 0);
-            $director = get_user_by('id', (int) ($op['director_id'] ?? 0));
             $mine = casting_opportunity_get_application($oid, $user_id);
             $already = $mine && (string) ($mine['status'] ?? '') !== 'withdrawn';
-            $is_own = (int) ($op['director_id'] ?? 0) === $user_id;
-            $expanded = $open_id === $oid;
-            ?>
-          <article class="home-opportunity-card<?= $expanded ? ' is-unread' : '' ?>" id="opp-<?= $oid ?>">
-            <div class="home-opportunity-body">
-              <h3><?= casting_e((string) ($op['title'] ?? 'فراخوان')) ?></h3>
-              <p class="meta">
-                <?php if ($director) : ?>
-                  <button type="button" class="link-button" data-member-preview="<?= (int) $director->ID ?>"><?= casting_e((string) $director->display_name) ?></button>
-                <?php else : ?>کارگردان<?php endif; ?>
-                <?php if (!empty($op['project_type'])) : ?> · <?= casting_e((string) $op['project_type']) ?><?php endif; ?>
-                <?php if (!empty($op['role_title'])) : ?> · <?= casting_e((string) $op['role_title']) ?><?php endif; ?>
-                <?php if (!empty($op['location'])) : ?> · <?= casting_e((string) $op['location']) ?><?php endif; ?>
-                · <?= casting_e(casting_opportunity_format_date((string) ($op['created_at'] ?? ''))) ?>
-              </p>
-              <p><?= nl2br(casting_e((string) ($op['message'] ?? ''))) ?></p>
-              <?php if ($already) : ?>
-                <p class="home-opportunity-status">اپلای شما: <?= casting_e($app_labels[(string) ($mine['status'] ?? 'pending')] ?? 'ثبت‌شده') ?></p>
-              <?php endif; ?>
-            </div>
-            <div class="home-opportunity-actions">
-              <?php if ($can_admin_delete) : ?>
-                <form method="post" action="opportunities.php?tab=open" onsubmit="return confirm('این فراخوان برای همیشه حذف شود؟');">
-                  <?php wp_nonce_field('casting_opportunity_admin'); ?>
-                  <input type="hidden" name="opp_action" value="admin_delete">
-                  <input type="hidden" name="opportunity_id" value="<?= $oid ?>">
-                  <button class="btn btn-reject btn-sm" type="submit">حذف</button>
-                </form>
-              <?php endif; ?>
-              <?php if ($is_own) : ?>
-                <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('director-desk.php?project=' . (int) ($op['project_id'] ?? 0) . '&opp=' . $oid)) ?>">متقاضیان</a>
-              <?php elseif ($already) : ?>
-                <a class="btn btn-ghost btn-sm" href="opportunities.php?tab=mine">مشاهده اپلای</a>
-              <?php elseif ($expanded) : ?>
-                <form class="form" method="post" action="opportunities.php?tab=open&amp;id=<?= $oid ?>#opp-<?= $oid ?>">
-                  <?php wp_nonce_field('casting_opportunity_apply'); ?>
-                  <input type="hidden" name="opp_action" value="apply">
-                  <input type="hidden" name="opportunity_id" value="<?= $oid ?>">
-                  <div class="field">
-                    <label for="note-<?= $oid ?>">یادداشت کوتاه (اختیاری)</label>
-                    <textarea id="note-<?= $oid ?>" name="note" rows="3" maxlength="1000" placeholder="چرا مناسب این نقش هستید…"></textarea>
-                  </div>
-                  <button class="btn btn-primary btn-sm" type="submit">ارسال اپلای</button>
-                  <a class="btn btn-ghost btn-sm" href="opportunities.php?tab=open">انصراف</a>
-                </form>
-              <?php else : ?>
-                <a class="btn btn-primary btn-sm" href="opportunities.php?tab=open&amp;id=<?= $oid ?>#opp-<?= $oid ?>">اپلای</a>
-              <?php endif; ?>
-            </div>
-          </article>
-        <?php endforeach; ?>
+            $status_label = '';
+            if ($already) {
+                $status_label = 'اپلای شما: ' . (string) ($app_labels[(string) ($mine['status'] ?? 'pending')] ?? 'ثبت‌شده');
+            }
+            casting_render_opportunity_card($op, [
+                'expanded'         => $open_id === $oid,
+                'already'          => $already,
+                'is_own'           => (int) ($op['director_id'] ?? 0) === $user_id,
+                'can_admin_delete' => $can_admin_delete,
+                'status_label'     => $status_label,
+                'show_message'     => true,
+            ]);
+        endforeach; ?>
       </div>
     <?php endif; ?>
   <?php endif; ?>
