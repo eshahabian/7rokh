@@ -38,7 +38,7 @@ if ($order === [] && $service !== '') {
         casting_set_flash('error', $added['error']);
         casting_redirect($service === 'casting_call' ? 'director-desk.php' : 'premium.php');
     }
-    casting_set_flash('success', 'به سبد خرید اضافه شد.');
+    casting_set_flash('success', 'به سفارش‌ها اضافه شد.');
     casting_redirect('cart.php');
 }
 
@@ -122,7 +122,6 @@ casting_render_flash();
       <?php else : ?>
         <li><strong>تخفیف:</strong> —</li>
       <?php endif; ?>
-      <li><strong>مالیات بر ارزش افزوده (۱۰٪):</strong> <?= casting_e(casting_format_toman((int) $order['vat_amount'])) ?></li>
       <li class="checkout-total"><strong>مبلغ نهایی قابل پرداخت:</strong> <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></li>
     </ul>
 
@@ -130,9 +129,6 @@ casting_render_flash();
       <div class="bio-block checkout-desc">
         <h2 class="panel-section-title">توضیح خدمت</h2>
         <p><?= casting_e((string) $order['description']) ?></p>
-        <?php if ((string) $order['service_key'] === 'premium') : ?>
-          <p class="meta">برنامه فعال‌سازی: حداقل عضویت ویژه ۳ ماهه · ماهیانه ۷۰٬۰۰۰ تومان · مالیات بر ارزش افزوده ۱۰٪ روی مبلغ محاسبه می‌شود.</p>
-        <?php endif; ?>
       </div>
     <?php endif; ?>
   </div>

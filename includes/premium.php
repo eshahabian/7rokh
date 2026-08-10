@@ -3,35 +3,33 @@ declare(strict_types=1);
 
 function casting_premium_plans(): array
 {
-    $month = 70000;
-
     return [
         'featured_90' => [
             'label'        => 'عضویت ویژه پرتال ۷رخ',
             'days'         => 90,
             'months'       => 3,
             'period_label' => '۳ ماه',
-            'price'        => $month * 3,
-            'unit_price'   => $month,
-            'description'  => 'حداقل ۳ ماه — ماهیانه ۷۰٬۰۰۰ تومان (+ مالیات بر ارزش افزوده). دسترسی به جستجو، شروع گفتگو و اولویت در نتایج.',
+            'price'        => 210000,
+            'unit_price'   => 70000,
+            'description'  => 'بسته ۳ ماهه — ۲۱۰٬۰۰۰ تومان. دسترسی به جستجو، شروع گفتگو و اولویت در نتایج.',
         ],
         'featured_180' => [
             'label'        => 'عضویت ویژه پرتال ۷رخ',
             'days'         => 180,
             'months'       => 6,
             'period_label' => '۶ ماه',
-            'price'        => $month * 6,
-            'unit_price'   => $month,
-            'description'  => '۶ ماه — ماهیانه ۷۰٬۰۰۰ تومان (+ مالیات بر ارزش افزوده).',
+            'price'        => 370000,
+            'unit_price'   => 61667,
+            'description'  => 'بسته ۶ ماهه — ۳۷۰٬۰۰۰ تومان.',
         ],
         'featured_365' => [
             'label'        => 'عضویت ویژه پرتال ۷رخ',
             'days'         => 365,
             'months'       => 12,
             'period_label' => '۱۲ ماه',
-            'price'        => $month * 12,
-            'unit_price'   => $month,
-            'description'  => '۱۲ ماه — ماهیانه ۷۰٬۰۰۰ تومان (+ مالیات بر ارزش افزوده).',
+            'price'        => 700000,
+            'unit_price'   => 58333,
+            'description'  => 'بسته ۱۲ ماهه — ۷۰۰٬۰۰۰ تومان.',
         ],
         // سازگاری با فیش‌ها / لینک‌های قدیمی (حداقل ۳ ماه)
         'featured_30' => [
@@ -39,9 +37,9 @@ function casting_premium_plans(): array
             'days'         => 90,
             'months'       => 3,
             'period_label' => '۳ ماه',
-            'price'        => $month * 3,
-            'unit_price'   => $month,
-            'description'  => 'حداقل ۳ ماه — ماهیانه ۷۰٬۰۰۰ تومان (+ مالیات بر ارزش افزوده).',
+            'price'        => 210000,
+            'unit_price'   => 70000,
+            'description'  => 'بسته ۳ ماهه — ۲۱۰٬۰۰۰ تومان.',
         ],
     ];
 }

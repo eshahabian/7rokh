@@ -285,7 +285,7 @@ function casting_cart_build_item(string $service_key, string $plan_key = '', int
     }
     $built = casting_checkout_build_draft($service_key, $plan_key, $project_id);
     if (!$built['ok'] || empty($built['draft'])) {
-        return ['ok' => false, 'error' => $built['error'] ?? 'افزودن به سبد ناموفق بود.'];
+        return ['ok' => false, 'error' => $built['error'] ?? 'افزودن به سفارش‌ها ناموفق بود.'];
     }
     $draft = $built['draft'];
     $id = substr(hash('sha256', $service_key . '|' . ($draft['plan_key'] ?? '') . '|' . $project_id . '|' . microtime(true)), 0, 12);
@@ -428,7 +428,7 @@ function casting_cart_create_order_from_cart(int $user_id): array
     }
     $cart = casting_cart_get();
     if ($cart['items'] === []) {
-        return ['ok' => false, 'error' => 'سبد خرید خالی است.'];
+        return ['ok' => false, 'error' => 'هنوز سفارشی ندارید.'];
     }
 
     $totals = casting_cart_totals($cart);
@@ -465,7 +465,7 @@ function casting_cart_create_order_from_cart(int $user_id): array
     $unique_types = array_values(array_unique($types));
     $service_type = count($unique_types) === 1
         ? $unique_types[0]
-        : 'سبد خرید خدمات ۷رخ';
+        : 'سفارش خدمات ۷رخ';
     $duration = count($durations) === 1 ? $durations[0] : '';
     $description = implode("\n", $descs);
 
@@ -479,7 +479,7 @@ function casting_cart_create_order_from_cart(int $user_id): array
         'title'          => $title,
         'service_type'   => $service_type,
         'duration_label' => $duration,
-        'description'    => $description !== '' ? $description : 'اقلام سبد خرید خدمات پورتال ۷رخ.',
+        'description'    => $description !== '' ? $description : 'اقلام سفارش خدمات پورتال ۷رخ.',
         'amount_base'    => $totals['base'],
         'discount'       => $totals['discount'],
         'vat_amount'     => $totals['vat'],

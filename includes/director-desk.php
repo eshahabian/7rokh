@@ -1325,7 +1325,7 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
         <div class="flash flash-error">نوع پروژه برای قیمت‌گذاری فراخوان مناسب نیست. نوع را روی تئاتر، فیلم کوتاه، سینمایی یا تلویزیونی تنظیم کنید.</div>
       <?php else : ?>
         <div class="bio-block checkout-call-price">
-          <p><strong>هزینه انتشار این فراخوان:</strong> <?= casting_e(casting_format_toman($price_base)) ?> + مالیات ۱۰٪ = <strong><?= casting_e(casting_format_toman($price_final)) ?></strong></p>
+          <p><strong>هزینه انتشار این فراخوان:</strong> <?= casting_e(casting_format_toman($price_base)) ?> تومان · مبلغ قابل پرداخت در درگاه: <strong><?= casting_e(casting_format_toman($price_final)) ?></strong></p>
           <?php if ($has_credit) : ?>
             <p class="meta flash-success" style="margin:0.35rem 0 0">پرداخت این فراخوان انجام شده — می‌توانید ارسال کنید.</p>
           <?php elseif ($checkout_href !== '') : ?>
@@ -1375,7 +1375,7 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
         </label>
         <button class="btn btn-primary" type="submit"<?= (!$has_credit || $type_key === '') ? ' disabled title="ابتدا هزینه فراخوان را پرداخت کنید"' : '' ?>>ارسال و انتشار فراخوان</button>
         <?php if (!$has_credit && $checkout_href !== '') : ?>
-          <a class="btn btn-ghost" href="<?= casting_e($checkout_href) ?>">افزودن به سبد خرید</a>
+          <a class="btn btn-ghost" href="<?= casting_e($checkout_href) ?>">افزودن به سفارش‌ها</a>
         <?php endif; ?>
       </form>
 

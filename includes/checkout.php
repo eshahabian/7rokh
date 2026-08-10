@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 function casting_vat_rate(): float
 {
-    return 0.10; // ۱۰٪ مالیات بر ارزش افزوده
+    return 0.10; // ۱۰٪ افزوده هنگام ورود به درگاه / واریز
 }
 
 function casting_orders_table(): string
@@ -68,9 +68,13 @@ function casting_orders_ensure_table(): void
  */
 function casting_paid_services_catalog(): array
 {
-    $month = 70000;
-    $premium_base = $month * 3; // حداقل ۳ ماه
-    $vat = casting_vat_rate();
+    if (!function_exists('casting_premium_plans')) {
+        require_once __DIR__ . '/premium.php';
+    }
+    $plans = casting_premium_plans();
+    $p90 = is_array($plans['featured_90'] ?? null) ? $plans['featured_90'] : ['price' => 210000, 'unit_price' => 70000];
+    $p180 = is_array($plans['featured_180'] ?? null) ? $plans['featured_180'] : ['price' => 370000, 'unit_price' => 61667];
+    $p365 = is_array($plans['featured_365'] ?? null) ? $plans['featured_365'] : ['price' => 700000, 'unit_price' => 58333];
 
     return [
         'premium' => [
@@ -80,17 +84,17 @@ function casting_paid_services_catalog(): array
             'duration'     => '۳ ماه',
             'days'         => 90,
             'months'       => 3,
-            'unit_price'   => $month,
-            'amount_base'  => $premium_base,
-            'description'  => 'برنامه فعال‌سازی عضویت ویژه: حداقل مدت ۳ ماه، ماهیانه ۷۰٬۰۰۰ تومان. با فعال‌سازی، به جستجوی کاربران، شروع گفتگو و اولویت در نتایج دسترسی دارید.',
+            'unit_price'   => (int) ($p90['unit_price'] ?? 70000),
+            'amount_base'  => (int) ($p90['price'] ?? 210000),
+            'description'  => 'برنامه فعال‌سازی عضویت ویژه. با فعال‌سازی، به جستجوی کاربران، شروع گفتگو و اولویت در نتایج دسترسی دارید.',
             'plans'        => [
                 'featured_90' => [
-                    'label'        => 'بسته ۳ ماهه (حداقل)',
+                    'label'        => 'بسته ۳ ماهه',
                     'plan_key'     => 'featured_90',
                     'days'         => 90,
                     'months'       => 3,
                     'period_label' => '۳ ماه',
-                    'amount_base'  => $month * 3,
+                    'amount_base'  => (int) ($p90['price'] ?? 210000),
                 ],
                 'featured_180' => [
                     'label'        => 'بسته ۶ ماهه',
@@ -98,7 +102,7 @@ function casting_paid_services_catalog(): array
                     'days'         => 180,
                     'months'       => 6,
                     'period_label' => '۶ ماه',
-                    'amount_base'  => $month * 6,
+                    'amount_base'  => (int) ($p180['price'] ?? 370000),
                 ],
                 'featured_365' => [
                     'label'        => 'بسته ۱۲ ماهه',
@@ -106,7 +110,7 @@ function casting_paid_services_catalog(): array
                     'days'         => 365,
                     'months'       => 12,
                     'period_label' => '۱۲ ماه',
-                    'amount_base'  => $month * 12,
+                    'amount_base'  => (int) ($p365['price'] ?? 700000),
                 ],
             ],
             'cancel_url'   => 'premium.php',
@@ -194,7 +198,7 @@ function casting_shop_catalog_tiles(): array
         $tiles[] = [
             'group'       => 'عضویت ویژه',
             'label'       => 'عضویت ویژه — ' . (string) ($p['period_label'] ?? ''),
-            'meta'        => 'ارتقای حساب کاربری · ماهیانه ۷۰٬۰۰۰ تومان',
+            'meta'        => 'ارتقای حساب کاربری · ' . (string) ($p['period_label'] ?? ''),
             'service'     => 'premium',
             'plan'        => (string) $key,
             'price_base'  => $calc['base'],
@@ -341,7 +345,7 @@ function casting_checkout_build_draft(string $service_key, string $plan_or_type 
                 'title'          => (string) $svc['title'],
                 'service_type'   => (string) $svc['service_type'],
                 'duration_label' => (string) $plan['period_label'],
-                'description'    => (string) $svc['description'] . ' بسته انتخابی: ' . (string) $plan['label'] . ' — ماهیانه ۷۰٬۰۰۰ تومان.',
+                'description'    => (string) $svc['description'] . ' بسته انتخابی: ' . (string) $plan['label'] . '.',
                 'plan_label'     => (string) $plan['label'],
                 'amount_base'    => $amounts['base'],
                 'discount'       => $amounts['discount'],
@@ -352,7 +356,7 @@ function casting_checkout_build_draft(string $service_key, string $plan_or_type 
                 'meta'           => [
                     'months'     => (int) $plan['months'],
                     'days'       => (int) $plan['days'],
-                    'unit_price' => 70000,
+                    'unit_price' => (int) round(((int) $plan['amount_base']) / max(1, (int) $plan['months'])),
                 ],
             ],
         ];

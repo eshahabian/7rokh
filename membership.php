@@ -17,12 +17,12 @@ $pending_receipts = casting_user_has_admin_permission($user_id, 'approve_receipt
 $tiles = [
     [
         'title' => 'خرید اشتراک و خدمات',
-        'desc'  => 'افزودن به سبد · خلاصه سفارش · درگاه',
+        'desc'  => 'افزودن به سفارش‌ها · خلاصه سفارش · درگاه',
         'href'  => 'premium.php',
         'badge' => $pending_receipts,
     ],
     [
-        'title' => 'سبد خرید',
+        'title' => 'سفارش‌ها',
         'desc'  => 'اقلام انتخاب‌شده قبل از پرداخت',
         'href'  => 'cart.php',
     ],

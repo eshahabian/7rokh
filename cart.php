@@ -64,7 +64,7 @@ if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $project_id = max(0, (int) ($_GET['project'] ?? 0));
     $result = casting_cart_add($service, $plan, $project_id);
     if ($result['ok']) {
-        casting_set_flash('success', 'به سبد خرید اضافه شد.');
+        casting_set_flash('success', 'به سفارش‌ها اضافه شد.');
     } else {
         casting_set_flash('error', $result['error']);
     }
@@ -148,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         casting_redirect('cart.php');
     } elseif ($action === 'clear') {
         casting_cart_clear();
-        casting_set_flash('success', 'سبد خرید خالی شد.');
+        casting_set_flash('success', 'سفارش‌ها خالی شد.');
         casting_redirect('cart.php');
     } elseif ($action === 'checkout') {
         if (!$logged_in) {
@@ -177,20 +177,20 @@ foreach ($shop_tiles as $tile) {
 }
 
 if ($logged_in) {
-    casting_render_panel_start('سبد خرید', 'cart');
+    casting_render_panel_start('سفارش‌ها', 'cart');
 } else {
-    casting_render_head('سبد خرید', 'page-cart-guest');
+    casting_render_head('سفارش‌ها', 'page-cart-guest');
     casting_render_header('cart');
     echo '<main class="wrap panel-page cart-guest-page">';
 }
 casting_render_flash();
 ?>
 <section class="dash-card cart-card">
-  <h1>سبد خرید</h1>
+  <h1>سفارش‌ها</h1>
   <?php if ($logged_in) : ?>
     <p class="meta">اقلام انتخاب‌شده را بررسی کنید؛ سپس به خلاصه سفارش و درگاه بانکی بروید.</p>
   <?php else : ?>
-    <p class="meta">خدمات را ببینید و به سبد اضافه کنید. برای پرداخت نهایی باید وارد شوید یا ثبت‌نام کنید.</p>
+    <p class="meta">خدمات را ببینید و به سفارش‌ها اضافه کنید. برای پرداخت نهایی باید وارد شوید یا ثبت‌نام کنید.</p>
   <?php endif; ?>
 
   <?php if ($error !== '') : ?>
@@ -199,7 +199,7 @@ casting_render_flash();
 
   <?php if ($cart['items'] === []) : ?>
     <div class="cart-empty-hero">
-      <p class="empty-state">سبد خرید شما خالی است.</p>
+      <p class="empty-state">هنوز سفارشی ندارید.</p>
     </div>
   <?php else : ?>
     <div class="cart-list">
@@ -217,9 +217,8 @@ casting_render_flash();
               <?php endif; ?>
             </p>
             <p class="cart-item-price">
-              <?= casting_e(casting_format_toman((int) ($item['amount_base'] ?? 0))) ?>
-              + مالیات
-              = <strong><?= casting_e(casting_format_toman((int) ($item['amount_final'] ?? 0))) ?></strong>
+              مبلغ بسته: <?= casting_e(casting_format_toman((int) ($item['amount_base'] ?? 0))) ?>
+              · قابل پرداخت: <strong><?= casting_e(casting_format_toman((int) ($item['amount_final'] ?? 0))) ?></strong>
             </p>
           </div>
           <form method="post" action="cart.php" class="cart-item-remove">
@@ -239,7 +238,6 @@ casting_render_flash();
         <?php if ((int) $totals['discount'] > 0) : ?>
           <li><strong>تخفیف:</strong> <?= casting_e(casting_format_toman((int) $totals['discount'])) ?></li>
         <?php endif; ?>
-        <li><strong>مالیات بر ارزش افزوده:</strong> <?= casting_e(casting_format_toman((int) $totals['vat'])) ?></li>
         <li class="checkout-total"><strong>مبلغ قابل پرداخت:</strong> <?= casting_e(casting_format_toman((int) $totals['final'])) ?></li>
       </ul>
     </div>
@@ -254,10 +252,10 @@ casting_render_flash();
       <?php else : ?>
         <button class="btn btn-primary" type="button" data-cart-auth-open>ادامه به پرداخت</button>
       <?php endif; ?>
-      <form method="post" action="cart.php" onsubmit="return confirm('سبد خرید خالی شود؟');">
+      <form method="post" action="cart.php" onsubmit="return confirm('سفارش‌ها خالی شود؟');">
         <?php wp_nonce_field('casting_cart'); ?>
         <input type="hidden" name="cart_action" value="clear">
-        <button class="btn btn-ghost" type="submit">خالی کردن سبد</button>
+        <button class="btn btn-ghost" type="submit">خالی کردن</button>
       </form>
     </div>
   <?php endif; ?>
@@ -265,7 +263,7 @@ casting_render_flash();
 
 <section class="dash-card cart-shop-card" id="cart-shop">
   <h2>خدمات قابل خرید</h2>
-  <p class="meta">روی هر کاشی بزنید تا به سبد اضافه شود.</p>
+  <p class="meta">روی هر کاشی بزنید تا به سفارش‌ها اضافه شود.</p>
 
   <?php foreach ($tiles_by_group as $group => $tiles) : ?>
     <h3 class="shop-group-title"><?= casting_e($group) ?></h3>
@@ -288,10 +286,9 @@ casting_render_flash();
             <strong class="shop-tile-title"><?= casting_e((string) $tile['label']) ?></strong>
             <p class="shop-tile-meta"><?= casting_e((string) $tile['meta']) ?></p>
             <p class="shop-tile-price">
-              <strong><?= casting_e(casting_format_toman((int) $tile['price_final'])) ?></strong>
-              <span class="meta">با مالیات</span>
+              <strong><?= casting_e(casting_format_toman((int) $tile['price_base'])) ?></strong>
             </p>
-            <a class="btn btn-primary btn-sm shop-tile-add" href="<?= casting_e($add_href) ?>">افزودن به سبد</a>
+            <a class="btn btn-primary btn-sm shop-tile-add" href="<?= casting_e($add_href) ?>">افزودن</a>
           </div>
         </article>
       <?php endforeach; ?>

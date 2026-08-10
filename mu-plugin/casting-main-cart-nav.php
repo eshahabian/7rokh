@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Casting Portal — سبد خرید در هدر سایت
- * Description: آیکون سبد خرید کنار شبکه‌های اجتماعی هدر + شمارنده زنده
- * Version: 1.7
+ * Plugin Name: Casting Portal — سفارش‌ها در هدر سایت
+ * Description: آیکون سفارش‌ها کنار شبکه‌های اجتماعی هدر + شمارنده زنده
+ * Version: 1.8
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-cart-nav.php
  * (خودکار با deploy — .cpanel.yml)
@@ -127,7 +127,7 @@ function casting_main_cart_enqueue_assets(): void
 }
 ';
 
-    wp_register_style('casting-main-cart-nav', false, [], '1.7');
+    wp_register_style('casting-main-cart-nav', false, [], '1.8');
     wp_enqueue_style('casting-main-cart-nav');
     wp_add_inline_style('casting-main-cart-nav', trim($css));
 
@@ -135,7 +135,7 @@ function casting_main_cart_enqueue_assets(): void
         'url'      => casting_main_cart_url(),
         'countUrl' => casting_main_cart_count_url(),
         'count'    => casting_main_cart_count_from_cookie(),
-        'label'    => 'سبد خرید',
+        'label'    => 'سفارش‌ها',
     ];
 
     $js = <<<'JS'
@@ -232,8 +232,8 @@ function casting_main_cart_enqueue_assets(): void
     }
     a.className = classes.join(" ");
     a.href = CFG.url || "#";
-    a.title = CFG.label || "سبد خرید";
-    a.setAttribute("aria-label", CFG.label || "سبد خرید");
+    a.title = CFG.label || "سفارش‌ها";
+    a.setAttribute("aria-label", CFG.label || "سفارش‌ها");
     a.removeAttribute("target");
     a.removeAttribute("rel");
 
@@ -339,7 +339,7 @@ function casting_main_cart_enqueue_assets(): void
 })();
 JS;
 
-    wp_register_script('casting-main-cart-nav', false, [], '1.7', true);
+    wp_register_script('casting-main-cart-nav', false, [], '1.8', true);
     wp_enqueue_script('casting-main-cart-nav');
     wp_add_inline_script(
         'casting-main-cart-nav',
@@ -356,7 +356,7 @@ function casting_main_cart_footer_markup(): void
     $count = casting_main_cart_count_from_cookie();
     $badge_class = 'casting-main-cart-badge' . ($count > 0 ? '' : ' is-empty');
     $badge = '<span class="' . esc_attr($badge_class) . '">' . ($count > 0 ? (string) (int) $count : '') . '</span>';
-    echo '<a class="casting-main-cart-fallback" href="' . $url . '" aria-label="سبد خرید">سبد خرید' . $badge . '</a>';
+    echo '<a class="casting-main-cart-fallback" href="' . $url . '" aria-label="سفارش‌ها">سفارش‌ها' . $badge . '</a>';
 }
 
 add_action('wp_enqueue_scripts', 'casting_main_cart_enqueue_assets', 30);

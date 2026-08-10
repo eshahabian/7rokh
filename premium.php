@@ -50,7 +50,7 @@ foreach ($plans as $key => $p) {
     $shop_items[] = [
         'group'       => 'عضویت ویژه',
         'label'       => 'عضویت ویژه — ' . (string) ($p['period_label'] ?? ''),
-        'meta'        => 'ارتقای حساب کاربری · ماهیانه ۷۰٬۰۰۰ تومان',
+        'meta'        => 'ارتقای حساب کاربری · ' . (string) ($p['period_label'] ?? ''),
         'href'        => casting_cart_add_url('premium', $key),
         'price_final' => $calc['final'],
         'price_base'  => $calc['base'],
@@ -76,7 +76,7 @@ casting_render_flash();
 ?>
 <section class="dash-card">
   <h1>خرید اشتراک و خدمات</h1>
-  <p class="meta">خدمت را به سبد اضافه کنید؛ سپس از سبد به خلاصه سفارش و درگاه می‌روید. حساب فقط پس از پرداخت موفق فعال می‌شود.</p>
+  <p class="meta">خدمت را به سفارش‌ها اضافه کنید؛ سپس به خلاصه سفارش و درگاه می‌روید. حساب فقط پس از پرداخت موفق فعال می‌شود.</p>
 
   <?php if ($premium) : ?>
     <div class="flash flash-success">حساب کاربری ویژه فعال است.</div>
@@ -108,11 +108,10 @@ casting_render_flash();
         <strong><?= casting_e($item['label']) ?></strong>
         <p class="meta"><?= casting_e($item['meta']) ?></p>
         <p class="shop-item-price">
-          <?= casting_e(number_format((int) $item['price_base'])) ?> + مالیات
-          = <strong><?= casting_e(number_format((int) $item['price_final'])) ?> تومان</strong>
+          <strong><?= casting_e(number_format((int) $item['price_base'])) ?> تومان</strong>
         </p>
       </div>
-      <a class="btn btn-primary" href="<?= casting_e($item['href']) ?>">افزودن به سبد</a>
+      <a class="btn btn-primary" href="<?= casting_e($item['href']) ?>">افزودن به سفارش‌ها</a>
     </article>
     <?php endforeach; ?>
   </div>
@@ -120,9 +119,9 @@ casting_render_flash();
   <div class="bio-block premium-payment-block" style="margin-top:1.25rem">
     <h2>نکته مهم</h2>
     <ul class="info-list">
-      <li>با زدن «افزودن به سبد» وارد سبد خرید می‌شوید؛ سپس خلاصه سفارش و درگاه. تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
-      <li>عضویت ویژه: حداقل ۳ ماه · ماهیانه ۷۰٬۰۰۰ تومان · مالیات بر ارزش افزوده ۱۰٪.</li>
-      <li>فراخوان تئاتر و فیلم کوتاه: ۷۰۰٬۰۰۰ تومان (+ مالیات) · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان (+ مالیات).</li>
+      <li>با زدن «افزودن به سفارش‌ها» وارد فهرست سفارش می‌شوید؛ سپس خلاصه سفارش و درگاه. تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
+      <li>عضویت ویژه: ۳ ماه ۲۱۰٬۰۰۰ · ۶ ماه ۳۷۰٬۰۰۰ · ۱۲ ماه ۷۰۰٬۰۰۰ تومان.</li>
+      <li>فراخوان تئاتر و فیلم کوتاه: ۷۰۰٬۰۰۰ تومان · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان.</li>
     </ul>
   </div>
 </section>
