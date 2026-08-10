@@ -124,8 +124,9 @@ if (!defined('CASTING_MAIL_FROM_NAME')) {
  * 4) برای پیامک متنی، شماره فرستنده (From) را از پنل بردارید
  */
 /**
- * تأیید OTP موبایل در ثبت‌نام — موقت false (برای کار روی پنل).
- * برای بازگردانی: true کنید. کد UI/منطق پاک نشده است.
+ * تأیید OTP موبایل در ثبت‌نام.
+ * فعلاً در includes/otp.php هم force-off است تا حتی اگر در config.local روشن باشد، UI نیاید.
+ * بعد از درست شدن سرویس پیامک: force-off را بردارید و اینجا/local را true کنید.
  */
 if (!defined('CASTING_MOBILE_OTP_ENABLED')) {
     define('CASTING_MOBILE_OTP_ENABLED', false);
