@@ -1783,6 +1783,49 @@
     syncAssignmentForm();
   }
 
+  const siteNavToggle = document.querySelector("[data-site-nav-toggle]");
+  const siteNav = document.querySelector("[data-site-nav]");
+  if (siteNavToggle && siteNav) {
+    const siteNavQuery = window.matchMedia("(max-width: 720px)");
+    const setSiteNavOpen = (open) => {
+      if (open && !siteNavQuery.matches) {
+        return;
+      }
+      document.body.classList.toggle("site-nav-open", open);
+      siteNavToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      siteNavToggle.setAttribute("aria-label", open ? "بستن منو" : "باز کردن منو");
+    };
+
+    siteNavToggle.addEventListener("click", () => {
+      if (!siteNavQuery.matches) {
+        return;
+      }
+      const open = siteNavToggle.getAttribute("aria-expanded") !== "true";
+      setSiteNavOpen(open);
+    });
+
+    siteNav.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => setSiteNavOpen(false));
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && siteNavToggle.getAttribute("aria-expanded") === "true") {
+        setSiteNavOpen(false);
+      }
+    });
+
+    const onSiteNavViewportChange = () => {
+      if (!siteNavQuery.matches) {
+        setSiteNavOpen(false);
+      }
+    };
+    if (typeof siteNavQuery.addEventListener === "function") {
+      siteNavQuery.addEventListener("change", onSiteNavViewportChange);
+    } else if (typeof siteNavQuery.addListener === "function") {
+      siteNavQuery.addListener(onSiteNavViewportChange);
+    }
+  }
+
   const panelToggle = document.querySelector("[data-panel-menu-toggle]");
   const panelDrawer = document.getElementById("panel-drawer");
   const panelBackdrop = document.querySelector(".panel-drawer-backdrop");

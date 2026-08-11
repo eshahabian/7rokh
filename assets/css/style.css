@@ -291,6 +291,10 @@ a:hover {
   display: contents;
 }
 
+.site-header:not(.site-header--panel) .site-header-bar {
+  display: contents;
+}
+
 .brand {
   font-family: var(--display);
   font-size: clamp(1.7rem, 3vw, 2.1rem);
@@ -3309,6 +3313,59 @@ html[data-theme="day"] .filter-bar--sticky {
     justify-content: center;
   }
 
+  /* منوی همبرگری صفحات عمومی (خانه / ورود / عضویت) */
+  body:not(.has-panel-drawer) .site-header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.7rem 1rem;
+    text-align: start;
+  }
+
+  body:not(.has-panel-drawer) .site-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  body:not(.has-panel-drawer) .site-header .brand {
+    font-size: 1.45rem;
+    line-height: 1.2;
+  }
+
+  body:not(.has-panel-drawer) .site-nav-toggle {
+    display: inline-flex;
+  }
+
+  body:not(.has-panel-drawer) .site-header .nav {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0.35rem 0 0.15rem;
+    border-top: 1px solid var(--line);
+  }
+
+  body:not(.has-panel-drawer).site-nav-open .site-header .nav {
+    display: flex;
+  }
+
+  body:not(.has-panel-drawer) .site-header .nav a {
+    padding: 0.7rem 0.35rem;
+    border-radius: 10px;
+  }
+
+  body:not(.has-panel-drawer) .site-header .nav a:hover,
+  body:not(.has-panel-drawer) .site-header .nav a.is-active {
+    background: color-mix(in srgb, var(--accent-dim) 55%, transparent);
+  }
+
   .gates {
     grid-template-columns: 1fr;
   }
@@ -3471,15 +3528,18 @@ body.panel-menu-open {
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-body.panel-menu-open .panel-menu-toggle-icon span:nth-child(1) {
+body.panel-menu-open .panel-menu-toggle-icon span:nth-child(1),
+body.site-nav-open .panel-menu-toggle-icon span:nth-child(1) {
   transform: translateY(0.28rem) rotate(45deg);
 }
 
-body.panel-menu-open .panel-menu-toggle-icon span:nth-child(2) {
+body.panel-menu-open .panel-menu-toggle-icon span:nth-child(2),
+body.site-nav-open .panel-menu-toggle-icon span:nth-child(2) {
   opacity: 0;
 }
 
-body.panel-menu-open .panel-menu-toggle-icon span:nth-child(3) {
+body.panel-menu-open .panel-menu-toggle-icon span:nth-child(3),
+body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
   transform: translateY(-0.28rem) rotate(-45deg);
 }
 
@@ -3579,8 +3639,11 @@ body.panel-menu-open .panel-menu-toggle-icon span:nth-child(3) {
     display: none;
   }
 
-  body.has-panel-drawer .panel-menu-toggle {
-    display: inline-flex;
+  body.has-panel-drawer .panel-menu-toggle,
+  body.has-panel-drawer .site-header--panel .panel-menu-toggle {
+    display: inline-flex !important;
+    visibility: visible;
+    opacity: 1;
   }
 
   .panel-shell {

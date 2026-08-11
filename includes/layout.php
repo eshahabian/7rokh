@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=153">
+  <link rel="stylesheet" href="<?= $css ?>?v=154">
   <script>
     (function () {
       try {
@@ -98,17 +98,22 @@ function casting_render_nav_cart(?string $active = null): void
     <?php
 }
 
-function casting_render_panel_menu_toggle(int $badge = 0): void
-{
+function casting_render_menu_toggle_button(
+    string $controls_id,
+    string $aria_label,
+    string $extra_attrs = '',
+    int $badge = 0,
+    string $extra_class = ''
+): void {
+    $class = trim('panel-menu-toggle ' . $extra_class);
     ?>
     <button
       type="button"
-      class="panel-menu-toggle"
-      id="panel-menu-toggle"
-      aria-controls="panel-drawer"
+      class="<?= casting_e($class) ?>"
+      aria-controls="<?= casting_e($controls_id) ?>"
       aria-expanded="false"
-      aria-label="باز کردن منوی پنل"
-      data-panel-menu-toggle
+      aria-label="<?= casting_e($aria_label) ?>"
+      <?= $extra_attrs ?>
     >
       <span class="panel-menu-toggle-icon" aria-hidden="true">
         <span></span><span></span><span></span>
@@ -119,6 +124,27 @@ function casting_render_panel_menu_toggle(int $badge = 0): void
       <?php endif; ?>
     </button>
     <?php
+}
+
+function casting_render_panel_menu_toggle(int $badge = 0): void
+{
+    casting_render_menu_toggle_button(
+        'panel-drawer',
+        'باز کردن منوی پنل',
+        'id="panel-menu-toggle" data-panel-menu-toggle',
+        $badge
+    );
+}
+
+function casting_render_site_nav_toggle(): void
+{
+    casting_render_menu_toggle_button(
+        'site-main-nav',
+        'باز کردن منو',
+        'data-site-nav-toggle',
+        0,
+        'site-nav-toggle'
+    );
 }
 
 function casting_render_header(?string $active = null, bool $panel_menu = false, int $panel_menu_badge = 0): void
@@ -137,10 +163,12 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
     <div class="site-header-bar">
       <?php if ($panel_menu) : ?>
         <?php casting_render_panel_menu_toggle($panel_menu_badge); ?>
+      <?php else : ?>
+        <?php casting_render_site_nav_toggle(); ?>
       <?php endif; ?>
       <a class="brand" href="index.php"><?= casting_brand_html() ?></a>
     </div>
-    <nav class="nav" aria-label="منوی اصلی">
+    <nav class="nav" id="site-main-nav" aria-label="منوی اصلی" data-site-nav>
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external">سایت <?= casting_brand_html() ?></a>
       <?php if ($role !== '') : ?>
         <a href="home.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
@@ -281,7 +309,7 @@ function casting_render_footer(): void
       logoutUrl: <?= wp_json_encode(casting_url('logout.php?reason=idle')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=100" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=101" defer></script>
 </body>
 </html>
 <?php
