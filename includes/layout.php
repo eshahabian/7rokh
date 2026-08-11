@@ -318,7 +318,7 @@ function casting_render_footer(): void
       logoutUrl: <?= wp_json_encode(casting_url('logout.php?reason=idle')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=101" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=102" defer></script>
 </body>
 </html>
 <?php

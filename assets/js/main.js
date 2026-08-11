@@ -164,6 +164,58 @@
     });
   });
 
+  const REMEMBER_LOGIN_KEY = "casting_saved_login";
+  document.querySelectorAll("form[data-remember-credentials]").forEach((form) => {
+    const loginInput = form.querySelector('input[name="login"]');
+    const passwordInput = form.querySelector('input[name="password"]');
+    const checkbox = form.querySelector("[data-remember-credentials-check]");
+    if (!loginInput || !passwordInput || !checkbox) return;
+
+    try {
+      const raw = localStorage.getItem(REMEMBER_LOGIN_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data && typeof data.login === "string") {
+          if (!loginInput.value) loginInput.value = data.login;
+          if (typeof data.password === "string" && !passwordInput.value) {
+            passwordInput.value = data.password;
+          }
+          checkbox.checked = true;
+        }
+      }
+    } catch (_) {
+      /* ignore */
+    }
+
+    checkbox.addEventListener("change", () => {
+      if (!checkbox.checked) {
+        try {
+          localStorage.removeItem(REMEMBER_LOGIN_KEY);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    });
+
+    form.addEventListener("submit", () => {
+      try {
+        if (checkbox.checked) {
+          localStorage.setItem(
+            REMEMBER_LOGIN_KEY,
+            JSON.stringify({
+              login: loginInput.value,
+              password: passwordInput.value,
+            })
+          );
+        } else {
+          localStorage.removeItem(REMEMBER_LOGIN_KEY);
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    });
+  });
+
   const forms = document.querySelectorAll("form[data-loading]");
   forms.forEach((form) => {
     form.addEventListener("submit", () => {

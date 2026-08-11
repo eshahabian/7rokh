@@ -177,7 +177,7 @@ casting_render_flash();
       </form>
     <?php else : ?>
       <p class="lede">با نام کاربری یا ایمیل وارد شوید. بعد از ورود به پنل خودتان هدایت می‌شوید.</p>
-      <form class="form" method="post" action="login.php<?= $login_intent === 'cart' ? '?intent=cart' : '' ?>">
+      <form class="form" method="post" action="login.php<?= $login_intent === 'cart' ? '?intent=cart' : '' ?>" data-remember-credentials>
         <?php wp_nonce_field('casting_login'); ?>
         <input type="hidden" name="mode" value="password">
         <?php if ($login_intent === 'cart') : ?>
@@ -203,6 +203,13 @@ casting_render_flash();
               </svg>
             </button>
           </div>
+        </div>
+
+        <div class="field">
+          <label class="checkbox-row" for="remember_credentials">
+            <input id="remember_credentials" type="checkbox" data-remember-credentials-check>
+            <span>ذخیره یوزر و پسورد</span>
+          </label>
         </div>
 
         <p class="form-inline-link">

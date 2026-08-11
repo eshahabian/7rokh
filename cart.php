@@ -334,7 +334,7 @@ casting_render_flash();
       <?php endif; ?>
 
       <div class="cart-auth-pane<?= $auth_tab === 'login' ? ' is-active' : '' ?>" data-cart-auth-pane="login"<?= $auth_tab === 'login' ? '' : ' hidden' ?>>
-        <form class="form cart-auth-form" method="post" action="cart.php" autocomplete="on">
+        <form class="form cart-auth-form" method="post" action="cart.php" autocomplete="on" data-remember-credentials>
           <?php wp_nonce_field('casting_cart_auth'); ?>
           <input type="hidden" name="cart_action" value="auth_login">
           <input type="hidden" name="auth_tab" value="login">
@@ -356,6 +356,12 @@ casting_render_flash();
                 </svg>
               </button>
             </div>
+          </div>
+          <div class="field">
+            <label class="checkbox-row" for="cart-remember-credentials">
+              <input id="cart-remember-credentials" type="checkbox" data-remember-credentials-check>
+              <span>ذخیره یوزر و پسورد</span>
+            </label>
           </div>
           <?php if ($auth_need_confirm) : ?>
             <input type="hidden" name="force_login" value="1">
