@@ -57,7 +57,7 @@ casting_cart_sync_count_cookie();
 
 $action = sanitize_key((string) ($_GET['action'] ?? $_POST['cart_action'] ?? ''));
 
-// افزودن از لینک / کاشی
+// افزودن از لینک / کاشی → فقط به خلاصه سفارش‌ها (نه مستقیم پرداخت)
 if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $service = sanitize_key((string) ($_GET['service'] ?? ''));
     $plan = sanitize_key((string) ($_GET['plan'] ?? ''));
@@ -65,25 +65,10 @@ if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $result = casting_cart_add($service, $plan, $project_id);
     if ($result['ok']) {
         casting_set_flash('success', 'به سفارش‌ها اضافه شد.');
-        casting_redirect('cart.php?continue=1');
+        casting_redirect('cart.php');
     }
     casting_set_flash('error', $result['error']);
     casting_redirect('cart.php');
-}
-
-// کلیک روی «سفارش‌ها» → مستقیم ادامه خرید (خلاصه سفارش + مالیات)
-if (
-    $_SERVER['REQUEST_METHOD'] === 'GET'
-    && $action === ''
-    && isset($_GET['continue'])
-) {
-    $pending = casting_cart_get();
-    if (($pending['items'] ?? []) !== []) {
-        if ($logged_in) {
-            $cart_continue_checkout($user_id);
-        }
-        $auth_needed = true;
-    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -203,9 +188,9 @@ casting_render_flash();
 <section class="dash-card cart-card">
   <h1>سفارش‌ها</h1>
   <?php if ($logged_in) : ?>
-    <p class="meta">اقلام انتخاب‌شده را بررسی کنید؛ سپس به خلاصه سفارش و درگاه بانکی بروید.</p>
+    <p class="meta">اقلام انتخاب‌شده را بررسی کنید؛ برای پرداخت، دکمهٔ زیر را بزنید. مالیات فقط در مرحلهٔ پرداخت محاسبه می‌شود.</p>
   <?php else : ?>
-    <p class="meta">خدمات را ببینید و به سفارش‌ها اضافه کنید. برای پرداخت نهایی باید وارد شوید یا ثبت‌نام کنید.</p>
+    <p class="meta">خدمات را ببینید و به سفارش‌ها اضافه کنید. برای پرداخت باید وارد شوید یا ثبت‌نام کنید. مالیات فقط هنگام پرداخت اعمال می‌شود.</p>
   <?php endif; ?>
 
   <?php if ($error !== '') : ?>
@@ -247,11 +232,12 @@ casting_render_flash();
     <div class="cart-totals bio-block">
       <ul class="info-list">
         <li><strong>تعداد اقلام:</strong> <?= (int) $totals['count'] ?></li>
-        <li><strong>جمع مبلغ:</strong> <?= casting_e(casting_format_toman((int) $totals['base'])) ?></li>
+        <li><strong>جمع مبلغ (بدون مالیات):</strong> <?= casting_e(casting_format_toman((int) $totals['base'])) ?></li>
         <?php if ((int) $totals['discount'] > 0) : ?>
           <li><strong>تخفیف:</strong> <?= casting_e(casting_format_toman((int) $totals['discount'])) ?></li>
         <?php endif; ?>
       </ul>
+      <p class="meta cart-vat-hint">مالیات بر ارزش افزوده ۱۰٪ هنگام پرداخت اضافه می‌شود.</p>
     </div>
 
     <div class="cta-row cart-actions">
@@ -259,10 +245,10 @@ casting_render_flash();
         <form method="post" action="cart.php">
           <?php wp_nonce_field('casting_cart'); ?>
           <input type="hidden" name="cart_action" value="checkout">
-          <button class="btn btn-primary" type="submit">ادامه به خلاصه سفارش</button>
+          <button class="btn btn-primary" type="submit">پرداخت</button>
         </form>
       <?php else : ?>
-        <button class="btn btn-primary" type="button" data-cart-auth-open>ادامه به پرداخت</button>
+        <button class="btn btn-primary" type="button" data-cart-auth-open>پرداخت</button>
       <?php endif; ?>
       <form method="post" action="cart.php" onsubmit="return confirm('سفارش‌ها خالی شود؟');">
         <?php wp_nonce_field('casting_cart'); ?>

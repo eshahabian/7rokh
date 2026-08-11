@@ -389,7 +389,7 @@ function casting_cart_remove(string $item_id): array
 }
 
 /**
- * جمع سفارش‌ها (بدون مالیات — مالیات فقط در خلاصه سفارش)
+ * جمع سفارش‌ها (بدون مالیات — مالیات فقط هنگام پرداخت)
  *
  * @return array{base:int,discount:int,vat:int,final:int,count:int}
  */
@@ -435,7 +435,7 @@ function casting_cart_create_order_from_cart(int $user_id): array
     }
 
     $totals = casting_cart_totals($cart);
-    // مالیات بر ارزش افزوده فقط هنگام ورود به خلاصه سفارش / درگاه
+    // مالیات بر ارزش افزوده فقط هنگام کلیک پرداخت / ورود به صفحه پرداخت
     $amounts = casting_checkout_calc_amounts((int) $totals['base'], (int) $totals['discount']);
     $titles = [];
     $types = [];

@@ -39,7 +39,7 @@ if ($order === [] && $service !== '') {
         casting_redirect($service === 'casting_call' ? 'director-desk.php' : 'premium.php');
     }
     casting_set_flash('success', 'به سفارش‌ها اضافه شد.');
-    casting_redirect('cart.php?continue=1');
+    casting_redirect('cart.php');
 }
 
 if ($order === [] || (int) ($order['user_id'] ?? 0) !== $user_id) {
@@ -91,12 +91,12 @@ if ((string) $order['service_key'] === 'premium') {
     $plan_label = (string) $order['title'];
 }
 
-casting_render_panel_start('خلاصه سفارش', 'membership');
+casting_render_panel_start('پرداخت', 'membership');
 casting_render_flash();
 ?>
 <section class="dash-card checkout-card">
-  <h1>خلاصه سفارش</h1>
-  <p class="meta">جزئیات سفارش را بررسی کنید. پرداخت آنلاین پس از اتصال درگاه بانکی فعال می‌شود.</p>
+  <h1>پرداخت</h1>
+  <p class="meta">جزئیات سفارش را ببینید. مالیات بر ارزش افزوده ۱۰٪ در این مرحله اعمال شده است.</p>
 
   <?php if ($error !== '') : ?>
     <div class="flash flash-error" role="alert"><?= casting_e($error) ?></div>
@@ -122,8 +122,6 @@ casting_render_flash();
       <?php else : ?>
         <li><strong>تخفیف:</strong> —</li>
       <?php endif; ?>
-      <li><strong>مالیات بر ارزش افزوده (۱۰٪):</strong> <?= casting_e(casting_format_toman((int) $order['vat_amount'])) ?></li>
-      <li class="checkout-total"><strong>مبلغ نهایی قابل پرداخت:</strong> <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></li>
     </ul>
 
     <?php if ((string) ($order['description'] ?? '') !== '') : ?>
@@ -132,6 +130,13 @@ casting_render_flash();
         <p><?= casting_e((string) $order['description']) ?></p>
       </div>
     <?php endif; ?>
+  </div>
+
+  <div class="bio-block checkout-vat-block" aria-live="polite">
+    <ul class="info-list checkout-summary-list">
+      <li><strong>مالیات بر ارزش افزوده (۱۰٪):</strong> <?= casting_e(casting_format_toman((int) $order['vat_amount'])) ?></li>
+      <li class="checkout-total"><strong>مبلغ نهایی قابل پرداخت:</strong> <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></li>
+    </ul>
   </div>
 
   <?php if ($gateway_ready) : ?>
@@ -150,14 +155,14 @@ casting_render_flash();
       </label>
 
       <div class="cta-row checkout-actions">
-        <button class="btn btn-primary" type="submit">پرداخت و انتقال به درگاه بانکی</button>
+        <button class="btn btn-primary" type="submit">پرداخت <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></button>
         <a class="btn btn-ghost" href="<?= casting_e($cancel_url) ?>">انصراف از خرید / بازگشت</a>
       </div>
     </form>
   <?php else : ?>
     <div class="cta-row checkout-actions">
-      <button class="btn btn-primary" type="button" disabled>پرداخت به‌زودی فعال می‌شود</button>
-      <a class="btn btn-ghost" href="<?= casting_e($cancel_url) ?>">بازگشت به سبد / انصراف</a>
+      <button class="btn btn-primary" type="button" disabled>پرداخت به‌زودی فعال می‌شود — <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></button>
+      <a class="btn btn-ghost" href="<?= casting_e($cancel_url) ?>">بازگشت به سفارش‌ها / انصراف</a>
     </div>
   <?php endif; ?>
 </section>

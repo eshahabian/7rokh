@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=158">
+  <link rel="stylesheet" href="<?= $css ?>?v=159">
   <script>
     (function () {
       try {
@@ -79,7 +79,7 @@ function casting_render_nav_cart(?string $active = null): void
     } catch (Throwable $e) {
         $cart_count = 0;
     }
-    $href = casting_url('cart.php?continue=1');
+    $href = casting_url('cart.php');
     $title = $logged_in ? 'سفارش‌ها' : 'مشاهده خدمات و سفارش‌ها';
     ?>
       <a

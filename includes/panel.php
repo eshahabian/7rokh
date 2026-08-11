@@ -49,7 +49,7 @@ function casting_panel_nav_groups(): array
             'label' => 'حساب',
             'items' => [
                 ['key' => 'premium',      'label' => 'خرید اشتراک',          'href' => 'premium.php'],
-                ['key' => 'cart',         'label' => 'سفارش‌ها',             'href' => 'cart.php?continue=1'],
+                ['key' => 'cart',         'label' => 'سفارش‌ها',             'href' => 'cart.php'],
                 ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',      'href' => 'transactions.php'],
                 ['key' => 'cancel',       'label' => 'انصراف از عضویت',      'href' => 'cancel-membership.php'],
                 ['key' => 'rules',        'label' => 'قوانین',               'href' => 'rules.php'],
@@ -169,7 +169,7 @@ function casting_render_premium_account_links(string $wrapper_class = 'cta-row p
     ?>
     <div class="<?= casting_e($wrapper_class) ?>">
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('premium.php')) ?>">خرید اشتراک</a>
-      <a class="btn btn-ghost" href="<?= casting_e(casting_url('cart.php?continue=1')) ?>">سفارش‌ها</a>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('cart.php')) ?>">سفارش‌ها</a>
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('transactions.php')) ?>">تراکنش‌های مالی</a>
     </div>
     <?php

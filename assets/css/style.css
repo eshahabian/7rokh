@@ -6509,6 +6509,16 @@ html[data-theme="day"] .member-card-photo-score {
   font-size: 1.05rem;
 }
 
+.checkout-vat-block {
+  margin-top: 1rem;
+  border-inline-start: 3px solid var(--accent, #c45c26);
+  padding-inline-start: 0.85rem;
+}
+
+.cart-vat-hint {
+  margin: 0.65rem 0 0;
+}
+
 .checkout-desc {
   margin-top: 1rem;
 }

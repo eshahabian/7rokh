@@ -1325,12 +1325,12 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
         <div class="flash flash-error">نوع پروژه برای قیمت‌گذاری فراخوان مناسب نیست. نوع را روی تئاتر، فیلم کوتاه، سینمایی یا تلویزیونی تنظیم کنید.</div>
       <?php else : ?>
         <div class="bio-block checkout-call-price">
-          <p><strong>هزینه انتشار این فراخوان:</strong> <?= casting_e(casting_format_toman($price_base)) ?> + مالیات ۱۰٪ = <strong><?= casting_e(casting_format_toman($price_final)) ?></strong></p>
+          <p><strong>هزینه انتشار این فراخوان:</strong> <?= casting_e(casting_format_toman($price_base)) ?> <span class="meta">(بدون مالیات)</span></p>
           <?php if ($has_credit) : ?>
             <p class="meta flash-success" style="margin:0.35rem 0 0">پرداخت این فراخوان انجام شده — می‌توانید ارسال کنید.</p>
           <?php elseif ($checkout_href !== '') : ?>
-            <p class="meta" style="margin:0.35rem 0 0.65rem">قبل از ارسال، هزینه را پرداخت کنید (خلاصه سفارش → درگاه).</p>
-            <a class="btn btn-primary btn-sm" href="<?= casting_e($checkout_href) ?>">افزودن هزینه فراخوان به سبد</a>
+            <p class="meta" style="margin:0.35rem 0 0.65rem">به سفارش‌ها اضافه کنید؛ مالیات ۱۰٪ هنگام پرداخت اعمال می‌شود.</p>
+            <a class="btn btn-primary btn-sm" href="<?= casting_e($checkout_href) ?>">افزودن هزینه فراخوان به سفارش‌ها</a>
           <?php endif; ?>
         </div>
       <?php endif; ?>
