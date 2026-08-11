@@ -221,15 +221,23 @@ a:hover {
 
 .header-theme {
   margin: 0;
+  flex-shrink: 0;
 }
 
 .site-header-brand-cluster {
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   min-width: 0;
+}
+
+.site-header-brand-cluster .brand {
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
 }
 
 .nav-cart {
@@ -3342,14 +3350,16 @@ html[data-theme="day"] .filter-bar--sticky {
   }
 
   body:not(.has-panel-drawer) .site-header-brand-cluster {
-    justify-content: flex-end;
-    gap: 0.4rem;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.45rem;
     flex: 1 1 auto;
+    min-height: 2.65rem;
   }
 
   body:not(.has-panel-drawer) .site-header .brand {
     font-size: 1.45rem;
-    line-height: 1.2;
+    line-height: 1;
   }
 
   body:not(.has-panel-drawer) .site-header .header-theme .theme-toggle-btn {
@@ -3652,14 +3662,16 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
   }
 
   body.has-panel-drawer .site-header--panel .site-header-brand-cluster {
-    justify-content: flex-end;
-    gap: 0.4rem;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.45rem;
     flex: 1 1 auto;
+    min-height: 2.65rem;
   }
 
   body.has-panel-drawer .site-header--panel .brand {
     font-size: 1.45rem;
-    line-height: 1.2;
+    line-height: 1;
   }
 
   body.has-panel-drawer .site-header--panel .header-theme .theme-toggle-btn {

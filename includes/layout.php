@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=155">
+  <link rel="stylesheet" href="<?= $css ?>?v=156">
   <script>
     (function () {
       try {
@@ -167,8 +167,8 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
         <?php casting_render_site_nav_toggle(); ?>
       <?php endif; ?>
       <div class="site-header-brand-cluster">
-        <a class="brand" href="index.php"><?= casting_brand_html() ?></a>
         <?php casting_render_theme_toggle(); ?>
+        <a class="brand" href="index.php"><?= casting_brand_html() ?></a>
       </div>
     </div>
     <nav class="nav" id="site-main-nav" aria-label="منوی اصلی" data-site-nav>
