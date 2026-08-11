@@ -240,6 +240,15 @@ a:hover {
   align-items: center;
 }
 
+.site-header-quick {
+  display: none;
+  align-items: center;
+  gap: 0.2rem 0.45rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
 .nav-cart {
   display: inline-flex;
   align-items: center;
@@ -3344,9 +3353,34 @@ html[data-theme="day"] .filter-bar--sticky {
   body:not(.has-panel-drawer) .site-header-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
+    justify-content: flex-start;
+    gap: 0.55rem;
     width: 100%;
+  }
+
+  body:not(.has-panel-drawer) .site-header-quick {
+    display: flex;
+  }
+
+  body:not(.has-panel-drawer) .site-header-quick-link {
+    display: inline-flex;
+    align-items: center;
+    color: var(--ink-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 0.28rem 0.2rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  body:not(.has-panel-drawer) .site-header-quick-link:hover,
+  body:not(.has-panel-drawer) .site-header-quick-link.is-active {
+    color: var(--accent-strong);
+  }
+
+  body:not(.has-panel-drawer) .site-header-quick-link .brand-mark {
+    font-size: 1em;
   }
 
   body:not(.has-panel-drawer) .site-header-brand-cluster {
