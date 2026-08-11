@@ -181,8 +181,8 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
         <a href="logout.php">خروج</a>
       <?php else : ?>
         <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
-        <a href="register.php" class="<?= $active === 'register' ? 'is-active' : '' ?>">عضویت</a>
-        <a href="login.php" class="<?= $active === 'login' ? 'is-active' : '' ?>">ورود</a>
+        <a href="register.php" class="<?= $active === 'register' ? 'is-active' : '' ?>">ثبت نام</a>
+        <a href="login.php" class="<?= $active === 'login' ? 'is-active' : '' ?>">ورود به پنل کاربری</a>
         <a href="contact.php" class="<?= $active === 'contact' ? 'is-active' : '' ?>">تماس با ما</a>
         <a href="faq.php" class="<?= $active === 'faq' ? 'is-active' : '' ?>">سوالات متداول</a>
         <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>

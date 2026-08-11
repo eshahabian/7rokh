@@ -636,7 +636,7 @@ $pending_video = $pending_media['video'];
     </form>
 
     <p class="form-foot">
-      قبلاً ثبت‌نام کرده‌اید؟ <a href="login.php">ورود</a>
+      قبلاً ثبت‌نام کرده‌اید؟ <a href="login.php">ورود به پنل کاربری</a>
     </p>
   </section>
 </main>

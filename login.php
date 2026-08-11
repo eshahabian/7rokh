@@ -223,7 +223,7 @@ casting_render_flash();
     <?php endif; ?>
 
     <p class="form-foot">
-      حساب ندارید؟ <a href="register.php">عضویت</a>
+      حساب ندارید؟ <a href="register.php">ثبت نام</a>
     </p>
   </section>
 </main>
