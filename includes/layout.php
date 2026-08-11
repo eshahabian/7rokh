@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=154">
+  <link rel="stylesheet" href="<?= $css ?>?v=155">
   <script>
     (function () {
       try {
@@ -49,7 +49,7 @@ function casting_render_head(string $title, string $body_class = ''): void
 function casting_render_theme_toggle(): void
 {
     ?>
-      <div class="nav-theme theme-toggle" role="group" aria-label="انتخاب روز یا شب">
+      <div class="header-theme theme-toggle" role="group" aria-label="انتخاب روز یا شب">
         <button type="button" class="theme-toggle-btn" data-theme-pick="night">شب</button>
         <button type="button" class="theme-toggle-btn is-active" data-theme-pick="day">روز</button>
       </div>
@@ -166,7 +166,10 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <?php else : ?>
         <?php casting_render_site_nav_toggle(); ?>
       <?php endif; ?>
-      <a class="brand" href="index.php"><?= casting_brand_html() ?></a>
+      <div class="site-header-brand-cluster">
+        <a class="brand" href="index.php"><?= casting_brand_html() ?></a>
+        <?php casting_render_theme_toggle(); ?>
+      </div>
     </div>
     <nav class="nav" id="site-main-nav" aria-label="منوی اصلی" data-site-nav>
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external">سایت <?= casting_brand_html() ?></a>
@@ -188,7 +191,6 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
         <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>
       <?php endif; ?>
       <?php casting_render_nav_cart($active); ?>
-      <?php casting_render_theme_toggle(); ?>
     </nav>
   </header>
 <?php

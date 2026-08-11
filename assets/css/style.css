@@ -219,8 +219,17 @@ a:hover {
   flex-shrink: 0;
 }
 
-.nav-theme {
-  margin-inline-start: 0.15rem;
+.header-theme {
+  margin: 0;
+}
+
+.site-header-brand-cluster {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .nav-cart {
@@ -3332,9 +3341,21 @@ html[data-theme="day"] .filter-bar--sticky {
     width: 100%;
   }
 
+  body:not(.has-panel-drawer) .site-header-brand-cluster {
+    justify-content: flex-end;
+    gap: 0.4rem;
+    flex: 1 1 auto;
+  }
+
   body:not(.has-panel-drawer) .site-header .brand {
     font-size: 1.45rem;
     line-height: 1.2;
+  }
+
+  body:not(.has-panel-drawer) .site-header .header-theme .theme-toggle-btn {
+    min-height: 28px;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.72rem;
   }
 
   body:not(.has-panel-drawer) .site-nav-toggle {
@@ -3630,9 +3651,21 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
     width: 100%;
   }
 
+  body.has-panel-drawer .site-header--panel .site-header-brand-cluster {
+    justify-content: flex-end;
+    gap: 0.4rem;
+    flex: 1 1 auto;
+  }
+
   body.has-panel-drawer .site-header--panel .brand {
     font-size: 1.45rem;
     line-height: 1.2;
+  }
+
+  body.has-panel-drawer .site-header--panel .header-theme .theme-toggle-btn {
+    min-height: 28px;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.72rem;
   }
 
   body.has-panel-drawer .site-header--panel .nav {
