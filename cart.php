@@ -360,7 +360,7 @@ casting_render_flash();
           <div class="field">
             <label class="checkbox-row" for="cart-remember-credentials">
               <input id="cart-remember-credentials" type="checkbox" data-remember-credentials-check>
-              <span>ذخیره یوزر و پسورد</span>
+              <span>ذخیره نام کاربری و رمز عبور</span>
             </label>
           </div>
           <?php if ($auth_need_confirm) : ?>

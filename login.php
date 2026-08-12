@@ -208,7 +208,7 @@ casting_render_flash();
         <div class="field">
           <label class="checkbox-row" for="remember_credentials">
             <input id="remember_credentials" type="checkbox" data-remember-credentials-check>
-            <span>ذخیره یوزر و پسورد</span>
+            <span>ذخیره نام کاربری و رمز عبور</span>
           </label>
         </div>
 
