@@ -10,4 +10,4 @@ deployment:
     - /bin/cp $DEPLOYPATH/mu-plugin/casting-wp-admin-guard.php $MUPATH/casting-wp-admin-guard.php
     - /bin/cp $DEPLOYPATH/mu-plugin/casting-main-cart-nav.php $MUPATH/casting-main-cart-nav.php
     - /bin/cp $DEPLOYPATH/mu-plugin/casting-main-menu-sticky.php $MUPATH/casting-main-menu-sticky.php
-    - /bin/cp $DEPLOYPATH/mu-plugin/casting-main-enamad-fix.php $MUPATH/casting-main-enamad-fix.php
+    - /bin/rm -f $MUPATH/casting-main-enamad-fix.php

@@ -19,12 +19,9 @@ function casting_render_head(string $title, string $body_class = ''): void
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="referrer" content="origin">
   <title><?= $full_title ?></title>
   <?php casting_render_pwa_head(); ?>
   <link rel="preload" href="<?= casting_e(casting_asset('fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
-  <link rel="preconnect" href="https://trustseal.enamad.ir" crossorigin>
-  <link rel="dns-prefetch" href="https://trustseal.enamad.ir">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
@@ -219,84 +216,24 @@ function casting_render_flash(): void
 }
 
 /**
- * نشان اعتماد اینماد (فقط پورتال کستینگ)
- *
- * سرور اینماد به Referer حساس است؛ اگر درخواست خیلی زود (قبل از آماده‌شدن سند)
- * برود، بار اول لوگو خالی می‌ماند و بعد از رفرش درست می‌شود.
- * src رسمی در HTML می‌ماند (برای بررسی اینماد)؛ نمایش با لود تأخیری+تلاش مجدد پایدار می‌شود.
+ * نشان اعتماد اینماد — کد رسمی اینماد (بدون دستکاری URL)
  */
 function casting_render_enamad_seal(string $extra_class = ''): void
 {
     $class = trim('enamad-seal ' . $extra_class);
-    $enamad_id = '4302477';
-    $enamad_code = 's5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS';
-    $enamad_href = 'https://trustseal.enamad.ir/?id=' . $enamad_id . '&Code=' . $enamad_code;
-    $enamad_src = 'https://trustseal.enamad.ir/logo.aspx?id=' . $enamad_id . '&Code=' . $enamad_code;
     ?>
   <a
     class="<?= casting_e($class) ?>"
     referrerpolicy="origin"
     target="_blank"
-    href="<?= casting_e($enamad_href) ?>"
-    title="نماد اعتماد الکترونیکی"
-  >
-    <img
+    href="https://trustseal.enamad.ir/?id=4302477&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+  ><img
       referrerpolicy="origin"
-      src="<?= casting_e($enamad_src) ?>"
-      alt="نماد اعتماد الکترونیکی"
-      width="125"
-      height="136"
-      loading="eager"
-      decoding="async"
+      src="https://trustseal.enamad.ir/logo.aspx?id=4302477&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+      alt=""
       style="cursor:pointer"
-      code="<?= casting_e($enamad_code) ?>"
-      data-enamad-src="<?= casting_e($enamad_src) ?>"
-      data-enamad-seal
-    >
-  </a>
-  <script>
-    (function () {
-      var prev = document.currentScript && document.currentScript.previousElementSibling;
-      var img = prev ? prev.querySelector("[data-enamad-seal]") : document.querySelector("[data-enamad-seal]");
-      if (!img) return;
-      var base = img.getAttribute("data-enamad-src") || img.getAttribute("src") || "";
-      if (!base) return;
-      var tries = 0;
-      var maxTries = 6;
-      var timer = null;
-      var isBad = function () {
-        return !img.complete || !img.naturalWidth || img.naturalWidth < 20;
-      };
-      var apply = function (bust) {
-        img.setAttribute("referrerpolicy", "origin");
-        var url = base;
-        if (bust) {
-          url += (base.indexOf("?") >= 0 ? "&" : "?") + "_=" + Date.now() + "-" + tries;
-        }
-        img.src = url;
-      };
-      var schedule = function () {
-        if (tries >= maxTries) return;
-        tries += 1;
-        if (timer) window.clearTimeout(timer);
-        timer = window.setTimeout(function () {
-          apply(true);
-        }, 220 * tries);
-      };
-      img.addEventListener("error", schedule);
-      img.addEventListener("load", function () {
-        if (isBad()) schedule();
-      });
-      var boot = function () {
-        // بعد از load سند، Referer قطعی است؛ یک‌بار با کش‌باستر دوباره بکش
-        window.setTimeout(function () {
-          schedule();
-        }, 150);
-      };
-      if (document.readyState === "complete") boot();
-      else window.addEventListener("load", boot);
-    })();
-  </script>
+      code="s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+  ></a>
     <?php
 }
 
