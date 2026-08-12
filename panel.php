@@ -53,6 +53,11 @@ $can_gallery = casting_user_can_manage_gallery($user_id);
 $can_photos = casting_user_can_upload_portraits($user_id);
 $city = trim((string) ($profile['city'] ?? ''));
 $bio = trim((string) ($profile['bio'] ?? ''));
+if (!function_exists('casting_render_referral_profile_section')) {
+    require_once __DIR__ . '/includes/referral.php';
+}
+$referral_code = casting_get_referral_code($user_id);
+$active_duration = casting_user_active_duration_label($user_id);
 if (!function_exists('casting_dm_unread_peer_count')) {
     require_once __DIR__ . '/includes/chat.php';
 }
@@ -114,6 +119,10 @@ casting_render_flash();
         <?php if ($city !== '') : ?>
           <p class="ig-profile-place"><?= casting_e($city) ?></p>
         <?php endif; ?>
+        <?php if ($referral_code !== '') : ?>
+          <p class="ig-profile-referral">کد معرفی: <span class="membership-number referral-code" dir="ltr"><?= casting_e($referral_code) ?></span></p>
+          <p class="ig-profile-place meta">مدت فعال بودن: <?= casting_e($active_duration) ?></p>
+        <?php endif; ?>
         <?php if ($bio !== '') : ?>
           <p class="ig-profile-bio"><?= nl2br(casting_e($bio)) ?></p>
         <?php endif; ?>
@@ -138,6 +147,8 @@ casting_render_flash();
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('settings.php')) ?>">تنظیمات</a>
     </div>
   </header>
+
+  <?php casting_render_referral_profile_section($user_id); ?>
 
   <div class="ig-profile-tabs" role="tablist">
     <span class="ig-profile-tab is-active" role="tab" aria-selected="true">پست‌ها</span>

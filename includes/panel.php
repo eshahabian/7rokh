@@ -418,6 +418,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
     $desk_response_count = 0;
     $panel_premium_until = null;
     $panel_membership_number = '';
+    $panel_referral_code = '';
     $user = casting_current_user();
     if ($user) {
         $user_id = (int) $user->ID;
@@ -425,6 +426,10 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
             require_once __DIR__ . '/membership-number.php';
         }
         $panel_membership_number = casting_get_membership_number($user_id);
+        if (!function_exists('casting_get_referral_code')) {
+            require_once __DIR__ . '/referral.php';
+        }
+        $panel_referral_code = casting_get_referral_code($user_id);
         if (!function_exists('casting_dm_unread_peer_count')) {
             require_once __DIR__ . '/chat.php';
         }
@@ -572,6 +577,9 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
                 <span class="panel-sidebar-login">@<?= casting_e((string) $user->user_login) ?></span>
                 <?php if ($panel_membership_number !== '') : ?>
                   <span class="panel-sidebar-membership membership-number"><?= casting_e($panel_membership_number) ?></span>
+                <?php endif; ?>
+                <?php if ($panel_referral_code !== '') : ?>
+                  <span class="panel-sidebar-referral membership-number referral-code" title="کد معرفی">معرف: <?= casting_e($panel_referral_code) ?></span>
                 <?php endif; ?>
               </p>
             </div>

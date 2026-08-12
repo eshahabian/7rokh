@@ -9134,6 +9134,29 @@ body.media-protect-capture-flash::after {
   margin: 0.65rem 0 0;
 }
 
+.ig-profile-referral {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+}
+
+.ig-profile .referral-block {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--accent-strong) 12%);
+}
+
+html[data-theme="day"] .ig-profile .referral-block {
+  background: color-mix(in srgb, #fff 92%, var(--accent-strong) 8%);
+}
+
+.panel-sidebar-referral {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+}
+
 @media (max-width: 700px) {
   .referral-list-item {
     flex-direction: column;
