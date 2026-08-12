@@ -64,6 +64,7 @@ $accent = '';
 $accent_other = '';
 $apparent_age_range = '';
 $age_preview = '';
+$referral_code = '';
 $pending_media = casting_register_pending_media_get();
 $pending_portraits = $pending_media['portraits'];
 $pending_video = $pending_media['video'];
@@ -139,6 +140,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $accent = (string) ($_POST['accent'] ?? '');
         $accent_other = (string) ($_POST['accent_other'] ?? '');
         $apparent_age_range = (string) ($_POST['apparent_age_range'] ?? '');
+        $referral_code = (string) ($_POST['referral_code'] ?? '');
         $age_calc = $birthdate !== '' ? casting_age_from_birthdate($birthdate) : null;
         $age_preview = $age_calc !== null ? (string) $age_calc : '';
         $skip_talent_profile = !casting_activities_need_talent_fields($activities);
@@ -260,6 +262,17 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $otp_ok = !$otp_enabled || casting_otp_session_is_verified('register', $mobile_norm);
                 if ($error === '' && !$password_mismatch && $otp_ok) {
+                    if (!function_exists('casting_validate_referral_code_for_register')) {
+                        require_once __DIR__ . '/includes/referral.php';
+                    }
+                    $referral_check = casting_validate_referral_code_for_register($referral_code);
+                    if (!$referral_check['ok']) {
+                        $error = (string) ($referral_check['error'] ?? 'کد معرفی معتبر نیست.');
+                        $focus_field = 'referral_code';
+                        $invalid_fields = ['referral_code'];
+                    }
+                }
+                if ($error === '' && !$password_mismatch && $otp_ok) {
                     try {
                         $role = casting_infer_role_from_activities($activities);
                         $result = casting_register_user($name, $username, $email, $password, $role);
@@ -271,6 +284,9 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                         } else {
                             $user_id = (int) $result['user_id'];
+                            if (trim($referral_code) !== '' && function_exists('casting_apply_referral_code')) {
+                                casting_apply_referral_code($user_id, $referral_code);
+                            }
                             $profile_save = casting_save_registration_profile($user_id, [
                                 'birthdate'        => $birthdate,
                                 'gender'           => $gender,
@@ -623,6 +639,12 @@ $pending_video = $pending_media['video'];
         </div>
         <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
       </fieldset>
+
+      <div class="field<?= $reg_invalid('referral_code') ?>">
+        <label for="referral_code">کد معرفی (اختیاری)</label>
+        <input id="referral_code" name="referral_code" type="text" maxlength="32" autocomplete="off" dir="ltr" value="<?= casting_e($referral_code) ?>" placeholder="مثلاً AB12CD34">
+        <p class="field-hint">اگر کسی شما را معرفی کرده، کد معرفی‌اش را اینجا وارد کنید.</p>
+      </div>
 
       <div class="field rules-consent-field<?= $reg_invalid('rules_accepted') ?>" data-rules-consent>
         <label class="checkbox-row">

@@ -19,12 +19,20 @@ function casting_opportunity_applications_table(): string
     return $wpdb->prefix . 'casting_opportunity_applications';
 }
 
+function casting_opportunity_saved_table(): string
+{
+    global $wpdb;
+
+    return $wpdb->prefix . 'casting_saved_opportunities';
+}
+
 function casting_opportunities_install(): void
 {
     global $wpdb;
     $charset = $wpdb->get_charset_collate();
     $ops = casting_opportunities_table();
     $apps = casting_opportunity_applications_table();
+    $saved = casting_opportunity_saved_table();
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
     dbDelta("CREATE TABLE IF NOT EXISTS {$ops} (
@@ -61,13 +69,24 @@ function casting_opportunities_install(): void
         KEY status (status)
     ) {$charset};");
 
-    update_option('casting_opportunities_db_version', '1');
+    dbDelta("CREATE TABLE IF NOT EXISTS {$saved} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        user_id BIGINT UNSIGNED NOT NULL,
+        opportunity_id BIGINT UNSIGNED NOT NULL,
+        created_at DATETIME NOT NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY user_opp (user_id, opportunity_id),
+        KEY opportunity_id (opportunity_id),
+        KEY user_created (user_id, created_at)
+    ) {$charset};");
+
+    update_option('casting_opportunities_db_version', '2');
 }
 
 function casting_opportunities_ensure_tables(): void
 {
     $ver = (string) get_option('casting_opportunities_db_version', '');
-    if ($ver !== '1') {
+    if ($ver !== '2') {
         casting_opportunities_install();
     }
     casting_opportunities_purge_emad_once();
@@ -871,12 +890,200 @@ function casting_opportunity_excerpt(string $message, int $max = 140): string
 }
 
 /**
+ * برچسب تازگی برای اسکن سریع فید
+ */
+function casting_opportunity_freshness_label(string $mysql): string
+{
+    $mysql = trim($mysql);
+    if ($mysql === '') {
+        return '';
+    }
+    $ts = strtotime($mysql);
+    if ($ts === false) {
+        return '';
+    }
+    $days = (int) floor((time() - $ts) / DAY_IN_SECONDS);
+    if ($days <= 0) {
+        return 'امروز';
+    }
+    if ($days === 1) {
+        return 'دیروز';
+    }
+    if ($days < 7) {
+        return $days . ' روز پیش';
+    }
+    if ($days < 30) {
+        $weeks = (int) floor($days / 7);
+
+        return $weeks . ' هفته پیش';
+    }
+
+    return casting_opportunity_format_date($mysql);
+}
+
+/**
+ * @param list<array<string, mixed>> $rows
+ * @return list<array<string, mixed>>
+ */
+function casting_opportunities_sort_list(array $rows, string $sort, int $user_id = 0): array
+{
+    $sort = sanitize_key($sort);
+    if ($sort !== 'relevant') {
+        usort($rows, static function (array $a, array $b): int {
+            return ((int) ($b['id'] ?? 0)) <=> ((int) ($a['id'] ?? 0));
+        });
+
+        return $rows;
+    }
+
+    $hay = '';
+    if ($user_id > 0 && function_exists('casting_get_profile')) {
+        $profile = casting_get_profile($user_id);
+        $bits = [
+            (string) ($profile['primary_activity'] ?? ''),
+            (string) ($profile['specialty'] ?? ''),
+            (string) ($profile['city'] ?? ''),
+            (string) ($profile['category'] ?? ''),
+        ];
+        if (!empty($profile['activities']) && is_array($profile['activities'])) {
+            foreach ($profile['activities'] as $act) {
+                $bits[] = (string) $act;
+            }
+        }
+        if (function_exists('casting_user_primary_activity_label')) {
+            $bits[] = casting_user_primary_activity_label($user_id);
+        }
+        $hay = mb_strtolower(implode(' ', array_filter(array_map('strval', $bits))), 'UTF-8');
+    }
+
+    $score = static function (array $row) use ($hay): int {
+        $s = 0;
+        $blob = mb_strtolower(trim(
+            (string) ($row['title'] ?? '') . ' ' .
+            (string) ($row['project_type'] ?? '') . ' ' .
+            (string) ($row['role_title'] ?? '') . ' ' .
+            (string) ($row['location'] ?? '')
+        ), 'UTF-8');
+        if ($hay === '' || $blob === '') {
+            return (int) ($row['id'] ?? 0);
+        }
+        foreach (preg_split('/\s+/u', $hay) ?: [] as $token) {
+            $token = trim((string) $token);
+            if (function_exists('mb_strlen') ? mb_strlen($token, 'UTF-8') < 2 : strlen($token) < 2) {
+                continue;
+            }
+            if (str_contains($blob, $token)) {
+                $s += 10;
+            }
+        }
+        $type = casting_opportunity_type_key((string) ($row['project_type'] ?? ''));
+        if ($type !== '' && str_contains($hay, $type)) {
+            $s += 8;
+        }
+
+        return ($s * 100000) + (int) ($row['id'] ?? 0);
+    };
+
+    usort($rows, static function (array $a, array $b) use ($score): int {
+        return $score($b) <=> $score($a);
+    });
+
+    return $rows;
+}
+
+function casting_opportunity_is_saved(int $user_id, int $opportunity_id): bool
+{
+    if ($user_id <= 0 || $opportunity_id <= 0) {
+        return false;
+    }
+    global $wpdb;
+    casting_opportunities_ensure_tables();
+    $table = casting_opportunity_saved_table();
+    $id = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM {$table} WHERE user_id = %d AND opportunity_id = %d LIMIT 1",
+        $user_id,
+        $opportunity_id
+    ));
+
+    return $id > 0;
+}
+
+/**
+ * @return array{ok:bool,error:string,saved:bool}
+ */
+function casting_opportunity_toggle_saved(int $user_id, int $opportunity_id): array
+{
+    if ($user_id <= 0 || $opportunity_id <= 0) {
+        return ['ok' => false, 'error' => 'درخواست نامعتبر است.', 'saved' => false];
+    }
+    $opp = casting_opportunity_get($opportunity_id);
+    if (!$opp) {
+        return ['ok' => false, 'error' => 'فراخوان پیدا نشد.', 'saved' => false];
+    }
+    global $wpdb;
+    casting_opportunities_ensure_tables();
+    $table = casting_opportunity_saved_table();
+    if (casting_opportunity_is_saved($user_id, $opportunity_id)) {
+        $wpdb->delete($table, ['user_id' => $user_id, 'opportunity_id' => $opportunity_id], ['%d', '%d']);
+
+        return ['ok' => true, 'error' => '', 'saved' => false];
+    }
+    $ok = $wpdb->insert(
+        $table,
+        [
+            'user_id'        => $user_id,
+            'opportunity_id' => $opportunity_id,
+            'created_at'     => current_time('mysql'),
+        ],
+        ['%d', '%d', '%s']
+    );
+    if (!$ok) {
+        return ['ok' => false, 'error' => 'ذخیره انجام نشد.', 'saved' => false];
+    }
+
+    return ['ok' => true, 'error' => '', 'saved' => true];
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function casting_opportunity_list_saved(int $user_id, int $limit = 40): array
+{
+    if ($user_id <= 0) {
+        return [];
+    }
+    global $wpdb;
+    casting_opportunities_ensure_tables();
+    $saved = casting_opportunity_saved_table();
+    $ops = casting_opportunities_table();
+    $limit = max(1, min(100, $limit));
+    $rows = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT o.* FROM {$saved} s
+             INNER JOIN {$ops} o ON o.id = s.opportunity_id
+             WHERE s.user_id = %d
+             ORDER BY s.id DESC
+             LIMIT %d",
+            $user_id,
+            $limit
+        ),
+        ARRAY_A
+    );
+
+    return is_array($rows) ? $rows : [];
+}
+
+/**
  * @param array<string, mixed> $op
  * @return list<array{label:string,kind:string}>
  */
 function casting_opportunity_card_chips(array $op): array
 {
     $chips = [];
+    $fresh = casting_opportunity_freshness_label((string) ($op['created_at'] ?? ''));
+    if ($fresh !== '') {
+        $chips[] = ['label' => $fresh, 'kind' => 'fresh'];
+    }
     $type_key = casting_opportunity_type_key((string) ($op['project_type'] ?? ''));
     $type_labels = casting_opportunity_filter_type_labels();
     if ($type_key !== '' && isset($type_labels[$type_key])) {
@@ -892,17 +1099,13 @@ function casting_opportunity_card_chips(array $op): array
     if ($location !== '') {
         $chips[] = ['label' => $location, 'kind' => 'place'];
     }
-    $date = casting_opportunity_format_date((string) ($op['created_at'] ?? ''));
-    if ($date !== '') {
-        $chips[] = ['label' => $date, 'kind' => 'date'];
-    }
 
     return $chips;
 }
 
 /**
  * @param array<string, mixed> $op
- * @param array{compact?:bool,expanded?:bool,already?:bool,status_label?:string,is_own?:bool,can_admin_delete?:bool,show_message?:bool} $ctx
+ * @param array{compact?:bool,expanded?:bool,already?:bool,status_label?:string,is_own?:bool,can_admin_delete?:bool,show_message?:bool,saved?:bool,show_save?:bool,list_query?:array<string,scalar>} $ctx
  */
 function casting_render_opportunity_card(array $op, array $ctx = []): void
 {
@@ -913,10 +1116,18 @@ function casting_render_opportunity_card(array $op, array $ctx = []): void
     $is_own = !empty($ctx['is_own']);
     $can_admin_delete = !empty($ctx['can_admin_delete']);
     $show_message = array_key_exists('show_message', $ctx) ? !empty($ctx['show_message']) : !$compact;
+    $saved = !empty($ctx['saved']);
+    $show_save = array_key_exists('show_save', $ctx) ? !empty($ctx['show_save']) : !$compact && !$is_own;
     $status_label = trim((string) ($ctx['status_label'] ?? ''));
+    $list_query = is_array($ctx['list_query'] ?? null) ? $ctx['list_query'] : ['tab' => 'open'];
     $director_id = (int) ($op['director_id'] ?? 0);
     $director = $director_id > 0 ? get_user_by('id', $director_id) : null;
     $chips = casting_opportunity_card_chips($op);
+    if ($status_label !== '') {
+        array_unshift($chips, ['label' => $status_label, 'kind' => 'status']);
+    } elseif ($already) {
+        array_unshift($chips, ['label' => 'اپلای شده', 'kind' => 'status']);
+    }
     $type_key = casting_opportunity_type_key((string) ($op['project_type'] ?? ''));
     $message = trim((string) ($op['message'] ?? ''));
     $excerpt = casting_opportunity_excerpt($message, $compact ? 96 : 160);
@@ -930,6 +1141,10 @@ function casting_render_opportunity_card(array $op, array $ctx = []): void
     if ($already) {
         $classes .= ' opp-card--applied';
     }
+    if ($saved) {
+        $classes .= ' opp-card--saved';
+    }
+    $return_qs = http_build_query(array_merge($list_query, ['id' => $oid]));
     ?>
   <article class="<?= casting_e($classes) ?>" id="opp-<?= $oid ?>"<?= $type_key !== '' ? ' data-opp-type="' . casting_e($type_key) . '"' : '' ?>>
     <div class="opp-card-main home-opportunity-body">
@@ -959,15 +1174,19 @@ function casting_render_opportunity_card(array $op, array $ctx = []): void
           <p class="opp-card-excerpt"><?= casting_e($excerpt) ?></p>
         <?php endif; ?>
       <?php endif; ?>
-      <?php if ($status_label !== '') : ?>
-        <p class="opp-card-status home-opportunity-status"><?= casting_e($status_label) ?></p>
-      <?php elseif ($already) : ?>
-        <p class="opp-card-status home-opportunity-status">اپلای کرده‌اید</p>
-      <?php elseif (!$compact && !$is_own) : ?>
+      <?php if ($status_label === '' && !$already && !$compact && !$is_own) : ?>
         <p class="opp-card-status home-opportunity-status">باز برای اپلای</p>
       <?php endif; ?>
     </div>
     <div class="opp-card-actions home-opportunity-actions">
+      <?php if ($show_save) : ?>
+        <form class="opp-save-form" method="post" action="opportunities.php?<?= casting_e($return_qs) ?>#opp-<?= $oid ?>">
+          <?php wp_nonce_field('casting_opportunity_apply'); ?>
+          <input type="hidden" name="opp_action" value="toggle_save">
+          <input type="hidden" name="opportunity_id" value="<?= $oid ?>">
+          <button class="btn btn-ghost btn-sm" type="submit"><?= $saved ? 'حذف ذخیره' : 'ذخیره' ?></button>
+        </form>
+      <?php endif; ?>
       <?php if ($can_admin_delete) : ?>
         <form method="post" action="opportunities.php?tab=open" onsubmit="return confirm('این فراخوان برای همیشه حذف شود؟');">
           <?php wp_nonce_field('casting_opportunity_admin'); ?>
@@ -985,7 +1204,7 @@ function casting_render_opportunity_card(array $op, array $ctx = []): void
       <?php elseif ($already) : ?>
         <a class="btn btn-ghost btn-sm" href="opportunities.php?tab=mine">مشاهده اپلای</a>
       <?php elseif ($expanded) : ?>
-        <form class="form" method="post" action="opportunities.php?tab=open&amp;id=<?= $oid ?>#opp-<?= $oid ?>">
+        <form class="form" method="post" action="opportunities.php?<?= casting_e($return_qs) ?>#opp-<?= $oid ?>">
           <?php wp_nonce_field('casting_opportunity_apply'); ?>
           <input type="hidden" name="opp_action" value="apply">
           <input type="hidden" name="opportunity_id" value="<?= $oid ?>">
@@ -995,11 +1214,11 @@ function casting_render_opportunity_card(array $op, array $ctx = []): void
           </div>
           <div class="cta-row">
             <button class="btn btn-primary btn-sm" type="submit">ارسال اپلای</button>
-            <a class="btn btn-ghost btn-sm" href="opportunities.php?tab=open">انصراف</a>
+            <a class="btn btn-ghost btn-sm" href="opportunities.php?<?= casting_e(http_build_query($list_query)) ?>">انصراف</a>
           </div>
         </form>
       <?php else : ?>
-        <a class="btn btn-primary btn-sm" href="opportunities.php?tab=open&amp;id=<?= $oid ?>#opp-<?= $oid ?>">اپلای</a>
+        <a class="btn btn-primary btn-sm" href="opportunities.php?<?= casting_e($return_qs) ?>#opp-<?= $oid ?>">اپلای</a>
       <?php endif; ?>
     </div>
   </article>
@@ -1062,12 +1281,13 @@ function casting_render_opportunity_application_card(array $app, array $status_l
     <?php
 }
 
-function casting_render_opportunity_type_chips(string $active_type): void
+function casting_render_opportunity_type_chips(string $active_type, string $sort = 'newest'): void
 {
     $active_type = sanitize_key($active_type);
     if ($active_type === '' || !isset(casting_opportunity_filter_type_labels()[$active_type])) {
         $active_type = 'all';
     }
+    $sort = sanitize_key($sort) === 'relevant' ? 'relevant' : 'newest';
     $items = ['all' => 'همه'] + casting_opportunity_filter_type_labels();
     ?>
   <nav class="opp-filter-chips search-quick-chips" aria-label="فیلتر نوع فراخوان">
@@ -1076,11 +1296,45 @@ function casting_render_opportunity_type_chips(string $active_type): void
         if ($key !== 'all') {
             $query['type'] = $key;
         }
+        if ($sort !== 'newest') {
+            $query['sort'] = $sort;
+        }
         $href = 'opportunities.php?' . http_build_query($query);
         $is_active = $active_type === $key;
         ?>
       <a class="search-quick-chip<?= $is_active ? ' is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= $is_active ? ' aria-current="page"' : '' ?>><?= casting_e($label) ?></a>
     <?php endforeach; ?>
   </nav>
+    <?php
+}
+
+function casting_render_opportunity_sort_chips(string $active_sort, string $type_filter = 'all'): void
+{
+    $active_sort = sanitize_key($active_sort) === 'relevant' ? 'relevant' : 'newest';
+    $type_filter = sanitize_key($type_filter);
+    if ($type_filter === '' || !isset(casting_opportunity_filter_type_labels()[$type_filter])) {
+        $type_filter = 'all';
+    }
+    $items = [
+        'newest'   => 'جدیدترین',
+        'relevant' => 'مرتبط',
+    ];
+    ?>
+  <div class="opp-sort" aria-label="مرتب‌سازی">
+    <span class="opp-sort-label">مرتب‌سازی:</span>
+    <?php foreach ($items as $key => $label) :
+        $query = ['tab' => 'open'];
+        if ($type_filter !== 'all') {
+            $query['type'] = $type_filter;
+        }
+        if ($key !== 'newest') {
+            $query['sort'] = $key;
+        }
+        $href = 'opportunities.php?' . http_build_query($query);
+        $is_active = $active_sort === $key;
+        ?>
+      <a class="search-quick-chip<?= $is_active ? ' is-active' : '' ?>" href="<?= casting_e($href) ?>"<?= $is_active ? ' aria-current="page"' : '' ?>><?= casting_e($label) ?></a>
+    <?php endforeach; ?>
+  </div>
     <?php
 }

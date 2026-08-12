@@ -56,6 +56,11 @@ function casting_register_user(string $name, string $username, string $email, st
     }
     casting_assign_membership_number((int) $user_id, $role);
 
+    if (!function_exists('casting_assign_referral_code')) {
+        require_once __DIR__ . '/referral.php';
+    }
+    casting_assign_referral_code((int) $user_id);
+
     if (!function_exists('casting_follow_default_admins')) {
         require_once __DIR__ . '/follows.php';
     }

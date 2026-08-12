@@ -715,8 +715,89 @@ function casting_render_panel_end(): void
         require_once __DIR__ . '/media-engagement.php';
     }
     casting_render_post_lightbox_shell();
+    casting_render_panel_bottom_nav((string) ($GLOBALS['casting_panel_active'] ?? ''));
     echo '</div></main>';
     casting_render_footer();
+}
+
+/**
+ * تب‌های پایین موبایل (الهام Backstage)
+ *
+ * @return list<array{key:string,label:string,href:string,badge?:int}>
+ */
+function casting_panel_bottom_nav_items(): array
+{
+    $user = casting_current_user();
+    $unread = 0;
+    if ($user) {
+        if (!function_exists('casting_dm_unread_peer_count')) {
+            require_once __DIR__ . '/chat.php';
+        }
+        if (function_exists('casting_dm_unread_peer_count')) {
+            $unread = (int) casting_dm_unread_peer_count((int) $user->ID);
+        }
+    }
+
+    return [
+        ['key' => 'opportunities', 'label' => 'فرصت‌ها', 'href' => 'opportunities.php'],
+        ['key' => 'home', 'label' => 'خانه', 'href' => 'home.php'],
+        ['key' => 'search', 'label' => 'جستجو', 'href' => 'search-users.php'],
+        ['key' => 'messages', 'label' => 'پیام', 'href' => 'chat.php', 'badge' => $unread],
+        ['key' => 'panel', 'label' => 'پروفایل', 'href' => 'panel.php'],
+    ];
+}
+
+function casting_panel_bottom_nav_active_key(string $active): string
+{
+    $map = [
+        'home'         => 'home',
+        'opportunities'=> 'opportunities',
+        'search'       => 'search',
+        'newest'       => 'search',
+        'messages'     => 'messages',
+        'panel'        => 'panel',
+        'my-profile'   => 'panel',
+        'edit-profile' => 'panel',
+        'photo'        => 'panel',
+        'gallery'      => 'panel',
+        'settings'     => 'panel',
+    ];
+
+    return $map[$active] ?? '';
+}
+
+function casting_render_panel_bottom_nav(string $active): void
+{
+    $user = casting_current_user();
+    if (!$user || casting_get_user_role((int) $user->ID) === '') {
+        return;
+    }
+    $items = casting_panel_bottom_nav_items();
+    $current = casting_panel_bottom_nav_active_key($active);
+    ?>
+  <nav class="panel-bottom-nav" aria-label="میانبرهای اصلی پنل">
+    <?php foreach ($items as $item) :
+        $key = (string) ($item['key'] ?? '');
+        $href = (string) ($item['href'] ?? '');
+        if ($href !== '' && !str_starts_with($href, 'http')) {
+            $href = casting_url($href);
+        }
+        $badge = (int) ($item['badge'] ?? 0);
+        $is_active = $current !== '' && $current === $key;
+        ?>
+      <a
+        class="panel-bottom-nav-link<?= $is_active ? ' is-active' : '' ?>"
+        href="<?= casting_e($href) ?>"
+        <?= $is_active ? 'aria-current="page"' : '' ?>
+      >
+        <span class="panel-bottom-nav-label"><?= casting_e((string) ($item['label'] ?? '')) ?></span>
+        <?php if ($badge > 0) : ?>
+          <span class="panel-bottom-nav-badge" aria-label="<?= casting_e((string) $badge) ?> پیام جدید"><?= $badge > 9 ? '۹+' : (string) $badge ?></span>
+        <?php endif; ?>
+      </a>
+    <?php endforeach; ?>
+  </nav>
+    <?php
 }
 
 /**

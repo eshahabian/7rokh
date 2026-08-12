@@ -11,14 +11,27 @@ $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 casting_opportunities_ensure_tables();
 
-$tab = ((string) ($_GET['tab'] ?? 'open')) === 'mine' ? 'mine' : 'open';
+$tab_raw = sanitize_key((string) ($_GET['tab'] ?? 'open'));
+$tab = in_array($tab_raw, ['open', 'mine', 'saved'], true) ? $tab_raw : 'open';
 $type_filter = sanitize_key((string) ($_GET['type'] ?? 'all'));
 if ($type_filter !== 'all' && !isset(casting_opportunity_filter_type_labels()[$type_filter])) {
     $type_filter = 'all';
 }
+$sort = sanitize_key((string) ($_GET['sort'] ?? 'newest'));
+if ($sort !== 'relevant') {
+    $sort = 'newest';
+}
 $error = '';
 $open_id = max(0, (int) ($_GET['id'] ?? 0));
 $can_admin_delete = casting_user_can_admin_delete_opportunity($user_id);
+
+$list_query = ['tab' => 'open'];
+if ($type_filter !== 'all') {
+    $list_query['type'] = $type_filter;
+}
+if ($sort !== 'newest') {
+    $list_query['sort'] = $sort;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = sanitize_key((string) ($_POST['opp_action'] ?? 'apply'));
@@ -47,6 +60,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 casting_set_flash('success', 'اپلای لغو شد.');
                 casting_redirect('opportunities.php?tab=mine');
             }
+        } elseif ($action === 'toggle_save') {
+            $result = casting_opportunity_toggle_saved($user_id, $oid);
+            if (!$result['ok']) {
+                $error = $result['error'];
+                $open_id = $oid;
+            } else {
+                casting_set_flash('success', !empty($result['saved']) ? 'فراخوان ذخیره شد.' : 'از ذخیره‌شده‌ها حذف شد.');
+                $back_tab = sanitize_key((string) ($_GET['tab'] ?? 'open'));
+                if (!in_array($back_tab, ['open', 'saved'], true)) {
+                    $back_tab = 'open';
+                }
+                $redir = array_merge($list_query, ['tab' => $back_tab, 'id' => $oid]);
+                casting_redirect('opportunities.php?' . http_build_query($redir) . '#opp-' . $oid);
+            }
         } else {
             $result = casting_opportunity_apply($user_id, $oid, (string) ($_POST['note'] ?? ''));
             if (!$result['ok']) {
@@ -60,9 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$open_list_all = casting_opportunities_list_open(40);
+$open_list_all = casting_opportunities_list_open(60);
 $open_list = casting_opportunities_filter_by_type($open_list_all, $type_filter);
+$open_list = casting_opportunities_sort_list($open_list, $sort, $user_id);
 $my_apps = casting_opportunity_list_my_applications($user_id, 40);
+$saved_list = casting_opportunity_list_saved($user_id, 40);
 $app_labels = casting_opportunity_application_status_labels();
 
 casting_render_panel_start('فرصت‌ها', 'opportunities');
@@ -73,10 +102,11 @@ casting_render_flash();
 ?>
 <section class="dash-card panel-wide opp-board">
   <?php casting_render_panel_heading('فرصت‌ها و فراخوان‌های باز'); ?>
-  <p class="lede opp-board-lede">عنوان، نوع پروژه، نقش و مکان را یک‌نگاه ببینید؛ بعد اپلای کنید.</p>
+  <p class="lede opp-board-lede">عنوان، نوع، شهر و تازگی را یک‌نگاه ببینید؛ ذخیره کنید یا اپلای بفرستید.</p>
 
   <div class="admin-tabs" role="tablist">
     <a class="admin-tab<?= $tab === 'open' ? ' is-active' : '' ?>" href="opportunities.php?tab=open">فراخوان‌های باز (<?= count($open_list_all) ?>)</a>
+    <a class="admin-tab<?= $tab === 'saved' ? ' is-active' : '' ?>" href="opportunities.php?tab=saved">ذخیره‌شده (<?= count($saved_list) ?>)</a>
     <a class="admin-tab<?= $tab === 'mine' ? ' is-active' : '' ?>" href="opportunities.php?tab=mine">اپلای‌های من (<?= count($my_apps) ?>)</a>
   </div>
 
@@ -97,8 +127,46 @@ casting_render_flash();
       </div>
     <?php endif; ?>
 
+  <?php elseif ($tab === 'saved') : ?>
+    <?php if ($saved_list === []) : ?>
+      <div class="empty-state empty-state--search" role="status">
+        <h2 class="empty-state-title">فراخوان ذخیره‌شده‌ای نیست</h2>
+        <p class="empty-state-text">روی کارت فراخوان دکمه «ذخیره» را بزنید تا بعداً سریع برگردید.</p>
+        <div class="cta-row empty-state-actions">
+          <a class="btn btn-primary" href="opportunities.php?tab=open">مشاهده فراخوان‌ها</a>
+        </div>
+      </div>
+    <?php else : ?>
+      <div class="home-opportunity-list opp-card-list">
+        <?php foreach ($saved_list as $op) :
+            $oid = (int) ($op['id'] ?? 0);
+            $mine = casting_opportunity_get_application($oid, $user_id);
+            $already = $mine && (string) ($mine['status'] ?? '') !== 'withdrawn';
+            $status_label = '';
+            if ($already) {
+                $status_label = (string) ($app_labels[(string) ($mine['status'] ?? 'pending')] ?? 'ثبت‌شده');
+            }
+            casting_render_opportunity_card($op, [
+                'expanded'         => $open_id === $oid,
+                'already'          => $already,
+                'is_own'           => (int) ($op['director_id'] ?? 0) === $user_id,
+                'can_admin_delete' => $can_admin_delete,
+                'status_label'     => $status_label,
+                'show_message'     => true,
+                'saved'            => true,
+                'show_save'        => true,
+                'list_query'       => ['tab' => 'saved'],
+            ]);
+        endforeach; ?>
+      </div>
+    <?php endif; ?>
+
   <?php else : ?>
-    <?php casting_render_opportunity_type_chips($type_filter); ?>
+    <?php casting_render_opportunity_type_chips($type_filter, $sort); ?>
+    <div class="opp-toolbar">
+      <p class="meta member-search-count" style="margin:0"><?= count($open_list) ?> فراخوان<?= $type_filter !== 'all' ? ' در این دسته' : '' ?></p>
+      <?php casting_render_opportunity_sort_chips($sort, $type_filter); ?>
+    </div>
 
     <?php if ($open_list_all === []) : ?>
       <div class="empty-state empty-state--search" role="status">
@@ -114,7 +182,6 @@ casting_render_flash();
         </div>
       </div>
     <?php else : ?>
-      <p class="meta member-search-count"><?= count($open_list) ?> فراخوان<?= $type_filter !== 'all' ? ' در این دسته' : '' ?></p>
       <div class="home-opportunity-list opp-card-list">
         <?php foreach ($open_list as $op) :
             $oid = (int) ($op['id'] ?? 0);
@@ -122,7 +189,7 @@ casting_render_flash();
             $already = $mine && (string) ($mine['status'] ?? '') !== 'withdrawn';
             $status_label = '';
             if ($already) {
-                $status_label = 'اپلای شما: ' . (string) ($app_labels[(string) ($mine['status'] ?? 'pending')] ?? 'ثبت‌شده');
+                $status_label = (string) ($app_labels[(string) ($mine['status'] ?? 'pending')] ?? 'ثبت‌شده');
             }
             casting_render_opportunity_card($op, [
                 'expanded'         => $open_id === $oid,
@@ -131,6 +198,9 @@ casting_render_flash();
                 'can_admin_delete' => $can_admin_delete,
                 'status_label'     => $status_label,
                 'show_message'     => true,
+                'saved'            => casting_opportunity_is_saved($user_id, $oid),
+                'show_save'        => true,
+                'list_query'       => $list_query,
             ]);
         endforeach; ?>
       </div>

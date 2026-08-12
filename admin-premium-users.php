@@ -4,11 +4,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/premium.php';
 require_once __DIR__ . '/includes/admin-access.php';
+require_once __DIR__ . '/includes/referral.php';
 require_once __DIR__ . '/includes/panel.php';
 
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 casting_require_admin_permission('view_premium_users');
+casting_referral_maybe_backfill();
 
 $error = '';
 $search = trim((string) ($_GET['q'] ?? ''));
@@ -159,6 +161,29 @@ casting_render_flash();
         <li><strong>ایمیل:</strong> <?= casting_e($target->user_email) ?></li>
         <li><strong>نقش:</strong> <?= casting_e(casting_user_profile_chip_label($target_id, $user_id)) ?></li>
         <li><strong>وضعیت حساب:</strong> <?= $suspended ? 'غیرفعال (تعلیق)' : 'فعال' ?></li>
+        <li><strong>مدت فعال بودن:</strong> <?= casting_e(casting_user_active_duration_label($target_id)) ?></li>
+        <li><strong>آخرین فعالیت:</strong> <?= casting_e(casting_user_last_active_label($target_id)) ?></li>
+        <?php
+        $target_referral_code = casting_get_referral_code($target_id);
+        $target_referred_by = casting_user_referred_by($target_id);
+        $target_referral_count = casting_referred_users_count($target_id);
+        ?>
+        <?php if ($target_referral_code !== '') : ?>
+          <li><strong>کد معرفی:</strong> <span class="membership-number referral-code" dir="ltr"><?= casting_e($target_referral_code) ?></span></li>
+        <?php endif; ?>
+        <?php if ($target_referred_by > 0) : ?>
+          <?php $ref_by_user = get_user_by('id', $target_referred_by); ?>
+          <li>
+            <strong>معرف:</strong>
+            <?php if ($ref_by_user) : ?>
+              <a href="<?= casting_e($member_query($target_referred_by)) ?>"><?= casting_e((string) $ref_by_user->display_name) ?></a>
+              <span class="meta">(<?= casting_e((string) $ref_by_user->user_login) ?>)</span>
+            <?php else : ?>
+              #<?= (int) $target_referred_by ?>
+            <?php endif; ?>
+          </li>
+        <?php endif; ?>
+        <li><strong>ثبت‌نام با کد این کاربر:</strong> <?= (int) $target_referral_count ?> نفر</li>
         <?php if ($suspended && $suspend_reason !== '') : ?>
           <li><strong>دلیل تعلیق:</strong> <?= casting_e($suspend_reason) ?></li>
         <?php endif; ?>
@@ -178,6 +203,29 @@ casting_render_flash();
           <?php endif; ?>
         </li>
       </ul>
+
+      <?php
+      $admin_referrals = casting_list_referred_users($target_id);
+      if ($admin_referrals !== []) :
+          ?>
+        <div class="admin-member-action-box">
+          <h3 class="panel-section-title">افراد معرفی‌شده</h3>
+          <ul class="panel-list referral-list">
+            <?php foreach ($admin_referrals as $ref_row) : ?>
+              <li class="panel-list-item referral-list-item">
+                <div class="referral-list-main">
+                  <a href="<?= casting_e($member_query((int) $ref_row['id'])) ?>"><strong><?= casting_e($ref_row['name']) ?></strong></a>
+                  <span class="meta"><?= casting_e(casting_role_label($ref_row['role'])) ?> · <?= casting_e($ref_row['login']) ?></span>
+                </div>
+                <div class="referral-list-meta meta">
+                  <span>فعال: <?= casting_e($ref_row['active_duration']) ?></span>
+                  <span>آخرین فعالیت: <?= casting_e($ref_row['last_active']) ?></span>
+                </div>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
 
       <?php if (!$target_is_super) : ?>
         <div class="admin-member-actions">
@@ -280,6 +328,7 @@ casting_render_flash();
             <th>کاربر</th>
             <th>نقش</th>
             <th>وضعیت</th>
+            <th>مدت فعال</th>
             <th>اشتراک ویژه</th>
             <th></th>
           </tr>
@@ -294,6 +343,12 @@ casting_render_flash();
                   <?php if (($row['membership_number'] ?? '') !== '') : ?>
                     <span class="meta membership-number"><?= casting_e((string) $row['membership_number']) ?></span>
                   <?php endif; ?>
+                  <?php
+                  $row_ref = casting_get_referral_code((int) $row['id']);
+                  if ($row_ref !== '') :
+                      ?>
+                    <span class="meta membership-number referral-code">معرف: <?= casting_e($row_ref) ?></span>
+                  <?php endif; ?>
                 </div>
               </td>
               <td><?= casting_e(casting_user_profile_chip_label((int) $row['id'], $user_id)) ?></td>
@@ -303,6 +358,9 @@ casting_render_flash();
                 <?php else : ?>
                   <span class="chip chip-active">فعال</span>
                 <?php endif; ?>
+              </td>
+              <td>
+                <span class="meta"><?= casting_e(casting_user_active_duration_label((int) $row['id'])) ?></span>
               </td>
               <td>
                 <?php if ($row['premium']) : ?>

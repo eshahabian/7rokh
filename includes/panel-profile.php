@@ -420,6 +420,17 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           <li><strong>شماره عضویت:</strong> <span class="membership-number"><?= casting_e((string) $profile['membership_number']) ?></span></li>
         <?php endif; ?>
         <?php if ($is_self) : ?>
+          <?php
+          if (!function_exists('casting_get_referral_code')) {
+              require_once __DIR__ . '/referral.php';
+          }
+          $self_referral_code = casting_get_referral_code($member_id);
+          $self_active_duration = casting_user_active_duration_label($member_id);
+          ?>
+          <?php if ($self_referral_code !== '') : ?>
+            <li><strong>کد معرفی:</strong> <span class="membership-number referral-code" dir="ltr"><?= casting_e($self_referral_code) ?></span> · <a href="#referral-code">جزئیات</a></li>
+          <?php endif; ?>
+          <li><strong>مدت فعال بودن:</strong> <?= casting_e($self_active_duration) ?></li>
           <li><strong>ایمیل:</strong> <?= $embedded
               ? casting_panel_missing_label(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '')
               : casting_e(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '—') ?></li>
@@ -703,6 +714,18 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
       <p><?= casting_panel_missing_label('') ?> — <a href="#edit-profile">تکمیل سوابق، زبان، تحصیل و ویدیو</a></p>
     </div>
   <?php endif; ?>
+
+  <?php
+  if ($is_self || (function_exists('casting_user_is_super_admin') && casting_user_is_super_admin($viewer_id))) {
+      if (!function_exists('casting_render_referral_profile_section')) {
+          require_once __DIR__ . '/referral.php';
+      }
+      casting_render_referral_profile_section(
+          $member_id,
+          function_exists('casting_user_is_super_admin') && casting_user_is_super_admin($viewer_id) && !$is_self
+      );
+  }
+  ?>
 
   <?php if ($show_director_tools && is_array($director_workspace)) : ?>
     <?php casting_render_director_talent_workspace_panel($viewer_id, $member_id, $director_workspace); ?>

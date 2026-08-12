@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/jalali.php';
 require_once __DIR__ . '/activities.php';
 require_once __DIR__ . '/membership-number.php';
+require_once __DIR__ . '/referral.php';
 require_once __DIR__ . '/locations.php';
 require_once __DIR__ . '/works-catalog.php';
 
@@ -2036,6 +2037,7 @@ function casting_get_profile(int $user_id): array
         'video_file_url'    => is_string($video_url_file) ? $video_url_file : '',
         'visible'           => get_user_meta($user_id, 'casting_visible', true) !== '0',
         'membership_number' => casting_get_membership_number($user_id),
+        'referral_code'     => casting_get_referral_code($user_id),
     ];
 }
 
@@ -3818,6 +3820,12 @@ function casting_require_casting_user(): WP_User
         require_once __DIR__ . '/follows.php';
     }
     casting_follow_default_admins((int) $user->ID);
+
+    if (!function_exists('casting_get_referral_code')) {
+        require_once __DIR__ . '/referral.php';
+    }
+    casting_get_referral_code((int) $user->ID);
+    casting_referral_maybe_backfill();
 
     return $user;
 }

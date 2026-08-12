@@ -95,6 +95,33 @@ casting_render_flash();
         <li><strong>ایمیل:</strong> <?= casting_e($target->user_email) ?></li>
         <li><strong>نقش:</strong> <?= casting_e(casting_role_label(casting_get_user_role($target_id))) ?></li>
         <li><strong>وضعیت:</strong> <?= $suspended ? 'غیرفعال' : 'فعال' ?></li>
+        <?php
+        if (!function_exists('casting_user_active_duration_label')) {
+            require_once __DIR__ . '/includes/referral.php';
+        }
+        ?>
+        <li><strong>مدت فعال بودن:</strong> <?= casting_e(casting_user_active_duration_label($target_id)) ?></li>
+        <li><strong>آخرین فعالیت:</strong> <?= casting_e(casting_user_last_active_label($target_id)) ?></li>
+        <?php
+        $admin_ref_code = casting_get_referral_code($target_id);
+        $admin_ref_count = casting_referred_users_count($target_id);
+        $admin_referred_by = casting_user_referred_by($target_id);
+        ?>
+        <?php if ($admin_ref_code !== '') : ?>
+          <li><strong>کد معرفی:</strong> <span class="membership-number referral-code" dir="ltr"><?= casting_e($admin_ref_code) ?></span></li>
+        <?php endif; ?>
+        <?php if ($admin_referred_by > 0) : ?>
+          <?php $admin_ref_user = get_user_by('id', $admin_referred_by); ?>
+          <li>
+            <strong>معرف:</strong>
+            <?php if ($admin_ref_user) : ?>
+              <a href="admin-users.php?user=<?= (int) $admin_referred_by ?>"><?= casting_e((string) $admin_ref_user->display_name) ?></a>
+            <?php else : ?>
+              #<?= (int) $admin_referred_by ?>
+            <?php endif; ?>
+          </li>
+        <?php endif; ?>
+        <li><strong>ثبت‌نام با کد این کاربر:</strong> <?= (int) $admin_ref_count ?> نفر</li>
         <?php if ($suspended && $suspend_reason !== '') : ?>
           <li><strong>دلیل تعلیق:</strong> <?= casting_e($suspend_reason) ?></li>
         <?php endif; ?>

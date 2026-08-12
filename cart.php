@@ -27,6 +27,7 @@ $auth_login = '';
 $auth_name = '';
 $auth_username = '';
 $auth_email = '';
+$auth_referral_code = '';
 $auth_need_confirm = false;
 
 $cart_continue_checkout = static function (int $uid): void {
@@ -115,29 +116,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $auth_name = (string) ($_POST['name'] ?? '');
             $auth_username = (string) ($_POST['username'] ?? '');
             $auth_email = (string) ($_POST['email'] ?? '');
+            $auth_referral_code = (string) ($_POST['referral_code'] ?? '');
             $password = (string) ($_POST['password'] ?? '');
             $password2 = (string) ($_POST['password2'] ?? '');
             if ($password !== $password2) {
                 $auth_error = 'تکرار رمز عبور با رمز یکسان نیست.';
             } else {
-                $role = $cart_role_from_items();
-                $result = casting_register_user($auth_name, $auth_username, $auth_email, $password, $role);
-                if (!$result['ok']) {
-                    casting_rate_limit_hit('register');
-                    $auth_error = (string) ($result['error'] ?? 'ثبت‌نام ناموفق بود.');
+                if (!function_exists('casting_validate_referral_code_for_register')) {
+                    require_once __DIR__ . '/includes/referral.php';
+                }
+                $referral_check = casting_validate_referral_code_for_register($auth_referral_code);
+                if (!$referral_check['ok']) {
+                    $auth_error = (string) ($referral_check['error'] ?? 'کد معرفی معتبر نیست.');
                 } else {
-                    $login = casting_login($auth_email, $password, '', true);
-                    if (!$login['ok']) {
-                        casting_rate_limit_clear('register');
-                        $auth_tab = 'login';
-                        $auth_login = $auth_email;
-                        $auth_error = 'ثبت‌نام شد؛ لطفاً وارد شوید. ' . (string) ($login['error'] ?? '');
+                    $role = $cart_role_from_items();
+                    $result = casting_register_user($auth_name, $auth_username, $auth_email, $password, $role);
+                    if (!$result['ok']) {
+                        casting_rate_limit_hit('register');
+                        $auth_error = (string) ($result['error'] ?? 'ثبت‌نام ناموفق بود.');
                     } else {
-                        casting_rate_limit_clear('register');
-                        casting_rate_limit_clear('login');
-                        update_user_meta((int) $result['user_id'], 'casting_cart_quick_register', '1');
-                        $uid = (int) ($login['user']->ID ?? $result['user_id']);
-                        $cart_continue_checkout($uid);
+                        if (trim($auth_referral_code) !== '' && function_exists('casting_apply_referral_code')) {
+                            casting_apply_referral_code((int) $result['user_id'], $auth_referral_code);
+                        }
+                        $login = casting_login($auth_email, $password, '', true);
+                        if (!$login['ok']) {
+                            casting_rate_limit_clear('register');
+                            $auth_tab = 'login';
+                            $auth_login = $auth_email;
+                            $auth_error = 'ثبت‌نام شد؛ لطفاً وارد شوید. ' . (string) ($login['error'] ?? '');
+                        } else {
+                            casting_rate_limit_clear('register');
+                            casting_rate_limit_clear('login');
+                            update_user_meta((int) $result['user_id'], 'casting_cart_quick_register', '1');
+                            $uid = (int) ($login['user']->ID ?? $result['user_id']);
+                            $cart_continue_checkout($uid);
+                        }
                     }
                 }
             }
@@ -409,6 +422,10 @@ casting_render_flash();
           <div class="field">
             <label for="cart-auth-reg-password2">تکرار رمز عبور</label>
             <input id="cart-auth-reg-password2" name="password2" type="password" required minlength="8" autocomplete="new-password">
+          </div>
+          <div class="field">
+            <label for="cart-auth-referral">کد معرفی (اختیاری)</label>
+            <input id="cart-auth-referral" name="referral_code" type="text" maxlength="32" autocomplete="off" dir="ltr" value="<?= casting_e($auth_referral_code) ?>" placeholder="مثلاً AB12CD34">
           </div>
           <button class="btn btn-primary cart-auth-submit" type="submit">ثبت‌نام و ادامه پرداخت</button>
         </form>
