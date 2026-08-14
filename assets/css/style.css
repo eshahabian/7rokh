@@ -4709,9 +4709,17 @@ html[data-theme="day"] .ig-profile-cell--thumb .ig-profile-pending-delete .btn {
 
 .panel-home-greeting {
   width: 100%;
+  max-width: 100%;
   margin: 0;
   padding: 0.75rem 1rem;
   box-sizing: border-box;
+}
+
+/* جلوگیری از عرض/حاشیهٔ عمومی .flash که باعث ناهم‌راستایی می‌شود */
+.panel-home .panel-home-greeting.flash {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 }
 
 .panel-home-greeting-eyebrow {
@@ -4799,6 +4807,11 @@ a.panel-home-filter-chip:focus-visible {
 .panel-promo-banner {
   position: relative;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  justify-self: stretch;
+  box-sizing: border-box;
   min-height: calc(260px * 1.5);
   aspect-ratio: 16 / 6.75;
   padding: 2.4rem 1.75rem 2.8rem;
@@ -4806,6 +4819,12 @@ a.panel-home-filter-chip:focus-visible {
   border-radius: calc(var(--radius) + 4px);
   background: #12161e;
   color: #f3eee4;
+}
+
+.panel-home > .panel-promo-banner {
+  width: 100%;
+  max-width: 100%;
+  margin-inline: 0;
 }
 
 .panel-promo-slides {
