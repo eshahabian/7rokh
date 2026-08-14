@@ -609,9 +609,6 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
         $nav_ctx['highlight'] = false;
         casting_render_panel_nav_groups($nav_ctx);
         ?>
-        <div class="panel-nav-theme">
-          <?php casting_render_theme_toggle(); ?>
-        </div>
       </nav>
       <?php if ($admin_nav) : ?>
         <p class="panel-sidebar-title panel-sidebar-title-admin">مدیریت</p>
