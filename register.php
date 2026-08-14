@@ -642,7 +642,7 @@ $pending_video = $pending_media['video'];
 
       <div class="field<?= $reg_invalid('referral_code') ?>">
         <label for="referral_code">کد معرفی (اختیاری)</label>
-        <input id="referral_code" name="referral_code" type="text" maxlength="32" autocomplete="off" dir="ltr" value="<?= casting_e($referral_code) ?>" placeholder="مثلاً AB12CD34">
+        <input id="referral_code" name="referral_code" type="text" maxlength="32" autocomplete="off" dir="ltr" value="<?= casting_e($referral_code) ?>" placeholder="مثلاً 7ROKHAB12CD34">
         <p class="field-hint">اگر کسی شما را معرفی کرده، کد معرفی‌اش را اینجا وارد کنید.</p>
       </div>
 

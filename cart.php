@@ -532,7 +532,7 @@ casting_render_flash();
           </div>
           <div class="field">
             <label for="cart-auth-referral">کد معرفی (اختیاری)</label>
-            <input id="cart-auth-referral" name="referral_code" type="text" maxlength="32" autocomplete="off" dir="ltr" value="<?= casting_e($auth_referral_code) ?>" placeholder="مثلاً AB12CD34">
+            <input id="cart-auth-referral" name="referral_code" type="text" maxlength="32" autocomplete="off" dir="ltr" value="<?= casting_e($auth_referral_code) ?>" placeholder="مثلاً 7ROKHAB12CD34">
           </div>
           <button class="btn btn-primary cart-auth-submit" type="submit">ثبت‌نام و ادامه پرداخت</button>
         </form>

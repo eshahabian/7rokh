@@ -5,15 +5,51 @@ declare(strict_types=1);
  * سیستم کد معرفی کاربران پورتال
  *
  * متاها:
- * - casting_referral_code  کد معرف خود کاربر
+ * - casting_referral_code  کد معرف خود کاربر (با پیشوند 7ROKH)
  * - casting_referred_by    شناسه کاربر معرف
  * - casting_referred_at    زمان استفاده از کد
  */
+
+function casting_referral_prefix(): string
+{
+    return '7ROKH';
+}
 
 function casting_referral_normalize_code(string $code): string
 {
     $code = strtoupper(trim($code));
     $code = preg_replace('/[^A-Z0-9]/', '', $code) ?? '';
+
+    return $code;
+}
+
+/**
+ * کد ذخیره‌شده را به شکل استاندارد با پیشوند برمی‌گرداند.
+ */
+function casting_referral_with_prefix(string $code): string
+{
+    $code = casting_referral_normalize_code($code);
+    if ($code === '') {
+        return '';
+    }
+    $prefix = casting_referral_prefix();
+    if (str_starts_with($code, $prefix)) {
+        return $code;
+    }
+
+    return $prefix . $code;
+}
+
+function casting_referral_strip_prefix(string $code): string
+{
+    $code = casting_referral_normalize_code($code);
+    if ($code === '') {
+        return '';
+    }
+    $prefix = casting_referral_prefix();
+    if (str_starts_with($code, $prefix)) {
+        return substr($code, strlen($prefix));
+    }
 
     return $code;
 }
@@ -33,7 +69,7 @@ function casting_referral_generate_candidate(int $user_id = 0): string
         $out = str_pad($out, 8, 'X');
     }
 
-    return $out;
+    return casting_referral_with_prefix($out);
 }
 
 function casting_referral_code_owner_id(string $code): int
@@ -43,17 +79,49 @@ function casting_referral_code_owner_id(string $code): int
         return 0;
     }
 
-    $users = get_users([
-        'meta_key'   => 'casting_referral_code',
-        'meta_value' => $code,
-        'number'     => 1,
-        'fields'     => 'ID',
-    ]);
-    if (!is_array($users) || $users === []) {
-        return 0;
+    $candidates = array_values(array_unique(array_filter([
+        casting_referral_with_prefix($code),
+        casting_referral_strip_prefix($code),
+        $code,
+    ], static fn(string $c): bool => $c !== '' && strlen($c) >= 4)));
+
+    foreach ($candidates as $candidate) {
+        $users = get_users([
+            'meta_key'   => 'casting_referral_code',
+            'meta_value' => $candidate,
+            'number'     => 1,
+            'fields'     => 'ID',
+        ]);
+        if (is_array($users) && $users !== []) {
+            return (int) $users[0];
+        }
     }
 
-    return (int) $users[0];
+    return 0;
+}
+
+/**
+ * اگر کد قدیمی بدون پیشوند باشد، پیشوند را اضافه و ذخیره می‌کند.
+ * رابطهٔ casting_referred_by دست نخورده می‌ماند.
+ */
+function casting_referral_ensure_prefixed_code(int $user_id): string
+{
+    $user_id = max(0, $user_id);
+    if ($user_id <= 0) {
+        return '';
+    }
+
+    $existing = casting_referral_normalize_code((string) get_user_meta($user_id, 'casting_referral_code', true));
+    if ($existing === '') {
+        return '';
+    }
+
+    $prefixed = casting_referral_with_prefix($existing);
+    if ($prefixed !== $existing) {
+        update_user_meta($user_id, 'casting_referral_code', $prefixed);
+    }
+
+    return $prefixed;
 }
 
 function casting_assign_referral_code(int $user_id): string
@@ -63,7 +131,7 @@ function casting_assign_referral_code(int $user_id): string
         return '';
     }
 
-    $existing = casting_referral_normalize_code((string) get_user_meta($user_id, 'casting_referral_code', true));
+    $existing = casting_referral_ensure_prefixed_code($user_id);
     if ($existing !== '') {
         return $existing;
     }
@@ -79,7 +147,7 @@ function casting_assign_referral_code(int $user_id): string
         return $candidate;
     }
 
-    $fallback = 'U' . strtoupper(substr(md5((string) $user_id . wp_salt('auth')), 0, 7));
+    $fallback = casting_referral_with_prefix('U' . strtoupper(substr(md5((string) $user_id . wp_salt('auth')), 0, 7)));
     update_user_meta($user_id, 'casting_referral_code', $fallback);
 
     return $fallback;
@@ -92,7 +160,7 @@ function casting_get_referral_code(int $user_id): string
         return '';
     }
 
-    $code = casting_referral_normalize_code((string) get_user_meta($user_id, 'casting_referral_code', true));
+    $code = casting_referral_ensure_prefixed_code($user_id);
     if ($code !== '') {
         return $code;
     }
@@ -146,6 +214,47 @@ function casting_referral_backfill_missing_codes(int $limit = 500): int
 }
 
 /**
+ * پیشوند 7ROKH را برای همهٔ کدهای قبلی اعمال می‌کند (بدون تغییر معرف‌ها).
+ */
+function casting_referral_backfill_prefix(int $limit = 800): int
+{
+    $limit = max(1, min(2000, $limit));
+    $prefix = casting_referral_prefix();
+    $users = get_users([
+        'fields'     => 'ID',
+        'meta_key'   => 'casting_referral_code',
+        'meta_query' => [
+            [
+                'key'     => 'casting_referral_code',
+                'value'   => '',
+                'compare' => '!=',
+            ],
+        ],
+        'number'     => $limit,
+    ]);
+    if (!is_array($users) || $users === []) {
+        return 0;
+    }
+
+    $updated = 0;
+    foreach ($users as $id) {
+        $id = (int) $id;
+        if ($id <= 0) {
+            continue;
+        }
+        $raw = casting_referral_normalize_code((string) get_user_meta($id, 'casting_referral_code', true));
+        if ($raw === '' || str_starts_with($raw, $prefix)) {
+            continue;
+        }
+        if (casting_referral_ensure_prefixed_code($id) !== '') {
+            $updated++;
+        }
+    }
+
+    return $updated;
+}
+
+/**
  * یک‌بار در هر درخواست ادمین/پروفایل — جلوگیری از فشار روی دیتابیس
  */
 function casting_referral_maybe_backfill(): void
@@ -157,13 +266,19 @@ function casting_referral_maybe_backfill(): void
     $done = true;
 
     $flag = (string) get_option('casting_referral_backfill_done', '');
-    if ($flag === '1') {
-        return;
+    if ($flag !== '1') {
+        $assigned = casting_referral_backfill_missing_codes(800);
+        if ($assigned === 0) {
+            update_option('casting_referral_backfill_done', '1', false);
+        }
     }
 
-    $assigned = casting_referral_backfill_missing_codes(800);
-    if ($assigned === 0) {
-        update_option('casting_referral_backfill_done', '1', false);
+    $prefix_flag = (string) get_option('casting_referral_prefix_backfill_done', '');
+    if ($prefix_flag !== '1') {
+        $updated = casting_referral_backfill_prefix(800);
+        if ($updated === 0) {
+            update_option('casting_referral_prefix_backfill_done', '1', false);
+        }
     }
 }
 
@@ -400,6 +515,12 @@ function casting_render_referral_profile_section(int $user_id, bool $is_admin_vi
         return;
     }
 
+    $owner = get_user_by('id', $user_id);
+    $owner_name = $owner ? trim((string) $owner->display_name) : '';
+    if ($owner_name === '') {
+        $owner_name = 'این کاربر';
+    }
+
     $referrals = casting_list_referred_users($user_id);
     $count = count($referrals);
     $active_self = casting_user_active_duration_label($user_id);
@@ -415,10 +536,10 @@ function casting_render_referral_profile_section(int $user_id, bool $is_admin_vi
       <p class="meta">این کد را با دیگران به اشتراک بگذارید تا هنگام ثبت‌نام وارد کنند.</p>
       <ul class="info-list">
         <li>
-          <strong>کد معرفی شما:</strong>
+          <strong>کد معرفی <?= casting_e($owner_name) ?>:</strong>
           <span class="membership-number referral-code" dir="ltr"><?= casting_e($code) ?></span>
         </li>
-        <li><strong>مدت فعال بودن حساب شما:</strong> <?= casting_e($active_self) ?></li>
+        <li><strong>مدت فعال بودن حساب <?= casting_e($owner_name) ?>:</strong> <?= casting_e($active_self) ?></li>
         <?php if ($is_admin_view && $referred_by > 0) : ?>
           <li>
             <strong>معرف این کاربر:</strong>
@@ -429,7 +550,7 @@ function casting_render_referral_profile_section(int $user_id, bool $is_admin_vi
             <?php endif; ?>
           </li>
         <?php endif; ?>
-        <li><strong>ثبت‌نام با کد شما:</strong> <?= (int) $count ?> نفر</li>
+        <li><strong>ثبت‌نام با کد <?= casting_e($owner_name) ?>:</strong> <?= (int) $count ?> نفر</li>
       </ul>
 
       <?php if ($referrals !== []) : ?>
@@ -449,7 +570,7 @@ function casting_render_referral_profile_section(int $user_id, bool $is_admin_vi
           <?php endforeach; ?>
         </ul>
       <?php else : ?>
-        <p class="meta referral-empty">هنوز کسی با کد شما ثبت‌نام نکرده است.</p>
+        <p class="meta referral-empty">هنوز کسی با کد <?= casting_e($owner_name) ?> ثبت‌نام نکرده است.</p>
       <?php endif; ?>
     </div>
     <?php
