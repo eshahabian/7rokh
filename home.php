@@ -61,7 +61,7 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
       ['src' => casting_asset('images/promo-slide-6.png'), 'alt' => 'میکروفون بوم و صحنه فیلم‌برداری'],
   ];
   ?>
-  <section class="panel-promo-banner" aria-label="محل نمایش تبلیغات اعضای ویژه" data-promo-slider>
+  <section class="panel-promo-banner" aria-label="مکانی برای دیده شدن" data-promo-slider>
     <div class="panel-promo-slides">
       <?php foreach ($promo_slides as $i => $slide) : ?>
         <figure class="panel-promo-slide<?= $i === 0 ? ' is-active' : '' ?>">
@@ -70,8 +70,7 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
       <?php endforeach; ?>
     </div>
     <div class="panel-promo-banner-copy">
-      <h1>محل نمایش تبلیغات اعضای ویژه</h1>
-      <p>مکانی برای دیده شدن</p>
+      <h1>مکانی برای دیده شدن</h1>
     </div>
     <div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدهای تبلیغات">
       <?php foreach ($promo_slides as $i => $slide) : ?>

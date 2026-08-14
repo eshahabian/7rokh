@@ -29,7 +29,7 @@ casting_render_flash();
 ?>
 <main class="wrap hero">
   <div class="hero-copy">
-    <section class="panel-promo-banner hero-promo-banner" aria-label="نمایش ویژه" data-promo-slider>
+    <section class="panel-promo-banner hero-promo-banner" aria-label="مکانی برای دیده شدن" data-promo-slider>
       <div class="panel-promo-slides">
         <?php foreach ($home_slides as $i => $slide) : ?>
           <figure class="panel-promo-slide<?= $i === 0 ? ' is-active' : '' ?>">
@@ -38,8 +38,7 @@ casting_render_flash();
         <?php endforeach; ?>
       </div>
       <div class="panel-promo-banner-copy">
-        <h1>محل نمایش تبلیغات اعضای ویژه</h1>
-        <p>مکانی برای دیده شدن</p>
+        <h1>مکانی برای دیده شدن</h1>
       </div>
       <div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدها">
         <?php foreach ($home_slides as $i => $slide) : ?>

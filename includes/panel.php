@@ -507,9 +507,13 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
             get_user_meta($user_id, 'casting_activities', true),
             $user_id
         );
-        $sidebar_primary_activity = casting_user_primary_activity_label($user_id);
-        if ($sidebar_primary_activity === '') {
-            $sidebar_primary_activity = casting_user_public_role_label($user_id);
+        if (casting_user_is_portal_owner($user_id)) {
+            $sidebar_primary_activity = 'مدیر سایت';
+        } else {
+            $sidebar_primary_activity = casting_user_primary_activity_label($user_id);
+            if ($sidebar_primary_activity === '') {
+                $sidebar_primary_activity = casting_user_public_role_label($user_id);
+            }
         }
         $sidebar_show_views = casting_activities_has_acting($sidebar_activities);
         if ($sidebar_show_views) {
@@ -621,6 +625,9 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
           <?php endforeach; ?>
         </nav>
       <?php endif; ?>
+      <div class="panel-sidebar-theme">
+        <?php casting_render_theme_toggle(); ?>
+      </div>
     </aside>
     </div>
     <?php if ($user) : ?>

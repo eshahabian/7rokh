@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=176">
+  <link rel="stylesheet" href="<?= $css ?>?v=177">
   <script>
     (function () {
       try {
@@ -173,10 +173,11 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
           <a href="login.php" class="site-header-quick-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود به پنل کاربری</a>
         </nav>
       <?php endif; ?>
+      <?php if (!$panel_menu) : ?>
       <div class="site-header-brand-cluster">
         <?php casting_render_theme_toggle(); ?>
-        <a class="brand" href="index.php"><?= casting_brand_html() ?></a>
       </div>
+      <?php endif; ?>
     </div>
     <nav class="nav" id="site-main-nav" aria-label="منوی اصلی" data-site-nav>
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external">سایت <?= casting_brand_html() ?></a>

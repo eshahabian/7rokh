@@ -106,7 +106,7 @@ function casting_role_label(string $role): string
 /**
  * برچسب نقش عمومی کاربر برای کارت‌ها، چت، پروفایل و …
  * اولویت با اولین نوع فعالیت است (مثلاً «بازیگر تئاتر» به‌جای «هنرمند»).
- * مدیر اصلی پورتال همیشه «واحد IT» دیده می‌شود.
+ * مدیر اصلی پورتال همیشه «مدیر سایت» دیده می‌شود.
  */
 function casting_user_public_role_label(int $user_id): string
 {
@@ -114,10 +114,10 @@ function casting_user_public_role_label(int $user_id): string
         return '';
     }
     if (casting_user_is_portal_owner($user_id)) {
-        return 'واحد IT';
+        return 'مدیر سایت';
     }
     if (function_exists('casting_dm_is_support_peer') && casting_dm_is_support_peer($user_id)) {
-        return 'واحد IT';
+        return 'مدیر سایت';
     }
 
     if (!function_exists('casting_user_primary_activity_label')) {

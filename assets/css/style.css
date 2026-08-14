@@ -4001,6 +4001,20 @@ a.panel-sidebar-title.is-active {
   margin-top: 1.1rem;
 }
 
+.panel-sidebar-theme {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: flex-start;
+}
+
+.panel-sidebar-theme .theme-toggle,
+.panel-sidebar-theme .header-theme {
+  width: 100%;
+  justify-content: center;
+}
+
 .panel-sidebar-head {
   margin-bottom: 0.75rem;
 }
@@ -5389,7 +5403,7 @@ a.panel-home-filter-chip:focus-visible {
 }
 
 .panel-promo-banner-copy h1 {
-  margin: 0 0 0.55rem;
+  margin: 0;
   font-family: var(--display);
   font-size: clamp(1.35rem, 2.6vw, 1.85rem);
   line-height: 1.35;
@@ -5398,11 +5412,7 @@ a.panel-home-filter-chip:focus-visible {
 }
 
 .panel-promo-banner-copy p {
-  margin: 0;
-  color: rgba(243, 238, 228, 0.9);
-  font-size: 0.95rem;
-  line-height: 1.6;
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+  display: none;
 }
 
 .panel-promo-dots {
