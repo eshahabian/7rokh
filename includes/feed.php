@@ -243,18 +243,6 @@ function casting_render_feed_media_card(array $item, int $viewer_id): void
           ]);
       }
       ?>
-      <button
-        type="button"
-        class="home-feed-zoom"
-        data-post-expand
-        aria-label="نمایش بزرگ‌تر"
-        title="نمایش بزرگ‌تر"
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <circle cx="10.5" cy="10.5" r="6.25" fill="none" stroke="currentColor" stroke-width="2"/>
-          <path d="M15.4 15.4 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
     </div>
     <?php if ($caption !== '') :
         $caption_long = (function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 90;
@@ -272,36 +260,11 @@ function casting_render_feed_media_card(array $item, int $viewer_id): void
 function casting_render_home_following_feed_section(int $user_id): void
 {
     $posts = casting_latest_media_feed(24);
-    $new_count = casting_new_followers_count($user_id);
-    $recent_followers = $new_count > 0
-        ? casting_new_followers_list($user_id, 5)
-        : casting_recent_followers_for($user_id, 3);
-    $has_new = $new_count > 0;
     ?>
-  <section class="panel-ads-section home-feed-section<?= $has_new ? ' home-feed-section--notify' : '' ?>" aria-labelledby="home-latest-feed-title">
+  <section class="panel-ads-section home-feed-section" aria-labelledby="home-latest-feed-title">
     <header class="panel-ads-head">
       <h2 id="home-latest-feed-title">آخرین پست‌ها</h2>
-      <?php if ($has_new) : ?>
-        <a class="btn btn-ghost btn-sm home-feed-notify-link" href="<?= casting_e(casting_url('following.php?tab=followers')) ?>">
-          دنبال‌کننده‌های جدید
-          <span class="nav-badge" aria-label="<?= (int) $new_count ?> دنبال‌کننده جدید"><?= (int) $new_count ?></span>
-        </a>
-      <?php else : ?>
-        <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('following.php?tab=following')) ?>">دنبال‌شده‌ها</a>
-      <?php endif; ?>
     </header>
-    <?php if ($recent_followers !== [] && $has_new) : ?>
-      <p class="home-feed-followers-hint meta is-new">
-        <a href="<?= casting_e(casting_url('following.php?tab=followers')) ?>">دنبال‌کننده‌های جدید:</a>
-        <?php
-        $names = [];
-        foreach ($recent_followers as $f) {
-            $names[] = '<a href="' . casting_e(casting_url('following.php?tab=followers')) . '">' . casting_e($f['name']) . '</a>';
-        }
-        echo ' ' . implode(' · ', $names);
-        ?>
-      </p>
-    <?php endif; ?>
     <?php if ($posts === []) : ?>
       <p class="empty-state">هنوز پست تأییدشده‌ای برای نمایش نیست.</p>
     <?php else : ?>

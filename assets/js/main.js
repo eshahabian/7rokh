@@ -2207,6 +2207,97 @@
   const postLightboxPanel = postLightbox?.querySelector(".post-lightbox-panel");
   const postLightboxBody = postLightbox?.querySelector("[data-post-lightbox-body]");
 
+  let homeFeedZoomPost = null;
+  let homeFeedZoomPlaceholder = null;
+  let homeFeedZoomBackdrop = document.querySelector("[data-home-feed-zoom-backdrop]");
+  if (!homeFeedZoomBackdrop) {
+    homeFeedZoomBackdrop = document.createElement("div");
+    homeFeedZoomBackdrop.className = "home-feed-zoom-backdrop";
+    homeFeedZoomBackdrop.setAttribute("data-home-feed-zoom-backdrop", "");
+    homeFeedZoomBackdrop.setAttribute("aria-hidden", "true");
+    document.body.appendChild(homeFeedZoomBackdrop);
+  }
+
+  const unlockBodyScroll = () => {
+    document.body.style.overflow = "";
+    document.body.style.paddingInlineEnd = "";
+  };
+
+  const lockBodyScroll = () => {
+    const sb = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = "hidden";
+    if (sb > 0) {
+      document.body.style.paddingInlineEnd = `${sb}px`;
+    }
+  };
+
+  const closeHomeFeedZoom = () => {
+    if (!homeFeedZoomPost) return;
+    homeFeedZoomPost.classList.remove("is-zoomed");
+    homeFeedZoomPost.style.position = "";
+    homeFeedZoomPost.style.top = "";
+    homeFeedZoomPost.style.left = "";
+    homeFeedZoomPost.style.width = "";
+    homeFeedZoomPost.style.maxWidth = "";
+    homeFeedZoomPost.style.zIndex = "";
+    homeFeedZoomPost.style.maxHeight = "";
+    homeFeedZoomPost.style.overflow = "";
+    if (homeFeedZoomPlaceholder && homeFeedZoomPlaceholder.parentNode) {
+      homeFeedZoomPlaceholder.parentNode.insertBefore(homeFeedZoomPost, homeFeedZoomPlaceholder);
+      homeFeedZoomPlaceholder.remove();
+    }
+    homeFeedZoomPlaceholder = null;
+    homeFeedZoomPost = null;
+    homeFeedZoomBackdrop.classList.remove("is-open");
+    homeFeedZoomBackdrop.setAttribute("aria-hidden", "true");
+    unlockBodyScroll();
+  };
+
+  const openHomeFeedZoom = (post) => {
+    if (!post) return;
+    closeHomeFeedZoom();
+    if (postLightbox?.classList.contains("is-open")) {
+      closePostLightbox();
+    }
+
+    const rect = post.getBoundingClientRect();
+    const placeholder = document.createElement("div");
+    placeholder.className = "home-feed-zoom-placeholder";
+    placeholder.style.width = `${rect.width}px`;
+    placeholder.style.height = `${rect.height}px`;
+    post.parentNode.insertBefore(placeholder, post);
+
+    const targetW = Math.min(window.innerWidth - 24, Math.max(rect.width * 1.55, 320));
+    let left = rect.left + rect.width / 2 - targetW / 2;
+    left = Math.max(12, Math.min(left, window.innerWidth - targetW - 12));
+    let top = rect.top;
+    top = Math.max(12, Math.min(top, window.innerHeight - 120));
+
+    homeFeedZoomPlaceholder = placeholder;
+    homeFeedZoomPost = post;
+    post.classList.add("is-zoomed");
+    post.style.position = "fixed";
+    post.style.top = `${top}px`;
+    post.style.left = `${left}px`;
+    post.style.width = `${targetW}px`;
+    post.style.maxWidth = "calc(100vw - 24px)";
+    post.style.zIndex = "10001";
+    document.body.appendChild(post);
+
+    homeFeedZoomBackdrop.classList.add("is-open");
+    homeFeedZoomBackdrop.setAttribute("aria-hidden", "false");
+    lockBodyScroll();
+
+    requestAnimationFrame(() => {
+      if (!homeFeedZoomPost) return;
+      const ph = homeFeedZoomPost.getBoundingClientRect().height;
+      if (top + ph > window.innerHeight - 12) {
+        top = Math.max(12, window.innerHeight - ph - 12);
+        homeFeedZoomPost.style.top = `${top}px`;
+      }
+    });
+  };
+
   const closePostLightbox = () => {
     if (!postLightbox || !postLightbox.classList.contains("is-open")) return;
     if (postLightboxEngage && postLightboxSource) {
@@ -2218,13 +2309,22 @@
     if (postLightboxBody) postLightboxBody.innerHTML = "";
     postLightbox.classList.remove("is-open");
     postLightbox.setAttribute("aria-hidden", "true");
-    document.body.style.overflow = "";
+    unlockBodyScroll();
   };
 
   const openPostLightbox = (trigger) => {
     if (!postLightbox || !postLightboxBody) return;
     const root = trigger.closest(".ig-profile-cell, .profile-media-item, .home-feed-post");
     if (!root) return;
+
+    // خانه: بزرگ‌نمایی در همان موقعیت پست
+    if (root.classList.contains("home-feed-post")) {
+      closePostLightbox();
+      openHomeFeedZoom(root);
+      return;
+    }
+
+    closeHomeFeedZoom();
     closePostLightbox();
 
     const mediaHost =
@@ -2361,7 +2461,7 @@
 
     postLightbox.classList.add("is-open");
     postLightbox.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
+    lockBodyScroll();
     postLightboxPanel?.scrollTo(0, 0);
   };
 
@@ -2369,6 +2469,25 @@
     if (event.target.closest(".ig-profile-cell-delete, .ig-profile-pending-delete")) {
       return;
     }
+
+    if (event.target.closest("[data-home-feed-zoom-backdrop]")) {
+      closeHomeFeedZoom();
+      return;
+    }
+
+    // کلیک روی مدیای فید خانه → بزرگ‌نمایی در همان جا (به‌جز کنترل‌های ویدیو)
+    const feedMedia = event.target.closest(".home-feed-post-media");
+    if (feedMedia && !event.target.closest(
+      "[data-video-play], [data-video-toggle], [data-video-seek], .media-protect-controls, .media-protect-play"
+    )) {
+      const post = feedMedia.closest(".home-feed-post");
+      if (post && !post.classList.contains("is-zoomed")) {
+        event.preventDefault();
+        openHomeFeedZoom(post);
+        return;
+      }
+    }
+
     const expand = event.target.closest("[data-post-expand]");
     if (expand) {
       event.preventDefault();
@@ -2386,7 +2505,10 @@
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closePostLightbox();
+    if (event.key === "Escape") {
+      closeHomeFeedZoom();
+      closePostLightbox();
+    }
   });
 
   document.addEventListener("click", async (event) => {

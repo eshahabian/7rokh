@@ -4927,7 +4927,7 @@ a.panel-home-filter-chip:focus-visible {
 
 /* فید خانه: ستون باریک شبیه اینستاگرام */
 .home-following-feed {
-  width: min(100%, 22.5rem);
+  width: min(100%, 18rem);
   margin-inline: auto;
   gap: 1.15rem;
 }
@@ -5160,6 +5160,7 @@ a.panel-home-filter-chip:focus-visible {
   position: relative;
   background: rgba(0, 0, 0, 0.22);
   max-width: 100%;
+  cursor: zoom-in;
 }
 
 .home-feed-post-media img,
@@ -5169,49 +5170,46 @@ a.panel-home-filter-chip:focus-visible {
   object-fit: cover;
 }
 
-.home-feed-zoom {
-  position: absolute;
-  top: 0.55rem;
-  inset-inline-end: 0.55rem;
-  z-index: 6;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.35rem;
-  height: 2.35rem;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 999px;
-  background: rgba(12, 12, 14, 0.62);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  cursor: zoom-in;
-  opacity: 0;
-  transform: scale(0.92);
-  pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
+.home-feed-post-media .media-protect-play,
+.home-feed-post-media .media-protect-controls,
+.home-feed-post-media .media-protect-toggle,
+.home-feed-post-media .media-protect-seek {
+  cursor: pointer;
 }
 
-.home-feed-post-media:hover .home-feed-zoom,
-.home-feed-post-media:focus-within .home-feed-zoom,
-.home-feed-zoom:focus-visible {
+.home-feed-zoom-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.72);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  cursor: zoom-out;
+}
+
+.home-feed-zoom-backdrop.is-open {
   opacity: 1;
-  transform: scale(1);
+  visibility: visible;
   pointer-events: auto;
 }
 
-.home-feed-zoom:hover,
-.home-feed-zoom:focus-visible {
-  background: rgba(12, 12, 14, 0.82);
-  outline: none;
+.home-feed-zoom-placeholder {
+  visibility: hidden;
+  pointer-events: none;
 }
 
-@media (hover: none) {
-  .home-feed-zoom {
-    opacity: 0.92;
-    transform: scale(1);
-    pointer-events: auto;
-  }
+.home-feed-post.is-zoomed {
+  z-index: 10001;
+  max-height: calc(100vh - 1.5rem);
+  overflow: auto;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  cursor: default;
+}
+
+.home-feed-post.is-zoomed .home-feed-post-media {
+  cursor: default;
 }
 
 .home-feed-caption {
