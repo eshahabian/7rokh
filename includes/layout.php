@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=177">
+  <link rel="stylesheet" href="<?= $css ?>?v=178">
   <script>
     (function () {
       try {
@@ -163,6 +163,9 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
     <div class="site-header-bar">
       <?php if ($panel_menu) : ?>
         <?php casting_render_panel_menu_toggle($panel_menu_badge); ?>
+        <div class="site-header-panel-theme">
+          <?php casting_render_theme_toggle(); ?>
+        </div>
       <?php else : ?>
         <?php casting_render_site_nav_toggle(); ?>
       <?php endif; ?>
@@ -172,11 +175,6 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
           <a href="register.php" class="site-header-quick-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
           <a href="login.php" class="site-header-quick-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود به پنل کاربری</a>
         </nav>
-      <?php endif; ?>
-      <?php if (!$panel_menu) : ?>
-      <div class="site-header-brand-cluster">
-        <?php casting_render_theme_toggle(); ?>
-      </div>
       <?php endif; ?>
     </div>
     <nav class="nav" id="site-main-nav" aria-label="منوی اصلی" data-site-nav>
@@ -199,6 +197,9 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
         <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>
       <?php endif; ?>
       <?php casting_render_nav_cart($active); ?>
+      <div class="nav-theme">
+        <?php casting_render_theme_toggle(); ?>
+      </div>
     </nav>
   </header>
 <?php

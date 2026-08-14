@@ -407,6 +407,17 @@ html[data-theme="day"] .brand-mark-rokh {
   color: var(--ink);
 }
 
+.nav-theme {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 0.35rem;
+}
+
+.nav-theme .theme-toggle,
+.nav-theme .header-theme {
+  margin: 0;
+}
+
 /* «سایت» مثل بقیه منو؛ فقط ۷ سفید و رخ زرد */
 .nav a.nav-external .brand-mark-7 {
   color: #ffffff !important;
@@ -3732,6 +3743,18 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
     width: 100%;
   }
 
+  body.has-panel-drawer .site-header--panel .site-header-panel-theme {
+    display: inline-flex;
+    margin-inline-start: auto;
+    flex: 0 0 auto;
+  }
+
+  body.has-panel-drawer .site-header--panel .site-header-panel-theme .theme-toggle-btn {
+    min-height: 28px;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.72rem;
+  }
+
   body.has-panel-drawer .site-header--panel .site-header-brand-cluster {
     justify-content: center;
     align-items: center;
@@ -4001,16 +4024,23 @@ a.panel-sidebar-title.is-active {
   margin-top: 1.1rem;
 }
 
-.panel-sidebar-theme {
-  margin-top: 0.85rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: flex-start;
+.site-header-panel-theme {
+  display: none;
+  flex: 0 0 auto;
+  margin-inline-start: auto;
 }
 
-.panel-sidebar-theme .theme-toggle,
-.panel-sidebar-theme .header-theme {
+.panel-nav-theme {
+  display: flex;
+  align-items: center;
+  justify-content: stretch;
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
+}
+
+.panel-nav-theme .theme-toggle,
+.panel-nav-theme .header-theme {
   width: 100%;
   justify-content: center;
 }
