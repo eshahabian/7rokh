@@ -4239,25 +4239,25 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   color: var(--ink-muted);
 }
 
-/* ویجت شناور پیام‌ها — هم‌تراز ستون منو، با فاصله‌ای برابر gap منو↔پیشنهادی */
+/* ویجت شناور پیام‌ها — پایین‌راست، پهن‌تر از ستون منو (زیر پیشنهادی نیست) */
 .messages-dock {
-  --messages-dock-gap: 0.85rem; /* همان gap ستون منو و «پیشنهادی برای شما» */
+  --messages-dock-edge: 0.85rem; /* همان فاصله منو ↔ پیشنهادی */
   position: fixed;
   z-index: 140;
   bottom: 1.25rem;
-  /* لبه راست = لبه راست .wrap (منو) */
+  /* لبه راست نزدیک لبه راست صفحه/.wrap */
   inset-inline-start: max(
-    var(--messages-dock-gap),
+    var(--messages-dock-edge),
     calc((100vw - min(1100px, calc(100vw - 2.5rem))) / 2)
   );
   inset-inline-end: auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--messages-dock-gap);
-  /* عرض ستون منو (تا 300px) منهای همان فاصله کوچک از سمت محتوا */
-  width: min(calc(300px - var(--messages-dock-gap)), calc(100vw - 2 * var(--messages-dock-gap)));
-  max-width: min(calc(300px - var(--messages-dock-gap)), calc(100vw - 2 * var(--messages-dock-gap)));
+  gap: 0.45rem;
+  /* پهن‌تر از ستون منو (300px) تا به سمت محتوا کشیده شود */
+  width: min(24rem, calc(100vw - 2 * var(--messages-dock-edge)));
+  max-width: min(24rem, calc(100vw - 2 * var(--messages-dock-edge)));
 }
 
 .messages-dock-toggle {
