@@ -3851,6 +3851,11 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
     line-height: 1.1rem;
     text-align: center;
   }
+
+  /* دکمه بازگشت به بالا — بالاتر از نوار پایین تا روی پروفایل نیفتد */
+  body.has-panel-drawer .scroll-top {
+    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .opp-toolbar {
