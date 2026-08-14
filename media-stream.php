@@ -2,21 +2,17 @@
 declare(strict_types=1);
 
 /**
- * استریم فایل پیوست فقط برای کاربر لاگین‌شده پورتال.
+ * استریم فایل پیوست فقط برای کاربر مجاز پورتال.
  * URL مستقیم wp-content در پلیر محافظت‌شده استفاده نمی‌شود.
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/media-protect.php';
 
 casting_nocache();
 
-$user = casting_current_user();
-if (!$user) {
-    status_header(403);
-    header('Content-Type: text/plain; charset=utf-8');
-    echo 'ورود لازم است.';
-    exit;
-}
+$user = casting_require_api_casting_user(false);
+$viewer_id = (int) $user->ID;
 
 $aid = (int) ($_GET['aid'] ?? 0);
 $nonce = (string) ($_GET['n'] ?? '');
@@ -24,6 +20,13 @@ if ($aid <= 0 || !wp_verify_nonce($nonce, 'casting_stream_' . $aid)) {
     status_header(403);
     header('Content-Type: text/plain; charset=utf-8');
     echo 'دسترسی نامعتبر است.';
+    exit;
+}
+
+if (!casting_user_can_stream_attachment($viewer_id, $aid)) {
+    status_header(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'اجازه مشاهده این فایل را ندارید.';
     exit;
 }
 
@@ -78,11 +81,6 @@ if ($status === 206) {
     header("Content-Range: bytes {$start}-{$end}/{$size}");
 }
 
-// جلوگیری از بافرینگ حجیم PHP
-while (ob_get_level() > 0) {
-    ob_end_clean();
-}
-
 $fp = fopen($path, 'rb');
 if ($fp === false) {
     status_header(500);
@@ -94,12 +92,13 @@ if ($start > 0) {
 $remaining = $length;
 $chunk = 8192;
 while ($remaining > 0 && !feof($fp)) {
-    $read = fread($fp, min($chunk, $remaining));
-    if ($read === false || $read === '') {
+    $read = ($remaining > $chunk) ? $chunk : $remaining;
+    $data = fread($fp, $read);
+    if ($data === false) {
         break;
     }
-    echo $read;
-    $remaining -= strlen($read);
+    echo $data;
+    $remaining -= strlen($data);
     if (connection_aborted()) {
         break;
     }

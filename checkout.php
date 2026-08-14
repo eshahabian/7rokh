@@ -21,8 +21,15 @@ $project_id = max(0, (int) ($_GET['project'] ?? $_POST['project_id'] ?? 0));
 
 $order = $order_code !== '' ? casting_get_order_by_code($order_code) : [];
 
-// ایجاد سفارش جدید از لینک خدمت → اول سبد خرید
+// ایجاد سفارش جدید از لینک خدمت → اول سبد خرید (فقط POST یا GET با nonce)
 if ($order === [] && $service !== '') {
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        $add_nonce = (string) ($_GET['_wpnonce'] ?? '');
+        if ($add_nonce === '' || !wp_verify_nonce($add_nonce, 'casting_cart_add')) {
+            casting_set_flash('error', 'درخواست نامعتبر است. از داخل پورتال اضافه کنید.');
+            casting_redirect('cart.php');
+        }
+    }
     if (!function_exists('casting_cart_add')) {
         require_once __DIR__ . '/includes/cart.php';
     }

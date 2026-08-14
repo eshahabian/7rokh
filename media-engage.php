@@ -10,13 +10,9 @@ require_once __DIR__ . '/includes/director-workspace.php';
 casting_nocache();
 header('Content-Type: application/json; charset=utf-8');
 
-$user = casting_current_user();
-if (!$user) {
-    echo wp_json_encode(['ok' => false, 'error' => 'وارد شوید.']);
-    exit;
-}
-
+$user = casting_require_api_casting_user();
 $user_id = (int) $user->ID;
+
 if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_media_engage')) {
     echo wp_json_encode(['ok' => false, 'error' => 'نشست منقضی شده. صفحه را رفرش کنید.']);
     exit;

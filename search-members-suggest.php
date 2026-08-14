@@ -8,7 +8,7 @@ require_once __DIR__ . '/includes/panel.php';
 header('Content-Type: application/json; charset=utf-8');
 casting_nocache();
 
-$user = casting_require_casting_user();
+$user = casting_require_api_casting_user();
 $user_id = (int) $user->ID;
 
 if (!casting_user_can_member_search($user_id)) {

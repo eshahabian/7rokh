@@ -9,13 +9,7 @@ require_once __DIR__ . '/includes/chat.php';
 header('Content-Type: application/json; charset=utf-8');
 casting_nocache();
 
-$user = casting_current_user();
-if (!$user || casting_get_user_role((int) $user->ID) === '') {
-    http_response_code(401);
-    echo wp_json_encode(['ok' => false, 'error' => 'وارد شوید.']);
-    exit;
-}
-
+$user = casting_require_api_casting_user();
 $my_id = (int) $user->ID;
 $action = (string) ($_REQUEST['action'] ?? '');
 
@@ -60,17 +54,18 @@ if ($action === 'thread') {
         ];
     }
 
+    $blocked = function_exists('casting_users_block_each_other') && casting_users_block_each_other($my_id, $peer_id);
     echo wp_json_encode([
         'ok'      => true,
         'peer'    => [
             'id'     => $peer_id,
-            'name'   => casting_dm_peer_display_name($peer_id),
-            'role'   => casting_dm_peer_role_label($peer_id),
-            'avatar' => casting_chat_peer_avatar_url($peer_id),
+            'name'   => $blocked ? 'کاربر' : casting_dm_peer_display_name($peer_id),
+            'role'   => $blocked ? '' : casting_dm_peer_role_label($peer_id),
+            'avatar' => $blocked ? '' : casting_chat_peer_avatar_url($peer_id),
         ],
         'locked'  => $locked,
-        'can_send'=> !empty($allow['ok']),
-        'error'   => empty($allow['ok']) ? (string) ($allow['error'] ?? '') : '',
+        'can_send'=> !empty($allow['ok']) && !$blocked,
+        'error'   => empty($allow['ok']) ? (string) ($allow['error'] ?? '') : ($blocked ? 'به‌دلیل بلاک امکان پیام نیست.' : ''),
         'messages'=> $messages,
     ]);
     exit;

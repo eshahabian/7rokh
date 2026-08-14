@@ -58,7 +58,8 @@ define('CASTING_N8N_REGISTER_WEBHOOK', '');
 define('CASTING_N8N_WEBHOOK_SECRET', '');
 
 /**
- * مدیران پورتال — تأیید فیش و ارتقا به حساب ویژه (علاوه بر manage_options وردپرس)
+ * مدیران پورتال — تأیید فیش، ارتقا، و دسترسی ادمین پورتال
+ * فقط این لیست + مالک پورتال؛ قابلیت manage_options وردپرس به‌تنهایی کافی نیست.
  * نام کاربری وردپرس را بنویسید.
  */
 define('CASTING_PORTAL_ADMINS', [

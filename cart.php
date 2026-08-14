@@ -84,8 +84,13 @@ if ($can_approve_receipts && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_PO
 
 $action = sanitize_key((string) ($_GET['action'] ?? $_POST['cart_action'] ?? ''));
 
-// افزودن از لینک / کاشی → فقط به خلاصه خرید اشتراک (نه مستقیم پرداخت)
+// افزودن از لینک / کاشی — فقط با nonce (جلوگیری از CSRF روی GET)
 if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $add_nonce = (string) ($_GET['_wpnonce'] ?? '');
+    if ($add_nonce === '' || !wp_verify_nonce($add_nonce, 'casting_cart_add')) {
+        casting_set_flash('error', 'درخواست نامعتبر است. از داخل پورتال اضافه کنید.');
+        casting_redirect('cart.php');
+    }
     $service = sanitize_key((string) ($_GET['service'] ?? ''));
     $plan = sanitize_key((string) ($_GET['plan'] ?? ''));
     $project_id = max(0, (int) ($_GET['project'] ?? 0));

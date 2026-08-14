@@ -53,9 +53,7 @@ function casting_user_is_super_admin(int $user_id): bool
     if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
         return true;
     }
-    if (user_can($user_id, 'manage_options')) {
-        return true;
-    }
+    // فقط مدیران تعریف‌شده در CASTING_PORTAL_ADMINS — manage_options وردپرس کافی نیست
     $user = get_user_by('id', $user_id);
     if (!$user) {
         return false;

@@ -74,6 +74,37 @@ function casting_media_get_row(int $media_id): ?array
     return is_array($row) ? $row : null;
 }
 
+/**
+ * آیا بیننده می‌تواند با این پست تعامل کند؟ (لایک/کامنت/ذخیره)
+ */
+function casting_media_user_can_engage(int $viewer_id, array $row): bool
+{
+    if ($viewer_id <= 0) {
+        return false;
+    }
+    $owner_id = (int) ($row['user_id'] ?? 0);
+    if ($owner_id <= 0) {
+        return false;
+    }
+    if ($owner_id === $viewer_id) {
+        return true;
+    }
+    if ((string) ($row['status'] ?? '') !== 'approved') {
+        return false;
+    }
+    if (function_exists('casting_users_block_each_other')) {
+        require_once __DIR__ . '/blocks.php';
+        if (casting_users_block_each_other($viewer_id, $owner_id)) {
+            return false;
+        }
+    }
+    if (function_exists('casting_user_can_view_member_profile')) {
+        return casting_user_can_view_member_profile($viewer_id, $owner_id);
+    }
+
+    return casting_get_user_role($owner_id) !== '';
+}
+
 function casting_media_like_count(int $media_id): int
 {
     if ($media_id <= 0) {
@@ -115,6 +146,9 @@ function casting_media_toggle_like(int $media_id, int $user_id): array
     $row = casting_media_get_row($media_id);
     if ($row === null || ($row['status'] ?? '') !== 'approved') {
         return ['ok' => false, 'error' => 'پست معتبر نیست.'];
+    }
+    if (!casting_media_user_can_engage($user_id, $row)) {
+        return ['ok' => false, 'error' => 'اجازه تعامل با این پست را ندارید.'];
     }
     casting_media_engagement_ensure();
     global $wpdb;
@@ -201,6 +235,9 @@ function casting_media_add_comment(int $media_id, int $user_id, string $body): a
     $row = casting_media_get_row($media_id);
     if ($row === null || ($row['status'] ?? '') !== 'approved') {
         return ['ok' => false, 'error' => 'پست معتبر نیست.'];
+    }
+    if (!casting_media_user_can_engage($user_id, $row)) {
+        return ['ok' => false, 'error' => 'اجازه تعامل با این پست را ندارید.'];
     }
     $body = sanitize_textarea_field($body);
     $body = trim($body);

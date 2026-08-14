@@ -57,6 +57,106 @@ function casting_media_stream_url(int $attachment_id): string
 }
 
 /**
+ * ردیف مدیای پورتال بر اساس attachment
+ *
+ * @return array<string,mixed>|null
+ */
+function casting_media_row_by_attachment(int $attachment_id): ?array
+{
+    if ($attachment_id <= 0) {
+        return null;
+    }
+    if (!function_exists('casting_user_media_ensure_table')) {
+        require_once __DIR__ . '/user-media.php';
+    }
+    casting_user_media_ensure_table();
+    global $wpdb;
+    $table = casting_user_media_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $row = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$table} WHERE attachment_id = %d LIMIT 1",
+        $attachment_id
+    ), ARRAY_A);
+
+    return is_array($row) ? $row : null;
+}
+
+/**
+ * مجوز استریم فایل پورتال — فقط مالک، ادمین پورتال، یا بیننده مجاز برای مدیای تأییدشده
+ */
+function casting_user_can_stream_attachment(int $viewer_id, int $attachment_id): bool
+{
+    if ($viewer_id <= 0 || $attachment_id <= 0) {
+        return false;
+    }
+    if (casting_get_user_role($viewer_id) === '') {
+        return false;
+    }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($viewer_id)) {
+        return true;
+    }
+    if (!function_exists('casting_user_is_super_admin')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if (function_exists('casting_user_is_super_admin') && casting_user_is_super_admin($viewer_id)) {
+        return true;
+    }
+
+    $post = get_post($attachment_id);
+    if (!$post || $post->post_type !== 'attachment') {
+        return false;
+    }
+    $author_id = (int) $post->post_author;
+    if ($author_id === $viewer_id) {
+        return true;
+    }
+
+    $media = casting_media_row_by_attachment($attachment_id);
+    if ($media !== null) {
+        $owner_id = (int) ($media['user_id'] ?? 0);
+        if ($owner_id === $viewer_id) {
+            return true;
+        }
+        if ((string) ($media['status'] ?? '') !== 'approved') {
+            return false;
+        }
+        if (!function_exists('casting_users_block_each_other')) {
+            require_once __DIR__ . '/blocks.php';
+        }
+        if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($viewer_id, $owner_id)) {
+            return false;
+        }
+
+        return function_exists('casting_user_can_view_member_profile')
+            ? casting_user_can_view_member_profile($viewer_id, $owner_id)
+            : false;
+    }
+
+    // فقط فایل‌های مسیر casting پورتال — نه هر پیوست وردپرس
+    $path = get_attached_file($attachment_id);
+    if (!is_string($path) || $path === '') {
+        return false;
+    }
+    $norm = str_replace('\\', '/', $path);
+    if (!str_contains($norm, '/casting/')) {
+        return false;
+    }
+    if ($author_id <= 0) {
+        return false;
+    }
+    if (!function_exists('casting_users_block_each_other')) {
+        require_once __DIR__ . '/blocks.php';
+    }
+    if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($viewer_id, $author_id)) {
+        return false;
+    }
+
+    return function_exists('casting_user_can_view_member_profile')
+        ? casting_user_can_view_member_profile($viewer_id, $author_id)
+        : false;
+}
+
+/**
  * @param array{class?:string,muted?:bool,poster?:string,preload?:string,attachment_id?:int} $opts
  */
 function casting_render_protected_video(string $src, string $watermark, array $opts = []): void
@@ -227,6 +327,9 @@ function casting_media_toggle_save(int $director_id, int $media_id): array
     $row = casting_media_get_row($media_id);
     if (!is_array($row) || (string) ($row['status'] ?? '') !== 'approved') {
         return ['ok' => false, 'error' => 'این پست قابل ذخیره نیست.'];
+    }
+    if (!casting_media_user_can_engage($director_id, $row)) {
+        return ['ok' => false, 'error' => 'اجازه ذخیره این پست را ندارید.'];
     }
     $owner_id = (int) ($row['user_id'] ?? 0);
     if ($owner_id === $director_id) {

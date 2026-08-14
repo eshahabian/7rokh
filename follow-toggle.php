@@ -7,12 +7,7 @@ require_once __DIR__ . '/includes/follows.php';
 header('Content-Type: application/json; charset=utf-8');
 casting_nocache();
 
-$user = casting_current_user();
-if (!$user) {
-    http_response_code(401);
-    echo wp_json_encode(['ok' => false, 'error' => 'وارد شوید.']);
-    exit;
-}
+$user = casting_require_api_casting_user();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

@@ -1,10 +1,28 @@
+# امنیت پورتال کستینگ — فقط همین پوشه (سایت اصلی وردپرس را تغییر نمی‌دهد)
+
+Options -Indexes
+
 # جلوگیری از کش شدن فرم‌های ثبت‌نام / ورود
 <IfModule mod_headers.c>
   Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
   Header set Pragma "no-cache"
+  Header set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
 <IfModule LiteSpeed>
   CacheDisable public /
   CacheDisable private /
 </IfModule>
+
+# مسدود کردن فایل‌های حساس احتمالی در ریشه پورتال
+<FilesMatch "(?i)^(config\.php|\.env|composer\.(json|lock)|.*\.(sql|bak|log|ini))$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

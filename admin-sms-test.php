@@ -9,8 +9,8 @@ require_once __DIR__ . '/includes/panel.php';
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 
-if (!casting_user_is_super_admin($user_id)) {
-    wp_die('فقط مدیر اصلی به این بخش دسترسی دارد.', 'دسترسی غیرمجاز', ['response' => 403]);
+if (!casting_user_is_portal_owner($user_id)) {
+    wp_die('فقط مدیر اصلی پورتال به این بخش دسترسی دارد.', 'دسترسی غیرمجاز', ['response' => 403]);
 }
 
 casting_nocache();

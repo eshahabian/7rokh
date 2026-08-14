@@ -208,3 +208,56 @@ function casting_bootstrap_portal_auth(): void
 
     casting_current_user();
 }
+
+/**
+ * احراز هویت APIهای JSON پورتال — نقش پورتال + غیرمعلق
+ * در صورت خطا پاسخ JSON می‌دهد و exit می‌کند.
+ */
+function casting_require_api_casting_user(bool $json = true): WP_User
+{
+    $user = casting_current_user();
+    if (!$user) {
+        http_response_code(401);
+        if ($json) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo wp_json_encode(['ok' => false, 'error' => 'وارد شوید.']);
+        } else {
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'ورود لازم است.';
+        }
+        exit;
+    }
+
+    $uid = (int) $user->ID;
+    if (casting_get_user_role($uid) === '') {
+        http_response_code(403);
+        if ($json) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo wp_json_encode(['ok' => false, 'error' => 'فقط اعضای پورتال دسترسی دارند.']);
+        } else {
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'دسترسی غیرمجاز.';
+        }
+        exit;
+    }
+
+    if (!function_exists('casting_user_is_suspended')) {
+        $admin = __DIR__ . '/admin-access.php';
+        if (is_file($admin)) {
+            require_once $admin;
+        }
+    }
+    if (function_exists('casting_user_is_suspended') && casting_user_is_suspended($uid)) {
+        http_response_code(403);
+        if ($json) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo wp_json_encode(['ok' => false, 'error' => 'حساب شما معلق شده است.']);
+        } else {
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'حساب معلق است.';
+        }
+        exit;
+    }
+
+    return $user;
+}

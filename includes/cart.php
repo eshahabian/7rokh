@@ -515,8 +515,9 @@ function casting_cart_create_order_from_cart(int $user_id): array
 function casting_cart_add_url(string $service_key, string $plan_key = '', int $project_id = 0): string
 {
     $q = [
-        'action'  => 'add',
-        'service' => $service_key,
+        'action'   => 'add',
+        'service'  => $service_key,
+        '_wpnonce' => wp_create_nonce('casting_cart_add'),
     ];
     if ($plan_key !== '') {
         $q['plan'] = $plan_key;
