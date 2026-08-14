@@ -4925,6 +4925,13 @@ a.panel-home-filter-chip:focus-visible {
   gap: 0.85rem;
 }
 
+/* فید خانه: ستون باریک شبیه اینستاگرام */
+.home-following-feed {
+  width: min(100%, 22.5rem);
+  margin-inline: auto;
+  gap: 1.15rem;
+}
+
 .home-opportunity-card,
 .opp-card {
   display: flex;
@@ -5130,7 +5137,7 @@ a.panel-home-filter-chip:focus-visible {
 
 .home-feed-post {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--bg-panel);
   overflow: hidden;
   display: grid;
@@ -5138,7 +5145,7 @@ a.panel-home-filter-chip:focus-visible {
 }
 
 .home-feed-post-head {
-  padding: 0.75rem 0.9rem 0.55rem;
+  padding: 0.65rem 0.8rem 0.45rem;
 }
 
 .home-feed-author {
@@ -5150,15 +5157,61 @@ a.panel-home-filter-chip:focus-visible {
 }
 
 .home-feed-post-media {
-  background: rgba(0, 0, 0, 0.2);
+  position: relative;
+  background: rgba(0, 0, 0, 0.22);
+  max-width: 100%;
 }
 
 .home-feed-post-media img,
 .home-feed-post-media video {
   display: block;
   width: 100%;
-  max-height: 28rem;
   object-fit: cover;
+}
+
+.home-feed-zoom {
+  position: absolute;
+  top: 0.55rem;
+  inset-inline-end: 0.55rem;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(12, 12, 14, 0.62);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  cursor: zoom-in;
+  opacity: 0;
+  transform: scale(0.92);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.home-feed-post-media:hover .home-feed-zoom,
+.home-feed-post-media:focus-within .home-feed-zoom,
+.home-feed-zoom:focus-visible {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.home-feed-zoom:hover,
+.home-feed-zoom:focus-visible {
+  background: rgba(12, 12, 14, 0.82);
+  outline: none;
+}
+
+@media (hover: none) {
+  .home-feed-zoom {
+    opacity: 0.92;
+    transform: scale(1);
+    pointer-events: auto;
+  }
 }
 
 .home-feed-caption {

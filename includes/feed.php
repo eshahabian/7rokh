@@ -243,6 +243,18 @@ function casting_render_feed_media_card(array $item, int $viewer_id): void
           ]);
       }
       ?>
+      <button
+        type="button"
+        class="home-feed-zoom"
+        data-post-expand
+        aria-label="نمایش بزرگ‌تر"
+        title="نمایش بزرگ‌تر"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="10.5" cy="10.5" r="6.25" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M15.4 15.4 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
     <?php if ($caption !== '') :
         $caption_long = (function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption)) > 90;
