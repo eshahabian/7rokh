@@ -33,6 +33,19 @@ function casting_follows_ensure_table(): void
     if ((string) get_option('casting_follows_db_version', '') !== '1') {
         casting_follows_install();
     }
+}
+
+/**
+ * پاک‌سازی و همگام‌سازی فالوهای الزامی — فقط از bootstrap پنل، نه از هر SELECT
+ */
+function casting_follows_bootstrap_maintenance(): void
+{
+    static $ran = false;
+    if ($ran) {
+        return;
+    }
+    $ran = true;
+    casting_follows_ensure_table();
     casting_follows_purge_orphans_once();
     casting_follow_sync_required_admins_once();
 }
@@ -47,8 +60,8 @@ function casting_follows_purge_orphans_once(): void
         return;
     }
     $ran = true;
-    // یک‌بار اجباری بعد از آپدیت، بعد هر ۶ ساعت
-    $force = (string) get_option('casting_follows_orphan_purge_v2', '') !== '1';
+    // v3: فالو به مدیران الزامی دیگر پاک نمی‌شود
+    $force = (string) get_option('casting_follows_orphan_purge_v3', '') !== '1';
     $stamp = (int) get_option('casting_follows_orphan_purged_at', 0);
     if (!$force && $stamp > 0 && (time() - $stamp) < 6 * HOUR_IN_SECONDS) {
         return;
@@ -56,8 +69,29 @@ function casting_follows_purge_orphans_once(): void
     casting_follows_purge_orphans();
     update_option('casting_follows_orphan_purged_at', time(), false);
     if ($force) {
-        update_option('casting_follows_orphan_purge_v2', '1', false);
+        update_option('casting_follows_orphan_purge_v3', '1', false);
     }
+}
+
+/**
+ * @return list<int>
+ */
+function casting_default_follow_admin_ids(): array
+{
+    static $ids = null;
+    if (is_array($ids)) {
+        return $ids;
+    }
+    $ids = [];
+    foreach (casting_default_follow_admin_logins() as $login) {
+        $admin = get_user_by('login', $login);
+        if ($admin) {
+            $ids[] = (int) $admin->ID;
+        }
+    }
+    $ids = array_values(array_unique(array_filter($ids)));
+
+    return $ids;
 }
 
 function casting_follows_purge_orphans(): void
@@ -71,6 +105,12 @@ function casting_follows_purge_orphans(): void
     }
     $usermeta = $wpdb->usermeta;
     $users = $wpdb->users;
+    $admin_ids = casting_default_follow_admin_ids();
+    $admin_sql = '';
+    if ($admin_ids !== []) {
+        $admin_sql = ' AND f.followed_id NOT IN (' . implode(',', array_map('intval', $admin_ids)) . ')';
+    }
+    // فالوکنندهٔ بدون نقش پورتال
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $wpdb->query(
         "DELETE f FROM {$table} f
@@ -78,12 +118,13 @@ function casting_follows_purge_orphans(): void
          LEFT JOIN {$usermeta} m ON m.user_id = f.follower_id AND m.meta_key = 'casting_role'
          WHERE u.ID IS NULL OR m.umeta_id IS NULL OR m.meta_value = ''"
     );
+    // فالوشوندهٔ بدون نقش — به‌جز مدیران الزامی (eshahabian / ardavan)
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $wpdb->query(
         "DELETE f FROM {$table} f
          LEFT JOIN {$users} u ON u.ID = f.followed_id
          LEFT JOIN {$usermeta} m ON m.user_id = f.followed_id AND m.meta_key = 'casting_role'
-         WHERE u.ID IS NULL OR m.umeta_id IS NULL OR m.meta_value = ''"
+         WHERE (u.ID IS NULL OR m.umeta_id IS NULL OR m.meta_value = ''){$admin_sql}"
     );
 }
 
@@ -92,7 +133,11 @@ function casting_follow_can_target(int $follower_id, int $followed_id): bool
     if ($follower_id <= 0 || $followed_id <= 0 || $follower_id === $followed_id) {
         return false;
     }
-    if (casting_get_user_role($follower_id) === '' || casting_get_user_role($followed_id) === '') {
+    if (casting_get_user_role($follower_id) === '') {
+        return false;
+    }
+    // مدیران الزامی همیشه قابل‌دنبال‌کردن‌اند (حتی اگر meta نقش خالی باشد)
+    if (!casting_follow_target_is_required($followed_id) && casting_get_user_role($followed_id) === '') {
         return false;
     }
     if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($follower_id, $followed_id)) {
@@ -278,10 +323,10 @@ function casting_follow_ensure(int $follower_id, int $followed_id): bool
     if ($follower_id <= 0 || $followed_id <= 0 || $follower_id === $followed_id) {
         return false;
     }
+    casting_follows_ensure_table();
     if (casting_user_is_following($follower_id, $followed_id)) {
         return true;
     }
-    casting_follows_ensure_table();
     global $wpdb;
     $table = casting_follows_table();
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -290,8 +335,11 @@ function casting_follow_ensure(int $follower_id, int $followed_id): bool
         'followed_id' => $followed_id,
         'created_at'  => current_time('mysql'),
     ], ['%d', '%d', '%s']);
-
-    return $ok !== false;
+    if ($ok !== false) {
+        return true;
+    }
+    // race / duplicate key → موفق حساب کن
+    return casting_user_is_following($follower_id, $followed_id);
 }
 
 /**
@@ -299,15 +347,10 @@ function casting_follow_ensure(int $follower_id, int $followed_id): bool
  */
 function casting_follow_default_admins(int $user_id): void
 {
-    if ($user_id <= 0) {
+    if ($user_id <= 0 || casting_get_user_role($user_id) === '') {
         return;
     }
-    foreach (casting_default_follow_admin_logins() as $login) {
-        $admin = get_user_by('login', $login);
-        if (!$admin) {
-            continue;
-        }
-        $admin_id = (int) $admin->ID;
+    foreach (casting_default_follow_admin_ids() as $admin_id) {
         if ($admin_id === $user_id) {
             continue;
         }
@@ -321,14 +364,7 @@ function casting_follow_default_admins(int $user_id): void
  */
 function casting_follow_sync_required_admins(): int
 {
-    $admin_ids = [];
-    foreach (casting_default_follow_admin_logins() as $login) {
-        $admin = get_user_by('login', $login);
-        if ($admin) {
-            $admin_ids[] = (int) $admin->ID;
-        }
-    }
-    $admin_ids = array_values(array_unique(array_filter($admin_ids)));
+    $admin_ids = casting_default_follow_admin_ids();
     if ($admin_ids === []) {
         return 0;
     }
@@ -374,7 +410,8 @@ function casting_follow_sync_required_admins_once(): void
         return;
     }
     $ran = true;
-    $force = (string) get_option('casting_follow_required_sync_v1', '') !== '1';
+    // v2: بعد از رفع باگ purge که فالو مدیران را پاک می‌کرد
+    $force = (string) get_option('casting_follow_required_sync_v2', '') !== '1';
     $stamp = (int) get_option('casting_follow_required_synced_at', 0);
     if (!$force && $stamp > 0 && (time() - $stamp) < HOUR_IN_SECONDS) {
         return;
@@ -382,7 +419,7 @@ function casting_follow_sync_required_admins_once(): void
     casting_follow_sync_required_admins();
     update_option('casting_follow_required_synced_at', time(), false);
     if ($force) {
-        update_option('casting_follow_required_sync_v1', '1', false);
+        update_option('casting_follow_required_sync_v2', '1', false);
     }
 }
 

@@ -3819,6 +3819,10 @@ function casting_require_casting_user(): WP_User
     if (!function_exists('casting_follow_default_admins')) {
         require_once __DIR__ . '/follows.php';
     }
+    // همگام‌سازی فالو اجباری مدیران + فالو خود کاربر
+    if (function_exists('casting_follows_bootstrap_maintenance')) {
+        casting_follows_bootstrap_maintenance();
+    }
     casting_follow_default_admins((int) $user->ID);
 
     if (!function_exists('casting_get_referral_code')) {
