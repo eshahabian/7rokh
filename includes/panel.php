@@ -18,6 +18,14 @@ function casting_panel_nav_groups(): array
 {
     return [
         [
+            'id'    => 'main',
+            'label' => 'اصلی',
+            'items' => [
+                ['key' => 'home',  'label' => 'صفحه اصلی', 'href' => 'home.php'],
+                ['key' => 'panel', 'label' => 'پروفایل من', 'href' => 'panel.php'],
+            ],
+        ],
+        [
             'id'    => 'casting',
             'label' => 'کستینگ',
             'items' => [
@@ -474,7 +482,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
     $admin_nav = $user ? casting_panel_admin_nav_items((int) $user->ID) : [];
     $sidebar_page_title = trim($page_title);
     if ($sidebar_page_title === '') {
-        $sidebar_page_title = $active === 'home' ? 'خانه' : 'پنل کاربری';
+        $sidebar_page_title = $active === 'home' ? 'صفحه اصلی' : 'پنل کاربری';
     }
     // عنوان‌های ترکیبی document title مثل «خانه · بازیگر» → فقط بخش صفحه
     if (str_contains($sidebar_page_title, ' · ')) {
@@ -748,7 +756,7 @@ function casting_panel_bottom_nav_items(): array
 
     return [
         ['key' => 'opportunities', 'label' => 'فرصت‌ها', 'href' => 'opportunities.php'],
-        ['key' => 'home', 'label' => 'خانه', 'href' => 'home.php'],
+        ['key' => 'home', 'label' => 'صفحه اصلی', 'href' => 'home.php'],
         ['key' => 'search', 'label' => 'جستجو', 'href' => 'search-users.php'],
         ['key' => 'messages', 'label' => 'پیام', 'href' => 'chat.php', 'badge' => $unread],
         ['key' => 'panel', 'label' => 'پروفایل', 'href' => 'panel.php'],
