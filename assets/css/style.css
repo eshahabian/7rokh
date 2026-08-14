@@ -3539,10 +3539,22 @@ html[data-theme="day"] .filter-bar--sticky {
 
 .panel-shell-nav {
   min-width: 0;
+}
+
+.panel-shell-nav-stack {
+  position: sticky;
+  top: 1rem;
+  z-index: auto;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
   align-items: stretch;
+  width: 100%;
+  max-height: calc(100vh - 2rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .panel-content {
@@ -3642,18 +3654,18 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
 }
 
 .panel-sidebar.panel-drawer {
-  position: sticky;
-  top: 1rem;
+  position: relative;
+  top: auto;
   z-index: auto;
   width: auto;
-  max-height: calc(100vh - 2rem);
+  max-height: none;
   margin: 0;
   padding: 1rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--bg-panel);
   box-shadow: none;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .panel-drawer-head-row {
@@ -3738,6 +3750,13 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
 
   .panel-shell-nav {
     display: contents;
+  }
+
+  .panel-shell-nav-stack {
+    display: contents;
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 
   .sidebar-suggest {

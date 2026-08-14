@@ -551,6 +551,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
     ?>
     <div class="panel-shell-nav">
     <div class="panel-drawer-backdrop" data-panel-drawer-close hidden></div>
+    <div class="panel-shell-nav-stack">
     <aside class="panel-sidebar panel-drawer" id="panel-drawer" aria-label="منوی پنل کاربری">
       <div class="panel-sidebar-head">
         <div class="panel-drawer-head-row">
@@ -624,6 +625,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
     <?php if ($user) : ?>
       <?php casting_render_sidebar_suggestions((int) $user->ID); ?>
     <?php endif; ?>
+    </div>
     </div>
     <?php
 }
