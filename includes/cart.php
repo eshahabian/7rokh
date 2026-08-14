@@ -507,9 +507,7 @@ function casting_cart_create_order_from_cart(int $user_id): array
     ];
 
     $created = casting_checkout_create_order($user_id, $draft);
-    if (!empty($created['ok'])) {
-        casting_cart_clear();
-    }
+    // سبد را اینجا خالی نکن — تا «بازگشت» اقلام را نگه دارد؛ خالی‌سازی در انصراف یا پرداخت موفق
 
     return $created;
 }

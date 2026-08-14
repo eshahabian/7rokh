@@ -53,15 +53,33 @@ if ((string) ($order['status'] ?? '') === 'paid') {
 
 $catalog = casting_paid_services_catalog();
 $svc = $catalog[(string) $order['service_key']] ?? [];
-$cancel_url = (string) ($svc['cancel_url'] ?? 'membership.php');
+$back_url = (string) ($svc['cancel_url'] ?? 'cart.php');
 if ((string) ($order['service_key'] ?? '') === 'cart' || !empty($order['meta']['from_cart'])) {
-    $cancel_url = 'cart.php';
+    $back_url = 'cart.php';
 } elseif ((int) ($order['project_id'] ?? 0) > 0 && (string) $order['service_key'] === 'casting_call') {
-    $cancel_url = 'director-desk.php?project=' . (int) $order['project_id'];
+    $back_url = 'director-desk.php?project=' . (int) $order['project_id'];
 }
+$cancel_url = 'cart.php';
 
 $gateway_mode = casting_gateway_mode();
 $gateway_ready = $gateway_mode === 'live' || $gateway_mode === 'sandbox';
+
+// انصراف — سبد خالی می‌شود و به خرید اشتراک برمی‌گردد
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_cancel'])) {
+    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_checkout_cancel_' . $order['order_code'])) {
+        $error = 'درخواست نامعتبر است.';
+    } else {
+        if (!function_exists('casting_cart_clear')) {
+            require_once __DIR__ . '/includes/cart.php';
+        }
+        casting_cart_clear();
+        if (in_array((string) ($order['status'] ?? ''), ['pending', 'failed', 'awaiting_payment', 'draft'], true)) {
+            casting_order_update((int) $order['id'], ['status' => 'cancelled']);
+        }
+        casting_set_flash('success', 'از خرید انصراف دادید و لیست خرید اشتراک خالی شد.');
+        casting_redirect($cancel_url);
+    }
+}
 
 // پرداخت — فقط وقتی درگاه آماده باشد (فعلاً off تا دریافت درگاه بانکی)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_pay'])) {
@@ -156,13 +174,23 @@ casting_render_flash();
 
       <div class="cta-row checkout-actions">
         <button class="btn btn-primary" type="submit">پرداخت <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></button>
-        <a class="btn btn-ghost" href="<?= casting_e($cancel_url) ?>">انصراف از خرید / بازگشت</a>
+        <a class="btn btn-ghost" href="<?= casting_e($back_url) ?>">بازگشت به خرید اشتراک</a>
       </div>
+    </form>
+    <form class="cta-row checkout-actions" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>" onsubmit="return confirm('از خرید انصراف می‌دهید؟ لیست خرید اشتراک خالی می‌شود.');">
+      <?php wp_nonce_field('casting_checkout_cancel_' . $order['order_code']); ?>
+      <input type="hidden" name="order_code" value="<?= casting_e((string) $order['order_code']) ?>">
+      <button class="btn btn-ghost" type="submit" name="checkout_cancel" value="1">انصراف</button>
     </form>
   <?php else : ?>
     <div class="cta-row checkout-actions">
       <button class="btn btn-primary" type="button" disabled>پرداخت به‌زودی فعال می‌شود — <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></button>
-      <a class="btn btn-ghost" href="<?= casting_e($cancel_url) ?>">بازگشت به خرید اشتراک / انصراف</a>
+      <a class="btn btn-ghost" href="<?= casting_e($back_url) ?>">بازگشت به خرید اشتراک</a>
+      <form method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>" onsubmit="return confirm('از خرید انصراف می‌دهید؟ لیست خرید اشتراک خالی می‌شود.');">
+        <?php wp_nonce_field('casting_checkout_cancel_' . $order['order_code']); ?>
+        <input type="hidden" name="order_code" value="<?= casting_e((string) $order['order_code']) ?>">
+        <button class="btn btn-ghost" type="submit" name="checkout_cancel" value="1">انصراف</button>
+      </form>
     </div>
   <?php endif; ?>
 </section>

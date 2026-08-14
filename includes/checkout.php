@@ -666,6 +666,13 @@ function casting_checkout_fulfill_order(array $order): array
         'paid_at' => current_time('mysql'),
     ]);
 
+    if (!empty($meta['from_cart']) || $service === 'cart') {
+        if (!function_exists('casting_cart_clear')) {
+            require_once __DIR__ . '/cart.php';
+        }
+        casting_cart_clear();
+    }
+
     return ['ok' => true, 'error' => ''];
 }
 
