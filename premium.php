@@ -121,12 +121,8 @@ casting_render_flash();
         <strong><?= casting_e($item['label']) ?></strong>
         <p class="meta"><?= casting_e($item['meta']) ?></p>
         <p class="shop-item-price">
-          <?php if (in_array((string) ($item['group'] ?? ''), ['فراخوان کستینگ', 'تبلیغات'], true)) : ?>
-            <?= casting_e(number_format((int) $item['price_base'])) ?> + مالیات
-            = <strong><?= casting_e(number_format((int) $item['price_final'])) ?> تومان</strong>
-          <?php else : ?>
-            <strong><?= casting_e(number_format((int) $item['price_base'])) ?> تومان</strong>
-          <?php endif; ?>
+          <?= casting_e(number_format((int) $item['price_base'])) ?> + مالیات
+          = <strong><?= casting_e(number_format((int) $item['price_final'])) ?> تومان</strong>
         </p>
       </div>
       <a class="btn btn-primary" href="<?= casting_e($item['href']) ?>">افزودن به سفارش‌ها</a>
@@ -138,9 +134,9 @@ casting_render_flash();
     <h2>نکته مهم</h2>
     <ul class="info-list">
       <li>با زدن «افزودن به سفارش‌ها» وارد فهرست سفارش می‌شوید؛ سپس خلاصه سفارش و درگاه. تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
-      <li>عضویت ویژه: ۳ ماه ۲۱۰٬۰۰۰ · ۶ ماه ۳۷۰٬۰۰۰ · ۱۲ ماه ۷۰۰٬۰۰۰ تومان.</li>
-      <li>فراخوان تئاتر و فیلم کوتاه: ۷۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت) · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت).</li>
-      <li>تبلیغات: بنر پوستر تئاتر ۱٬۰۰۰٬۰۰۰ · بنر پوستر فیلم ۳٬۰۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت).</li>
+      <li>عضویت ویژه: ۳ ماه ۲۱۰٬۰۰۰ · ۶ ماه ۳۷۰٬۰۰۰ · ۱۲ ماه ۷۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت).</li>
+      <li>فراخوان تئاتر، فیلم کوتاه و مستند: ۷۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت) · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت).</li>
+      <li>تبلیغات: بنر پوستر تئاتر ۱٬۰۰۰٬۰۰۰ · بنر پوستر فیلم ۳٬۰۰۰٬۰۰۰ · بنر پوستر فیلم مستند ۱ تومان (+ مالیات هنگام پرداخت).</li>
     </ul>
   </div>
 </section>

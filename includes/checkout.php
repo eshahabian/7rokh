@@ -132,6 +132,10 @@ function casting_paid_services_catalog(): array
                     'label'       => 'فراخوان فیلم کوتاه',
                     'amount_base' => 700000,
                 ],
+                'documentary' => [
+                    'label'       => 'فراخوان فیلم مستند',
+                    'amount_base' => 700000,
+                ],
                 'cinema'     => [
                     'label'       => 'فراخوان فیلم سینمایی',
                     'amount_base' => 7000000,
@@ -158,6 +162,10 @@ function casting_paid_services_catalog(): array
                 'banner_film' => [
                     'label'       => 'بنر پوستر فیلم',
                     'amount_base' => 3000000,
+                ],
+                'banner_documentary' => [
+                    'label'       => 'بنر پوستر فیلم مستند',
+                    'amount_base' => 1,
                 ],
             ],
             'success_note' => 'پس از پرداخت موفق، تیم پشتیبانی برای هماهنگی نمایش بنر با شما تماس می‌گیرد.',
@@ -201,14 +209,16 @@ function casting_shop_catalog_tiles(): array
             'featured_365' => 'images/shop-premium-12m.webp',
         ],
         'casting_call' => [
-            'theater'    => 'images/shop-call-theater.webp',
-            'short_film' => 'images/shop-call-short-film.webp',
-            'cinema'     => 'images/shop-call-cinema.webp',
-            'tv'         => 'images/shop-call-tv.webp',
+            'theater'     => 'images/shop-call-theater.webp',
+            'short_film'  => 'images/shop-call-short-film.webp',
+            'documentary' => 'images/shop-call-short-film.webp',
+            'cinema'      => 'images/shop-call-cinema.webp',
+            'tv'          => 'images/shop-call-tv.webp',
         ],
         'advertising' => [
-            'banner_theater' => 'images/shop-call-theater.webp',
-            'banner_film'    => 'images/shop-call-cinema.webp',
+            'banner_theater'     => 'images/shop-call-theater.webp',
+            'banner_film'        => 'images/shop-call-cinema.webp',
+            'banner_documentary' => 'images/shop-call-short-film.webp',
         ],
     ];
     $tiles = [];
@@ -420,7 +430,7 @@ function casting_checkout_build_draft(string $service_key, string $plan_or_type 
             $type_key = 'tv';
         }
         if ($type_key === 'other' || $type_key === '') {
-            return ['ok' => false, 'error' => 'نوع پروژه فراخوان را مشخص کنید (تئاتر، فیلم کوتاه، سینمایی یا تلویزیونی).'];
+            return ['ok' => false, 'error' => 'نوع پروژه فراخوان را مشخص کنید (تئاتر، فیلم کوتاه، مستند، سینمایی یا تلویزیونی).'];
         }
         if (!isset($types[$type_key])) {
             return ['ok' => false, 'error' => 'نوع فراخوان نامعتبر است.'];
@@ -716,13 +726,14 @@ function casting_checkout_map_project_type(string $project_type): string
 {
     $project_type = sanitize_key($project_type);
     $map = [
-        'theater'    => 'theater',
-        'short_film' => 'short_film',
-        'cinema'     => 'cinema',
-        'tv'         => 'tv',
-        'film'       => 'cinema',
-        'series'     => 'tv',
-        'other'      => '',
+        'theater'     => 'theater',
+        'short_film'  => 'short_film',
+        'documentary' => 'documentary',
+        'cinema'      => 'cinema',
+        'tv'          => 'tv',
+        'film'        => 'cinema',
+        'series'      => 'tv',
+        'other'       => '',
     ];
 
     return $map[$project_type] ?? '';

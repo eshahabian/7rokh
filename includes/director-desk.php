@@ -105,13 +105,14 @@ function casting_director_require_director(int $user_id): bool
 function casting_director_project_type_labels(): array
 {
     return [
-        'theater'    => 'تئاتر',
-        'short_film' => 'فیلم کوتاه',
-        'cinema'     => 'فیلم سینمایی',
-        'tv'         => 'تلویزیونی / سریال',
-        'film'       => 'فیلم (قدیمی)',
-        'series'     => 'سریال (قدیمی)',
-        'other'      => 'سایر',
+        'theater'     => 'تئاتر',
+        'short_film'  => 'فیلم کوتاه',
+        'documentary' => 'فیلم مستند',
+        'cinema'      => 'فیلم سینمایی',
+        'tv'          => 'تلویزیونی / سریال',
+        'film'        => 'فیلم (قدیمی)',
+        'series'      => 'سریال (قدیمی)',
+        'other'       => 'سایر',
     ];
 }
 
@@ -1121,7 +1122,7 @@ function casting_director_send_casting_call(
     if (!casting_user_has_casting_call_credit($director_id, $project_id)) {
         $type_key = casting_checkout_map_project_type((string) ($project['project_type'] ?? ''));
         if ($type_key === '') {
-            return ['ok' => false, 'error' => 'برای انتشار فراخوان، نوع پروژه باید تئاتر، فیلم کوتاه، سینمایی یا تلویزیونی باشد.'];
+            return ['ok' => false, 'error' => 'برای انتشار فراخوان، نوع پروژه باید تئاتر، فیلم کوتاه، مستند، سینمایی یا تلویزیونی باشد.'];
         }
 
         return [
@@ -1322,7 +1323,7 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
       <h2 class="panel-section-title">فراخوان کستینگ</h2>
       <p class="field-hint">برای اعضای منطبق ارسال می‌شود و به‌صورت پیش‌فرض در فید عمومی «فرصت‌ها» هم منتشر می‌شود تا دیگران بتوانند اپلای کنند.</p>
       <?php if ($type_key === '') : ?>
-        <div class="flash flash-error">نوع پروژه برای قیمت‌گذاری فراخوان مناسب نیست. نوع را روی تئاتر، فیلم کوتاه، سینمایی یا تلویزیونی تنظیم کنید.</div>
+        <div class="flash flash-error">نوع پروژه برای قیمت‌گذاری فراخوان مناسب نیست. نوع را روی تئاتر، فیلم کوتاه، مستند، سینمایی یا تلویزیونی تنظیم کنید.</div>
       <?php else : ?>
         <div class="bio-block checkout-call-price">
           <p><strong>هزینه انتشار این فراخوان:</strong> <?= casting_e(casting_format_toman($price_base)) ?> <span class="meta">(بدون مالیات)</span></p>

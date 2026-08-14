@@ -302,12 +302,8 @@ casting_render_flash();
             <strong class="shop-tile-title"><?= casting_e((string) $tile['label']) ?></strong>
             <p class="shop-tile-meta"><?= casting_e((string) $tile['meta']) ?></p>
             <p class="shop-tile-price">
-              <?php if ($tile_service === 'casting_call' || $tile_service === 'advertising') : ?>
-                <strong><?= casting_e(casting_format_toman((int) $tile['price_base'])) ?></strong>
-                <span class="meta">+ مالیات در پرداخت</span>
-              <?php else : ?>
-                <strong><?= casting_e(casting_format_toman((int) $tile['price_base'])) ?></strong>
-              <?php endif; ?>
+              <strong><?= casting_e(casting_format_toman((int) $tile['price_base'])) ?></strong>
+              <span class="meta">+ مالیات در پرداخت</span>
             </p>
             <a class="btn btn-primary btn-sm shop-tile-add" href="<?= casting_e($add_href) ?>">افزودن</a>
           </div>
