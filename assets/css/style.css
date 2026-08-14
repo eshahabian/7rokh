@@ -8870,9 +8870,12 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
 .media-protect--video.is-video-fallback .media-protect-source {
   opacity: 1;
   z-index: 1;
+  pointer-events: auto;
 }
 
-.media-protect--video.is-video-fallback .media-protect-canvas {
+.media-protect--video.is-video-fallback .media-protect-canvas,
+.media-protect--video.is-video-fallback .media-protect-play,
+.media-protect--video.is-video-fallback .media-protect-controls {
   display: none;
 }
 

@@ -2257,23 +2257,84 @@
           const protect = document.createElement("div");
           protect.className = "media-protect";
           protect.setAttribute("data-media-protect", "");
-          const clone = cloneSource.cloneNode(true);
-          if (clone.tagName === "VIDEO") {
+          if (cloneSource.tagName === "VIDEO") {
+            protect.classList.add("media-protect--video");
+            protect.setAttribute("data-video-protect", "");
+            const clone = document.createElement("video");
+            clone.className = "media-protect-source";
+            const src = cloneSource.currentSrc || cloneSource.getAttribute("src") || "";
+            if (src) clone.src = src;
+            const poster = cloneSource.getAttribute("poster") || "";
+            if (poster) clone.setAttribute("poster", poster);
+            clone.setAttribute("playsinline", "");
+            clone.setAttribute("webkit-playsinline", "");
+            clone.setAttribute("preload", "metadata");
             clone.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
             clone.setAttribute("disablepictureinpicture", "");
+            clone.draggable = false;
+            clone.oncontextmenu = () => false;
+            protect.appendChild(clone);
+
+            const canvas = document.createElement("canvas");
+            canvas.className = "media-protect-canvas";
+            canvas.setAttribute("aria-hidden", "true");
+            protect.appendChild(canvas);
+
+            const wm = document.createElement("div");
+            wm.className = "media-watermark";
+            wm.setAttribute("aria-hidden", "true");
+            const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
+            for (let i = 0; i < 3; i += 1) {
+              const span = document.createElement("span");
+              span.textContent = label;
+              wm.appendChild(span);
+            }
+            protect.appendChild(wm);
+
+            const playBtn = document.createElement("button");
+            playBtn.type = "button";
+            playBtn.className = "media-protect-play";
+            playBtn.setAttribute("data-video-play", "");
+            playBtn.setAttribute("aria-label", "پخش ویدیو");
+            playBtn.textContent = "▶";
+            protect.appendChild(playBtn);
+
+            const controls = document.createElement("div");
+            controls.className = "media-protect-controls";
+            controls.hidden = true;
+            const toggleBtn = document.createElement("button");
+            toggleBtn.type = "button";
+            toggleBtn.className = "media-protect-toggle";
+            toggleBtn.setAttribute("data-video-toggle", "");
+            toggleBtn.setAttribute("aria-label", "توقف/پخش");
+            toggleBtn.textContent = "❚❚";
+            const seek = document.createElement("input");
+            seek.className = "media-protect-seek";
+            seek.type = "range";
+            seek.min = "0";
+            seek.max = "1000";
+            seek.value = "0";
+            seek.step = "1";
+            seek.setAttribute("data-video-seek", "");
+            seek.setAttribute("aria-label", "زمان");
+            controls.appendChild(toggleBtn);
+            controls.appendChild(seek);
+            protect.appendChild(controls);
+          } else {
+            const clone = cloneSource.cloneNode(true);
+            clone.draggable = false;
+            protect.appendChild(clone);
+            const wm = document.createElement("div");
+            wm.className = "media-watermark";
+            wm.setAttribute("aria-hidden", "true");
+            const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
+            for (let i = 0; i < 3; i += 1) {
+              const span = document.createElement("span");
+              span.textContent = label;
+              wm.appendChild(span);
+            }
+            protect.appendChild(wm);
           }
-          clone.draggable = false;
-          protect.appendChild(clone);
-          const wm = document.createElement("div");
-          wm.className = "media-watermark";
-          wm.setAttribute("aria-hidden", "true");
-          const label = (window.CASTING_MEDIA_PROTECT && window.CASTING_MEDIA_PROTECT.watermark) || "";
-          for (let i = 0; i < 3; i += 1) {
-            const span = document.createElement("span");
-            span.textContent = label;
-            wm.appendChild(span);
-          }
-          protect.appendChild(wm);
           mediaWrap.appendChild(protect);
         }
       }
@@ -2482,6 +2543,10 @@
       root.classList.remove("is-video-fallback");
     } catch (_err) {
       root.classList.add("is-video-fallback");
+      if (video && !video.hasAttribute("controls")) {
+        video.setAttribute("controls", "");
+        video.controls = true;
+      }
     }
   };
 
@@ -2489,10 +2554,25 @@
     if (!root || root.dataset.videoReady === "1") return;
     const video = root.querySelector("video.media-protect-source, video");
     const canvas = root.querySelector("canvas.media-protect-canvas");
-    if (!video || !canvas) return;
+    if (!video) return;
+    // بدون canvas → کنترل‌های بومی
+    if (!canvas) {
+      root.dataset.videoReady = "1";
+      root.classList.add("is-video-fallback");
+      video.setAttribute("controls", "");
+      video.controls = true;
+      video.removeAttribute("muted");
+      video.muted = false;
+      return;
+    }
     root.dataset.videoReady = "1";
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) {
+      root.classList.add("is-video-fallback");
+      video.setAttribute("controls", "");
+      video.controls = true;
+      return;
+    }
     const playBtn = root.querySelector("[data-video-play]");
     const toggleBtn = root.querySelector("[data-video-toggle]");
     const seek = root.querySelector("[data-video-seek]");
