@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $conversations = [];
-$contacts = casting_dm_allowed_contacts($my_id);
+$contacts = [];
 $peer = null;
 $thread = [];
 $peer_allow = ['ok' => false, 'error' => ''];
@@ -85,10 +85,12 @@ $thread_closed = false;
 $can_close_thread = false;
 
 if ($peer_id > 0) {
+    if (!casting_dm_peer_is_listable($peer_id)) {
+        casting_redirect('chat.php');
+    }
     $peer = get_user_by('id', $peer_id);
-    if (!$peer || casting_get_user_role($peer_id) === '') {
-        $error = $error !== '' ? $error : 'کاربر پیدا نشد.';
-        $peer_id = 0;
+    if (!$peer) {
+        casting_redirect('chat.php');
     } else {
         $thread_locked = casting_dm_thread_locked_for_user($my_id, $peer_id);
         $thread_closed = casting_dm_thread_is_closed($my_id, $peer_id);
@@ -121,6 +123,11 @@ if ($peer_id > 0) {
 }
 
 $conversations = casting_dm_conversations($my_id);
+if (!function_exists('casting_user_is_super_admin')) {
+    require_once __DIR__ . '/includes/admin-access.php';
+}
+$contacts = casting_dm_allowed_contacts($my_id);
+$is_admin_chat = casting_user_is_portal_owner($my_id) || casting_user_is_super_admin($my_id);
 $compose_default = '';
 $compose_locked = false;
 if ($peer_id > 0 && !empty($peer_allow['ok']) && casting_is_employer_role(casting_get_user_role($my_id))) {
@@ -153,11 +160,22 @@ casting_render_flash();
         <ul class="chat-conv-list">
           <?php foreach ($conversations as $conv) :
               $conv_unread = (int) ($conv['unread'] ?? 0);
+              $conv_peer = (int) ($conv['peer_id'] ?? 0);
+              if (!casting_dm_peer_is_listable($conv_peer)) {
+                  continue;
+              }
+              $conv_name = trim((string) ($conv['name'] ?? ''));
+              if ($conv_name === '') {
+                  $conv_name = casting_dm_peer_display_name($conv_peer);
+              }
+              if ($conv_name === '') {
+                  continue;
+              }
               ?>
             <li>
-              <a class="chat-conv-item<?= $peer_id === (int) $conv['peer_id'] ? ' is-active' : '' ?><?= $conv_unread > 0 ? ' has-unread' : '' ?><?= !empty($conv['locked']) ? ' is-locked' : '' ?>" href="chat.php?with=<?= (int) $conv['peer_id'] ?>">
-                <?php casting_render_chat_avatar((int) $conv['peer_id'], (string) $conv['name'], $conv_unread > 0); ?>
-                <strong class="chat-conv-name"><?= casting_e($conv['name']) ?></strong>
+              <a class="chat-conv-item<?= $peer_id === $conv_peer ? ' is-active' : '' ?><?= $conv_unread > 0 ? ' has-unread' : '' ?><?= !empty($conv['locked']) ? ' is-locked' : '' ?>" href="chat.php?with=<?= $conv_peer ?>">
+                <?php casting_render_chat_avatar($conv_peer, $conv_name, $conv_unread > 0); ?>
+                <strong class="chat-conv-name"><?= casting_e($conv_name) ?></strong>
               </a>
             </li>
           <?php endforeach; ?>
@@ -168,18 +186,37 @@ casting_render_flash();
         <?php wp_nonce_field('casting_dm'); ?>
         <input type="hidden" name="action" value="start">
         <div class="field">
-          <label for="peer_id">شروع گفتگوی جدید</label>
+          <label for="peer_id"><?= $is_admin_chat ? 'پیام به همه اعضا' : 'شروع گفتگوی جدید' ?></label>
           <?php if ($contacts === []) : ?>
             <p class="field-hint">فعلاً مخاطب مجازی برای شروع گفتگو ندارید. دسترسی نقش‌ها را در جدول پیام‌رسان بررسی کنید.</p>
+          <?php else : ?>
+            <?php if ($is_admin_chat) : ?>
+              <input type="search" class="chat-contact-filter" data-chat-contact-filter placeholder="جستجوی عضو…" aria-label="جستجوی عضو" autocomplete="off">
+            <?php endif; ?>
+            <select id="peer_id" name="peer_id" required size="<?= $is_admin_chat ? '12' : '1' ?>" class="<?= $is_admin_chat ? 'chat-contact-select--admin' : '' ?>" data-chat-contact-select>
+              <?php if (!$is_admin_chat) : ?>
+                <option value="">انتخاب مخاطب…</option>
+              <?php endif; ?>
+              <?php foreach ($contacts as $contact) :
+                  $cid = (int) ($contact['id'] ?? 0);
+                  if ($cid <= 0) {
+                      continue;
+                  }
+                  $cname = (string) ($contact['name'] ?? '');
+                  $crole = casting_user_public_role_label($cid);
+                  $label = $cname . ($crole !== '' ? ' — ' . $crole : '');
+                  ?>
+                <option
+                  value="<?= $cid ?>"
+                  <?= $peer_id === $cid ? 'selected' : '' ?>
+                  data-contact-label="<?= casting_e(function_exists('mb_strtolower') ? mb_strtolower($label, 'UTF-8') : strtolower($label)) ?>"
+                ><?= casting_e($label) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <?php if ($is_admin_chat) : ?>
+              <p class="field-hint"><?= count($contacts) ?> عضو قابل پیام</p>
+            <?php endif; ?>
           <?php endif; ?>
-          <select id="peer_id" name="peer_id" required <?= $contacts === [] ? 'disabled' : '' ?>>
-            <option value="">انتخاب مخاطب…</option>
-            <?php foreach ($contacts as $contact) : ?>
-              <option value="<?= (int) $contact['id'] ?>" <?= $peer_id === (int) $contact['id'] ? 'selected' : '' ?>>
-                <?= casting_e($contact['name'] . ' — ' . casting_user_public_role_label((int) $contact['id'])) ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
         </div>
         <button class="btn btn-ghost" type="submit" <?= $contacts === [] ? 'disabled' : '' ?>>باز کردن</button>
       </form>

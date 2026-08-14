@@ -2302,10 +2302,16 @@ function casting_render_messages_dock(): void
           <ul class="messages-dock-list">
             <?php foreach ($preview as $conv) :
                 $peer = (int) ($conv['peer_id'] ?? 0);
-                if ($peer <= 0) {
+                if ($peer <= 0 || !casting_dm_peer_is_listable($peer)) {
                     continue;
                 }
-                $name = (string) ($conv['name'] ?? '');
+                $name = trim((string) ($conv['name'] ?? ''));
+                if ($name === '') {
+                    $name = casting_dm_peer_display_name($peer);
+                }
+                if ($name === '') {
+                    continue;
+                }
                 $role = (string) ($conv['role'] ?? '');
                 if ($role === '' && !$is_admin_chat) {
                     try {
@@ -2315,6 +2321,9 @@ function casting_render_messages_dock(): void
                     }
                 }
                 $avatar = (string) ($conv['avatar'] ?? '');
+                if ($avatar === '') {
+                    $avatar = casting_chat_peer_avatar_url($peer);
+                }
                 $unread = (int) ($conv['unread'] ?? 0);
                 $last = trim((string) ($conv['last_message'] ?? ''));
                 if (function_exists('mb_strlen') && mb_strlen($last, 'UTF-8') > 40) {

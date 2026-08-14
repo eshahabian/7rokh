@@ -182,7 +182,11 @@ function casting_can_user_open_dm(int $from_id, int $to_id): array
     if (casting_users_block_each_other($from_id, $to_id)) {
         return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
     }
-    if (casting_user_is_portal_owner($from_id) && casting_get_user_role($to_id) !== '') {
+    if (!function_exists('casting_user_is_super_admin')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if ((casting_user_is_portal_owner($from_id) || casting_user_is_super_admin($from_id))
+        && casting_get_user_role($to_id) !== '') {
         return ['ok' => true, 'error' => ''];
     }
     // مدیران رسمی برای همه قابل پیام هستند

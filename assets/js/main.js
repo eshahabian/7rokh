@@ -3423,4 +3423,21 @@
       if (event.key === "Escape") setOpen(false);
     });
   }
+
+  // فیلتر مخاطبین در صفحه چت کامل (ادمین)
+  const chatContactFilter = document.querySelector("[data-chat-contact-filter]");
+  const chatContactSelect = document.querySelector("[data-chat-contact-select]");
+  if (chatContactFilter instanceof HTMLInputElement && chatContactSelect instanceof HTMLSelectElement) {
+    chatContactFilter.addEventListener("input", () => {
+      const q = (chatContactFilter.value || "").trim().toLowerCase();
+      Array.from(chatContactSelect.options).forEach((opt) => {
+        if (!opt.value) {
+          opt.hidden = false;
+          return;
+        }
+        const label = String(opt.getAttribute("data-contact-label") || opt.textContent || "").toLowerCase();
+        opt.hidden = q !== "" && !label.includes(q);
+      });
+    });
+  }
 })();

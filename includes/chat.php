@@ -78,8 +78,39 @@ function casting_user_requires_premium_for_dm(int $user_id): bool
 function casting_dm_peer_display_name(int $peer_id): string
 {
     $user = get_user_by('id', $peer_id);
+    if (!$user) {
+        return '';
+    }
+    $name = trim((string) $user->display_name);
+    if ($name !== '') {
+        return $name;
+    }
+    $login = trim((string) $user->user_login);
 
-    return $user ? (string) $user->display_name : 'کاربر';
+    return $login !== '' ? $login : '';
+}
+
+/**
+ * آیا مخاطب برای لیست گفتگو / مخاطبین قابل نمایش است؟
+ */
+function casting_dm_peer_is_listable(int $peer_id): bool
+{
+    if ($peer_id <= 0) {
+        return false;
+    }
+    $user = get_user_by('id', $peer_id);
+    if (!$user) {
+        return false;
+    }
+    if (casting_get_user_role($peer_id) === '') {
+        return false;
+    }
+    if (function_exists('casting_user_is_suspended') && casting_user_is_suspended($peer_id)) {
+        return false;
+    }
+    $name = casting_dm_peer_display_name($peer_id);
+
+    return $name !== '';
 }
 
 function casting_dm_premium_notice_recently_sent(int $recipient_id): bool
@@ -1140,7 +1171,10 @@ function casting_dm_conversations(int $user_id): array
             continue;
         }
         $seen[$peer] = true;
-        $user = get_user_by('id', $peer);
+        // کاربر حذف‌شده / معلق / بدون نقش پورتال را در لیست نشان نده
+        if (!casting_dm_peer_is_listable($peer)) {
+            continue;
+        }
         $locked = casting_dm_thread_locked_for_user($user_id, $peer);
         $last_message = (string) $row['message'];
         if ($locked && (int) ($unread_map[$peer] ?? 0) > 0) {
@@ -1167,10 +1201,15 @@ function casting_dm_conversations(int $user_id): array
  */
 function casting_dm_allowed_contacts(int $user_id): array
 {
+    if (!function_exists('casting_user_is_super_admin')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    $is_admin = casting_user_is_portal_owner($user_id) || casting_user_is_super_admin($user_id);
+
     $users = get_users([
         'meta_key' => 'casting_role',
         'number'   => -1,
-        'fields'   => ['ID', 'display_name'],
+        'fields'   => ['ID', 'display_name', 'user_login'],
         'orderby'  => 'display_name',
         'order'    => 'ASC',
     ]);
@@ -1181,12 +1220,22 @@ function casting_dm_allowed_contacts(int $user_id): array
         if ($uid === $user_id) {
             continue;
         }
-        if (!casting_can_user_open_dm($user_id, $uid)['ok']) {
+        if (!casting_dm_peer_is_listable($uid)) {
+            continue;
+        }
+        if (!$is_admin && !casting_can_user_open_dm($user_id, $uid)['ok']) {
+            continue;
+        }
+        if ($is_admin && casting_users_block_each_other($user_id, $uid)) {
+            continue;
+        }
+        $name = casting_dm_peer_display_name($uid);
+        if ($name === '') {
             continue;
         }
         $out[] = [
             'id'   => $uid,
-            'name' => (string) $user->display_name,
+            'name' => $name,
             'role' => casting_get_user_role($uid),
         ];
     }
