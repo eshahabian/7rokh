@@ -586,7 +586,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
                   <span class="panel-sidebar-membership membership-number"><?= casting_e($panel_membership_number) ?></span>
                 <?php endif; ?>
                 <?php if ($panel_referral_code !== '') : ?>
-                  <span class="panel-sidebar-referral membership-number referral-code" title="کد معرفی">معرف: <?= casting_e($panel_referral_code) ?></span>
+                  <span class="panel-sidebar-referral" title="کد معرفی">معرف: <span class="membership-number referral-code" dir="ltr"><?= casting_e($panel_referral_code) ?></span></span>
                 <?php endif; ?>
               </p>
             </div>

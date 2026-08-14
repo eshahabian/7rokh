@@ -3542,11 +3542,12 @@ html[data-theme="day"] .filter-bar--sticky {
 /* ── Panel shell: desktop sidebar + mobile hamburger ── */
 .panel-shell {
   --panel-nav-width: 300px;
-  --panel-nav-gap: 0.85rem; /* فاصله منو ↔ پیشنهادی — همان برای چت ↔ منو */
+  --panel-tile-gap: 1.25rem; /* فاصله اسلایدشو ↔ منو — مبنا برای همه کاشی‌ها */
+  --panel-nav-gap: var(--panel-tile-gap);
   position: relative;
   display: grid;
   grid-template-columns: minmax(260px, var(--panel-nav-width)) minmax(0, 1fr);
-  gap: 1.25rem;
+  gap: var(--panel-tile-gap);
   align-items: start;
   padding: 2rem 0 4rem;
 }
@@ -4241,37 +4242,33 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   color: var(--ink-muted);
 }
 
-/* ویجت شناور پیام‌ها — راست سایت؛ فاصله تا منو = فاصله منو↔پیشنهادی */
+/* ویجت شناور پیام‌ها — راست سایت؛ هم‌عرض منو؛ فاصله = اسلایدشو↔منو */
 .messages-dock {
-  --messages-gap: 0.85rem;
+  --tile-gap: 1.25rem;
+  --tile-w: 300px;
   --wrap-max: 1100px;
   position: fixed;
   z-index: 140;
   bottom: 1.25rem;
-  /* لبه راست صفحه */
-  inset-inline-start: var(--messages-gap);
+  /*
+    از راست: بعد از حاشیه wrap، یک ستون هم‌عرض منو با فاصله tile-gap
+    تا فاصله‌اش با منو همان فاصله اسلایدشو و منو باشد.
+  */
+  inset-inline-start: max(
+    var(--tile-gap),
+    calc(
+      (100vw - min(var(--wrap-max), calc(100vw - 2.5rem))) / 2
+      - var(--tile-w)
+      - var(--tile-gap)
+    )
+  );
   inset-inline-end: auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.45rem;
-  /*
-    عرض طوری که بین لبهٔ چپ ویجت و لبهٔ راست ستون منو
-    دقیقاً همان --messages-gap بماند (= gap منو و پیشنهادی).
-    حاشیه راست wrap = (100vw - wrapWidth) / 2
-  */
-  width: max(
-    18rem,
-    min(
-      24rem,
-      calc(
-        (100vw - min(var(--wrap-max), calc(100vw - 2.5rem))) / 2
-        - var(--messages-gap)
-        - var(--messages-gap)
-      )
-    )
-  );
-  max-width: calc(100vw - 2 * var(--messages-gap));
+  gap: var(--tile-gap);
+  width: min(var(--tile-w), calc(100vw - 2 * var(--tile-gap)));
+  max-width: min(var(--tile-w), calc(100vw - 2 * var(--tile-gap)));
 }
 
 .messages-dock-toggle {
@@ -9762,8 +9759,16 @@ html[data-theme="day"] .ig-profile .referral-block {
 
 .panel-sidebar-referral {
   display: block;
+  width: 100%;
   margin-top: 0.15rem;
   font-size: 0.78rem;
+  unicode-bidi: plaintext;
+}
+
+.panel-sidebar-referral .referral-code {
+  margin-inline-start: 0.25rem;
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 @media (max-width: 700px) {

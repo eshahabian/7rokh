@@ -10,9 +10,12 @@ $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $tab = ((string) ($_GET['tab'] ?? 'following')) === 'followers' ? 'followers' : 'following';
 
+// اطمینان از فالو اجباری همه اعضا به مدیران (eshahabian / ardavan)
+casting_follow_sync_required_admins();
+
 $ids = $tab === 'followers'
-    ? casting_list_follower_ids($user_id, 100)
-    : casting_list_following_ids($user_id, 100);
+    ? casting_list_follower_ids($user_id, 300)
+    : casting_list_following_ids($user_id, 300);
 
 $new_followers = casting_new_followers_count($user_id);
 if ($tab === 'followers') {

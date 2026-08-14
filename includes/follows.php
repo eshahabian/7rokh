@@ -85,6 +85,10 @@ function casting_default_follow_admin_ids(): array
     $ids = [];
     foreach (casting_default_follow_admin_logins() as $login) {
         $admin = get_user_by('login', $login);
+        if (!$admin) {
+            // بعضی نصب‌ها login را با حروف بزرگ ذخیره کرده‌اند
+            $admin = get_user_by('slug', $login);
+        }
         if ($admin) {
             $ids[] = (int) $admin->ID;
         }
@@ -410,8 +414,8 @@ function casting_follow_sync_required_admins_once(): void
         return;
     }
     $ran = true;
-    // v2: بعد از رفع باگ purge که فالو مدیران را پاک می‌کرد
-    $force = (string) get_option('casting_follow_required_sync_v2', '') !== '1';
+    // v3: اجبار همگام‌سازی دوباره (فالو همه اعضا به eshahabian/ardavan)
+    $force = (string) get_option('casting_follow_required_sync_v3', '') !== '1';
     $stamp = (int) get_option('casting_follow_required_synced_at', 0);
     if (!$force && $stamp > 0 && (time() - $stamp) < HOUR_IN_SECONDS) {
         return;
@@ -419,7 +423,7 @@ function casting_follow_sync_required_admins_once(): void
     casting_follow_sync_required_admins();
     update_option('casting_follow_required_synced_at', time(), false);
     if ($force) {
-        update_option('casting_follow_required_sync_v2', '1', false);
+        update_option('casting_follow_required_sync_v3', '1', false);
     }
 }
 
