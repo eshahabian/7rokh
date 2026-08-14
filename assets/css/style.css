@@ -4239,25 +4239,19 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   color: var(--ink-muted);
 }
 
-/* ویجت شناور پیام‌ها — پایین‌راست، پهن‌تر از ستون منو (زیر پیشنهادی نیست) */
+/* ویجت شناور پیام‌ها — چسبیده به راست سایت */
 .messages-dock {
-  --messages-dock-edge: 0.85rem; /* همان فاصله منو ↔ پیشنهادی */
   position: fixed;
   z-index: 140;
   bottom: 1.25rem;
-  /* لبه راست نزدیک لبه راست صفحه/.wrap */
-  inset-inline-start: max(
-    var(--messages-dock-edge),
-    calc((100vw - min(1100px, calc(100vw - 2.5rem))) / 2)
-  );
+  inset-inline-start: 1.25rem;
   inset-inline-end: auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 0.45rem;
-  /* پهن‌تر از ستون منو (300px) تا به سمت محتوا کشیده شود */
-  width: min(24rem, calc(100vw - 2 * var(--messages-dock-edge)));
-  max-width: min(24rem, calc(100vw - 2 * var(--messages-dock-edge)));
+  width: min(24rem, calc(100vw - 2.5rem));
+  max-width: min(24rem, calc(100vw - 2.5rem));
 }
 
 .messages-dock-toggle {
