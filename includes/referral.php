@@ -216,9 +216,9 @@ function casting_referral_backfill_missing_codes(int $limit = 500): int
 /**
  * پیشوند 7ROKH را برای همهٔ کدهای قبلی اعمال می‌کند (بدون تغییر معرف‌ها).
  */
-function casting_referral_backfill_prefix(int $limit = 800): int
+function casting_referral_backfill_prefix(int $limit = 40): int
 {
-    $limit = max(1, min(2000, $limit));
+    $limit = max(1, min(100, $limit));
     $prefix = casting_referral_prefix();
     $users = get_users([
         'fields'     => 'ID',
@@ -230,7 +230,9 @@ function casting_referral_backfill_prefix(int $limit = 800): int
                 'compare' => '!=',
             ],
         ],
-        'number'     => $limit,
+        'number'     => $limit * 3,
+        'orderby'    => 'ID',
+        'order'      => 'ASC',
     ]);
     if (!is_array($users) || $users === []) {
         return 0;
@@ -238,6 +240,9 @@ function casting_referral_backfill_prefix(int $limit = 800): int
 
     $updated = 0;
     foreach ($users as $id) {
+        if ($updated >= $limit) {
+            break;
+        }
         $id = (int) $id;
         if ($id <= 0) {
             continue;
@@ -255,7 +260,7 @@ function casting_referral_backfill_prefix(int $limit = 800): int
 }
 
 /**
- * یک‌بار در هر درخواست ادمین/پروفایل — جلوگیری از فشار روی دیتابیس
+ * یک‌بار در هر درخواست — فقط بک‌فیل سبک (جلوگیری از تایم‌اوت)
  */
 function casting_referral_maybe_backfill(): void
 {
@@ -265,20 +270,24 @@ function casting_referral_maybe_backfill(): void
     }
     $done = true;
 
-    $flag = (string) get_option('casting_referral_backfill_done', '');
-    if ($flag !== '1') {
-        $assigned = casting_referral_backfill_missing_codes(800);
-        if ($assigned === 0) {
-            update_option('casting_referral_backfill_done', '1', false);
+    try {
+        $flag = (string) get_option('casting_referral_backfill_done', '');
+        if ($flag !== '1') {
+            $assigned = casting_referral_backfill_missing_codes(40);
+            if ($assigned === 0) {
+                update_option('casting_referral_backfill_done', '1', false);
+            }
         }
-    }
 
-    $prefix_flag = (string) get_option('casting_referral_prefix_backfill_done', '');
-    if ($prefix_flag !== '1') {
-        $updated = casting_referral_backfill_prefix(800);
-        if ($updated === 0) {
-            update_option('casting_referral_prefix_backfill_done', '1', false);
+        $prefix_flag = (string) get_option('casting_referral_prefix_backfill_done', '');
+        if ($prefix_flag !== '1') {
+            $updated = casting_referral_backfill_prefix(40);
+            if ($updated === 0) {
+                update_option('casting_referral_prefix_backfill_done', '1', false);
+            }
         }
+    } catch (Throwable $e) {
+        // هرگز صفحه را به خاطر بک‌فیل از کار نینداز
     }
 }
 

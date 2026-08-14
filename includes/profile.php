@@ -3824,8 +3824,8 @@ function casting_require_casting_user(): WP_User
     if (!function_exists('casting_get_referral_code')) {
         require_once __DIR__ . '/referral.php';
     }
+    // فقط کد خود کاربر — بک‌فیل دسته‌جمعی سنگین را اینجا اجرا نکن
     casting_get_referral_code((int) $user->ID);
-    casting_referral_maybe_backfill();
 
     return $user;
 }

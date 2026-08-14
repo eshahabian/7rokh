@@ -623,7 +623,13 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
       <?php endif; ?>
     </aside>
     <?php if ($user) : ?>
-      <?php casting_render_sidebar_suggestions((int) $user->ID); ?>
+      <?php
+      try {
+          casting_render_sidebar_suggestions((int) $user->ID);
+      } catch (Throwable $e) {
+          // پیشنهادها نباید کل پنل را از کار بیندازد
+      }
+      ?>
     <?php endif; ?>
     </div>
     </div>
@@ -734,7 +740,11 @@ function casting_render_panel_end(): void
         require_once __DIR__ . '/media-engagement.php';
     }
     casting_render_post_lightbox_shell();
-    casting_render_messages_dock();
+    try {
+        casting_render_messages_dock();
+    } catch (Throwable $e) {
+        // ویجت پیام نباید کل پنل را از کار بیندازد
+    }
     casting_render_panel_bottom_nav((string) ($GLOBALS['casting_panel_active'] ?? ''));
     echo '</div></main>';
     casting_render_footer();
@@ -2082,7 +2092,7 @@ function casting_newest_members(int $limit = 30, int $exclude_id = 0): array
 function casting_suggested_members_for(int $viewer_id, int $limit = 5): array
 {
     $viewer_id = max(0, $viewer_id);
-    $limit = max(1, min(12, $limit));
+    $limit = max(1, min(8, $limit));
     if ($viewer_id <= 0) {
         return [];
     }
@@ -2090,10 +2100,12 @@ function casting_suggested_members_for(int $viewer_id, int $limit = 5): array
         require_once __DIR__ . '/follows.php';
     }
 
-    $pool = array_merge(
-        casting_home_premium_members(24, $viewer_id),
-        casting_newest_members(36, $viewer_id)
-    );
+    try {
+        $pool = casting_newest_members(max(12, $limit * 4), $viewer_id);
+    } catch (Throwable $e) {
+        return [];
+    }
+
     $seen = [];
     $out = [];
     foreach ($pool as $user) {
@@ -2105,17 +2117,18 @@ function casting_suggested_members_for(int $viewer_id, int $limit = 5): array
             continue;
         }
         $seen[$id] = true;
-        if (!casting_follow_can_target($viewer_id, $id)) {
+        try {
+            if (!casting_follow_can_target($viewer_id, $id) || casting_user_is_following($viewer_id, $id)) {
+                continue;
+            }
+            $profile = casting_get_profile($id);
+            $photo = casting_member_card_photo_url($id, $profile);
+            $role = casting_user_primary_activity_label($id);
+            if ($role === '') {
+                $role = casting_user_public_role_label($id);
+            }
+        } catch (Throwable $e) {
             continue;
-        }
-        if (casting_user_is_following($viewer_id, $id)) {
-            continue;
-        }
-        $profile = casting_get_profile($id);
-        $photo = casting_member_card_photo_url($id, $profile);
-        $role = casting_user_primary_activity_label($id);
-        if ($role === '') {
-            $role = casting_user_public_role_label($id);
         }
         $out[] = [
             'id'    => $id,
@@ -2133,7 +2146,11 @@ function casting_suggested_members_for(int $viewer_id, int $limit = 5): array
 
 function casting_render_sidebar_suggestions(int $viewer_id): void
 {
-    $items = casting_suggested_members_for($viewer_id, 5);
+    try {
+        $items = casting_suggested_members_for($viewer_id, 5);
+    } catch (Throwable $e) {
+        return;
+    }
     if ($items === []) {
         return;
     }
@@ -2187,22 +2204,26 @@ function casting_render_sidebar_suggestions(int $viewer_id): void
  */
 function casting_render_messages_dock(): void
 {
-    $user = casting_current_user();
-    if (!$user || casting_get_user_role((int) $user->ID) === '') {
+    try {
+        $user = casting_current_user();
+        if (!$user || casting_get_user_role((int) $user->ID) === '') {
+            return;
+        }
+        $user_id = (int) $user->ID;
+        $active = (string) ($GLOBALS['casting_panel_active'] ?? '');
+        if ($active === 'messages') {
+            return;
+        }
+        if (!function_exists('casting_dm_conversations')) {
+            require_once __DIR__ . '/chat.php';
+        }
+        $conversations = casting_dm_conversations($user_id);
+        $unread_total = casting_dm_unread_peer_count($user_id);
+        $preview = array_slice($conversations, 0, 6);
+        $avatar_stack = array_slice($conversations, 0, 3);
+    } catch (Throwable $e) {
         return;
     }
-    $user_id = (int) $user->ID;
-    $active = (string) ($GLOBALS['casting_panel_active'] ?? '');
-    if ($active === 'messages') {
-        return;
-    }
-    if (!function_exists('casting_dm_conversations')) {
-        require_once __DIR__ . '/chat.php';
-    }
-    $conversations = casting_dm_conversations($user_id);
-    $unread_total = casting_dm_unread_peer_count($user_id);
-    $preview = array_slice($conversations, 0, 8);
-    $avatar_stack = array_slice($conversations, 0, 3);
     ?>
   <div class="messages-dock" data-messages-dock>
     <button type="button" class="messages-dock-toggle" data-messages-dock-toggle aria-expanded="false" aria-controls="messages-dock-panel">
@@ -2215,7 +2236,6 @@ function casting_render_messages_dock(): void
       <?php if ($avatar_stack !== []) : ?>
         <span class="messages-dock-avatars" aria-hidden="true">
           <?php foreach ($avatar_stack as $conv) :
-              $aid = (int) ($conv['peer_id'] ?? 0);
               $aname = (string) ($conv['name'] ?? '');
               $aurl = (string) ($conv['avatar'] ?? '');
               ?>
@@ -2248,7 +2268,12 @@ function casting_render_messages_dock(): void
                   continue;
               }
               $name = (string) ($conv['name'] ?? '');
-              $role = casting_dm_peer_role_label($peer);
+              $role = '';
+              try {
+                  $role = casting_dm_peer_role_label($peer);
+              } catch (Throwable $e) {
+                  $role = '';
+              }
               $avatar = (string) ($conv['avatar'] ?? '');
               $unread = (int) ($conv['unread'] ?? 0);
               $last = trim((string) ($conv['last_message'] ?? ''));
