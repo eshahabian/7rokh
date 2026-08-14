@@ -4925,9 +4925,9 @@ a.panel-home-filter-chip:focus-visible {
   gap: 0.85rem;
 }
 
-/* فید خانه: ستون باریک شبیه اینستاگرام */
+/* فید خانه: عرض ۲× و ارتفاع ۱٫۵× نسبت به نسخه قبلی */
 .home-following-feed {
-  width: min(100%, 18rem);
+  width: min(100%, 36rem);
   margin-inline: auto;
   gap: 1.15rem;
 }
@@ -9059,9 +9059,18 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
   max-height: none;
 }
 
+/* خانه: عرض ۲ برابر، طول ۱٫۵ برابر → نسبت ۴:۳ */
+.home-feed-post-media .media-protect img {
+  aspect-ratio: 4 / 3;
+}
+
 .home-feed-post-media .media-protect--video,
 .profile-media-item .media-protect--video {
   aspect-ratio: 1 / 1;
+}
+
+.home-feed-post-media .media-protect--video {
+  aspect-ratio: 4 / 3;
 }
 
 .profile-video-player .media-protect video,
