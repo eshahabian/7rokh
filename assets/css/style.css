@@ -3541,9 +3541,11 @@ html[data-theme="day"] .filter-bar--sticky {
 
 /* ── Panel shell: desktop sidebar + mobile hamburger ── */
 .panel-shell {
+  --panel-nav-width: 300px;
+  --panel-nav-gap: 0.85rem; /* فاصله منو ↔ پیشنهادی — همان برای چت ↔ منو */
   position: relative;
   display: grid;
-  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, var(--panel-nav-width)) minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
   padding: 2rem 0 4rem;
@@ -3556,7 +3558,7 @@ html[data-theme="day"] .filter-bar--sticky {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: var(--panel-nav-gap);
   align-items: stretch;
   max-height: calc(100vh - 2rem);
 }
@@ -4239,19 +4241,37 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   color: var(--ink-muted);
 }
 
-/* ویجت شناور پیام‌ها — چسبیده به راست سایت */
+/* ویجت شناور پیام‌ها — راست سایت؛ فاصله تا منو = فاصله منو↔پیشنهادی */
 .messages-dock {
+  --messages-gap: 0.85rem;
+  --wrap-max: 1100px;
   position: fixed;
   z-index: 140;
   bottom: 1.25rem;
-  inset-inline-start: 1.25rem;
+  /* لبه راست صفحه */
+  inset-inline-start: var(--messages-gap);
   inset-inline-end: auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 0.45rem;
-  width: min(24rem, calc(100vw - 2.5rem));
-  max-width: min(24rem, calc(100vw - 2.5rem));
+  /*
+    عرض طوری که بین لبهٔ چپ ویجت و لبهٔ راست ستون منو
+    دقیقاً همان --messages-gap بماند (= gap منو و پیشنهادی).
+    حاشیه راست wrap = (100vw - wrapWidth) / 2
+  */
+  width: max(
+    18rem,
+    min(
+      24rem,
+      calc(
+        (100vw - min(var(--wrap-max), calc(100vw - 2.5rem))) / 2
+        - var(--messages-gap)
+        - var(--messages-gap)
+      )
+    )
+  );
+  max-width: calc(100vw - 2 * var(--messages-gap));
 }
 
 .messages-dock-toggle {
