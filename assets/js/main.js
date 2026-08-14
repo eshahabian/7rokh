@@ -3213,4 +3213,29 @@
       });
     }
   });
+
+  // ویجت شناور پیام‌ها
+  const messagesDock = document.querySelector("[data-messages-dock]");
+  if (messagesDock) {
+    const toggle = messagesDock.querySelector("[data-messages-dock-toggle]");
+    const panel = messagesDock.querySelector("[data-messages-dock-panel]");
+    const setOpen = (open) => {
+      if (!(panel instanceof HTMLElement) || !(toggle instanceof HTMLElement)) return;
+      panel.hidden = !open;
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+    toggle?.addEventListener("click", (event) => {
+      event.preventDefault();
+      const open = toggle.getAttribute("aria-expanded") !== "true";
+      setOpen(open);
+    });
+    document.addEventListener("click", (event) => {
+      if (!messagesDock.contains(event.target)) {
+        setOpen(false);
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setOpen(false);
+    });
+  }
 })();

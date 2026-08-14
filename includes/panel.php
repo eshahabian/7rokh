@@ -620,6 +620,9 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
           <?php endforeach; ?>
         </nav>
       <?php endif; ?>
+      <?php if ($user) : ?>
+        <?php casting_render_sidebar_suggestions((int) $user->ID); ?>
+      <?php endif; ?>
     </aside>
     </div>
     <?php
@@ -729,6 +732,7 @@ function casting_render_panel_end(): void
         require_once __DIR__ . '/media-engagement.php';
     }
     casting_render_post_lightbox_shell();
+    casting_render_messages_dock();
     casting_render_panel_bottom_nav((string) ($GLOBALS['casting_panel_active'] ?? ''));
     echo '</div></main>';
     casting_render_footer();
@@ -2066,6 +2070,221 @@ function casting_newest_members(int $limit = 30, int $exclude_id = 0): array
     }
 
     return $out;
+}
+
+/**
+ * پیشنهاد دنبال‌کردن برای سایدبار (مثل Suggested for you)
+ *
+ * @return list<array{id:int,name:string,role:string,photo:string}>
+ */
+function casting_suggested_members_for(int $viewer_id, int $limit = 5): array
+{
+    $viewer_id = max(0, $viewer_id);
+    $limit = max(1, min(12, $limit));
+    if ($viewer_id <= 0) {
+        return [];
+    }
+    if (!function_exists('casting_user_is_following')) {
+        require_once __DIR__ . '/follows.php';
+    }
+
+    $pool = array_merge(
+        casting_home_premium_members(24, $viewer_id),
+        casting_newest_members(36, $viewer_id)
+    );
+    $seen = [];
+    $out = [];
+    foreach ($pool as $user) {
+        if (!$user instanceof WP_User) {
+            continue;
+        }
+        $id = (int) $user->ID;
+        if ($id <= 0 || isset($seen[$id]) || $id === $viewer_id) {
+            continue;
+        }
+        $seen[$id] = true;
+        if (!casting_follow_can_target($viewer_id, $id)) {
+            continue;
+        }
+        if (casting_user_is_following($viewer_id, $id)) {
+            continue;
+        }
+        $profile = casting_get_profile($id);
+        $photo = casting_member_card_photo_url($id, $profile);
+        $role = casting_user_primary_activity_label($id);
+        if ($role === '') {
+            $role = casting_user_public_role_label($id);
+        }
+        $out[] = [
+            'id'    => $id,
+            'name'  => (string) $user->display_name,
+            'role'  => $role,
+            'photo' => $photo,
+        ];
+        if (count($out) >= $limit) {
+            break;
+        }
+    }
+
+    return $out;
+}
+
+function casting_render_sidebar_suggestions(int $viewer_id): void
+{
+    $items = casting_suggested_members_for($viewer_id, 5);
+    if ($items === []) {
+        return;
+    }
+    if (!function_exists('casting_render_follow_button')) {
+        require_once __DIR__ . '/follows.php';
+    }
+    ?>
+  <section class="sidebar-suggest" aria-labelledby="sidebar-suggest-title">
+    <header class="sidebar-suggest-head">
+      <h3 id="sidebar-suggest-title">پیشنهادی برای شما</h3>
+      <a class="sidebar-suggest-all" href="<?= casting_e(casting_url('search-users.php')) ?>">مشاهده همه</a>
+    </header>
+    <ul class="sidebar-suggest-list">
+      <?php foreach ($items as $row) :
+          $id = (int) ($row['id'] ?? 0);
+          if ($id <= 0) {
+              continue;
+          }
+          $name = (string) ($row['name'] ?? '');
+          $role = (string) ($row['role'] ?? '');
+          $photo = (string) ($row['photo'] ?? '');
+          ?>
+        <li class="sidebar-suggest-item">
+          <button type="button" class="sidebar-suggest-user" data-member-preview="<?= $id ?>">
+            <span class="sidebar-suggest-avatar-wrap">
+              <?php if ($photo !== '') : ?>
+                <img class="sidebar-suggest-avatar" src="<?= casting_e($photo) ?>" alt="" width="36" height="36" loading="lazy">
+              <?php else : ?>
+                <span class="sidebar-suggest-avatar sidebar-suggest-avatar--empty" aria-hidden="true">?</span>
+              <?php endif; ?>
+            </span>
+            <span class="sidebar-suggest-text">
+              <strong class="sidebar-suggest-name"><?= casting_e($name) ?></strong>
+              <?php if ($role !== '') : ?>
+                <span class="sidebar-suggest-role"><?= casting_e($role) ?></span>
+              <?php endif; ?>
+            </span>
+          </button>
+          <div class="sidebar-suggest-action">
+            <?php casting_render_follow_button($viewer_id, $id, 'btn-sm sidebar-suggest-follow'); ?>
+          </div>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  </section>
+    <?php
+}
+
+/**
+ * ویجت شناور پیام‌ها (مثل Messages اینستاگرام)
+ */
+function casting_render_messages_dock(): void
+{
+    $user = casting_current_user();
+    if (!$user || casting_get_user_role((int) $user->ID) === '') {
+        return;
+    }
+    $user_id = (int) $user->ID;
+    $active = (string) ($GLOBALS['casting_panel_active'] ?? '');
+    if ($active === 'messages') {
+        return;
+    }
+    if (!function_exists('casting_dm_conversations')) {
+        require_once __DIR__ . '/chat.php';
+    }
+    $conversations = casting_dm_conversations($user_id);
+    $unread_total = casting_dm_unread_peer_count($user_id);
+    $preview = array_slice($conversations, 0, 8);
+    $avatar_stack = array_slice($conversations, 0, 3);
+    ?>
+  <div class="messages-dock" data-messages-dock>
+    <button type="button" class="messages-dock-toggle" data-messages-dock-toggle aria-expanded="false" aria-controls="messages-dock-panel">
+      <span class="messages-dock-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" focusable="false">
+          <path d="M4.5 6.75A2.25 2.25 0 0 1 6.75 4.5h10.5A2.25 2.25 0 0 1 19.5 6.75v7.5a2.25 2.25 0 0 1-2.25 2.25H9.3L5.4 19.4a.75.75 0 0 1-1.2-.6V6.75Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="messages-dock-label">پیام‌ها</span>
+      <?php if ($avatar_stack !== []) : ?>
+        <span class="messages-dock-avatars" aria-hidden="true">
+          <?php foreach ($avatar_stack as $conv) :
+              $aid = (int) ($conv['peer_id'] ?? 0);
+              $aname = (string) ($conv['name'] ?? '');
+              $aurl = (string) ($conv['avatar'] ?? '');
+              ?>
+            <span class="messages-dock-avatar">
+              <?php if ($aurl !== '') : ?>
+                <img src="<?= casting_e($aurl) ?>" alt="">
+              <?php else : ?>
+                <span><?= casting_e(function_exists('mb_substr') ? (string) mb_substr($aname, 0, 1, 'UTF-8') : substr($aname, 0, 1)) ?></span>
+              <?php endif; ?>
+            </span>
+          <?php endforeach; ?>
+        </span>
+      <?php endif; ?>
+      <?php if ($unread_total > 0) : ?>
+        <span class="messages-dock-badge" aria-label="<?= (int) $unread_total ?> پیام خوانده‌نشده"><?= $unread_total > 9 ? '۹+' : (string) $unread_total ?></span>
+      <?php endif; ?>
+    </button>
+    <div class="messages-dock-panel" id="messages-dock-panel" data-messages-dock-panel hidden>
+      <header class="messages-dock-panel-head">
+        <strong>پیام‌ها</strong>
+        <a href="<?= casting_e(casting_url('chat.php')) ?>">مشاهده همه</a>
+      </header>
+      <?php if ($preview === []) : ?>
+        <p class="messages-dock-empty meta">هنوز گفتگویی ندارید. از پروفایل اعضا می‌توانید پیام بفرستید.</p>
+      <?php else : ?>
+        <ul class="messages-dock-list">
+          <?php foreach ($preview as $conv) :
+              $peer = (int) ($conv['peer_id'] ?? 0);
+              if ($peer <= 0) {
+                  continue;
+              }
+              $name = (string) ($conv['name'] ?? '');
+              $role = casting_dm_peer_role_label($peer);
+              $avatar = (string) ($conv['avatar'] ?? '');
+              $unread = (int) ($conv['unread'] ?? 0);
+              $last = trim((string) ($conv['last_message'] ?? ''));
+              if (function_exists('mb_strlen') && mb_strlen($last, 'UTF-8') > 48) {
+                  $last = mb_substr($last, 0, 48, 'UTF-8') . '…';
+              } elseif (strlen($last) > 48) {
+                  $last = substr($last, 0, 48) . '…';
+              }
+              ?>
+            <li>
+              <a class="messages-dock-row<?= $unread > 0 ? ' is-unread' : '' ?>" href="<?= casting_e(casting_url('chat.php?with=' . $peer)) ?>">
+                <span class="messages-dock-row-avatar">
+                  <?php if ($avatar !== '') : ?>
+                    <img src="<?= casting_e($avatar) ?>" alt="">
+                  <?php else : ?>
+                    <span aria-hidden="true"><?= casting_e(function_exists('mb_substr') ? (string) mb_substr($name, 0, 1, 'UTF-8') : substr($name, 0, 1)) ?></span>
+                  <?php endif; ?>
+                </span>
+                <span class="messages-dock-row-text">
+                  <strong><?= casting_e($name) ?></strong>
+                  <?php if ($role !== '') : ?>
+                    <span class="meta"><?= casting_e($role) ?></span>
+                  <?php endif; ?>
+                  <?php if ($last !== '') : ?>
+                    <span class="messages-dock-snippet"><?= casting_e($last) ?></span>
+                  <?php endif; ?>
+                </span>
+                <?php if ($unread > 0) : ?>
+                  <span class="messages-dock-row-badge"><?= $unread > 9 ? '۹+' : (string) $unread ?></span>
+                <?php endif; ?>
+              </a>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
+    </div>
+  </div>
+    <?php
 }
 
 /**

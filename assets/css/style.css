@@ -4046,6 +4046,341 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   font-size: 0.78rem;
 }
 
+/* پیشنهاد دنبال‌کردن در سایدبار */
+.sidebar-suggest {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+.sidebar-suggest-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.sidebar-suggest-head h3 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+.sidebar-suggest-all {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.sidebar-suggest-all:hover {
+  color: var(--accent-strong);
+}
+
+.sidebar-suggest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.sidebar-suggest-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sidebar-suggest-user {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+}
+
+.sidebar-suggest-avatar-wrap {
+  width: 36px;
+  height: 36px;
+}
+
+.sidebar-suggest-avatar {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+}
+
+.sidebar-suggest-avatar--empty {
+  display: grid;
+  place-items: center;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.sidebar-suggest-text {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.sidebar-suggest-name {
+  display: block;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-suggest-role {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--ink-muted);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-suggest-action {
+  flex: 0 0 auto;
+}
+
+.sidebar-suggest-follow {
+  padding: 0.2rem 0.45rem !important;
+  min-height: 0;
+  font-size: 0.74rem !important;
+  font-weight: 700;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.sidebar-suggest-follow.btn-primary {
+  background: transparent;
+  border-color: transparent;
+  color: #4a9eff;
+  box-shadow: none;
+}
+
+.sidebar-suggest-follow.btn-primary:hover {
+  color: #7bbcff;
+  background: transparent;
+}
+
+.sidebar-suggest-follow.is-following {
+  color: var(--ink-muted);
+}
+
+/* ویجت شناور پیام‌ها */
+.messages-dock {
+  position: fixed;
+  z-index: 140;
+  bottom: 1.25rem;
+  inset-inline-start: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  max-width: min(22rem, calc(100vw - 2rem));
+}
+
+.messages-dock-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.85rem 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-elevated) 92%, #000);
+  color: var(--ink);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.38);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.messages-dock-toggle:hover,
+.messages-dock-toggle[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.messages-dock-icon {
+  display: inline-flex;
+  color: var(--accent-strong);
+}
+
+.messages-dock-avatars {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  margin-inline-start: 0.15rem;
+}
+
+.messages-dock-avatar {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  border: 2px solid var(--bg-elevated);
+  overflow: hidden;
+  background: var(--bg-panel);
+  margin-inline-end: -0.4rem;
+  display: grid;
+  place-items: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.messages-dock-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.messages-dock-badge,
+.messages-dock-row-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: var(--danger, #b42318);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.messages-dock-panel {
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: min(52vh, 420px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.42);
+}
+
+.messages-dock-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--bg-elevated);
+  z-index: 1;
+}
+
+.messages-dock-panel-head a {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--accent-strong);
+}
+
+.messages-dock-empty {
+  margin: 0;
+  padding: 1rem 0.9rem;
+}
+
+.messages-dock-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0;
+}
+
+.messages-dock-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.55rem 0.85rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.messages-dock-row:hover {
+  background: color-mix(in srgb, var(--accent-dim) 45%, transparent);
+}
+
+.messages-dock-row.is-unread strong {
+  color: var(--accent-strong);
+}
+
+.messages-dock-row-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.messages-dock-row-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.messages-dock-row-text {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.messages-dock-row-text strong {
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.messages-dock-row-text .meta {
+  font-size: 0.74rem;
+}
+
+.messages-dock-snippet {
+  font-size: 0.76rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 960px) {
+  .messages-dock {
+    display: none;
+  }
+}
+
+body.has-panel-drawer .messages-dock {
+  bottom: 1.25rem;
+}
+
 .panel-nav {
   display: flex;
   flex-direction: column;
