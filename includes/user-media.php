@@ -959,12 +959,20 @@ function casting_user_media_thumb_url(array $row): string
         return '';
     }
     if (($row['media_type'] ?? '') === 'video') {
+        // پوستر/تامبنیل واقعی تصویر — نه URL خودِ فایل ویدیو
         $thumb = wp_get_attachment_image_url($id, 'medium');
         if (is_string($thumb) && $thumb !== '') {
             return $thumb;
         }
+        $poster_id = (int) get_post_meta($id, '_thumbnail_id', true);
+        if ($poster_id > 0) {
+            $poster = wp_get_attachment_image_url($poster_id, 'medium');
+            if (is_string($poster) && $poster !== '') {
+                return $poster;
+            }
+        }
 
-        return casting_user_media_url($row);
+        return '';
     }
     $thumb = wp_get_attachment_image_url($id, 'medium');
 
@@ -1085,7 +1093,11 @@ function casting_render_admin_approved_media_section(int $admin_id): void
     if ($items === []) {
         return;
     }
+    if (!function_exists('casting_render_protected_image')) {
+        require_once __DIR__ . '/media-protect.php';
+    }
     $approver = casting_user_media_approver_label($admin_id);
+    $wm = casting_media_protect_viewer_label();
     ?>
   <section class="profile-media-gallery profile-media-gallery--approvals" aria-label="پست‌های تأییدشده">
     <h3 class="panel-section-title">تأییدهای <?= casting_e($approver !== '' ? $approver : 'مدیر') ?></h3>
@@ -1100,17 +1112,20 @@ function casting_render_admin_approved_media_section(int $admin_id): void
           $owner = get_user_by('id', (int) ($item['user_id'] ?? 0));
           $caption = trim((string) ($item['caption'] ?? ''));
           $is_deleted = (($item['status'] ?? '') === 'deleted');
+          $is_video = (($item['media_type'] ?? '') === 'video');
           ?>
-        <figure class="profile-media-item<?= $is_deleted ? ' is-user-deleted' : '' ?>">
-          <?php
-          if (!function_exists('casting_render_protected_image')) {
-              require_once __DIR__ . '/media-protect.php';
-          }
-          $wm = casting_media_protect_viewer_label();
-          casting_render_protected_image($thumb !== '' ? $thumb : $url, $wm, [
-              'class' => 'media-protect--gallery',
-          ]);
-          ?>
+        <figure class="profile-media-item<?= $is_deleted ? ' is-user-deleted' : '' ?><?= $is_video ? ' is-video' : '' ?>">
+          <?php if ($is_video) :
+              casting_render_protected_video($url, $wm, [
+                  'class'         => 'media-protect--gallery',
+                  'poster'        => $thumb,
+                  'attachment_id' => (int) ($item['attachment_id'] ?? 0),
+              ]);
+          else :
+              casting_render_protected_image($thumb !== '' ? $thumb : $url, $wm, [
+                  'class' => 'media-protect--gallery',
+              ]);
+          endif; ?>
           <figcaption class="profile-media-caption">
             <?php if ($owner) : ?>
               <p><strong><?= casting_e((string) $owner->display_name) ?></strong></p>
