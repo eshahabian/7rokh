@@ -1330,8 +1330,8 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
           <?php if ($has_credit) : ?>
             <p class="meta flash-success" style="margin:0.35rem 0 0">پرداخت این فراخوان انجام شده — می‌توانید ارسال کنید.</p>
           <?php elseif ($checkout_href !== '') : ?>
-            <p class="meta" style="margin:0.35rem 0 0.65rem">به سفارش‌ها اضافه کنید؛ مالیات ۱۰٪ هنگام پرداخت اعمال می‌شود.</p>
-            <a class="btn btn-primary btn-sm" href="<?= casting_e($checkout_href) ?>">افزودن هزینه فراخوان به سفارش‌ها</a>
+            <p class="meta" style="margin:0.35rem 0 0.65rem">به خرید اشتراک اضافه کنید؛ مالیات ۱۰٪ هنگام پرداخت اعمال می‌شود.</p>
+            <a class="btn btn-primary btn-sm" href="<?= casting_e($checkout_href) ?>">افزودن هزینه فراخوان به خرید اشتراک</a>
           <?php endif; ?>
         </div>
       <?php endif; ?>
@@ -1376,7 +1376,7 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
         </label>
         <button class="btn btn-primary" type="submit"<?= (!$has_credit || $type_key === '') ? ' disabled title="ابتدا هزینه فراخوان را پرداخت کنید"' : '' ?>>ارسال و انتشار فراخوان</button>
         <?php if (!$has_credit && $checkout_href !== '') : ?>
-          <a class="btn btn-ghost" href="<?= casting_e($checkout_href) ?>">افزودن به سفارش‌ها</a>
+          <a class="btn btn-ghost" href="<?= casting_e($checkout_href) ?>">افزودن به خرید اشتراک</a>
         <?php endif; ?>
       </form>
 

@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Casting Portal — سفارش‌ها در هدر سایت
- * Description: آیکون سفارش‌ها کنار شبکه‌های اجتماعی هدر + شمارنده زنده
- * Version: 1.10
+ * Plugin Name: Casting Portal — خرید اشتراک در هدر سایت
+ * Description: آیکون خرید اشتراک کنار شبکه‌های اجتماعی هدر + شمارنده زنده
+ * Version: 1.11
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-cart-nav.php
  * (خودکار با deploy — .cpanel.yml)
@@ -135,7 +135,7 @@ function casting_main_cart_enqueue_assets(): void
         'url'      => casting_main_cart_url(),
         'countUrl' => casting_main_cart_count_url(),
         'count'    => casting_main_cart_count_from_cookie(),
-        'label'    => 'سفارش‌ها',
+        'label'    => 'خرید اشتراک',
     ];
 
     $js = <<<'JS'
@@ -232,8 +232,8 @@ function casting_main_cart_enqueue_assets(): void
     }
     a.className = classes.join(" ");
     a.href = CFG.url || "#";
-    a.title = CFG.label || "سفارش‌ها";
-    a.setAttribute("aria-label", CFG.label || "سفارش‌ها");
+    a.title = CFG.label || "خرید اشتراک";
+    a.setAttribute("aria-label", CFG.label || "خرید اشتراک");
     a.removeAttribute("target");
     a.removeAttribute("rel");
 
@@ -356,7 +356,7 @@ function casting_main_cart_footer_markup(): void
     $count = casting_main_cart_count_from_cookie();
     $badge_class = 'casting-main-cart-badge' . ($count > 0 ? '' : ' is-empty');
     $badge = '<span class="' . esc_attr($badge_class) . '">' . ($count > 0 ? (string) (int) $count : '') . '</span>';
-    echo '<a class="casting-main-cart-fallback" href="' . $url . '" aria-label="سفارش‌ها">سفارش‌ها' . $badge . '</a>';
+    echo '<a class="casting-main-cart-fallback" href="' . $url . '" aria-label="خرید اشتراک">خرید اشتراک' . $badge . '</a>';
 }
 
 add_action('wp_enqueue_scripts', 'casting_main_cart_enqueue_assets', 30);

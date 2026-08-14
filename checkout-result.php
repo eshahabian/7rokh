@@ -30,7 +30,7 @@ if ((string) ($order['service_key'] ?? '') === 'casting_call') {
     $pid = (int) ($order['project_id'] ?? 0);
     $next_url = $pid > 0 ? ('director-desk.php?project=' . $pid) : 'director-desk.php';
 } elseif ((string) ($order['service_key'] ?? '') === 'premium' && $is_success) {
-    $next_url = 'premium.php';
+    $next_url = 'cart.php';
 }
 
 casting_render_panel_start($page_title, 'membership');

@@ -113,7 +113,7 @@ function casting_paid_services_catalog(): array
                     'amount_base'  => (int) ($p365['price'] ?? 700000),
                 ],
             ],
-            'cancel_url'   => 'premium.php',
+            'cancel_url'   => 'cart.php',
             'success_note' => 'پس از تأیید پرداخت، عضویت ویژه روی حساب شما فعال می‌شود.',
         ],
         'casting_call' => [

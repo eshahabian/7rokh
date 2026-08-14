@@ -36,9 +36,9 @@ if ($order === [] && $service !== '') {
     $added = casting_cart_add($service, $plan, $project_id);
     if (!$added['ok']) {
         casting_set_flash('error', $added['error']);
-        casting_redirect($service === 'casting_call' ? 'director-desk.php' : 'premium.php');
+        casting_redirect($service === 'casting_call' ? 'director-desk.php' : 'cart.php');
     }
-    casting_set_flash('success', 'به سفارش‌ها اضافه شد.');
+    casting_set_flash('success', 'به خرید اشتراک اضافه شد.');
     casting_redirect('cart.php');
 }
 
@@ -162,7 +162,7 @@ casting_render_flash();
   <?php else : ?>
     <div class="cta-row checkout-actions">
       <button class="btn btn-primary" type="button" disabled>پرداخت به‌زودی فعال می‌شود — <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></button>
-      <a class="btn btn-ghost" href="<?= casting_e($cancel_url) ?>">بازگشت به سفارش‌ها / انصراف</a>
+      <a class="btn btn-ghost" href="<?= casting_e($cancel_url) ?>">بازگشت به خرید اشتراک / انصراف</a>
     </div>
   <?php endif; ?>
 </section>

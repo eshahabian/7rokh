@@ -2,10 +2,12 @@
 declare(strict_types=1);
 
 /**
- * سبد خرید — مهمان هم می‌تواند ببیند و انتخاب کند؛ پرداخت نیازمند ورود است
+ * خرید اشتراک — مهمان هم می‌تواند ببیند و انتخاب کند؛ پرداخت نیازمند ورود است
  */
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/premium.php';
+require_once __DIR__ . '/includes/admin-access.php';
 require_once __DIR__ . '/includes/checkout.php';
 require_once __DIR__ . '/includes/cart.php';
 require_once __DIR__ . '/includes/layout.php';
@@ -29,6 +31,13 @@ $auth_username = '';
 $auth_email = '';
 $auth_referral_code = '';
 $auth_need_confirm = false;
+$premium = $logged_in && casting_user_is_premium($user_id);
+$can_approve_receipts = $logged_in && casting_user_has_admin_permission($user_id, 'approve_receipts');
+$admin_filter = sanitize_key((string) ($_GET['status'] ?? 'pending'));
+if (!in_array($admin_filter, ['pending', 'approved', 'rejected', 'all'], true)) {
+    $admin_filter = 'pending';
+}
+$plans = casting_premium_plans();
 
 $cart_continue_checkout = static function (int $uid): void {
     casting_cart_claim_guest_cart();
@@ -56,23 +65,40 @@ if ($logged_in) {
 }
 casting_cart_sync_count_cookie();
 
+if ($can_approve_receipts && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_receipt'])) {
+    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_admin_receipt')) {
+        casting_set_flash('error', 'درخواست نامعتبر است.');
+    } else {
+        $receipt_id = (int) ($_POST['receipt_id'] ?? 0);
+        $action_receipt = (string) ($_POST['action'] ?? '');
+        if ($action_receipt === 'approve') {
+            $result = casting_approve_premium_receipt($receipt_id);
+            casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'فیش تأیید و حساب کاربری ویژه فعال شد.' : $result['error']);
+        } elseif ($action_receipt === 'reject') {
+            $result = casting_reject_premium_receipt($receipt_id);
+            casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'فیش رد شد.' : $result['error']);
+        }
+    }
+    casting_redirect('cart.php?status=' . $admin_filter . '#admin-receipts');
+}
+
 $action = sanitize_key((string) ($_GET['action'] ?? $_POST['cart_action'] ?? ''));
 
-// افزودن از لینک / کاشی → فقط به خلاصه سفارش‌ها (نه مستقیم پرداخت)
+// افزودن از لینک / کاشی → فقط به خلاصه خرید اشتراک (نه مستقیم پرداخت)
 if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $service = sanitize_key((string) ($_GET['service'] ?? ''));
     $plan = sanitize_key((string) ($_GET['plan'] ?? ''));
     $project_id = max(0, (int) ($_GET['project'] ?? 0));
     $result = casting_cart_add($service, $plan, $project_id);
     if ($result['ok']) {
-        casting_set_flash('success', 'به سفارش‌ها اضافه شد.');
+        casting_set_flash('success', 'به خرید اشتراک اضافه شد.');
         casting_redirect('cart.php');
     }
     casting_set_flash('error', $result['error']);
     casting_redirect('cart.php');
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['admin_receipt'])) {
     $action = sanitize_key((string) ($_POST['cart_action'] ?? ''));
     $is_auth_action = $action === 'auth_login' || $action === 'auth_register';
     $nonce_action = $is_auth_action ? 'casting_cart_auth' : 'casting_cart';
@@ -157,11 +183,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'remove') {
         $result = casting_cart_remove((string) ($_POST['item_id'] ?? ''));
-        casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'از سبد حذف شد.' : $result['error']);
+        casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'از لیست حذف شد.' : $result['error']);
         casting_redirect('cart.php');
     } elseif ($action === 'clear') {
         casting_cart_clear();
-        casting_set_flash('success', 'سفارش‌ها خالی شد.');
+        casting_set_flash('success', 'لیست خرید اشتراک خالی شد.');
         casting_redirect('cart.php');
     } elseif ($action === 'checkout') {
         if (!$logged_in) {
@@ -188,22 +214,39 @@ foreach ($shop_tiles as $tile) {
     }
     $tiles_by_group[$g][] = $tile;
 }
+$admin_receipts = $can_approve_receipts ? casting_admin_list_receipts($admin_filter === 'all' ? '' : $admin_filter) : [];
 
 if ($logged_in) {
-    casting_render_panel_start('سفارش‌ها', 'cart');
+    casting_render_panel_start('خرید اشتراک', 'cart');
 } else {
-    casting_render_head('سفارش‌ها', 'page-cart-guest');
+    casting_render_head('خرید اشتراک', 'page-cart-guest');
     casting_render_header('cart');
     echo '<main class="wrap panel-page cart-guest-page">';
 }
 casting_render_flash();
 ?>
 <section class="dash-card cart-card">
-  <h1>سفارش‌ها</h1>
+  <h1>خرید اشتراک</h1>
   <?php if ($logged_in) : ?>
     <p class="meta">اقلام انتخاب‌شده را بررسی کنید؛ برای پرداخت، دکمهٔ زیر را بزنید. مالیات فقط در مرحلهٔ پرداخت محاسبه می‌شود.</p>
   <?php else : ?>
-    <p class="meta">خدمات را ببینید و به سفارش‌ها اضافه کنید. برای پرداخت باید وارد شوید یا ثبت‌نام کنید. مالیات فقط هنگام پرداخت اعمال می‌شود.</p>
+    <p class="meta">خدمات را ببینید و به لیست اضافه کنید. برای پرداخت باید وارد شوید یا ثبت‌نام کنید. مالیات فقط هنگام پرداخت اعمال می‌شود.</p>
+  <?php endif; ?>
+
+  <?php if ($logged_in && $premium) : ?>
+    <div class="flash flash-success">حساب کاربری ویژه فعال است.</div>
+    <?php casting_render_premium_countdown($user_id); ?>
+  <?php endif; ?>
+
+  <?php if ($can_approve_receipts) : ?>
+    <?php $pending_count = casting_admin_pending_receipt_count(); ?>
+    <div class="premium-admin-notice">
+      <strong>مدیریت پرداخت‌ها (مدیران)</strong>
+      <p class="meta">تأیید فیش‌های قدیمی در صورت نیاز.</p>
+      <?php if ($pending_count > 0) : ?>
+        <p><a class="btn btn-primary btn-sm" href="#admin-receipts"><?= (int) $pending_count ?> فیش در انتظار تأیید</a></p>
+      <?php endif; ?>
+    </div>
   <?php endif; ?>
 
   <?php if ($error !== '') : ?>
@@ -212,7 +255,7 @@ casting_render_flash();
 
   <?php if ($cart['items'] === []) : ?>
     <div class="cart-empty-hero">
-      <p class="empty-state">هنوز سفارشی ندارید.</p>
+      <p class="empty-state">هنوز موردی انتخاب نکرده‌اید. از لیست خدمات پایین اضافه کنید.</p>
     </div>
   <?php else : ?>
     <div class="cart-list">
@@ -263,7 +306,7 @@ casting_render_flash();
       <?php else : ?>
         <button class="btn btn-primary" type="button" data-cart-auth-open>پرداخت</button>
       <?php endif; ?>
-      <form method="post" action="cart.php" onsubmit="return confirm('سفارش‌ها خالی شود؟');">
+      <form method="post" action="cart.php" onsubmit="return confirm('لیست خرید اشتراک خالی شود؟');">
         <?php wp_nonce_field('casting_cart'); ?>
         <input type="hidden" name="cart_action" value="clear">
         <button class="btn btn-ghost" type="submit">خالی کردن</button>
@@ -274,7 +317,7 @@ casting_render_flash();
 
 <section class="dash-card cart-shop-card" id="cart-shop">
   <h2>خدمات قابل خرید</h2>
-  <p class="meta">روی هر کاشی بزنید تا به سفارش‌ها اضافه شود.</p>
+  <p class="meta">روی هر کاشی بزنید تا به خرید اشتراک اضافه شود.</p>
 
   <?php foreach ($tiles_by_group as $group => $tiles) : ?>
     <h3 class="shop-group-title"><?= casting_e($group) ?></h3>
@@ -312,6 +355,74 @@ casting_render_flash();
     </div>
   <?php endforeach; ?>
 </section>
+
+<div class="bio-block premium-payment-block" style="margin-top:1.25rem">
+  <h2>نکته مهم</h2>
+  <ul class="info-list">
+    <li>با زدن «افزودن» وارد لیست خرید اشتراک می‌شوید؛ سپس پرداخت. تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
+    <li>عضویت ویژه: ۳ ماه ۲۱۰٬۰۰۰ · ۶ ماه ۳۷۰٬۰۰۰ · ۱۲ ماه ۷۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت).</li>
+    <li>فراخوان تئاتر، فیلم کوتاه و مستند: ۷۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت) · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت).</li>
+    <li>تبلیغات: بنر پوستر تئاتر ۱٬۰۰۰٬۰۰۰ · بنر پوستر فیلم ۳٬۰۰۰٬۰۰۰ · بنر پوستر فیلم مستند ۱ تومان (+ مالیات هنگام پرداخت).</li>
+  </ul>
+</div>
+
+<?php if ($can_approve_receipts) : ?>
+<section class="dash-card" id="admin-receipts" style="margin-top:1rem">
+  <h2 class="panel-section-title">مدیریت فیش‌ها و ارتقا به ویژه</h2>
+  <p class="meta">تأیید فیش = فعال‌سازی حساب کاربری ویژه طبق پلن · پس از پایان اعتبار خودکار غیرفعال می‌شود.</p>
+
+  <nav class="admin-tabs" aria-label="فیلتر وضعیت">
+    <?php foreach (['pending' => 'در انتظار', 'approved' => 'تأیید شده', 'rejected' => 'رد شده', 'all' => 'همه'] as $key => $label) : ?>
+      <a class="admin-tab <?= $admin_filter === $key ? 'is-active' : '' ?>" href="cart.php?status=<?= casting_e($key) ?>#admin-receipts"><?= casting_e($label) ?></a>
+    <?php endforeach; ?>
+  </nav>
+
+  <?php if (!$admin_receipts) : ?>
+    <p class="empty-state">فیشی در این بخش نیست.</p>
+  <?php else : ?>
+    <div class="admin-receipt-list">
+      <?php foreach ($admin_receipts as $row) :
+          $uid = (int) $row['user_id'];
+          $u = get_user_by('id', $uid);
+          $row_plan_key = (string) $row['plan_key'];
+          $plan_label = $plans[$row_plan_key]['label'] ?? $row_plan_key;
+          $status = (string) $row['status'];
+          ?>
+        <article class="admin-receipt-item">
+          <header>
+            <div>
+              <strong>#<?= (int) $row['id'] ?> — <?= casting_e($u ? $u->display_name : 'کاربر') ?></strong>
+              <span class="meta"><?= casting_e($plan_label) ?> · <?= casting_e(number_format((int) $row['amount'])) ?> تومان</span>
+            </div>
+            <span class="chip"><?= casting_e(casting_premium_status_label($status)) ?></span>
+          </header>
+          <ul class="info-list admin-receipt-meta">
+            <li><strong>شماره پیگیری:</strong> <?= casting_e((string) $row['reference_code']) ?></li>
+            <li><strong>تاریخ:</strong> <?= casting_e((string) $row['created_at']) ?></li>
+            <?php if ($u) : ?>
+              <li><strong>ایمیل:</strong> <?= casting_e($u->user_email) ?></li>
+            <?php endif; ?>
+          </ul>
+          <?php if ((int) ($row['attachment_id'] ?? 0) > 0) : ?>
+            <?php casting_render_receipt_thumbnail((int) $row['attachment_id']); ?>
+          <?php endif; ?>
+          <?php if ($status === 'pending') : ?>
+            <div class="cta-row">
+              <form method="post" action="cart.php?status=<?= casting_e($admin_filter) ?>#admin-receipts">
+                <?php wp_nonce_field('casting_admin_receipt'); ?>
+                <input type="hidden" name="admin_receipt" value="1">
+                <input type="hidden" name="receipt_id" value="<?= (int) $row['id'] ?>">
+                <button class="btn btn-primary" type="submit" name="action" value="approve">تأیید و فعال‌سازی ویژه</button>
+                <button class="btn btn-reject" type="submit" name="action" value="reject">رد</button>
+              </form>
+            </div>
+          <?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+</section>
+<?php endif; ?>
 
 <?php if (!$logged_in) :
     $auth_modal_open = $auth_needed || $auth_error !== '';

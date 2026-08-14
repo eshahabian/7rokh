@@ -285,7 +285,7 @@ function casting_cart_build_item(string $service_key, string $plan_key = '', int
     }
     $built = casting_checkout_build_draft($service_key, $plan_key, $project_id);
     if (!$built['ok'] || empty($built['draft'])) {
-        return ['ok' => false, 'error' => $built['error'] ?? 'افزودن به سفارش‌ها ناموفق بود.'];
+        return ['ok' => false, 'error' => $built['error'] ?? 'افزودن به خرید اشتراک ناموفق بود.'];
     }
     $draft = $built['draft'];
     $id = substr(hash('sha256', $service_key . '|' . ($draft['plan_key'] ?? '') . '|' . $project_id . '|' . microtime(true)), 0, 12);

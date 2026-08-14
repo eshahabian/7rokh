@@ -16,15 +16,10 @@ $pending_receipts = casting_user_has_admin_permission($user_id, 'approve_receipt
 
 $tiles = [
     [
-        'title' => 'خرید اشتراک و خدمات',
-        'desc'  => 'افزودن به سفارش‌ها · خلاصه سفارش · درگاه',
-        'href'  => 'premium.php',
-        'badge' => $pending_receipts,
-    ],
-    [
-        'title' => 'سفارش‌ها',
-        'desc'  => 'خلاصه اقلام و ادامه به پرداخت',
+        'title' => 'خرید اشتراک',
+        'desc'  => 'انتخاب خدمات · خلاصه · درگاه',
         'href'  => 'cart.php',
+        'badge' => $pending_receipts,
     ],
     [
         'title' => 'تراکنش‌های مالی',
@@ -53,7 +48,7 @@ casting_render_flash();
     <div class="flash flash-success">حساب کاربری ویژه فعال است.</div>
     <?php casting_render_premium_countdown($user_id); ?>
   <?php else : ?>
-    <p class="meta">حساب ویژه ندارید. از «خرید اشتراک و خدمات» بسته را انتخاب و پس از پرداخت موفق فعال کنید.</p>
+    <p class="meta">حساب ویژه ندارید. از «خرید اشتراک» بسته را انتخاب و پس از پرداخت موفق فعال کنید.</p>
   <?php endif; ?>
 
   <?php casting_render_panel_hub_tiles($tiles); ?>
