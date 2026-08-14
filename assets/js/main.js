@@ -3355,6 +3355,15 @@
       });
     });
 
+    const filterInput = messagesDock.querySelector("[data-messages-dock-filter]");
+    filterInput?.addEventListener("input", () => {
+      const q = String(filterInput.value || "").trim().toLowerCase();
+      messagesDock.querySelectorAll("[data-dock-user-row]").forEach((row) => {
+        const name = String(row.getAttribute("data-dock-user-name") || "");
+        row.hidden = q !== "" && !name.includes(q);
+      });
+    });
+
     compose?.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!(input instanceof HTMLTextAreaElement) || !(peerIdInput instanceof HTMLInputElement)) return;

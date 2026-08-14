@@ -2217,10 +2217,58 @@ function casting_render_messages_dock(): void
         if (!function_exists('casting_dm_conversations')) {
             require_once __DIR__ . '/chat.php';
         }
+        if (!function_exists('casting_user_is_super_admin')) {
+            require_once __DIR__ . '/admin-access.php';
+        }
+
+        $is_admin_chat = casting_user_is_portal_owner($user_id) || casting_user_is_super_admin($user_id);
         $conversations = casting_dm_conversations($user_id);
         $unread_total = casting_dm_unread_peer_count($user_id);
-        $preview = array_slice($conversations, 0, 8);
-        $avatar_stack = array_slice($conversations, 0, 3);
+        $unread_map = [];
+        $last_map = [];
+        foreach ($conversations as $conv) {
+            $pid = (int) ($conv['peer_id'] ?? 0);
+            if ($pid <= 0) {
+                continue;
+            }
+            $unread_map[$pid] = (int) ($conv['unread'] ?? 0);
+            $last_map[$pid] = trim((string) ($conv['last_message'] ?? ''));
+        }
+
+        $preview = [];
+        if ($is_admin_chat) {
+            $contacts = casting_dm_allowed_contacts($user_id);
+            foreach ($contacts as $contact) {
+                $pid = (int) ($contact['id'] ?? 0);
+                if ($pid <= 0) {
+                    continue;
+                }
+                $role_key = (string) ($contact['role'] ?? '');
+                $role = $role_key !== '' ? casting_role_label($role_key) : '';
+                if ($role === '') {
+                    $role = casting_dm_peer_role_label($pid);
+                }
+                $preview[] = [
+                    'peer_id'      => $pid,
+                    'name'         => (string) ($contact['name'] ?? ''),
+                    'role'         => $role,
+                    'avatar'       => '',
+                    'unread'       => (int) ($unread_map[$pid] ?? 0),
+                    'last_message' => (string) ($last_map[$pid] ?? ''),
+                ];
+            }
+            usort($preview, static function (array $a, array $b): int {
+                $ua = (int) ($a['unread'] ?? 0);
+                $ub = (int) ($b['unread'] ?? 0);
+                if ($ua !== $ub) {
+                    return $ub <=> $ua;
+                }
+
+                return strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+            });
+        } else {
+            $preview = array_slice($conversations, 0, 10);
+        }
     } catch (Throwable $e) {
         return;
     }
@@ -2233,22 +2281,6 @@ function casting_render_messages_dock(): void
         </svg>
       </span>
       <span class="messages-dock-label">پیام‌ها</span>
-      <?php if ($avatar_stack !== []) : ?>
-        <span class="messages-dock-avatars" aria-hidden="true">
-          <?php foreach ($avatar_stack as $conv) :
-              $aname = (string) ($conv['name'] ?? '');
-              $aurl = (string) ($conv['avatar'] ?? '');
-              ?>
-            <span class="messages-dock-avatar">
-              <?php if ($aurl !== '') : ?>
-                <img src="<?= casting_e($aurl) ?>" alt="">
-              <?php else : ?>
-                <span><?= casting_e(function_exists('mb_substr') ? (string) mb_substr($aname, 0, 1, 'UTF-8') : substr($aname, 0, 1)) ?></span>
-              <?php endif; ?>
-            </span>
-          <?php endforeach; ?>
-        </span>
-      <?php endif; ?>
       <?php if ($unread_total > 0) : ?>
         <span class="messages-dock-badge" aria-label="<?= (int) $unread_total ?> پیام خوانده‌نشده"><?= $unread_total > 9 ? '۹+' : (string) $unread_total ?></span>
       <?php endif; ?>
@@ -2256,9 +2288,14 @@ function casting_render_messages_dock(): void
     <div class="messages-dock-panel" id="messages-dock-panel" data-messages-dock-panel hidden>
       <div class="messages-dock-view is-active" data-messages-dock-list-view>
         <header class="messages-dock-panel-head">
-          <strong>پیام‌ها</strong>
+          <strong><?= $is_admin_chat ? 'پیام به اعضا' : 'پیام‌ها' ?></strong>
           <a href="<?= casting_e(casting_url('chat.php')) ?>">صفحه کامل</a>
         </header>
+        <?php if ($is_admin_chat && $preview !== []) : ?>
+          <div class="messages-dock-search">
+            <input type="search" placeholder="جستجوی عضو…" data-messages-dock-filter aria-label="جستجوی عضو">
+          </div>
+        <?php endif; ?>
         <?php if ($preview === []) : ?>
           <p class="messages-dock-empty meta">هنوز گفتگویی ندارید. از پروفایل اعضا می‌توانید پیام بفرستید.</p>
         <?php else : ?>
@@ -2269,35 +2306,39 @@ function casting_render_messages_dock(): void
                     continue;
                 }
                 $name = (string) ($conv['name'] ?? '');
-                $role = '';
-                try {
-                    $role = casting_dm_peer_role_label($peer);
-                } catch (Throwable $e) {
-                    $role = '';
+                $role = (string) ($conv['role'] ?? '');
+                if ($role === '' && !$is_admin_chat) {
+                    try {
+                        $role = casting_dm_peer_role_label($peer);
+                    } catch (Throwable $e) {
+                        $role = '';
+                    }
                 }
                 $avatar = (string) ($conv['avatar'] ?? '');
                 $unread = (int) ($conv['unread'] ?? 0);
                 $last = trim((string) ($conv['last_message'] ?? ''));
-                if (function_exists('mb_strlen') && mb_strlen($last, 'UTF-8') > 48) {
-                    $last = mb_substr($last, 0, 48, 'UTF-8') . '…';
-                } elseif (strlen($last) > 48) {
-                    $last = substr($last, 0, 48) . '…';
+                if (function_exists('mb_strlen') && mb_strlen($last, 'UTF-8') > 40) {
+                    $last = mb_substr($last, 0, 40, 'UTF-8') . '…';
+                } elseif (strlen($last) > 40) {
+                    $last = substr($last, 0, 40) . '…';
                 }
+                $initial = function_exists('mb_substr')
+                    ? (string) mb_substr($name !== '' ? $name : '؟', 0, 1, 'UTF-8')
+                    : substr($name !== '' ? $name : '?', 0, 1);
                 ?>
-              <li>
+              <li data-dock-user-row data-dock-user-name="<?= casting_e(function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name)) ?>">
                 <button
                   type="button"
                   class="messages-dock-row<?= $unread > 0 ? ' is-unread' : '' ?>"
                   data-messages-dock-open="<?= $peer ?>"
                   data-peer-name="<?= casting_e($name) ?>"
                   data-peer-role="<?= casting_e($role) ?>"
-                  data-peer-avatar="<?= casting_e($avatar) ?>"
                 >
                   <span class="messages-dock-row-avatar">
                     <?php if ($avatar !== '') : ?>
                       <img src="<?= casting_e($avatar) ?>" alt="">
                     <?php else : ?>
-                      <span aria-hidden="true"><?= casting_e(function_exists('mb_substr') ? (string) mb_substr($name, 0, 1, 'UTF-8') : substr($name, 0, 1)) ?></span>
+                      <span aria-hidden="true"><?= casting_e($initial) ?></span>
                     <?php endif; ?>
                   </span>
                   <span class="messages-dock-row-text">
