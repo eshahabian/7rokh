@@ -3539,6 +3539,10 @@ html[data-theme="day"] .filter-bar--sticky {
 
 .panel-shell-nav {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  align-items: stretch;
 }
 
 .panel-content {
@@ -3734,6 +3738,10 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
 
   .panel-shell-nav {
     display: contents;
+  }
+
+  .sidebar-suggest {
+    display: none;
   }
 
   .panel-drawer-close {
@@ -4046,11 +4054,13 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   font-size: 0.78rem;
 }
 
-/* پیشنهاد دنبال‌کردن در سایدبار */
+/* پیشنهاد دنبال‌کردن — زیر منوی سایدبار (جدا از منو) */
 .sidebar-suggest {
-  margin-top: 1rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--line);
+  margin: 0;
+  padding: 0.85rem 0.95rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
 }
 
 .sidebar-suggest-head {

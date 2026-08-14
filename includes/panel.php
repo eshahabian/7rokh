@@ -620,10 +620,10 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
           <?php endforeach; ?>
         </nav>
       <?php endif; ?>
-      <?php if ($user) : ?>
-        <?php casting_render_sidebar_suggestions((int) $user->ID); ?>
-      <?php endif; ?>
     </aside>
+    <?php if ($user) : ?>
+      <?php casting_render_sidebar_suggestions((int) $user->ID); ?>
+    <?php endif; ?>
     </div>
     <?php
 }
