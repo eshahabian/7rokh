@@ -622,6 +622,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
         </nav>
       <?php endif; ?>
     </aside>
+    </div>
     <?php if ($user) : ?>
       <?php
       try {
@@ -631,7 +632,6 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
       }
       ?>
     <?php endif; ?>
-    </div>
     </div>
     <?php
 }
@@ -2219,7 +2219,7 @@ function casting_render_messages_dock(): void
         }
         $conversations = casting_dm_conversations($user_id);
         $unread_total = casting_dm_unread_peer_count($user_id);
-        $preview = array_slice($conversations, 0, 6);
+        $preview = array_slice($conversations, 0, 8);
         $avatar_stack = array_slice($conversations, 0, 3);
     } catch (Throwable $e) {
         return;
@@ -2254,61 +2254,88 @@ function casting_render_messages_dock(): void
       <?php endif; ?>
     </button>
     <div class="messages-dock-panel" id="messages-dock-panel" data-messages-dock-panel hidden>
-      <header class="messages-dock-panel-head">
-        <strong>پیام‌ها</strong>
-        <a href="<?= casting_e(casting_url('chat.php')) ?>">مشاهده همه</a>
-      </header>
-      <?php if ($preview === []) : ?>
-        <p class="messages-dock-empty meta">هنوز گفتگویی ندارید. از پروفایل اعضا می‌توانید پیام بفرستید.</p>
-      <?php else : ?>
-        <ul class="messages-dock-list">
-          <?php foreach ($preview as $conv) :
-              $peer = (int) ($conv['peer_id'] ?? 0);
-              if ($peer <= 0) {
-                  continue;
-              }
-              $name = (string) ($conv['name'] ?? '');
-              $role = '';
-              try {
-                  $role = casting_dm_peer_role_label($peer);
-              } catch (Throwable $e) {
-                  $role = '';
-              }
-              $avatar = (string) ($conv['avatar'] ?? '');
-              $unread = (int) ($conv['unread'] ?? 0);
-              $last = trim((string) ($conv['last_message'] ?? ''));
-              if (function_exists('mb_strlen') && mb_strlen($last, 'UTF-8') > 48) {
-                  $last = mb_substr($last, 0, 48, 'UTF-8') . '…';
-              } elseif (strlen($last) > 48) {
-                  $last = substr($last, 0, 48) . '…';
-              }
-              ?>
-            <li>
-              <a class="messages-dock-row<?= $unread > 0 ? ' is-unread' : '' ?>" href="<?= casting_e(casting_url('chat.php?with=' . $peer)) ?>">
-                <span class="messages-dock-row-avatar">
-                  <?php if ($avatar !== '') : ?>
-                    <img src="<?= casting_e($avatar) ?>" alt="">
-                  <?php else : ?>
-                    <span aria-hidden="true"><?= casting_e(function_exists('mb_substr') ? (string) mb_substr($name, 0, 1, 'UTF-8') : substr($name, 0, 1)) ?></span>
+      <div class="messages-dock-view is-active" data-messages-dock-list-view>
+        <header class="messages-dock-panel-head">
+          <strong>پیام‌ها</strong>
+          <a href="<?= casting_e(casting_url('chat.php')) ?>">صفحه کامل</a>
+        </header>
+        <?php if ($preview === []) : ?>
+          <p class="messages-dock-empty meta">هنوز گفتگویی ندارید. از پروفایل اعضا می‌توانید پیام بفرستید.</p>
+        <?php else : ?>
+          <ul class="messages-dock-list">
+            <?php foreach ($preview as $conv) :
+                $peer = (int) ($conv['peer_id'] ?? 0);
+                if ($peer <= 0) {
+                    continue;
+                }
+                $name = (string) ($conv['name'] ?? '');
+                $role = '';
+                try {
+                    $role = casting_dm_peer_role_label($peer);
+                } catch (Throwable $e) {
+                    $role = '';
+                }
+                $avatar = (string) ($conv['avatar'] ?? '');
+                $unread = (int) ($conv['unread'] ?? 0);
+                $last = trim((string) ($conv['last_message'] ?? ''));
+                if (function_exists('mb_strlen') && mb_strlen($last, 'UTF-8') > 48) {
+                    $last = mb_substr($last, 0, 48, 'UTF-8') . '…';
+                } elseif (strlen($last) > 48) {
+                    $last = substr($last, 0, 48) . '…';
+                }
+                ?>
+              <li>
+                <button
+                  type="button"
+                  class="messages-dock-row<?= $unread > 0 ? ' is-unread' : '' ?>"
+                  data-messages-dock-open="<?= $peer ?>"
+                  data-peer-name="<?= casting_e($name) ?>"
+                  data-peer-role="<?= casting_e($role) ?>"
+                  data-peer-avatar="<?= casting_e($avatar) ?>"
+                >
+                  <span class="messages-dock-row-avatar">
+                    <?php if ($avatar !== '') : ?>
+                      <img src="<?= casting_e($avatar) ?>" alt="">
+                    <?php else : ?>
+                      <span aria-hidden="true"><?= casting_e(function_exists('mb_substr') ? (string) mb_substr($name, 0, 1, 'UTF-8') : substr($name, 0, 1)) ?></span>
+                    <?php endif; ?>
+                  </span>
+                  <span class="messages-dock-row-text">
+                    <strong><?= casting_e($name) ?></strong>
+                    <?php if ($role !== '') : ?>
+                      <span class="meta"><?= casting_e($role) ?></span>
+                    <?php endif; ?>
+                    <?php if ($last !== '') : ?>
+                      <span class="messages-dock-snippet"><?= casting_e($last) ?></span>
+                    <?php endif; ?>
+                  </span>
+                  <?php if ($unread > 0) : ?>
+                    <span class="messages-dock-row-badge"><?= $unread > 9 ? '۹+' : (string) $unread ?></span>
                   <?php endif; ?>
-                </span>
-                <span class="messages-dock-row-text">
-                  <strong><?= casting_e($name) ?></strong>
-                  <?php if ($role !== '') : ?>
-                    <span class="meta"><?= casting_e($role) ?></span>
-                  <?php endif; ?>
-                  <?php if ($last !== '') : ?>
-                    <span class="messages-dock-snippet"><?= casting_e($last) ?></span>
-                  <?php endif; ?>
-                </span>
-                <?php if ($unread > 0) : ?>
-                  <span class="messages-dock-row-badge"><?= $unread > 9 ? '۹+' : (string) $unread ?></span>
-                <?php endif; ?>
-              </a>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      <?php endif; ?>
+                </button>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        <?php endif; ?>
+      </div>
+
+      <div class="messages-dock-view" data-messages-dock-thread-view hidden>
+        <header class="messages-dock-panel-head messages-dock-thread-head">
+          <button type="button" class="messages-dock-back" data-messages-dock-back aria-label="بازگشت">→</button>
+          <div class="messages-dock-thread-peer">
+            <strong data-messages-dock-peer-name>گفتگو</strong>
+            <span class="meta" data-messages-dock-peer-role></span>
+          </div>
+          <a href="<?= casting_e(casting_url('chat.php')) ?>" data-messages-dock-full>کامل</a>
+        </header>
+        <div class="messages-dock-thread" data-messages-dock-thread></div>
+        <form class="messages-dock-compose" data-messages-dock-compose>
+          <input type="hidden" name="peer_id" value="0" data-messages-dock-peer-id>
+          <textarea name="message" rows="1" placeholder="پیام بنویسید…" maxlength="2000" data-messages-dock-input required></textarea>
+          <button type="submit" class="btn btn-primary btn-sm">ارسال</button>
+        </form>
+        <p class="messages-dock-thread-error meta" data-messages-dock-error hidden></p>
+      </div>
     </div>
   </div>
     <?php

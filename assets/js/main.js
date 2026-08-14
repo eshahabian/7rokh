@@ -3214,21 +3214,197 @@
     }
   });
 
-  // ویجت شناور پیام‌ها
+  // ویجت شناور پیام‌ها + چت داخل همان پنل
   const messagesDock = document.querySelector("[data-messages-dock]");
   if (messagesDock) {
     const toggle = messagesDock.querySelector("[data-messages-dock-toggle]");
     const panel = messagesDock.querySelector("[data-messages-dock-panel]");
+    const listView = messagesDock.querySelector("[data-messages-dock-list-view]");
+    const threadView = messagesDock.querySelector("[data-messages-dock-thread-view]");
+    const threadEl = messagesDock.querySelector("[data-messages-dock-thread]");
+    const compose = messagesDock.querySelector("[data-messages-dock-compose]");
+    const peerIdInput = messagesDock.querySelector("[data-messages-dock-peer-id]");
+    const input = messagesDock.querySelector("[data-messages-dock-input]");
+    const errEl = messagesDock.querySelector("[data-messages-dock-error]");
+    const peerNameEl = messagesDock.querySelector("[data-messages-dock-peer-name]");
+    const peerRoleEl = messagesDock.querySelector("[data-messages-dock-peer-role]");
+    const fullLink = messagesDock.querySelector("[data-messages-dock-full]");
+    const cfg = window.CASTING_CHAT_DOCK || {};
+
     const setOpen = (open) => {
       if (!(panel instanceof HTMLElement) || !(toggle instanceof HTMLElement)) return;
       panel.hidden = !open;
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      if (!open) showList();
     };
+
+    const showList = () => {
+      if (listView) listView.hidden = false;
+      if (threadView) threadView.hidden = true;
+      if (errEl) {
+        errEl.hidden = true;
+        errEl.textContent = "";
+      }
+    };
+
+    const showThread = () => {
+      if (listView) listView.hidden = true;
+      if (threadView) threadView.hidden = false;
+    };
+
+    const renderMessages = (messages) => {
+      if (!(threadEl instanceof HTMLElement)) return;
+      threadEl.innerHTML = "";
+      (messages || []).forEach((msg) => {
+        const bubble = document.createElement("div");
+        bubble.className = "messages-dock-bubble " + (msg.is_mine ? "is-mine" : "is-theirs");
+        bubble.textContent = msg.message || "";
+        threadEl.appendChild(bubble);
+      });
+      threadEl.scrollTop = threadEl.scrollHeight;
+    };
+
+    const openThread = async (peerId, meta = {}) => {
+      if (!cfg.url || !cfg.nonce || !peerId) return;
+      setOpen(true);
+      showThread();
+      if (peerNameEl) peerNameEl.textContent = meta.name || "گفتگو";
+      if (peerRoleEl) {
+        peerRoleEl.textContent = meta.role || "";
+        peerRoleEl.hidden = !meta.role;
+      }
+      if (peerIdInput) peerIdInput.value = String(peerId);
+      if (fullLink) fullLink.href = (cfg.fullUrl || "chat.php") + "?with=" + encodeURIComponent(String(peerId));
+      if (threadEl) threadEl.innerHTML = "<p class='meta'>در حال بارگذاری…</p>";
+      if (errEl) {
+        errEl.hidden = true;
+        errEl.textContent = "";
+      }
+      try {
+        const url = new URL(cfg.url, window.location.origin);
+        url.searchParams.set("action", "thread");
+        url.searchParams.set("peer_id", String(peerId));
+        url.searchParams.set("_wpnonce", cfg.nonce);
+        const res = await fetch(url.toString(), {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        const data = await res.json();
+        if (!data || !data.ok) {
+          if (threadEl) threadEl.innerHTML = "";
+          if (errEl) {
+            errEl.hidden = false;
+            errEl.textContent = (data && data.error) || "بارگذاری گفتگو ناموفق بود.";
+          }
+          return;
+        }
+        if (data.peer) {
+          if (peerNameEl) peerNameEl.textContent = data.peer.name || meta.name || "گفتگو";
+          if (peerRoleEl) {
+            peerRoleEl.textContent = data.peer.role || "";
+            peerRoleEl.hidden = !data.peer.role;
+          }
+        }
+        if (data.locked) {
+          renderMessages([]);
+          if (errEl) {
+            errEl.hidden = false;
+            errEl.textContent = "برای مشاهده این گفتگو عضویت ویژه لازم است.";
+          }
+          if (compose) compose.hidden = true;
+          return;
+        }
+        if (compose) {
+          compose.hidden = !data.can_send;
+        }
+        if (!data.can_send && data.error && errEl) {
+          errEl.hidden = false;
+          errEl.textContent = data.error;
+        }
+        renderMessages(data.messages || []);
+        input?.focus();
+      } catch (e) {
+        if (threadEl) threadEl.innerHTML = "";
+        if (errEl) {
+          errEl.hidden = false;
+          errEl.textContent = "خطا در ارتباط با سرور.";
+        }
+      }
+    };
+
     toggle?.addEventListener("click", (event) => {
       event.preventDefault();
       const open = toggle.getAttribute("aria-expanded") !== "true";
       setOpen(open);
     });
+
+    messagesDock.querySelector("[data-messages-dock-back]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      showList();
+    });
+
+    messagesDock.querySelectorAll("[data-messages-dock-open]").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const peerId = Number(btn.getAttribute("data-messages-dock-open") || "0");
+        openThread(peerId, {
+          name: btn.getAttribute("data-peer-name") || "",
+          role: btn.getAttribute("data-peer-role") || "",
+        });
+      });
+    });
+
+    compose?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!(input instanceof HTMLTextAreaElement) || !(peerIdInput instanceof HTMLInputElement)) return;
+      const peerId = Number(peerIdInput.value || "0");
+      const message = (input.value || "").trim();
+      if (!peerId || !message || !cfg.url || !cfg.nonce) return;
+      const submitBtn = compose.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      try {
+        const body = new FormData();
+        body.set("action", "send");
+        body.set("peer_id", String(peerId));
+        body.set("message", message);
+        body.set("_wpnonce", cfg.nonce);
+        const res = await fetch(cfg.url, {
+          method: "POST",
+          credentials: "same-origin",
+          body,
+          headers: { Accept: "application/json" },
+        });
+        const data = await res.json();
+        if (!data || !data.ok) {
+          if (errEl) {
+            errEl.hidden = false;
+            errEl.textContent = (data && data.error) || "ارسال ناموفق بود.";
+          }
+          return;
+        }
+        input.value = "";
+        if (errEl) {
+          errEl.hidden = true;
+          errEl.textContent = "";
+        }
+        if (threadEl && data.message) {
+          const bubble = document.createElement("div");
+          bubble.className = "messages-dock-bubble is-mine";
+          bubble.textContent = data.message.message || message;
+          threadEl.appendChild(bubble);
+          threadEl.scrollTop = threadEl.scrollHeight;
+        }
+      } catch (e) {
+        if (errEl) {
+          errEl.hidden = false;
+          errEl.textContent = "خطا در ارسال پیام.";
+        }
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
+
     document.addEventListener("click", (event) => {
       if (!messagesDock.contains(event.target)) {
         setOpen(false);

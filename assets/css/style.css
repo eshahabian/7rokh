@@ -3538,19 +3538,24 @@ html[data-theme="day"] .filter-bar--sticky {
 }
 
 .panel-shell-nav {
-  min-width: 0;
-}
-
-.panel-shell-nav-stack {
   position: sticky;
   top: 1rem;
   z-index: auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
   align-items: stretch;
-  width: 100%;
   max-height: calc(100vh - 2rem);
+}
+
+.panel-shell-nav-stack {
+  position: relative;
+  z-index: auto;
+  display: block;
+  width: 100%;
+  min-height: 0;
+  max-height: min(58vh, calc(100vh - 16rem));
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -3750,6 +3755,8 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
 
   .panel-shell-nav {
     display: contents;
+    position: static;
+    max-height: none;
   }
 
   .panel-shell-nav-stack {
@@ -4073,13 +4080,17 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   font-size: 0.78rem;
 }
 
-/* پیشنهاد دنبال‌کردن — زیر منوی سایدبار (جدا از منو) */
+/* پیشنهاد دنبال‌کردن — آیتم جدا زیر منو */
 .sidebar-suggest {
   margin: 0;
   padding: 0.85rem 0.95rem 1rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--bg-panel);
+  flex: 0 0 auto;
+  max-height: min(34vh, 20rem);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .sidebar-suggest-head {
@@ -4226,14 +4237,16 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.55rem;
-  max-width: min(22rem, calc(100vw - 2rem));
+  width: min(33rem, calc(100vw - 2rem));
+  max-width: min(33rem, calc(100vw - 2rem));
 }
 
 .messages-dock-toggle {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.55rem 0.85rem 0.55rem 0.7rem;
+  min-width: min(18rem, 100%);
+  padding: 0.65rem 1.1rem 0.65rem 0.85rem;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: color-mix(in srgb, var(--bg-elevated) 92%, #000);
@@ -4242,7 +4255,7 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   cursor: pointer;
   font: inherit;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .messages-dock-toggle:hover,
@@ -4258,7 +4271,7 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
 .messages-dock-avatars {
   display: inline-flex;
   flex-direction: row-reverse;
-  margin-inline-start: 0.15rem;
+  margin-inline-start: auto;
 }
 
 .messages-dock-avatar {
@@ -4298,13 +4311,26 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
 }
 
 .messages-dock-panel {
-  width: min(22rem, calc(100vw - 2rem));
-  max-height: min(52vh, 420px);
-  overflow: auto;
+  width: 100%;
+  max-height: min(70vh, 560px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--bg-elevated);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.42);
+}
+
+.messages-dock-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.messages-dock-view[hidden] {
+  display: none !important;
 }
 
 .messages-dock-panel-head {
@@ -4314,10 +4340,9 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   gap: 0.5rem;
   padding: 0.75rem 0.9rem;
   border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: 0;
   background: var(--bg-elevated);
   z-index: 1;
+  flex: 0 0 auto;
 }
 
 .messages-dock-panel-head a {
@@ -4336,6 +4361,8 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   list-style: none;
   margin: 0;
   padding: 0.35rem 0;
+  overflow: auto;
+  max-height: min(52vh, 420px);
 }
 
 .messages-dock-row {
@@ -4343,9 +4370,15 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   grid-template-columns: 42px minmax(0, 1fr) auto;
   gap: 0.65rem;
   align-items: center;
+  width: 100%;
   padding: 0.55rem 0.85rem;
+  border: 0;
+  background: transparent;
   text-decoration: none;
   color: inherit;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
 }
 
 .messages-dock-row:hover {
@@ -4398,6 +4431,98 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.messages-dock-thread-head {
+  gap: 0.45rem;
+}
+
+.messages-dock-back {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.messages-dock-thread-peer {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 0.05rem;
+}
+
+.messages-dock-thread-peer strong,
+.messages-dock-thread-peer .meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.messages-dock-thread {
+  flex: 1 1 auto;
+  min-height: 12rem;
+  max-height: min(42vh, 340px);
+  overflow: auto;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  background: color-mix(in srgb, var(--bg-panel) 70%, #000);
+}
+
+.messages-dock-bubble {
+  max-width: 85%;
+  padding: 0.45rem 0.7rem;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.messages-dock-bubble.is-mine {
+  align-self: flex-start;
+  background: color-mix(in srgb, var(--accent-dim) 80%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+
+.messages-dock-bubble.is-theirs {
+  align-self: flex-end;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+}
+
+.messages-dock-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  padding: 0.65rem 0.75rem;
+  border-top: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+
+.messages-dock-compose textarea {
+  width: 100%;
+  min-height: 2.4rem;
+  max-height: 5.5rem;
+  resize: vertical;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-panel);
+  color: var(--ink);
+  font: inherit;
+}
+
+.messages-dock-thread-error {
+  margin: 0;
+  padding: 0 0.85rem 0.65rem;
+  color: var(--reject-fg, #e07a6a);
 }
 
 @media (max-width: 960px) {
