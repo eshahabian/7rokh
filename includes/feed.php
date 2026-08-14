@@ -34,6 +34,29 @@ function casting_home_casting_call_feed(int $user_id, int $limit = 8): array
 }
 
 /**
+ * آخرین پست‌های تأییدشدهٔ همهٔ کاربران (به‌ترتیب تاریخ)
+ *
+ * @return list<array<string, mixed>>
+ */
+function casting_latest_media_feed(int $limit = 20): array
+{
+    casting_user_media_ensure_table();
+    global $wpdb;
+    $media = casting_user_media_table();
+    $limit = max(1, min(60, $limit));
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $rows = $wpdb->get_results($wpdb->prepare(
+        "SELECT m.* FROM {$media} m
+         WHERE m.status = 'approved'
+         ORDER BY m.created_at DESC, m.id DESC
+         LIMIT %d",
+        $limit
+    ), ARRAY_A);
+
+    return is_array($rows) ? $rows : [];
+}
+
+/**
  * پست‌های تأییدشدهٔ کسانی که کاربر دنبال می‌کند
  *
  * @return list<array<string, mixed>>
@@ -54,7 +77,7 @@ function casting_following_media_feed(int $user_id, int $limit = 12): array
         "SELECT m.* FROM {$media} m
          INNER JOIN {$follows} f ON f.followed_id = m.user_id AND f.follower_id = %d
          WHERE m.status = 'approved'
-         ORDER BY m.id DESC
+         ORDER BY m.created_at DESC, m.id DESC
          LIMIT %d",
         $user_id,
         $limit
@@ -236,32 +259,28 @@ function casting_render_feed_media_card(array $item, int $viewer_id): void
 
 function casting_render_home_following_feed_section(int $user_id): void
 {
-    $posts = casting_following_media_feed($user_id, 10);
+    $posts = casting_latest_media_feed(24);
     $new_count = casting_new_followers_count($user_id);
     $recent_followers = $new_count > 0
         ? casting_new_followers_list($user_id, 5)
         : casting_recent_followers_for($user_id, 3);
     $has_new = $new_count > 0;
     ?>
-  <section class="panel-ads-section home-feed-section<?= $has_new ? ' home-feed-section--notify' : '' ?>" aria-labelledby="home-following-feed-title">
+  <section class="panel-ads-section home-feed-section<?= $has_new ? ' home-feed-section--notify' : '' ?>" aria-labelledby="home-latest-feed-title">
     <header class="panel-ads-head">
-      <h2 id="home-following-feed-title">
-        <?php if ($has_new) : ?>
-          <a class="home-feed-notify-link" href="<?= casting_e(casting_url('following.php?tab=followers')) ?>">از دنبال‌شده‌ها</a>
+      <h2 id="home-latest-feed-title">آخرین پست‌ها</h2>
+      <?php if ($has_new) : ?>
+        <a class="btn btn-ghost btn-sm home-feed-notify-link" href="<?= casting_e(casting_url('following.php?tab=followers')) ?>">
+          دنبال‌کننده‌های جدید
           <span class="nav-badge" aria-label="<?= (int) $new_count ?> دنبال‌کننده جدید"><?= (int) $new_count ?></span>
-        <?php else : ?>
-          از دنبال‌شده‌ها
-        <?php endif; ?>
-      </h2>
-      <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('following.php?tab=following')) ?>">دنبال‌شده‌ها</a>
+        </a>
+      <?php else : ?>
+        <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('following.php?tab=following')) ?>">دنبال‌شده‌ها</a>
+      <?php endif; ?>
     </header>
-    <?php if ($recent_followers !== []) : ?>
-      <p class="home-feed-followers-hint meta<?= $has_new ? ' is-new' : '' ?>">
-        <?php if ($has_new) : ?>
-          <a href="<?= casting_e(casting_url('following.php?tab=followers')) ?>">دنبال‌کننده‌های جدید:</a>
-        <?php else : ?>
-          دنبال‌کننده‌های تازه:
-        <?php endif; ?>
+    <?php if ($recent_followers !== [] && $has_new) : ?>
+      <p class="home-feed-followers-hint meta is-new">
+        <a href="<?= casting_e(casting_url('following.php?tab=followers')) ?>">دنبال‌کننده‌های جدید:</a>
         <?php
         $names = [];
         foreach ($recent_followers as $f) {
@@ -272,7 +291,7 @@ function casting_render_home_following_feed_section(int $user_id): void
       </p>
     <?php endif; ?>
     <?php if ($posts === []) : ?>
-      <p class="empty-state">هنوز پستی از کسانی که دنبال می‌کنید نیست. افراد را دنبال کنید تا فید اینجا پر شود.</p>
+      <p class="empty-state">هنوز پست تأییدشده‌ای برای نمایش نیست.</p>
     <?php else : ?>
       <div class="home-following-feed">
         <?php foreach ($posts as $item) :
