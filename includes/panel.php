@@ -744,13 +744,14 @@ function casting_render_panel_end(): void
         require_once __DIR__ . '/media-engagement.php';
     }
     casting_render_post_lightbox_shell();
+    casting_render_panel_bottom_nav((string) ($GLOBALS['casting_panel_active'] ?? ''));
+    echo '</div></main>';
+    // بیرون از grid پنل — کنار دکمه ↑ در سطح صفحه
     try {
         casting_render_messages_dock();
     } catch (Throwable $e) {
         // ویجت پیام نباید کل پنل را از کار بیندازد
     }
-    casting_render_panel_bottom_nav((string) ($GLOBALS['casting_panel_active'] ?? ''));
-    echo '</div></main>';
     casting_render_footer();
 }
 
@@ -2277,7 +2278,11 @@ function casting_render_messages_dock(): void
         return;
     }
     ?>
-  <div class="messages-dock" data-messages-dock>
+  <div
+    class="messages-dock"
+    data-messages-dock
+    style="position:fixed;left:1.25rem;right:auto;bottom:calc(1.25rem + 2.85rem + 0.65rem);inset-inline-start:auto;inset-inline-end:auto;z-index:140;width:max-content;max-width:min(300px,calc(100vw - 2.5rem));"
+  >
     <button type="button" class="messages-dock-toggle" data-messages-dock-toggle aria-expanded="false" aria-controls="messages-dock-panel">
       <span class="messages-dock-icon" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" focusable="false">
