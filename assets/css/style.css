@@ -4305,26 +4305,26 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   color: var(--ink-muted);
 }
 
-/* ویجت شناور پیام‌ها — پایین چپ؛ روی منو/پیشنهادی نمی‌افتد؛ عرض ثابت */
+/* ویجت شناور پیام‌ها — پایین چپ، درست بالای دکمه بازگشت به بالا */
 .messages-dock {
   --tile-gap: 1.25rem;
   --tile-w: 300px;
-  --wrap-max: 1100px;
-  --page-pad: 2.5rem;
-  --wrap-w: min(var(--wrap-max), calc(100vw - var(--page-pad)));
-  --side-margin: max(0px, calc((100vw - var(--wrap-w)) / 2));
+  --fab-edge: 1.25rem;
+  --scroll-btn-size: 2.85rem;
+  --fab-stack-gap: 0.65rem;
   position: fixed;
   z-index: 140;
-  bottom: 1.25rem;
+  left: var(--fab-edge);
+  right: auto;
   inset-inline-start: auto;
-  /* سمت چپ صفحه — هم‌تراز لبهٔ محتوا */
-  inset-inline-end: max(var(--tile-gap), var(--side-margin));
+  inset-inline-end: auto;
+  bottom: calc(var(--fab-edge) + var(--scroll-btn-size) + var(--fab-stack-gap));
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: var(--tile-gap);
   width: var(--tile-w);
-  max-width: min(var(--tile-w), calc(100vw - 2 * var(--tile-gap)));
+  max-width: min(var(--tile-w), calc(100vw - 2 * var(--fab-edge)));
 }
 
 .messages-dock-toggle {
@@ -4615,10 +4615,6 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   .messages-dock {
     display: none;
   }
-}
-
-body.has-panel-drawer .messages-dock {
-  bottom: 1.25rem;
 }
 
 .panel-nav {
