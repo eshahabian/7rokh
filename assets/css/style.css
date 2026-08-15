@@ -4305,7 +4305,7 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   color: var(--ink-muted);
 }
 
-/* ویجت شناور پیام‌ها — لپ‌تاپ: کنار منو داخل ستون محتوا؛ مانیتور عریض: حاشیه بیرون */
+/* ویجت شناور پیام‌ها — پایین چپ؛ روی منو/پیشنهادی نمی‌افتد؛ عرض ثابت */
 .messages-dock {
   --tile-gap: 1.25rem;
   --tile-w: 300px;
@@ -4316,54 +4316,15 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   position: fixed;
   z-index: 140;
   bottom: 1.25rem;
-  /*
-    لپ‌تاپ / مانیتور معمولی: زیر ستون محتوا (نه روی «پیشنهادی برای شما»).
-    فاصله با منو = همان --tile-gap.
-  */
-  inset-inline-start: max(
-    var(--tile-gap),
-    calc(var(--side-margin) + var(--tile-w) + var(--tile-gap))
-  );
-  inset-inline-end: auto;
+  inset-inline-start: auto;
+  /* سمت چپ صفحه — هم‌تراز لبهٔ محتوا */
+  inset-inline-end: max(var(--tile-gap), var(--side-margin));
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: var(--tile-gap);
-  width: min(var(--tile-w), calc(100vw - 2 * var(--tile-gap)));
+  width: var(--tile-w);
   max-width: min(var(--tile-w), calc(100vw - 2 * var(--tile-gap)));
-}
-
-/* مانیتور عریض (≥ wrap + ۲×(منو+فاصله)): دکمه در حاشیه راست، بیرون از منو */
-@media (min-width: 1740px) {
-  .messages-dock {
-    inset-inline-start: max(
-      var(--tile-gap),
-      calc(var(--side-margin) - var(--tile-w) - var(--tile-gap))
-    );
-  }
-}
-
-/* لپ‌تاپ باریک‌تر: دکمه جمع‌وجورتر تا کمتر جا بگیرد */
-@media (max-width: 1400px) {
-  .messages-dock {
-    --tile-w: 260px;
-    bottom: 1rem;
-  }
-
-  .messages-dock-toggle {
-    padding: 0.45rem 0.7rem;
-    font-size: 0.84rem;
-  }
-}
-
-@media (max-width: 1200px) {
-  .messages-dock {
-    --tile-w: 220px;
-  }
-
-  .messages-dock-label {
-    font-size: 0.82rem;
-  }
 }
 
 .messages-dock-toggle {
