@@ -2315,6 +2315,12 @@ html[data-theme="day"] .filter-bar--sticky {
   overflow: visible;
 }
 
+/* Sticky must keep its own overflow so max-height does not spill over results. */
+.filter-bar-wide.filter-bar--sticky {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .filter-bar-headshot .filter-primary {
   grid-column: 1 / -1;
   display: grid;
@@ -2374,6 +2380,16 @@ html[data-theme="day"] .filter-bar--sticky {
   .filter-bar-headshot .filter-primary,
   .filter-advanced {
     grid-template-columns: 1fr;
+  }
+
+  /* On mobile/app WebView, keep filters in normal flow so tiles are not covered. */
+  .filter-bar--sticky {
+    position: static;
+    top: auto;
+    z-index: auto;
+    max-height: none;
+    overflow: visible;
+    backdrop-filter: none;
   }
 
   .member-grid {
