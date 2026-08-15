@@ -3592,8 +3592,6 @@ html[data-theme="day"] .filter-bar--sticky {
   gap: var(--panel-nav-gap);
   align-items: stretch;
   max-height: calc(100vh - 2rem);
-  /* جای دکمه پیام‌ها زیر پیشنهاد — فاصله همان --panel-nav-gap */
-  padding-bottom: calc(3.25rem + var(--panel-nav-gap));
 }
 
 .panel-shell-nav-stack {
@@ -4307,23 +4305,18 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   color: var(--ink-muted);
 }
 
-/* ویجت شناور پیام‌ها — راست، هم‌عرض منو؛ فاصله = منو ↔ پیشنهادی */
+/* ویجت پیام‌ها — زیر «پیشنهادی»، داخل ستون sticky؛ فاصله = منو ↔ پیشنهادی */
 .messages-dock {
-  --dock-gap: 1.25rem; /* همان --panel-tile-gap / فاصله منو و پیشنهادی */
-  --dock-w: clamp(240px, 22vw, 300px);
-  --wrap-max: 1100px;
-  --side-margin: max(0px, calc((100vw - min(var(--wrap-max), calc(100vw - 2.5rem))) / 2));
-  position: fixed;
-  z-index: 140;
-  right: max(var(--dock-gap), var(--side-margin));
-  left: auto;
-  bottom: var(--dock-gap);
+  --dock-gap: var(--panel-nav-gap, 1.25rem);
+  position: relative;
+  z-index: 60;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   align-items: stretch;
-  gap: var(--dock-gap);
-  width: var(--dock-w);
-  max-width: calc(100vw - 2 * var(--dock-gap));
+  gap: 0;
 }
 
 .messages-dock-toggle {
@@ -4379,6 +4372,10 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
 }
 
 .messages-dock-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + var(--dock-gap, 1.25rem));
   width: 100%;
   max-height: min(52vh, 420px);
   overflow: hidden;

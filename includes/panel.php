@@ -634,6 +634,11 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
       } catch (Throwable $e) {
           // پیشنهادها نباید کل پنل را از کار بیندازد
       }
+      try {
+          casting_render_messages_dock();
+      } catch (Throwable $e) {
+          // ویجت پیام نباید کل پنل را از کار بیندازد
+      }
       ?>
     <?php endif; ?>
     </div>
@@ -746,12 +751,6 @@ function casting_render_panel_end(): void
     casting_render_post_lightbox_shell();
     casting_render_panel_bottom_nav((string) ($GLOBALS['casting_panel_active'] ?? ''));
     echo '</div></main>';
-    // بیرون از grid پنل — کنار دکمه ↑ در سطح صفحه
-    try {
-        casting_render_messages_dock();
-    } catch (Throwable $e) {
-        // ویجت پیام نباید کل پنل را از کار بیندازد
-    }
     casting_render_footer();
 }
 
