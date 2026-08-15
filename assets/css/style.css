@@ -4305,25 +4305,24 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   color: var(--ink-muted);
 }
 
-/* ویجت شناور پیام‌ها — راست سایت؛ هم‌عرض منو؛ فاصله = اسلایدشو↔منو */
+/* ویجت شناور پیام‌ها — لپ‌تاپ: کنار منو داخل ستون محتوا؛ مانیتور عریض: حاشیه بیرون */
 .messages-dock {
   --tile-gap: 1.25rem;
   --tile-w: 300px;
   --wrap-max: 1100px;
+  --page-pad: 2.5rem;
+  --wrap-w: min(var(--wrap-max), calc(100vw - var(--page-pad)));
+  --side-margin: max(0px, calc((100vw - var(--wrap-w)) / 2));
   position: fixed;
   z-index: 140;
   bottom: 1.25rem;
   /*
-    از راست: بعد از حاشیه wrap، یک ستون هم‌عرض منو با فاصله tile-gap
-    تا فاصله‌اش با منو همان فاصله اسلایدشو و منو باشد.
+    لپ‌تاپ / مانیتور معمولی: زیر ستون محتوا (نه روی «پیشنهادی برای شما»).
+    فاصله با منو = همان --tile-gap.
   */
   inset-inline-start: max(
     var(--tile-gap),
-    calc(
-      (100vw - min(var(--wrap-max), calc(100vw - 2.5rem))) / 2
-      - var(--tile-w)
-      - var(--tile-gap)
-    )
+    calc(var(--side-margin) + var(--tile-w) + var(--tile-gap))
   );
   inset-inline-end: auto;
   display: flex;
@@ -4332,6 +4331,39 @@ a.panel-sidebar-identity:hover .panel-sidebar-display-name {
   gap: var(--tile-gap);
   width: min(var(--tile-w), calc(100vw - 2 * var(--tile-gap)));
   max-width: min(var(--tile-w), calc(100vw - 2 * var(--tile-gap)));
+}
+
+/* مانیتور عریض (≥ wrap + ۲×(منو+فاصله)): دکمه در حاشیه راست، بیرون از منو */
+@media (min-width: 1740px) {
+  .messages-dock {
+    inset-inline-start: max(
+      var(--tile-gap),
+      calc(var(--side-margin) - var(--tile-w) - var(--tile-gap))
+    );
+  }
+}
+
+/* لپ‌تاپ باریک‌تر: دکمه جمع‌وجورتر تا کمتر جا بگیرد */
+@media (max-width: 1400px) {
+  .messages-dock {
+    --tile-w: 260px;
+    bottom: 1rem;
+  }
+
+  .messages-dock-toggle {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.84rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .messages-dock {
+    --tile-w: 220px;
+  }
+
+  .messages-dock-label {
+    font-size: 0.82rem;
+  }
 }
 
 .messages-dock-toggle {
