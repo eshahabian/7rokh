@@ -2278,11 +2278,7 @@ function casting_render_messages_dock(): void
         return;
     }
     ?>
-  <div
-    class="messages-dock"
-    data-messages-dock
-    style="position:fixed;left:1.25rem;right:auto;bottom:calc(1.25rem + 2.85rem + 0.65rem);inset-inline-start:auto;inset-inline-end:auto;z-index:140;width:max-content;max-width:min(300px,calc(100vw - 2.5rem));"
-  >
+  <div class="messages-dock" data-messages-dock>
     <button type="button" class="messages-dock-toggle" data-messages-dock-toggle aria-expanded="false" aria-controls="messages-dock-panel">
       <span class="messages-dock-icon" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" focusable="false">
