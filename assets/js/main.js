@@ -2157,8 +2157,85 @@
     }
   });
 
-  // Media like / comment
+  // Media like / comment / view
   const mediaEngageCfg = () => window.CASTING_MEDIA_ENGAGE || {};
+  const viewedMediaIds = new Set();
+
+  const updateViewCount = (mediaId, count) => {
+    const id = String(mediaId || "");
+    document.querySelectorAll("[data-media-engage]").forEach((wrap) => {
+      if (wrap.getAttribute("data-media-engage") !== id) return;
+      const el = wrap.querySelector("[data-view-count]");
+      if (el) el.textContent = String(count);
+    });
+  };
+
+  const recordMediaView = (mediaId) => {
+    const id = String(mediaId || "");
+    if (!id || viewedMediaIds.has(id)) return;
+    if (!window.CASTING_SESSION?.active) return;
+    const cfg = mediaEngageCfg();
+    if (!cfg.url || !cfg.nonce) return;
+    viewedMediaIds.add(id);
+    const body = new URLSearchParams();
+    body.set("_wpnonce", cfg.nonce);
+    body.set("engage_action", "view");
+    body.set("media_id", id);
+    fetch(cfg.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+      body: body.toString(),
+      credentials: "same-origin",
+      keepalive: true,
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.ok && data.count != null) {
+          updateViewCount(id, data.count);
+        }
+      })
+      .catch(() => {});
+  };
+
+  const mediaIdFromEngageRoot = (root) => {
+    if (!root) return "";
+    const wrap = root.matches?.("[data-media-engage]")
+      ? root
+      : root.querySelector?.("[data-media-engage]");
+    return wrap?.getAttribute("data-media-engage") || "";
+  };
+
+  if ("IntersectionObserver" in window && window.CASTING_SESSION?.active) {
+    const pendingViewTimers = new Map();
+    const viewObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const id = mediaIdFromEngageRoot(entry.target);
+        if (!id || viewedMediaIds.has(id)) {
+          if (id) viewObserver.unobserve(entry.target);
+          return;
+        }
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.4) {
+          if (pendingViewTimers.has(id)) return;
+          pendingViewTimers.set(id, window.setTimeout(() => {
+            pendingViewTimers.delete(id);
+            recordMediaView(id);
+            viewObserver.unobserve(entry.target);
+          }, 650));
+        } else {
+          const timer = pendingViewTimers.get(id);
+          if (timer) {
+            window.clearTimeout(timer);
+            pendingViewTimers.delete(id);
+          }
+        }
+      });
+    }, { threshold: [0.4] });
+
+    document.querySelectorAll("[data-media-engage]").forEach((wrap) => {
+      const root = wrap.closest(".home-feed-post, .ig-profile-cell, .profile-media-item") || wrap;
+      viewObserver.observe(root);
+    });
+  }
 
   const buildCommentLi = (comment) => {
     const li = document.createElement("li");
@@ -2276,6 +2353,7 @@
     homeFeedZoomPlaceholder = placeholder;
     homeFeedZoomPost = post;
     post.classList.add("is-zoomed");
+    recordMediaView(mediaIdFromEngageRoot(post));
     post.style.position = "fixed";
     post.style.top = `${top}px`;
     post.style.left = `${left}px`;
@@ -2463,6 +2541,7 @@
     postLightbox.setAttribute("aria-hidden", "false");
     lockBodyScroll();
     postLightboxPanel?.scrollTo(0, 0);
+    recordMediaView(mediaIdFromEngageRoot(root));
   };
 
   document.addEventListener("click", (event) => {

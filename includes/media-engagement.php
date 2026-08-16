@@ -17,12 +17,20 @@ function casting_media_comments_table(): string
     return $wpdb->prefix . 'casting_media_comments';
 }
 
+function casting_media_views_table(): string
+{
+    global $wpdb;
+
+    return $wpdb->prefix . 'casting_media_views';
+}
+
 function casting_media_engagement_install(): void
 {
     global $wpdb;
     $charset = $wpdb->get_charset_collate();
     $likes = casting_media_likes_table();
     $comments = casting_media_comments_table();
+    $views = casting_media_views_table();
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
     $sql_likes = "CREATE TABLE {$likes} (
@@ -48,14 +56,26 @@ function casting_media_engagement_install(): void
         KEY media_created (media_id, created_at)
     ) {$charset};";
 
+    $sql_views = "CREATE TABLE {$views} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        media_id BIGINT UNSIGNED NOT NULL,
+        user_id BIGINT UNSIGNED NOT NULL,
+        created_at DATETIME NOT NULL,
+        PRIMARY KEY  (id),
+        UNIQUE KEY media_user (media_id, user_id),
+        KEY media_id (media_id),
+        KEY user_id (user_id)
+    ) {$charset};";
+
     dbDelta($sql_likes);
     dbDelta($sql_comments);
-    update_option('casting_media_engagement_db_version', '1');
+    dbDelta($sql_views);
+    update_option('casting_media_engagement_db_version', '2');
 }
 
 function casting_media_engagement_ensure(): void
 {
-    if ((string) get_option('casting_media_engagement_db_version', '') !== '1') {
+    if ((string) get_option('casting_media_engagement_db_version', '') !== '2') {
         casting_media_engagement_install();
     }
 }
@@ -186,6 +206,59 @@ function casting_media_comment_count(int $media_id): int
     return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE media_id = %d", $media_id));
 }
 
+function casting_media_view_count(int $media_id): int
+{
+    if ($media_id <= 0) {
+        return 0;
+    }
+    casting_media_engagement_ensure();
+    global $wpdb;
+    $table = casting_media_views_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE media_id = %d", $media_id));
+}
+
+/**
+ * بازدید یکتای هر کاربر از پست. بازدید خودِ صاحب پست شمرده نمی‌شود.
+ *
+ * @return array{ok:bool,error:string,count?:int,recorded?:bool}
+ */
+function casting_media_record_view(int $media_id, int $user_id): array
+{
+    if ($user_id <= 0 || casting_get_user_role($user_id) === '') {
+        return ['ok' => false, 'error' => 'برای ثبت بازدید باید وارد شوید.'];
+    }
+    $row = casting_media_get_row($media_id);
+    if ($row === null || ($row['status'] ?? '') !== 'approved') {
+        return ['ok' => false, 'error' => 'پست معتبر نیست.'];
+    }
+    $count = casting_media_view_count($media_id);
+    $owner_id = (int) ($row['user_id'] ?? 0);
+    if ($owner_id === $user_id) {
+        return ['ok' => true, 'error' => '', 'count' => $count, 'recorded' => false];
+    }
+    if (!casting_media_user_can_engage($user_id, $row)) {
+        return ['ok' => false, 'error' => 'اجازه مشاهده این پست را ندارید.'];
+    }
+    casting_media_engagement_ensure();
+    global $wpdb;
+    $table = casting_media_views_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->query($wpdb->prepare(
+        "INSERT IGNORE INTO {$table} (media_id, user_id, created_at) VALUES (%d, %d, %s)",
+        $media_id,
+        $user_id,
+        current_time('mysql')
+    ));
+
+    return [
+        'ok'       => true,
+        'error'    => '',
+        'count'    => casting_media_view_count($media_id),
+        'recorded' => (int) $wpdb->rows_affected > 0,
+    ];
+}
+
 /**
  * @return list<array{id:int,media_id:int,user_id:int,body:string,created_at:string,name:string}>
  */
@@ -279,7 +352,7 @@ function casting_media_add_comment(int $media_id, int $user_id, string $body): a
 }
 
 /**
- * نوار لایک/کامنت زیر پست
+ * نوار لایک/کامنت/بازدید زیر پست
  */
 function casting_render_media_engagement(int $media_id, int $viewer_id, bool $compact = false): void
 {
@@ -288,6 +361,7 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
     }
     $likes = casting_media_like_count($media_id);
     $comments = casting_media_comment_count($media_id);
+    $views = casting_media_view_count($media_id);
     $liked = $viewer_id > 0 && casting_media_user_liked($media_id, $viewer_id);
     $list = $compact ? [] : casting_media_list_comments($media_id, 40);
     $preview_limit = 2;
@@ -327,6 +401,11 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
       <span class="media-engage-comment-count" title="کامنت">
         <span aria-hidden="true">💬</span>
         <span data-comment-count><?= (int) $comments ?></span>
+      </span>
+      <span class="media-engage-view-count" title="بازدید">
+        <span aria-hidden="true">👁</span>
+        <span data-view-count><?= (int) $views ?></span>
+        <span class="media-engage-label">بازدید</span>
       </span>
     </div>
     <?php if (!$compact) : ?>

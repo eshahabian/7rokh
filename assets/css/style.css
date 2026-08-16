@@ -5828,6 +5828,7 @@ a.panel-home-filter-chip:focus-visible {
   align-items: center;
   gap: 0.85rem;
   flex: 0 0 auto;
+  flex-wrap: wrap;
 }
 
 .media-engage-like {
@@ -5851,12 +5852,17 @@ a.panel-home-filter-chip:focus-visible {
   color: var(--ink-muted);
 }
 
-.media-engage-comment-count {
+.media-engage-comment-count,
+.media-engage-view-count {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
   color: var(--ink-muted);
   font-size: 0.9rem;
+}
+
+.media-engage-view-count .media-engage-label {
+  font-size: 0.82rem;
 }
 
 .media-engage-comments {

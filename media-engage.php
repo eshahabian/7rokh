@@ -36,5 +36,10 @@ if ($action === 'save') {
     exit;
 }
 
+if ($action === 'view') {
+    echo wp_json_encode(casting_media_record_view($media_id, $user_id));
+    exit;
+}
+
 echo wp_json_encode(['ok' => false, 'error' => 'درخواست نامعتبر است.']);
 exit;
