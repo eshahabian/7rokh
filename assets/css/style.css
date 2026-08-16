@@ -3402,7 +3402,8 @@ html[data-theme="day"] .filter-bar--sticky {
   body:not(.has-panel-drawer) .site-header-bar-actions {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
     margin-inline-start: auto;
     flex: 0 0 auto;
   }
@@ -3413,12 +3414,29 @@ html[data-theme="day"] .filter-bar--sticky {
     flex: 0 0 auto;
   }
 
+  body:not(.has-panel-drawer) .site-header-panel-theme .theme-toggle,
+  body:not(.has-panel-drawer) .site-header-panel-theme .header-theme {
+    gap: 0.05rem;
+    padding: 0.06rem;
+  }
+
+  body:not(.has-panel-drawer) .site-header-panel-theme .theme-toggle-btn,
+  body:not(.has-panel-drawer) .site-header .header-theme .theme-toggle-btn {
+    min-height: 22px;
+    padding: 0.06rem 0.32rem;
+    font-size: 0.6rem;
+    font-weight: 600;
+    box-shadow: none;
+  }
+
   body:not(.has-panel-drawer) .site-header-bar {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 0.55rem;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
     width: 100%;
+    min-width: 0;
   }
 
   body:not(.has-panel-drawer) .site-header-quick {
@@ -3461,9 +3479,9 @@ html[data-theme="day"] .filter-bar--sticky {
   }
 
   body:not(.has-panel-drawer) .site-header .header-theme .theme-toggle-btn {
-    min-height: 28px;
-    padding: 0.18rem 0.55rem;
-    font-size: 0.72rem;
+    min-height: 22px;
+    padding: 0.06rem 0.32rem;
+    font-size: 0.6rem;
   }
 
   body:not(.has-panel-drawer) .site-nav-toggle {
@@ -3772,10 +3790,11 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
 @media (max-width: 960px) {
   body.has-panel-drawer .site-header.site-header--panel {
     flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.7rem 1rem;
+    gap: 0.4rem;
+    padding: 0.55rem 0.7rem;
     text-align: start;
   }
 
@@ -3783,24 +3802,28 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
     width: 100%;
+    min-width: 0;
   }
 
   body.has-panel-drawer .site-header--panel .site-header-bar-actions {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
     margin-inline-start: auto;
     flex: 0 0 auto;
+    min-width: 0;
   }
 
   body.has-panel-drawer .site-header--panel .site-header-app-link {
     display: inline-flex;
     margin-inline-start: 0;
-    min-height: 28px;
-    padding: 0.18rem 0.65rem;
-    font-size: 0.72rem;
+    min-height: 24px;
+    padding: 0.12rem 0.45rem;
+    font-size: 0.64rem;
   }
 
   body.has-panel-drawer .site-header--panel .site-header-panel-theme {
@@ -3809,10 +3832,26 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
     flex: 0 0 auto;
   }
 
-  body.has-panel-drawer .site-header--panel .site-header-panel-theme .theme-toggle-btn {
-    min-height: 28px;
-    padding: 0.18rem 0.55rem;
-    font-size: 0.72rem;
+  body.has-panel-drawer .site-header--panel .site-header-panel-theme .theme-toggle,
+  body.has-panel-drawer .site-header--panel .site-header-panel-theme .header-theme {
+    gap: 0.05rem;
+    padding: 0.06rem;
+  }
+
+  body.has-panel-drawer .site-header--panel .site-header-panel-theme .theme-toggle-btn,
+  body.has-panel-drawer .site-header--panel .header-theme .theme-toggle-btn {
+    min-height: 22px;
+    padding: 0.06rem 0.32rem;
+    font-size: 0.6rem;
+    font-weight: 600;
+    box-shadow: none;
+  }
+
+  body.has-panel-drawer .site-header--panel .panel-menu-toggle {
+    width: 2.15rem;
+    min-width: 2.15rem;
+    height: 2.15rem;
+    min-height: 2.15rem;
   }
 
   body.has-panel-drawer .site-header--panel .site-header-brand-cluster {
@@ -3827,12 +3866,6 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
   body.has-panel-drawer .site-header--panel .brand {
     font-size: 1.45rem;
     line-height: 1;
-  }
-
-  body.has-panel-drawer .site-header--panel .header-theme .theme-toggle-btn {
-    min-height: 28px;
-    padding: 0.18rem 0.55rem;
-    font-size: 0.72rem;
   }
 
   body.has-panel-drawer .site-header--panel .nav {
