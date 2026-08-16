@@ -2239,14 +2239,92 @@
 
   const buildCommentLi = (comment) => {
     const li = document.createElement("li");
+    const parentId = Number(comment?.parent_id || 0);
+    li.className = parentId > 0 ? "media-comment is-reply" : "media-comment";
+    li.setAttribute("data-comment-id", String(comment?.id || ""));
+
+    const main = document.createElement("div");
+    main.className = "media-comment-main";
+
+    const text = document.createElement("p");
+    text.className = "media-comment-text";
     const strong = document.createElement("strong");
     strong.textContent = comment?.name || "کاربر";
     const span = document.createElement("span");
     span.textContent = comment?.body || "";
-    li.appendChild(strong);
-    li.appendChild(document.createTextNode(" "));
-    li.appendChild(span);
+    text.appendChild(strong);
+    text.appendChild(document.createTextNode(" "));
+    text.appendChild(span);
+
+    const actions = document.createElement("div");
+    actions.className = "media-comment-actions";
+    const likeBtn = document.createElement("button");
+    likeBtn.type = "button";
+    likeBtn.className = "media-comment-like";
+    likeBtn.setAttribute("data-comment-like", String(comment?.id || ""));
+    likeBtn.setAttribute("aria-pressed", "false");
+    likeBtn.title = "پسند کامنت";
+    const likeIcon = document.createElement("span");
+    likeIcon.setAttribute("aria-hidden", "true");
+    likeIcon.textContent = "♡";
+    const likeCount = document.createElement("span");
+    likeCount.setAttribute("data-comment-like-count", "");
+    likeCount.textContent = String(comment?.likes || 0);
+    likeBtn.appendChild(likeIcon);
+    likeBtn.appendChild(likeCount);
+    actions.appendChild(likeBtn);
+
+    if (window.CASTING_SESSION?.active) {
+      const replyBtn = document.createElement("button");
+      replyBtn.type = "button";
+      replyBtn.className = "media-comment-reply";
+      replyBtn.setAttribute("data-comment-reply", String(comment?.id || ""));
+      replyBtn.setAttribute("data-reply-name", comment?.name || "کاربر");
+      replyBtn.textContent = "پاسخ";
+      actions.appendChild(replyBtn);
+    }
+
+    main.appendChild(text);
+    main.appendChild(actions);
+    li.appendChild(main);
+
+    if (parentId <= 0) {
+      const replies = document.createElement("ul");
+      replies.className = "media-comment-replies";
+      li.appendChild(replies);
+    }
     return li;
+  };
+
+  const clearCommentReply = (form) => {
+    if (!form) return;
+    const hidden = form.querySelector('input[name="parent_id"]');
+    const input = form.querySelector('input[name="body"]');
+    const hint = form.querySelector("[data-reply-hint]");
+    const hintText = form.querySelector("[data-reply-hint-text]");
+    if (hidden) hidden.value = "0";
+    if (input) input.placeholder = "کامنت بنویسید…";
+    if (hint) hint.hidden = true;
+    if (hintText) hintText.textContent = "";
+  };
+
+  const setCommentReply = (form, parentId, name) => {
+    if (!form) return;
+    const hidden = form.querySelector('input[name="parent_id"]');
+    const input = form.querySelector('input[name="body"]');
+    const hint = form.querySelector("[data-reply-hint]");
+    const hintText = form.querySelector("[data-reply-hint-text]");
+    if (hidden) hidden.value = String(parentId || 0);
+    if (parentId && name) {
+      if (input) {
+        input.placeholder = `پاسخ به ${name}…`;
+        input.focus();
+      }
+      if (hint) hint.hidden = false;
+      if (hintText) hintText.textContent = `پاسخ به ${name}`;
+    } else {
+      clearCommentReply(form);
+    }
   };
 
   const refreshCommentPreview = (wrap) => {
@@ -2254,9 +2332,13 @@
     const preview = wrap.querySelector("[data-media-comments]");
     const full = wrap.querySelector("[data-media-comments-full]");
     if (!preview || !full) return;
-    const items = Array.from(full.querySelectorAll("li"));
+    const items = Array.from(full.querySelectorAll(":scope > li"));
     preview.innerHTML = "";
-    items.slice(0, 2).forEach((li) => preview.appendChild(li.cloneNode(true)));
+    items.slice(0, 2).forEach((li) => {
+      const clone = li.cloneNode(true);
+      clone.querySelectorAll(".media-comment-replies").forEach((el) => el.remove());
+      preview.appendChild(clone);
+    });
     const countEl = wrap.querySelector("[data-comment-count]");
     const count = Number(countEl?.textContent || items.length || 0);
     const needMore = count > 2 || items.length > 2;
@@ -2273,6 +2355,13 @@
     } else if (moreBtn) {
       moreBtn.hidden = !needMore;
     }
+  };
+
+  const expandCommentThread = (wrap) => {
+    if (!wrap) return;
+    const preview = wrap.querySelector("[data-media-comments]");
+    const full = wrap.querySelector("[data-media-comments-full]");
+    if (full && preview) preview.innerHTML = full.innerHTML;
   };
 
   let postLightboxSource = null;
@@ -2310,6 +2399,7 @@
 
   const closeHomeFeedZoom = () => {
     if (!homeFeedZoomPost) return;
+    const engage = homeFeedZoomPost.querySelector("[data-media-engage]");
     homeFeedZoomPost.classList.remove("is-zoomed");
     homeFeedZoomPost.style.position = "";
     homeFeedZoomPost.style.top = "";
@@ -2328,6 +2418,7 @@
     homeFeedZoomBackdrop.classList.remove("is-open");
     homeFeedZoomBackdrop.setAttribute("aria-hidden", "true");
     unlockBodyScroll();
+    refreshCommentPreview(engage);
   };
 
   const openHomeFeedZoom = (post) => {
@@ -2354,6 +2445,7 @@
     homeFeedZoomPost = post;
     post.classList.add("is-zoomed");
     recordMediaView(mediaIdFromEngageRoot(post));
+    expandCommentThread(post.querySelector("[data-media-engage]"));
     post.style.position = "fixed";
     post.style.top = `${top}px`;
     post.style.left = `${left}px`;
@@ -2587,6 +2679,72 @@
     if (event.key === "Escape") {
       closeHomeFeedZoom();
       closePostLightbox();
+    }
+  });
+
+  document.addEventListener("click", async (event) => {
+    const commentLikeBtn = event.target.closest("[data-comment-like]");
+    if (commentLikeBtn && !commentLikeBtn.disabled) {
+      event.preventDefault();
+      const cfg = mediaEngageCfg();
+      const commentId = commentLikeBtn.getAttribute("data-comment-like");
+      const wrap = commentLikeBtn.closest("[data-media-engage]");
+      const mediaId = wrap?.getAttribute("data-media-engage") || "";
+      if (!commentId || !cfg.url || !cfg.nonce) return;
+      commentLikeBtn.disabled = true;
+      try {
+        const body = new URLSearchParams();
+        body.set("_wpnonce", cfg.nonce);
+        body.set("engage_action", "comment_like");
+        body.set("media_id", mediaId);
+        body.set("comment_id", commentId);
+        const res = await fetch(cfg.url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+          body: body.toString(),
+          credentials: "same-origin",
+        });
+        const data = await res.json();
+        if (!data?.ok) {
+          window.alert(data?.error || "لایک کامنت ثبت نشد.");
+          return;
+        }
+        const liked = !!data.liked;
+        document.querySelectorAll(`[data-comment-like="${commentId}"]`).forEach((btn) => {
+          btn.classList.toggle("is-liked", liked);
+          btn.setAttribute("aria-pressed", liked ? "true" : "false");
+          const icon = btn.querySelector("span[aria-hidden]");
+          if (icon) icon.textContent = liked ? "♥" : "♡";
+          const countEl = btn.querySelector("[data-comment-like-count]");
+          if (countEl) countEl.textContent = String(data.count ?? 0);
+        });
+      } catch (_err) {
+        window.alert("خطا در ارتباط با سرور.");
+      } finally {
+        document.querySelectorAll(`[data-comment-like="${commentId}"]`).forEach((btn) => {
+          btn.disabled = false;
+        });
+      }
+      return;
+    }
+
+    const replyBtn = event.target.closest("[data-comment-reply]");
+    if (replyBtn) {
+      event.preventDefault();
+      const wrap = replyBtn.closest("[data-media-engage]");
+      const form = wrap?.querySelector("[data-media-comment-form]");
+      setCommentReply(
+        form,
+        replyBtn.getAttribute("data-comment-reply"),
+        replyBtn.getAttribute("data-reply-name") || "کاربر"
+      );
+      return;
+    }
+
+    const cancelReply = event.target.closest("[data-reply-cancel]");
+    if (cancelReply) {
+      event.preventDefault();
+      clearCommentReply(cancelReply.closest("[data-media-comment-form]"));
     }
   });
 
@@ -2890,6 +3048,7 @@
     const cfg = mediaEngageCfg();
     const mediaId = form.getAttribute("data-media-comment-form");
     const input = form.querySelector('input[name="body"]');
+    const parentInput = form.querySelector('input[name="parent_id"]');
     const bodyText = (input?.value || "").trim();
     if (!mediaId || !cfg.url || !cfg.nonce || !bodyText) return;
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -2900,6 +3059,7 @@
       body.set("engage_action", "comment");
       body.set("media_id", mediaId);
       body.set("body", bodyText);
+      body.set("parent_id", parentInput?.value || "0");
       const res = await fetch(cfg.url, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
@@ -2912,14 +3072,29 @@
         return;
       }
       if (input) input.value = "";
+      clearCommentReply(form);
       const wrap = form.closest("[data-media-engage]");
       const full = wrap?.querySelector("[data-media-comments-full]");
       if (full && data.comment) {
-        full.appendChild(buildCommentLi(data.comment));
+        const node = buildCommentLi(data.comment);
+        const parentId = Number(data.comment.parent_id || 0);
+        if (parentId > 0) {
+          const parentLi = full.querySelector(`[data-comment-id="${parentId}"]`);
+          let replies = parentLi?.querySelector(":scope > .media-comment-replies");
+          if (!replies && parentLi) {
+            replies = document.createElement("ul");
+            replies.className = "media-comment-replies";
+            parentLi.appendChild(replies);
+          }
+          if (replies) replies.appendChild(node);
+          else full.appendChild(node);
+        } else {
+          full.appendChild(node);
+        }
       }
-      if (postLightbox?.classList.contains("is-open") && wrap) {
-        const preview = wrap.querySelector("[data-media-comments]");
-        if (preview && full) preview.innerHTML = full.innerHTML;
+      const expanded = !!(postLightbox?.classList.contains("is-open") || wrap?.closest(".home-feed-post.is-zoomed"));
+      if (expanded && wrap) {
+        expandCommentThread(wrap);
       } else {
         refreshCommentPreview(wrap);
       }

@@ -416,6 +416,7 @@ $pending_video = $pending_media['video'];
             : 'اطلاعات پایه، عکس و ویدیو را وارد کنید و ثبت‌نام را کامل کنید.';
     }
     ?></p>
+    <p class="lede-req-note" role="note">موارد ستاره‌دار الزامی می‌باشد.</p>
 
     <form class="form" method="post" action="register.php" enctype="multipart/form-data" autocomplete="on" data-talent-profile-toggle data-register-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?><?= $invalid_fields !== [] ? ' data-invalid-fields="' . casting_e(implode(',', $invalid_fields)) . '"' : '' ?>>
       <?php wp_nonce_field('casting_register'); ?>

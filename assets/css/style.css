@@ -1000,9 +1000,16 @@ html[data-theme="day"] .brand-mark-rokh {
 }
 
 .panel .lede {
-  margin: 0 0 1.5rem;
+  margin: 0 0 0.45rem;
   color: var(--ink-muted);
   font-size: 0.95rem;
+}
+
+.lede-req-note {
+  margin: 0 0 1.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #c62828;
 }
 
 .form {
@@ -5870,21 +5877,68 @@ a.panel-home-filter-chip:focus-visible {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.35rem;
+  gap: 0.45rem;
   font-size: 0.88rem;
 }
 
 .media-engage-comments.is-preview {
-  max-height: 3.4em;
   overflow: hidden;
 }
 
-.media-engage-comments li {
+.media-engage-comments.is-preview .media-comment-replies {
+  display: none;
+}
+
+.post-lightbox .media-engage-comments.is-preview .media-comment-replies,
+.home-feed-post.is-zoomed .media-engage-comments.is-preview .media-comment-replies {
+  display: grid;
+}
+
+.media-comment {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.media-comment-text {
+  margin: 0;
   line-height: 1.45;
 }
 
-.media-engage-comments strong {
+.media-comment-text strong {
   margin-inline-end: 0.35rem;
+}
+
+.media-comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.media-comment-like,
+.media-comment-reply {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.media-comment-like.is-liked {
+  color: #e35d6a;
+}
+
+.media-comment-replies {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0 0.85rem 0 0;
+  display: grid;
+  gap: 0.35rem;
+  border-inline-start: 1px solid var(--line);
 }
 
 .media-engage-more {
@@ -5897,6 +5951,7 @@ a.panel-home-filter-chip:focus-visible {
 
 .media-engage-form {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
   align-items: center;
   width: 100%;
@@ -5907,7 +5962,22 @@ a.panel-home-filter-chip:focus-visible {
   flex: 0 0 auto;
 }
 
-.media-engage-form input {
+.media-engage-reply-hint {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #c62828;
+}
+
+.media-engage-reply-hint[hidden] {
+  display: none !important;
+}
+
+.media-engage-form input[type="text"] {
   flex: 1 1 auto;
   min-width: 0;
   width: auto;
@@ -5919,6 +5989,10 @@ a.panel-home-filter-chip:focus-visible {
   font: inherit;
   font-size: 0.82rem;
   box-sizing: border-box;
+}
+
+.media-engage-form input[type="hidden"] {
+  display: none;
 }
 
 .media-engage-form .media-engage-submit,

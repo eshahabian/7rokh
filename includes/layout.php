@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=187">
+  <link rel="stylesheet" href="<?= $css ?>?v=188">
   <script>
     (function () {
       try {
@@ -282,7 +282,7 @@ function casting_render_footer(): void
       fullUrl: <?= wp_json_encode(casting_url('chat.php')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=109" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=110" defer></script>
 </body>
 </html>
 <?php

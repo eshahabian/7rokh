@@ -27,7 +27,17 @@ if ($action === 'like') {
 }
 
 if ($action === 'comment') {
-    echo wp_json_encode(casting_media_add_comment($media_id, $user_id, (string) ($_POST['body'] ?? '')));
+    echo wp_json_encode(casting_media_add_comment(
+        $media_id,
+        $user_id,
+        (string) ($_POST['body'] ?? ''),
+        (int) ($_POST['parent_id'] ?? 0)
+    ));
+    exit;
+}
+
+if ($action === 'comment_like') {
+    echo wp_json_encode(casting_media_toggle_comment_like((int) ($_POST['comment_id'] ?? 0), $user_id));
     exit;
 }
 
