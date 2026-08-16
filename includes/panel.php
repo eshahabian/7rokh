@@ -21,8 +21,9 @@ function casting_panel_nav_groups(): array
             'id'    => 'main',
             'label' => 'اصلی',
             'items' => [
-                ['key' => 'home',  'label' => 'صفحه اصلی', 'href' => 'home.php'],
-                ['key' => 'panel', 'label' => 'پروفایل من', 'href' => 'panel.php'],
+                ['key' => 'home',     'label' => 'صفحه اصلی',    'href' => 'home.php'],
+                ['key' => 'panel',    'label' => 'پروفایل من',    'href' => 'panel.php'],
+                ['key' => 'messages', 'label' => 'پیام کاربران', 'href' => 'chat.php'],
             ],
         ],
         [
@@ -128,7 +129,7 @@ function casting_panel_nav_highlight_key(string $active): string
         'newest'       => 'newest',
         'my-profile'   => 'panel',
         'edit-profile' => 'panel',
-        'messages'     => 'panel',
+        'messages'     => 'messages',
         'news'         => 'news',
         'app'          => 'app',
     ];
@@ -307,6 +308,8 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
               <span class="nav-badge" aria-label="<?= casting_e((string) $desk_response_count) ?> پذیرش جدید"><?= (int) $desk_response_count ?></span>
             <?php elseif ($item['key'] === 'briefs' && $pending_brief_count > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $pending_brief_count) ?> تکلیف"><?= (int) $pending_brief_count ?></span>
+            <?php elseif ($item['key'] === 'messages' && $unread_peers > 0) : ?>
+              <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
             <?php elseif (($item['key'] === 'contact' || $item['key'] === 'settings') && $unread_contacts > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
             <?php endif; ?>
