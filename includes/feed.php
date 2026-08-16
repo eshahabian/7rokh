@@ -220,10 +220,17 @@ function casting_render_feed_media_card(array $item, int $viewer_id): void
     ?>
   <article class="home-feed-post" data-media-id="<?= $id ?>">
     <header class="home-feed-post-head">
+      <?php if ($owner_id > 0 && function_exists('casting_user_profile_is_hidden') && casting_user_profile_is_hidden($owner_id)) : ?>
+      <span class="home-feed-author">
+        <strong><?= casting_e($name) ?></strong>
+        <?php if ($role !== '') : ?><span class="meta"><?= casting_e($role) ?></span><?php endif; ?>
+      </span>
+      <?php else : ?>
       <button type="button" class="link-button home-feed-author" data-member-preview="<?= $owner_id ?>">
         <strong><?= casting_e($name) ?></strong>
         <?php if ($role !== '') : ?><span class="meta"><?= casting_e($role) ?></span><?php endif; ?>
       </button>
+      <?php endif; ?>
     </header>
     <div class="home-feed-post-media<?= $is_video ? ' is-video' : '' ?>">
       <?php

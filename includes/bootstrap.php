@@ -171,9 +171,95 @@ function casting_user_is_portal_owner(int $user_id): bool
     return strtolower((string) $user->user_login) === casting_portal_owner_login();
 }
 
+function casting_portal_admin_logins(): array
+{
+    $logins = [];
+    if (defined('CASTING_PORTAL_ADMINS') && is_array(CASTING_PORTAL_ADMINS)) {
+        foreach (CASTING_PORTAL_ADMINS as $login) {
+            $login = strtolower(trim((string) $login));
+            if ($login !== '') {
+                $logins[] = $login;
+            }
+        }
+    }
+    $owner = casting_portal_owner_login();
+    if ($owner !== '') {
+        $logins[] = $owner;
+    }
+    if ($logins === []) {
+        $logins = ['eshahabian', 'ardavan'];
+    }
+
+    return array_values(array_unique($logins));
+}
+
+function casting_user_is_listed_portal_admin(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return false;
+    }
+
+    return in_array(strtolower((string) $user->user_login), casting_portal_admin_logins(), true);
+}
+
+/**
+ * پروفایل مدیران رسمی برای هیچ‌کس (جز خودشان) قابل مشاهده نیست.
+ */
+function casting_user_profile_is_hidden(int $user_id): bool
+{
+    return casting_user_is_listed_portal_admin($user_id);
+}
+
+/**
+ * @return list<int>
+ */
+function casting_hidden_profile_user_ids(): array
+{
+    static $ids = null;
+    if (is_array($ids)) {
+        return $ids;
+    }
+    $ids = [];
+    foreach (casting_portal_admin_logins() as $login) {
+        $user = get_user_by('login', $login);
+        if ($user) {
+            $ids[] = (int) $user->ID;
+        }
+    }
+    $ids = array_values(array_unique(array_filter($ids)));
+
+    return $ids;
+}
+
+/**
+ * @param array<string, mixed> $args
+ * @return array<string, mixed>
+ */
+function casting_user_query_exclude_hidden_profiles(array $args, int $extra_exclude = 0): array
+{
+    $ids = casting_hidden_profile_user_ids();
+    if ($extra_exclude > 0) {
+        $ids[] = $extra_exclude;
+    }
+    if (isset($args['exclude'])) {
+        $existing = is_array($args['exclude']) ? $args['exclude'] : [(int) $args['exclude']];
+        $ids = array_merge($existing, $ids);
+    }
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+    if ($ids !== []) {
+        $args['exclude'] = $ids;
+    }
+
+    return $args;
+}
+
 /**
  * آیا بیننده می‌تواند پروفایل عضو را ببیند؟
- * مدیر اصلی (eshahabian) بالاترین سطح را دارد و همه پروفایل‌ها را می‌بیند.
+ * پروفایل مدیران رسمی مخفی است. مدیر اصلی بقیه پروفایل‌ها را می‌بیند.
  */
 function casting_user_can_view_member_profile(int $viewer_id, int $member_id): bool
 {
@@ -182,6 +268,9 @@ function casting_user_can_view_member_profile(int $viewer_id, int $member_id): b
     }
     if ($viewer_id === $member_id) {
         return true;
+    }
+    if (casting_user_profile_is_hidden($member_id)) {
+        return false;
     }
     // بالاترین سطح دسترسی — بدون محدودیت مخفی‌بودن یا بلاک
     if (casting_user_is_portal_owner($viewer_id)) {
@@ -202,6 +291,24 @@ function casting_user_can_view_member_profile(int $viewer_id, int $member_id): b
     }
 
     return true;
+}
+
+/**
+ * مشاهدهٔ پست/مدیای عضو — پست مدیران رسمی در فید می‌ماند، حتی اگر پروفایل مخفی باشد.
+ */
+function casting_user_can_view_member_media(int $viewer_id, int $owner_id): bool
+{
+    if ($viewer_id <= 0 || $owner_id <= 0) {
+        return false;
+    }
+    if ($viewer_id === $owner_id) {
+        return true;
+    }
+    if (casting_user_profile_is_hidden($owner_id)) {
+        return casting_get_user_role($viewer_id) !== '';
+    }
+
+    return casting_user_can_view_member_profile($viewer_id, $owner_id);
 }
 
 /**

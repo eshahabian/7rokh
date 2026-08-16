@@ -2024,6 +2024,7 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
         $args['search'] = '*' . esc_attr($name_q) . '*';
         $args['search_columns'] = ['display_name', 'user_login'];
     }
+    $args = casting_user_query_exclude_hidden_profiles($args);
 
     $query = new WP_User_Query($args);
     $users = $query->get_results();
@@ -2068,6 +2069,7 @@ function casting_newest_members(int $limit = 30, int $exclude_id = 0): array
     if ($exclude_id > 0) {
         $args['exclude'] = [$exclude_id];
     }
+    $args = casting_user_query_exclude_hidden_profiles($args);
     $query = new WP_User_Query($args);
     $users = $query->get_results();
     if (!is_array($users)) {
@@ -2421,6 +2423,7 @@ function casting_home_premium_members(int $limit = 8, int $exclude_id = 0): arra
     if ($exclude_id > 0) {
         $args['exclude'] = [$exclude_id];
     }
+    $args = casting_user_query_exclude_hidden_profiles($args);
     $query = new WP_User_Query($args);
     $users = $query->get_results();
     if (!is_array($users)) {
@@ -2451,6 +2454,9 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
         require_once __DIR__ . '/follows.php';
     }
     $id = (int) $member->ID;
+    if (function_exists('casting_user_profile_is_hidden') && casting_user_profile_is_hidden($id) && $viewer_id !== $id) {
+        return;
+    }
     $profile = casting_get_profile($id);
     $photo = casting_member_card_photo_url($id, $profile);
     $city = trim((string) ($profile['city'] ?? ''));
@@ -2519,6 +2525,9 @@ function casting_render_panel_home_member_row(array $members, bool $premium_badg
 function casting_render_member_card(WP_User $member, int $viewer_id, ?array $director_flags = null, float $director_score = 0): void
 {
     $id = (int) $member->ID;
+    if (function_exists('casting_user_profile_is_hidden') && casting_user_profile_is_hidden($id) && $viewer_id !== $id) {
+        return;
+    }
     $profile = casting_get_profile($id);
     $premium = casting_user_is_premium($id);
     $photo = casting_member_card_photo_url($id, $profile);
@@ -2601,6 +2610,7 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
     if ($exclude_id > 0) {
         $args['exclude'] = [$exclude_id];
     }
+    $args = casting_user_query_exclude_hidden_profiles($args);
 
     $query = new WP_User_Query($args);
     $users = $query->get_results();
@@ -2611,6 +2621,9 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
     $out = [];
     foreach ($users as $user) {
         $id = (int) $user->ID;
+        if (casting_user_profile_is_hidden($id) && $id !== $viewer_id) {
+            continue;
+        }
         $role = casting_get_user_role($id);
         if ($role === '') {
             continue;

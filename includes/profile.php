@@ -3502,6 +3502,9 @@ function casting_query_talents(array $filters = [], int $page = 1, int $per_page
         $args['search'] = '*' . esc_attr(sanitize_text_field($filters['q'])) . '*';
         $args['search_columns'] = ['display_name', 'user_email'];
     }
+    if (function_exists('casting_user_query_exclude_hidden_profiles')) {
+        $args = casting_user_query_exclude_hidden_profiles($args);
+    }
 
     $query = new WP_User_Query($args);
     $users = $query->get_results();

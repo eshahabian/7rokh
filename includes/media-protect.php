@@ -127,9 +127,11 @@ function casting_user_can_stream_attachment(int $viewer_id, int $attachment_id):
             return false;
         }
 
-        return function_exists('casting_user_can_view_member_profile')
-            ? casting_user_can_view_member_profile($viewer_id, $owner_id)
-            : false;
+        return function_exists('casting_user_can_view_member_media')
+            ? casting_user_can_view_member_media($viewer_id, $owner_id)
+            : (function_exists('casting_user_can_view_member_profile')
+                ? casting_user_can_view_member_profile($viewer_id, $owner_id)
+                : false);
     }
 
     // فقط فایل‌های مسیر casting پورتال — نه هر پیوست وردپرس
@@ -151,9 +153,11 @@ function casting_user_can_stream_attachment(int $viewer_id, int $attachment_id):
         return false;
     }
 
-    return function_exists('casting_user_can_view_member_profile')
-        ? casting_user_can_view_member_profile($viewer_id, $author_id)
-        : false;
+    return function_exists('casting_user_can_view_member_media')
+        ? casting_user_can_view_member_media($viewer_id, $author_id)
+        : (function_exists('casting_user_can_view_member_profile')
+            ? casting_user_can_view_member_profile($viewer_id, $author_id)
+            : false);
 }
 
 /**

@@ -5977,6 +5977,18 @@ a.panel-home-filter-chip:focus-visible {
   display: none !important;
 }
 
+.media-engage-premium-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.media-engage-premium-hint a {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
 .media-engage-form input[type="text"] {
   flex: 1 1 auto;
   min-width: 0;

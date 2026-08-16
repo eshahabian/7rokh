@@ -140,11 +140,32 @@ function casting_media_user_can_engage(int $viewer_id, array $row): bool
             return false;
         }
     }
+    if (function_exists('casting_user_can_view_member_media')) {
+        return casting_user_can_view_member_media($viewer_id, $owner_id);
+    }
     if (function_exists('casting_user_can_view_member_profile')) {
         return casting_user_can_view_member_profile($viewer_id, $owner_id);
     }
 
     return casting_get_user_role($owner_id) !== '';
+}
+
+function casting_media_user_can_comment(int $user_id): bool
+{
+    if ($user_id <= 0 || casting_get_user_role($user_id) === '') {
+        return false;
+    }
+    if (function_exists('casting_user_is_listed_portal_admin') && casting_user_is_listed_portal_admin($user_id)) {
+        return true;
+    }
+    if (!function_exists('casting_user_is_premium')) {
+        $premium = __DIR__ . '/premium.php';
+        if (is_file($premium)) {
+            require_once $premium;
+        }
+    }
+
+    return function_exists('casting_user_is_premium') && casting_user_is_premium($user_id);
 }
 
 function casting_media_like_count(int $media_id): int
@@ -472,6 +493,9 @@ function casting_media_toggle_comment_like(int $comment_id, int $user_id): array
     if (!casting_media_user_can_engage($user_id, $row)) {
         return ['ok' => false, 'error' => 'اجازه تعامل با این پست را ندارید.'];
     }
+    if (!casting_media_user_can_comment($user_id)) {
+        return ['ok' => false, 'error' => 'لایک کامنت فقط برای اعضای ویژه است.'];
+    }
     casting_media_engagement_ensure();
     global $wpdb;
     $table = casting_media_comment_likes_table();
@@ -511,6 +535,9 @@ function casting_media_add_comment(int $media_id, int $user_id, string $body, in
     }
     if (!casting_media_user_can_engage($user_id, $row)) {
         return ['ok' => false, 'error' => 'اجازه تعامل با این پست را ندارید.'];
+    }
+    if (!casting_media_user_can_comment($user_id)) {
+        return ['ok' => false, 'error' => 'کامنت فقط برای اعضای ویژه است.'];
     }
     $body = sanitize_textarea_field($body);
     $body = trim($body);
@@ -626,11 +653,12 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
     $comments = casting_media_comment_count($media_id);
     $views = casting_media_view_count($media_id);
     $liked = $viewer_id > 0 && casting_media_user_liked($media_id, $viewer_id);
-    $list = $compact ? [] : casting_media_list_comments($media_id, 40, $viewer_id);
-    $tree = $compact ? [] : casting_media_comments_tree($list);
+    $can_comment = $viewer_id > 0 && casting_media_user_can_comment($viewer_id);
+    $list = ($compact || !$can_comment) ? [] : casting_media_list_comments($media_id, 40, $viewer_id);
+    $tree = ($compact || !$can_comment) ? [] : casting_media_comments_tree($list);
     $preview_limit = 2;
     $preview = array_slice($tree, 0, $preview_limit);
-    $show_more = !$compact && ($comments > $preview_limit || count($tree) > $preview_limit);
+    $show_more = !$compact && $can_comment && ($comments > $preview_limit || count($tree) > $preview_limit);
     if (!function_exists('casting_user_can_save_media')) {
         require_once __DIR__ . '/media-protect.php';
     }
@@ -662,17 +690,19 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
         <span class="media-engage-label"><?= $saved ? 'ذخیره شد' : 'ذخیره' ?></span>
       </button>
       <?php endif; ?>
+      <?php if ($can_comment) : ?>
       <span class="media-engage-comment-count" title="کامنت">
         <span aria-hidden="true">💬</span>
         <span data-comment-count><?= (int) $comments ?></span>
       </span>
+      <?php endif; ?>
       <span class="media-engage-view-count" title="بازدید">
         <span aria-hidden="true">👁</span>
         <span data-view-count><?= (int) $views ?></span>
         <span class="media-engage-label">بازدید</span>
       </span>
     </div>
-    <?php if (!$compact) : ?>
+    <?php if (!$compact && $can_comment) : ?>
       <ul class="media-engage-comments is-preview" data-media-comments="<?= (int) $media_id ?>">
         <?php foreach ($preview as $c) :
             casting_render_media_comment_item($c, $viewer_id, false);
@@ -686,17 +716,17 @@ function casting_render_media_engagement(int $media_id, int $viewer_id, bool $co
       <?php if ($show_more) : ?>
         <button type="button" class="link-button media-engage-more" data-post-expand>بیشتر…</button>
       <?php endif; ?>
-      <?php if ($viewer_id > 0) : ?>
-        <form class="media-engage-form" data-media-comment-form="<?= (int) $media_id ?>">
-          <p class="media-engage-reply-hint" data-reply-hint hidden>
-            <span data-reply-hint-text></span>
-            <button type="button" class="link-button" data-reply-cancel>لغو</button>
-          </p>
-          <input type="hidden" name="parent_id" value="0">
-          <input type="text" name="body" maxlength="400" placeholder="کامنت بنویسید…" required autocomplete="off">
-          <button class="btn btn-ghost media-engage-submit" type="submit">ارسال</button>
-        </form>
-      <?php endif; ?>
+      <form class="media-engage-form" data-media-comment-form="<?= (int) $media_id ?>">
+        <p class="media-engage-reply-hint" data-reply-hint hidden>
+          <span data-reply-hint-text></span>
+          <button type="button" class="link-button" data-reply-cancel>لغو</button>
+        </p>
+        <input type="hidden" name="parent_id" value="0">
+        <input type="text" name="body" maxlength="400" placeholder="کامنت بنویسید…" required autocomplete="off">
+        <button class="btn btn-ghost media-engage-submit" type="submit">ارسال</button>
+      </form>
+    <?php elseif (!$compact && $viewer_id > 0) : ?>
+      <p class="media-engage-premium-hint">کامنت فقط برای اعضای ویژه است. <a href="<?= casting_e(casting_url('membership.php')) ?>">عضویت ویژه</a></p>
     <?php endif; ?>
   </div>
     <?php

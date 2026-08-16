@@ -238,7 +238,9 @@ casting_render_flash();
             </div>
           </div>
           <div class="cta-row">
+            <?php if (!casting_user_profile_is_hidden($peer_id)) : ?>
             <a class="btn btn-ghost btn-sm" href="member.php?id=<?= $peer_id ?>">پروفایل</a>
+            <?php endif; ?>
             <?php if ($can_close_thread) : ?>
               <form method="post" action="chat.php?with=<?= $peer_id ?>" onsubmit="return confirm('با بستن گفتگو، طرف مقابل دیگر نمی‌تواند پیام بدهد تا دوباره با پیام شما باز شود. ادامه می‌دهید؟');">
                 <?php wp_nonce_field('casting_dm'); ?>

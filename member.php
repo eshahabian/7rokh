@@ -29,6 +29,11 @@ if ($is_self) {
     casting_redirect('my-profile.php');
 }
 
+if (!$is_self && !casting_user_can_view_member_profile($viewer_id, $id)) {
+    casting_set_flash('error', 'این پروفایل فعلاً قابل مشاهده نیست.');
+    casting_redirect('search-users.php');
+}
+
 if (!$is_self) {
     casting_record_profile_visit($id, $viewer_id);
     if (casting_user_is_director_role($viewer_id) && $member_role === 'talent') {
@@ -37,10 +42,6 @@ if (!$is_self) {
 }
 
 $profile = casting_get_profile($id);
-if (!$is_self && !casting_user_can_view_member_profile($viewer_id, $id)) {
-    casting_set_flash('error', 'این پروفایل فعلاً قابل مشاهده نیست.');
-    casting_redirect('search-users.php');
-}
 
 $error = '';
 $project = '';

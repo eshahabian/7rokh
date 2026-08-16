@@ -49,6 +49,9 @@ casting_render_flash();
           if (!$member) {
               continue;
           }
+          if (function_exists('casting_user_profile_is_hidden') && casting_user_profile_is_hidden((int) $id) && (int) $id !== $user_id) {
+              continue;
+          }
           casting_render_member_card($member, $user_id);
           ?>
       <?php endforeach; ?>
