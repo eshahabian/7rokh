@@ -347,7 +347,7 @@ casting_render_flash();
                   $row_ref = casting_get_referral_code((int) $row['id']);
                   if ($row_ref !== '') :
                       ?>
-                    <span class="meta membership-number referral-code">معرف: <?= casting_e($row_ref) ?></span>
+                    <span class="meta">معرف: <span class="membership-number referral-code" dir="ltr"><?= casting_e($row_ref) ?></span></span>
                   <?php endif; ?>
                 </div>
               </td>

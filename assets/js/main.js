@@ -3694,4 +3694,85 @@
       });
     });
   }
+
+  const referralCodeText = (el) => {
+    const raw = (el.getAttribute("data-copy") || el.textContent || "").trim();
+    return raw.replace(/^معرف:\s*/u, "").trim();
+  };
+
+  const copyReferralCode = async (text) => {
+    if (!text) return false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (_err) {
+      /* fallback below */
+    }
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.insetInlineStart = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch (_err) {
+      ok = false;
+    }
+    ta.remove();
+    return ok;
+  };
+
+  const showCopyToast = (message) => {
+    let toast = document.querySelector("[data-copy-toast]");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.className = "copy-toast";
+      toast.setAttribute("data-copy-toast", "");
+      toast.setAttribute("role", "status");
+      toast.setAttribute("aria-live", "polite");
+      const label = document.createElement("span");
+      toast.appendChild(label);
+      document.body.appendChild(toast);
+    }
+    const label = toast.querySelector("span");
+    if (label) label.textContent = message;
+    toast.classList.add("is-visible");
+    window.clearTimeout(showCopyToast._timer);
+    showCopyToast._timer = window.setTimeout(() => {
+      toast.classList.remove("is-visible");
+    }, 1800);
+  };
+
+  document.querySelectorAll(".referral-code").forEach((el) => {
+    if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "0");
+    if (!el.hasAttribute("role")) el.setAttribute("role", "button");
+    if (!el.getAttribute("title")) el.setAttribute("title", "برای کپی کلیک کنید");
+    el.setAttribute("aria-label", "کپی کد معرفی");
+  });
+
+  document.addEventListener("click", async (event) => {
+    const el = event.target.closest(".referral-code");
+    if (!el) return;
+    event.preventDefault();
+    const code = referralCodeText(el);
+    if (!code) return;
+    const ok = await copyReferralCode(code);
+    showCopyToast(ok ? "کد کپی شد" : "کپی نشد. دوباره تلاش کنید.");
+  });
+
+  document.addEventListener("keydown", async (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const el = event.target.closest?.(".referral-code");
+    if (!el) return;
+    event.preventDefault();
+    const code = referralCodeText(el);
+    if (!code) return;
+    const ok = await copyReferralCode(code);
+    showCopyToast(ok ? "کد کپی شد" : "کپی نشد. دوباره تلاش کنید.");
+  });
 })();
