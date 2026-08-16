@@ -521,6 +521,11 @@ function casting_panel_admin_nav_items(int $user_id): array
     if (casting_user_has_admin_permission($user_id, 'view_premium_users')) {
         $items[] = ['key' => 'admin-premium', 'label' => 'مشترکین', 'href' => 'admin-premium-users.php', 'perm' => 'view_premium_users'];
     }
+    if (casting_user_has_admin_permission($user_id, 'suspend_users')
+        || casting_user_has_admin_permission($user_id, 'unblock_users')
+        || casting_user_has_admin_permission($user_id, 'view_user_blocks')) {
+        $items[] = ['key' => 'admin-users', 'label' => 'مدیریت کاربران', 'href' => 'admin-users.php', 'perm' => 'suspend_users'];
+    }
     if (casting_user_has_admin_permission($user_id, 'approve_receipts')) {
         $items[] = ['key' => 'admin-receipts', 'label' => 'تأیید فیش‌ها', 'href' => 'cart.php#admin-receipts', 'perm' => 'approve_receipts'];
     }

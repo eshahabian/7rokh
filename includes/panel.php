@@ -50,7 +50,6 @@ function casting_panel_nav_groups(): array
                     'href'     => casting_main_site_url(),
                     'external' => true,
                 ],
-                ['key' => 'app', 'label' => 'اپلیکیشن موبایل', 'href' => 'app.php'],
             ],
         ],
         [
@@ -1911,7 +1910,7 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
         ],
     ];
     $viewer_id = (int) ($filters['viewer_id'] ?? 0);
-    $skip_visible = $viewer_id > 0 && function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($viewer_id);
+    $skip_visible = $viewer_id > 0 && function_exists('casting_user_is_listed_portal_admin') && casting_user_is_listed_portal_admin($viewer_id);
     if (!$skip_visible) {
         $meta_query[] = casting_member_visible_meta_query();
     }
@@ -2026,7 +2025,9 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
         $args['search'] = '*' . esc_attr($name_q) . '*';
         $args['search_columns'] = ['display_name', 'user_login'];
     }
-    $args = casting_user_query_exclude_hidden_profiles($args);
+    if (!$skip_visible) {
+        $args = casting_user_query_exclude_hidden_profiles($args);
+    }
 
     $query = new WP_User_Query($args);
     $users = $query->get_results();
@@ -2457,7 +2458,9 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
     }
     $id = (int) $member->ID;
     if (function_exists('casting_user_profile_is_hidden') && casting_user_profile_is_hidden($id) && $viewer_id !== $id) {
-        return;
+        if (!function_exists('casting_user_is_listed_portal_admin') || !casting_user_is_listed_portal_admin($viewer_id)) {
+            return;
+        }
     }
     $profile = casting_get_profile($id);
     $photo = casting_member_card_photo_url($id, $profile);
@@ -2528,7 +2531,9 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
 {
     $id = (int) $member->ID;
     if (function_exists('casting_user_profile_is_hidden') && casting_user_profile_is_hidden($id) && $viewer_id !== $id) {
-        return;
+        if (!function_exists('casting_user_is_listed_portal_admin') || !casting_user_is_listed_portal_admin($viewer_id)) {
+            return;
+        }
     }
     $profile = casting_get_profile($id);
     $premium = casting_user_is_premium($id);
@@ -2589,7 +2594,7 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
         return [];
     }
 
-    $skip_visible = $viewer_id > 0 && function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($viewer_id);
+    $skip_visible = $viewer_id > 0 && function_exists('casting_user_is_listed_portal_admin') && casting_user_is_listed_portal_admin($viewer_id);
     $meta_query = [
         'relation' => 'AND',
         [
@@ -2612,7 +2617,9 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
     if ($exclude_id > 0) {
         $args['exclude'] = [$exclude_id];
     }
-    $args = casting_user_query_exclude_hidden_profiles($args);
+    if (!$skip_visible) {
+        $args = casting_user_query_exclude_hidden_profiles($args);
+    }
 
     $query = new WP_User_Query($args);
     $users = $query->get_results();
@@ -2623,7 +2630,7 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
     $out = [];
     foreach ($users as $user) {
         $id = (int) $user->ID;
-        if (casting_user_profile_is_hidden($id) && $id !== $viewer_id) {
+        if (!$skip_visible && casting_user_profile_is_hidden($id) && $id !== $viewer_id) {
             continue;
         }
         $role = casting_get_user_role($id);

@@ -186,6 +186,12 @@ function casting_portal_admin_logins(): array
     if ($owner !== '') {
         $logins[] = $owner;
     }
+    if (defined('CASTING_CONTACT_BRAND_ADMIN')) {
+        $brand = strtolower(trim((string) CASTING_CONTACT_BRAND_ADMIN));
+        if ($brand !== '') {
+            $logins[] = $brand;
+        }
+    }
     if ($logins === []) {
         $logins = ['eshahabian', 'ardavan'];
     }
@@ -207,7 +213,22 @@ function casting_user_is_listed_portal_admin(int $user_id): bool
 }
 
 /**
- * پروفایل مدیران رسمی برای هیچ‌کس (جز خودشان) قابل مشاهده نیست.
+ * عضو پورتال یا مدیر رسمی — حتی اگر نقش کستینگ خالی باشد.
+ */
+function casting_user_can_use_member_portal(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (casting_get_user_role($user_id) !== '') {
+        return true;
+    }
+
+    return casting_user_is_listed_portal_admin($user_id) || casting_user_is_portal_owner($user_id);
+}
+
+/**
+ * پروفایل مدیران رسمی برای عموم مخفی است. خودشان و دیگر مدیران رسمی می‌توانند ببینند.
  */
 function casting_user_profile_is_hidden(int $user_id): bool
 {
@@ -259,7 +280,7 @@ function casting_user_query_exclude_hidden_profiles(array $args, int $extra_excl
 
 /**
  * آیا بیننده می‌تواند پروفایل عضو را ببیند؟
- * پروفایل مدیران رسمی مخفی است. مدیر اصلی بقیه پروفایل‌ها را می‌بیند.
+ * پروفایل مدیران رسمی برای عموم مخفی است. مدیران رسمی همه پروفایل‌ها را می‌بینند.
  */
 function casting_user_can_view_member_profile(int $viewer_id, int $member_id): bool
 {
@@ -269,12 +290,11 @@ function casting_user_can_view_member_profile(int $viewer_id, int $member_id): b
     if ($viewer_id === $member_id) {
         return true;
     }
+    if (casting_user_is_listed_portal_admin($viewer_id) || casting_user_is_portal_owner($viewer_id)) {
+        return (bool) get_user_by('id', $member_id);
+    }
     if (casting_user_profile_is_hidden($member_id)) {
         return false;
-    }
-    // بالاترین سطح دسترسی — بدون محدودیت مخفی‌بودن یا بلاک
-    if (casting_user_is_portal_owner($viewer_id)) {
-        return (bool) get_user_by('id', $member_id);
     }
     if (casting_get_user_role($member_id) === '') {
         return false;
@@ -336,7 +356,7 @@ function casting_user_can_manage_message_access(int $user_id): bool
 
 function casting_user_can_member_search(int $user_id): bool
 {
-    if (casting_user_is_portal_owner($user_id)) {
+    if (casting_user_is_portal_owner($user_id) || casting_user_is_listed_portal_admin($user_id)) {
         return true;
     }
 

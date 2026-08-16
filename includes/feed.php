@@ -217,10 +217,14 @@ function casting_render_feed_media_card(array $item, int $viewer_id): void
     $caption = trim((string) ($item['caption'] ?? ''));
     $name = $owner ? (string) $owner->display_name : 'کاربر';
     $role = $owner_id > 0 ? casting_user_public_role_label($owner_id) : '';
+    $can_open_profile = $owner_id > 0 && (
+        !(function_exists('casting_user_profile_is_hidden') && casting_user_profile_is_hidden($owner_id))
+        || (function_exists('casting_user_can_view_member_profile') && casting_user_can_view_member_profile($viewer_id, $owner_id))
+    );
     ?>
   <article class="home-feed-post" data-media-id="<?= $id ?>">
     <header class="home-feed-post-head">
-      <?php if ($owner_id > 0 && function_exists('casting_user_profile_is_hidden') && casting_user_profile_is_hidden($owner_id)) : ?>
+      <?php if (!$can_open_profile) : ?>
       <span class="home-feed-author">
         <strong><?= casting_e($name) ?></strong>
         <?php if ($role !== '') : ?><span class="meta"><?= casting_e($role) ?></span><?php endif; ?>

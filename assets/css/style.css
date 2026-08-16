@@ -3769,9 +3769,17 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
     width: 100%;
   }
 
-  body.has-panel-drawer .site-header--panel .site-header-panel-theme {
+  body.has-panel-drawer .site-header--panel .site-header-app-link {
     display: inline-flex;
     margin-inline-start: auto;
+    min-height: 28px;
+    padding: 0.18rem 0.65rem;
+    font-size: 0.72rem;
+  }
+
+  body.has-panel-drawer .site-header--panel .site-header-panel-theme {
+    display: inline-flex;
+    margin-inline-start: 0;
     flex: 0 0 auto;
   }
 
@@ -4054,6 +4062,28 @@ a.panel-sidebar-title.is-active {
   display: none;
   flex: 0 0 auto;
   margin-inline-start: auto;
+}
+
+.site-header-app-link {
+  display: none;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-strong);
+  text-decoration: none;
+  white-space: nowrap;
+  border: 1px solid rgba(212, 165, 116, 0.45);
+  background: rgba(212, 165, 116, 0.16);
+}
+
+.site-header-app-link:hover,
+.site-header-app-link.is-active {
+  color: var(--ink);
+  border-color: rgba(212, 165, 116, 0.75);
+  background: rgba(212, 165, 116, 0.28);
 }
 
 .panel-nav-theme {
@@ -8216,6 +8246,10 @@ html.is-native-app .app-download-web {
 
 html.is-native-app .app-download-inapp {
   display: block;
+}
+
+html.is-native-app [data-app-download] {
+  display: none !important;
 }
 
 .faq-accordion {

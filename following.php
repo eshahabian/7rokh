@@ -50,7 +50,9 @@ casting_render_flash();
               continue;
           }
           if (function_exists('casting_user_profile_is_hidden') && casting_user_profile_is_hidden((int) $id) && (int) $id !== $user_id) {
-              continue;
+              if (!function_exists('casting_user_is_listed_portal_admin') || !casting_user_is_listed_portal_admin($user_id)) {
+                  continue;
+              }
           }
           casting_render_member_card($member, $user_id);
           ?>

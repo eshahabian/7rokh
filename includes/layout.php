@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=191">
+  <link rel="stylesheet" href="<?= $css ?>?v=192">
   <script>
     (function () {
       try {
@@ -63,7 +63,7 @@ function casting_render_nav_cart(?string $active = null): void
 {
     $user = casting_current_user();
     $role = $user ? casting_get_user_role((int) $user->ID) : '';
-    $logged_in = $role !== '';
+    $logged_in = $user && ($role !== '' || (function_exists('casting_user_can_use_member_portal') && casting_user_can_use_member_portal((int) $user->ID)));
 
     $cart_count = 0;
     try {
@@ -151,8 +151,9 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
 {
     $user = casting_current_user();
     $role = $user ? casting_get_user_role((int) $user->ID) : '';
+    $is_member = $user && ($role !== '' || (function_exists('casting_user_can_use_member_portal') && casting_user_can_use_member_portal((int) $user->ID)));
     $new_followers = 0;
-    if ($user && $role !== '') {
+    if ($is_member) {
         if (!function_exists('casting_new_followers_count')) {
             require_once __DIR__ . '/follows.php';
         }
@@ -163,23 +164,25 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
     <div class="site-header-bar">
       <?php if ($panel_menu) : ?>
         <?php casting_render_panel_menu_toggle($panel_menu_badge); ?>
+        <a class="site-header-app-link<?= $active === 'app' ? ' is-active' : '' ?>" href="<?= casting_e(casting_url('app.php')) ?>" data-app-download>اپلیکیشن</a>
         <div class="site-header-panel-theme">
           <?php casting_render_theme_toggle(); ?>
         </div>
       <?php else : ?>
         <?php casting_render_site_nav_toggle(); ?>
       <?php endif; ?>
-      <?php if (!$panel_menu && $role === '') : ?>
+      <?php if (!$panel_menu && !$is_member) : ?>
         <nav class="site-header-quick" aria-label="دسترسی سریع">
           <a href="<?= casting_e(casting_main_site_url()) ?>" class="site-header-quick-link"><?= casting_brand_html() ?></a>
           <a href="register.php" class="site-header-quick-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
           <a href="login.php" class="site-header-quick-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود به پنل کاربری</a>
+          <a href="<?= casting_e(casting_url('app.php')) ?>" class="site-header-quick-link<?= $active === 'app' ? ' is-active' : '' ?>" data-app-download>اپلیکیشن</a>
         </nav>
       <?php endif; ?>
     </div>
     <nav class="nav" id="site-main-nav" aria-label="منوی اصلی" data-site-nav>
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external">سایت <?= casting_brand_html() ?></a>
-      <?php if ($role !== '') : ?>
+      <?php if ($is_member) : ?>
         <a href="home.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <a href="<?= casting_e(casting_url($new_followers > 0 ? 'following.php?tab=followers' : 'panel.php')) ?>" class="<?= $active === 'panel' || $active === 'following' ? 'is-active' : '' ?><?= $new_followers > 0 ? ' has-notify' : '' ?>">
           پنل کاربری
@@ -187,11 +190,13 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
             <span class="nav-badge" aria-label="<?= (int) $new_followers ?> دنبال‌کننده جدید"><?= (int) $new_followers ?></span>
           <?php endif; ?>
         </a>
+        <a href="<?= casting_e(casting_url('app.php')) ?>" class="<?= $active === 'app' ? 'is-active' : '' ?>" data-app-download>اپلیکیشن موبایل</a>
         <a href="logout.php">خروج</a>
       <?php else : ?>
         <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <a href="register.php" class="<?= $active === 'register' ? 'is-active' : '' ?>">ثبت نام</a>
         <a href="login.php" class="<?= $active === 'login' ? 'is-active' : '' ?>">ورود به پنل کاربری</a>
+        <a href="<?= casting_e(casting_url('app.php')) ?>" class="<?= $active === 'app' ? 'is-active' : '' ?>" data-app-download>اپلیکیشن موبایل</a>
         <a href="contact.php" class="<?= $active === 'contact' ? 'is-active' : '' ?>">تماس با ما</a>
         <a href="faq.php" class="<?= $active === 'faq' ? 'is-active' : '' ?>">سوالات متداول</a>
         <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>
