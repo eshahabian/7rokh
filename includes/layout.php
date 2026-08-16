@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=192">
+  <link rel="stylesheet" href="<?= $css ?>?v=193">
   <script>
     (function () {
       try {
@@ -164,12 +164,19 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
     <div class="site-header-bar">
       <?php if ($panel_menu) : ?>
         <?php casting_render_panel_menu_toggle($panel_menu_badge); ?>
-        <a class="site-header-app-link<?= $active === 'app' ? ' is-active' : '' ?>" href="<?= casting_e(casting_url('app.php')) ?>" data-app-download>اپلیکیشن</a>
-        <div class="site-header-panel-theme">
-          <?php casting_render_theme_toggle(); ?>
+        <div class="site-header-bar-actions">
+          <a class="site-header-app-link<?= $active === 'app' ? ' is-active' : '' ?>" href="<?= casting_e(casting_url('app.php')) ?>" data-app-download>اپلیکیشن</a>
+          <div class="site-header-panel-theme">
+            <?php casting_render_theme_toggle(); ?>
+          </div>
         </div>
       <?php else : ?>
         <?php casting_render_site_nav_toggle(); ?>
+        <div class="site-header-bar-actions">
+          <div class="site-header-panel-theme">
+            <?php casting_render_theme_toggle(); ?>
+          </div>
+        </div>
       <?php endif; ?>
       <?php if (!$panel_menu && !$is_member) : ?>
         <nav class="site-header-quick" aria-label="دسترسی سریع">

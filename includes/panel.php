@@ -629,6 +629,9 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
           <?php endforeach; ?>
         </nav>
       <?php endif; ?>
+      <div class="panel-nav-theme">
+        <?php casting_render_theme_toggle(); ?>
+      </div>
     </aside>
     </div>
     <?php if ($user) : ?>

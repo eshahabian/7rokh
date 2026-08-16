@@ -3399,6 +3399,20 @@ html[data-theme="day"] .filter-bar--sticky {
     text-align: start;
   }
 
+  body:not(.has-panel-drawer) .site-header-bar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-inline-start: auto;
+    flex: 0 0 auto;
+  }
+
+  body:not(.has-panel-drawer) .site-header-panel-theme {
+    display: inline-flex;
+    margin-inline-start: 0;
+    flex: 0 0 auto;
+  }
+
   body:not(.has-panel-drawer) .site-header-bar {
     display: flex;
     align-items: center;
@@ -3469,6 +3483,10 @@ html[data-theme="day"] .filter-bar--sticky {
 
   body:not(.has-panel-drawer).site-nav-open .site-header .nav {
     display: flex;
+  }
+
+  body:not(.has-panel-drawer) .site-header .nav-theme {
+    display: none;
   }
 
   body:not(.has-panel-drawer) .site-header .nav a {
@@ -3769,9 +3787,17 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
     width: 100%;
   }
 
+  body.has-panel-drawer .site-header--panel .site-header-bar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-inline-start: auto;
+    flex: 0 0 auto;
+  }
+
   body.has-panel-drawer .site-header--panel .site-header-app-link {
     display: inline-flex;
-    margin-inline-start: auto;
+    margin-inline-start: 0;
     min-height: 28px;
     padding: 0.18rem 0.65rem;
     font-size: 0.72rem;
@@ -3844,6 +3870,10 @@ body.site-nav-open .panel-menu-toggle-icon span:nth-child(3) {
 
   .panel-drawer-close {
     display: grid;
+  }
+
+  body.has-panel-drawer .panel-nav-theme {
+    display: flex;
   }
 
   .panel-drawer-backdrop {
@@ -4058,10 +4088,17 @@ a.panel-sidebar-title.is-active {
   margin-top: 1.1rem;
 }
 
+.site-header-bar-actions {
+  display: none;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
 .site-header-panel-theme {
   display: none;
   flex: 0 0 auto;
-  margin-inline-start: auto;
 }
 
 .site-header-app-link {
@@ -4087,12 +4124,21 @@ a.panel-sidebar-title.is-active {
 }
 
 .panel-nav-theme {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: stretch;
   margin-top: 0.55rem;
   padding-top: 0.55rem;
   border-top: 1px solid var(--line);
+}
+
+@media (min-width: 961px) {
+  .site-header-bar-actions,
+  .site-header-panel-theme,
+  .site-header-app-link,
+  .panel-nav-theme {
+    display: none;
+  }
 }
 
 .panel-nav-theme .theme-toggle,
