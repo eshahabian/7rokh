@@ -28,6 +28,7 @@ mobile/.capacitor/
 **/android/captures/
 **/android/.idea/
 **/*.apk
+!downloads/*.apk
 **/*.aab
 **/*.dex
 **/*.iml

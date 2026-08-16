@@ -50,6 +50,7 @@ function casting_panel_nav_groups(): array
                     'href'     => casting_main_site_url(),
                     'external' => true,
                 ],
+                ['key' => 'app', 'label' => 'اپلیکیشن موبایل', 'href' => 'app.php'],
             ],
         ],
         [
@@ -130,6 +131,7 @@ function casting_panel_nav_highlight_key(string $active): string
         'edit-profile' => 'panel',
         'messages'     => 'panel',
         'news'         => 'news',
+        'app'          => 'app',
     ];
 
     return $map[$active] ?? $active;

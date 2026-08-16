@@ -8177,6 +8177,47 @@ button.is-follow-locked {
   margin-bottom: 1.5rem;
 }
 
+.app-download-web {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.app-download-card {
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.app-download-card h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.app-download-card .btn {
+  margin-top: 0.75rem;
+}
+
+.app-download-soon {
+  margin: 0.75rem 0 0;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+.app-download-inapp {
+  display: none;
+  margin-top: 1.25rem;
+}
+
+html.is-native-app .app-download-web {
+  display: none;
+}
+
+html.is-native-app .app-download-inapp {
+  display: block;
+}
+
 .faq-accordion {
   display: flex;
   flex-direction: column;
