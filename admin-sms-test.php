@@ -74,7 +74,7 @@ $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
 $otp_sender = '';
 $api_base = '';
 $pattern_id = '';
-$otp_method = 'send';
+$otp_method = 'smart';
 $http_set = false;
 $otp_template = '';
 $otp_var = 'x';
@@ -82,8 +82,9 @@ $credit_info = ['ok' => false, 'error' => 'بررسی نشده'];
 $debug = null;
 
 try {
-    $otp_sender = casting_sms_otp_sender();
+    $otp_sender = casting_sms_line_number();
     $api_base = casting_sms_api_base();
+    $from = $otp_sender;
     $pattern_id = casting_sms_otp_pattern_id();
     $otp_method = casting_sms_otp_method();
     $http_set = casting_sms_http_is_configured();

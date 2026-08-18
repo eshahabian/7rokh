@@ -46,9 +46,25 @@ function casting_sms_api_base(): string
 
 function casting_sms_otp_sender(): string
 {
-    $sender = defined('CASTING_SMS_OTP_SENDER') ? trim((string) CASTING_SMS_OTP_SENDER) : '';
+    return casting_sms_line_number();
+}
 
-    return $sender;
+/** خط پنل WebOne — Auto و موبایل ۰۹ را رد می‌کند */
+function casting_sms_line_number(): string
+{
+    $candidates = [
+        defined('CASTING_SMS_OTP_SENDER') ? trim((string) CASTING_SMS_OTP_SENDER) : '',
+        defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '',
+    ];
+    foreach ($candidates as $line) {
+        if ($line === '' || strcasecmp($line, 'Auto') === 0 || preg_match('/^09\d{9}$/', $line)) {
+            continue;
+        }
+
+        return $line;
+    }
+
+    return '10002147';
 }
 
 /**
@@ -408,7 +424,7 @@ function casting_sms_send_http_get(string $mobile, string $message): array
     if (!casting_sms_http_is_configured()) {
         return ['ok' => false, 'error' => 'برای ارسال HTTP، CASTING_SMS_USERNAME و CASTING_SMS_PASSWORD را در config.local.php بگذارید.'];
     }
-    $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
+    $from = casting_sms_line_number();
     if ($from === '') {
         return ['ok' => false, 'error' => 'شماره فرستنده (CASTING_SMS_FROM) تنظیم نشده است.'];
     }
@@ -551,38 +567,18 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
     }
 
     $matched = $otp_code !== '' ? casting_sms_otp_text($otp_code) : $message;
-    $otp_sender = casting_sms_otp_sender();
-    if ($otp_sender === '') {
-        $otp_sender = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
-    }
-    if ($otp_sender === '') {
-        $otp_sender = 'Auto';
-    }
-
     $result = casting_sms_request('SMS/SmartOTP', [
-        'OTPSender' => $otp_sender,
+        'OTPSender' => casting_sms_line_number(),
         'ToNumber'  => $mobile,
         'Content'   => $matched,
     ]);
-    if (!empty($result['ok'])) {
-        return [
-            'ok'     => true,
-            'error'  => '',
-            'ref_id' => (string) ($result['ref_id'] ?? ''),
-        ];
-    }
-    $code = (int) ($result['code'] ?? 0);
 
-    if ($code !== 19 || !casting_sms_http_is_configured()) {
-        return [
-            'ok'     => false,
-            'error'  => $result['error'],
-            'ref_id' => (string) ($result['ref_id'] ?? ''),
-            'code'   => $code,
-        ];
-    }
-
-    return casting_sms_send_http_get($mobile, $matched);
+    return [
+        'ok'     => !empty($result['ok']),
+        'error'  => $result['error'] ?? '',
+        'ref_id' => (string) ($result['ref_id'] ?? ''),
+        'code'   => (int) ($result['code'] ?? 0),
+    ];
 }
 
 /**
@@ -593,7 +589,7 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
  */
 function casting_sms_send_otp_matched_text(string $mobile, string $content, string $otp_code = ''): array
 {
-    $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
+    $from = casting_sms_line_number();
     if ($from === '') {
         return ['ok' => false, 'error' => 'برای ارسال با الگو، CASTING_SMS_FROM لازم است.', 'code' => 3];
     }
@@ -644,7 +640,7 @@ function casting_sms_send_otp_matched_text(string $mobile, string $content, stri
  */
 function casting_sms_send_otp_pattern(string $mobile, string $otp_code, string $pattern_id = ''): array
 {
-    $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
+    $from = casting_sms_line_number();
     if ($from === '') {
         return ['ok' => false, 'error' => 'برای ارسال OTP با الگو، CASTING_SMS_FROM لازم است.'];
     }
@@ -743,7 +739,7 @@ function casting_sms_send_text(string $mobile, string $message): array
         return ['ok' => false, 'error' => 'شماره موبایل نامعتبر است.'];
     }
 
-    $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
+    $from = casting_sms_line_number();
     if ($from === '') {
         return ['ok' => false, 'error' => 'شماره فرستنده پیامک (CASTING_SMS_FROM) در config.local.php تنظیم نشده است.'];
     }
