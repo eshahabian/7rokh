@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($test_mobile === '' || !preg_match('/^09\d{9}$/', $test_mobile)) {
                 $error = 'شماره موبایل معتبر وارد کنید.';
             } elseif (!casting_sms_is_configured()) {
-                $error = 'CASTING_SMS_API_KEY در config.local.php روی سرور تنظیم نشده است.';
+                $error = 'کلید API یا نام کاربری/رمز پنل در config.local.php روی سرور تنظیم نشده است.';
             } elseif ($mode === 'otp') {
                 $result = casting_otp_send('admin_test', $test_mobile);
                 $debug = casting_sms_last_debug();
@@ -75,6 +75,7 @@ $otp_sender = '';
 $api_base = '';
 $pattern_id = '';
 $otp_method = 'smart';
+$http_set = false;
 $credit_info = ['ok' => false, 'error' => 'بررسی نشده'];
 $debug = null;
 
@@ -83,6 +84,7 @@ try {
     $api_base = casting_sms_api_base();
     $pattern_id = casting_sms_otp_pattern_id();
     $otp_method = casting_sms_otp_method();
+    $http_set = casting_sms_http_is_configured();
     // اعتبار را فقط وقتی کاربر خواست بخوان (جلوگیری از fatal/timeout هنگام باز کردن صفحه)
     $want_credit = isset($_GET['credit']) || isset($_POST['check_credit']);
     if ($want_credit && casting_sms_is_configured()) {
@@ -111,7 +113,7 @@ casting_render_flash();
 ?>
 <section class="dash-card panel-wide">
   <h1>تست پیامک WebOne</h1>
-  <p class="lede">اگر سایت «موفق» نشان داد ولی پیامک نیامد، بلوک «آخرین پاسخ API» را ببینید و همان را بفرستید.</p>
+  <p class="lede">خطای الگو یعنی متن پیامک باید عین الگوی تأییدشده در پنل WebOne باشد. PatternId یا متن دقیق الگو را از بخش الگوها بردارید.</p>
 
   <dl class="admin-mail-status">
     <dt>API Base</dt>
@@ -130,6 +132,8 @@ casting_render_flash();
     <dd><code dir="ltr"><?= casting_e($otp_sender !== '' ? $otp_sender : 'Auto') ?></code></dd>
     <dt>OTP Pattern</dt>
     <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code>' : 'تنظیم نشده — از SmartOTP استفاده می‌شود' ?></dd>
+    <dt>HTTP GET</dt>
+    <dd><?= !empty($http_set) ? '✓ نام کاربری/رمز پنل تنظیم شده' : '✗ تنظیم نشده — برای متد GET پنل، USERNAME و PASSWORD لازم است' ?></dd>
     <dt>مانده اعتبار</dt>
     <dd><?php
     if (!empty($credit_info['ok'])) {

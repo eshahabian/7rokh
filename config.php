@@ -121,9 +121,10 @@ if (!defined('CASTING_MAIL_FROM_NAME')) {
  * در پنل WebOne حتماً:
  * 1) API Key بسازید (منوی وب‌سرویس)
  * 2) در تنظیمات عمومی پنل، IP سرور را در آی‌پی‌های مجاز REST ثبت کنید
- * 3) OTP: یا خط OTP + OTPSender=Auto (SMS/SmartOTP)
- *    یا الگوی تأییدشده + CASTING_SMS_OTP_PATTERN_ID (SMS/Send با PatternId)
- * 4) برای پیامک متنی، شماره فرستنده (From) را از پنل بردارید
+ * 3) OTP روی خط خدماتی: در پنل یک الگو بسازید و PatternId را بگذارید
+ *    یا متن الگو را در CASTING_SMS_OTP_TEMPLATE با {code} بگذارید
+ * 4) اختیاری: ارسال HTTP GET با نام کاربری/رمز پنل (SMSInOutBox/SendSms)
+ * 5) برای پیامک متنی، شماره فرستنده (From) را از پنل بردارید
  */
 /**
  * تأیید OTP موبایل در ثبت‌نام.
@@ -157,6 +158,20 @@ if (!defined('CASTING_SMS_OTP_PATTERN_ID')) {
 /** نام پارامتر الگو — پیش‌فرض ParameterValue طبق نمونه مستند */
 if (!defined('CASTING_SMS_OTP_PATTERN_PARAM')) {
     define('CASTING_SMS_OTP_PATTERN_PARAM', 'ParameterValue');
+}
+/** متن دقیق الگوی پنل — مثلاً "کد تایید: {code}" */
+if (!defined('CASTING_SMS_OTP_TEMPLATE')) {
+    define('CASTING_SMS_OTP_TEMPLATE', '');
+}
+/** نام کاربری پنل برای ارسال HTTP GET (اختیاری) */
+if (!defined('CASTING_SMS_USERNAME')) {
+    define('CASTING_SMS_USERNAME', '');
+}
+if (!defined('CASTING_SMS_PASSWORD')) {
+    define('CASTING_SMS_PASSWORD', '');
+}
+if (!defined('CASTING_SMS_HTTP_SEND_URL')) {
+    define('CASTING_SMS_HTTP_SEND_URL', 'https://webone-sms.ir/SMSInOutBox/SendSms');
 }
 /** اختیاری: override آدرس API — پیش‌فرض api.payamakapi.ir */
 if (!defined('CASTING_SMS_API_BASE')) {

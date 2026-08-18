@@ -15,8 +15,19 @@ function casting_sms_is_configured(): bool
         return false;
     }
     $key = defined('CASTING_SMS_API_KEY') ? trim((string) CASTING_SMS_API_KEY) : '';
+    if ($key !== '') {
+        return true;
+    }
 
-    return $key !== '';
+    return casting_sms_http_is_configured();
+}
+
+function casting_sms_http_is_configured(): bool
+{
+    $user = defined('CASTING_SMS_USERNAME') ? trim((string) CASTING_SMS_USERNAME) : '';
+    $pass = defined('CASTING_SMS_PASSWORD') ? trim((string) CASTING_SMS_PASSWORD) : '';
+
+    return $user !== '' && $pass !== '';
 }
 
 function casting_sms_api_base(): string
@@ -306,7 +317,7 @@ function casting_sms_error_message(int $code): string
         16 => 'شماره موبایل گیرنده یافت نشد / نامعتبر است.',
         17 => 'خط OTP برای این حساب یافت نشد. در پنل WebOne خط OTP را فعال کنید یا PatternId الگو را بگذارید.',
         18 => 'با این خط فقط ارسال تکی مجاز است.',
-        19 => 'متن با الگوی تعریف‌شده در پنل مطابقت ندارد. برای خطوط خدماتی باید الگو تأییدشده باشد.',
+        19 => 'متن با الگوی تأییدشده پنل یکی نیست. در پنل WebOne بخش الگوها، متن دقیق الگو و شناسه (PatternId) را بردارید و در CASTING_SMS_OTP_PATTERN_ID بگذارید.',
         21 => 'IP سرور برای وب‌سرویس مجاز نیست؛ IP را در پنل ثبت کنید.',
         22 => 'احراز هویت پنل (کارت ملی) تکمیل نشده است.',
     ];
@@ -334,6 +345,172 @@ function casting_sms_otp_method(): string
     return casting_sms_otp_pattern_id() !== '' ? 'pattern' : 'smart';
 }
 
+function casting_sms_otp_template(): string
+{
+    return defined('CASTING_SMS_OTP_TEMPLATE') ? trim((string) CASTING_SMS_OTP_TEMPLATE) : '';
+}
+
+/** متن OTP طبق الگوی پنل — {code} با رقم‌ها عوض می‌شود */
+function casting_sms_otp_text(string $code): string
+{
+    $code = preg_replace('/\D+/', '', $code) ?? '';
+    $tpl = casting_sms_otp_template();
+    if ($tpl !== '') {
+        return str_replace(['{code}', '{CODE}', '%code%'], $code, $tpl);
+    }
+    $brand = function_exists('casting_brand') ? casting_brand() : '۷ رخ';
+
+    return 'کد تأیید ' . $brand . ': ' . $code;
+}
+
+/**
+ * متن‌هایی که برای SmartOTP امتحان می‌شوند (خط خدماتی باید با الگوی پنل یکی باشد)
+ *
+ * @return list<string>
+ */
+function casting_sms_otp_content_candidates(string $message, string $otp_code): array
+{
+    $out = [];
+    $tpl = casting_sms_otp_template();
+    if ($tpl !== '' && $otp_code !== '') {
+        $out[] = str_replace(['{code}', '{CODE}', '%code%'], $otp_code, $tpl);
+        return $out;
+    }
+    if ($otp_code !== '') {
+        $out[] = $otp_code;
+        $out[] = 'کد تایید: ' . $otp_code;
+        $out[] = 'کد تأیید: ' . $otp_code;
+    }
+    $message = trim($message);
+    if ($message !== '' && !in_array($message, $out, true)) {
+        $out[] = $message;
+    }
+
+    return $out !== [] ? $out : [$message];
+}
+
+/**
+ * ارسال ساده طبق مستند HTTP GET پنل:
+ * https://webone-sms.ir/SMSInOutBox/SendSms?username=&password=&from=&to=&text=
+ *
+ * @return array{ok:bool,error:string,ref_id?:string,http?:int,code?:int}
+ */
+function casting_sms_send_http_get(string $mobile, string $message): array
+{
+    if (!casting_sms_http_is_configured()) {
+        return ['ok' => false, 'error' => 'برای ارسال HTTP، CASTING_SMS_USERNAME و CASTING_SMS_PASSWORD را در config.local.php بگذارید.'];
+    }
+    $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
+    if ($from === '') {
+        return ['ok' => false, 'error' => 'شماره فرستنده (CASTING_SMS_FROM) تنظیم نشده است.'];
+    }
+    $message = trim($message);
+    if ($message === '') {
+        return ['ok' => false, 'error' => 'متن پیامک خالی است.'];
+    }
+
+    $url_base = defined('CASTING_SMS_HTTP_SEND_URL') ? trim((string) CASTING_SMS_HTTP_SEND_URL) : '';
+    if ($url_base === '') {
+        $url_base = 'https://webone-sms.ir/SMSInOutBox/SendSms';
+    }
+    $query = [
+        'username' => trim((string) CASTING_SMS_USERNAME),
+        'password' => trim((string) CASTING_SMS_PASSWORD),
+        'from'     => $from,
+        'to'       => $mobile,
+        'text'     => $message,
+    ];
+    $url = $url_base . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    $debug_url = $url_base . '?' . http_build_query(array_merge($query, ['password' => '***']), '', '&', PHP_QUERY_RFC3986);
+
+    $response = wp_remote_get($url, [
+        'timeout' => 25,
+        'headers' => [
+            'Accept' => 'text/plain, application/json, */*',
+        ],
+    ]);
+    if (is_wp_error($response)) {
+        $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
+        casting_sms_remember_last([
+            'at'       => function_exists('current_time') ? current_time('mysql') : date('c'),
+            'url'      => $debug_url,
+            'endpoint' => 'HTTP-GET',
+            'request'  => ['from' => $from, 'to' => $mobile, 'text' => $message],
+            'error'    => $out['error'],
+        ]);
+
+        return $out;
+    }
+
+    $http = (int) wp_remote_retrieve_response_code($response);
+    $raw_body = trim((string) wp_remote_retrieve_body($response));
+    $raw_clip = function_exists('mb_substr')
+        ? (string) mb_substr($raw_body, 0, 800, 'UTF-8')
+        : substr($raw_body, 0, 800);
+    $data = json_decode($raw_body, true);
+    $debug = [
+        'at'       => function_exists('current_time') ? current_time('mysql') : date('c'),
+        'url'      => $debug_url,
+        'endpoint' => 'HTTP-GET',
+        'request'  => ['from' => $from, 'to' => $mobile, 'text' => $message],
+        'http'     => $http,
+        'body'     => is_array($data) ? $data : $raw_clip,
+    ];
+
+    if ($http < 200 || $http >= 300) {
+        $out = ['ok' => false, 'error' => 'پاسخ نامعتبر از پنل پیامک (HTTP ' . $http . ').', 'http' => $http];
+        $debug['ok'] = false;
+        $debug['parsed_error'] = $out['error'];
+        casting_sms_remember_last($debug);
+
+        return $out;
+    }
+
+    if (is_array($data)) {
+        $succeeded = casting_sms_is_truthy_success($data['succeeded'] ?? $data['Succeeded'] ?? $data['success'] ?? null);
+        $result_code = isset($data['resultCode']) || isset($data['ResultCode'])
+            ? (int) ($data['resultCode'] ?? $data['ResultCode'])
+            : 0;
+        $ref_id = trim((string) ($data['refId'] ?? $data['RefId'] ?? $data['id'] ?? ''));
+        if ($succeeded && $result_code === 0) {
+            $debug['ok'] = true;
+            $debug['ref_id'] = $ref_id;
+            casting_sms_remember_last($debug);
+
+            return ['ok' => true, 'error' => '', 'ref_id' => $ref_id, 'http' => $http, 'code' => 0];
+        }
+        $code = $result_code !== 0 ? $result_code : 19;
+        $out = ['ok' => false, 'error' => casting_sms_error_message($code), 'code' => $code, 'http' => $http];
+        $debug['ok'] = false;
+        $debug['parsed_error'] = $out['error'];
+        casting_sms_remember_last($debug);
+
+        return $out;
+    }
+
+    if (is_numeric($raw_body) && (float) $raw_body > 0) {
+        $ref_id = (string) $raw_body;
+        $debug['ok'] = true;
+        $debug['ref_id'] = $ref_id;
+        casting_sms_remember_last($debug);
+
+        return ['ok' => true, 'error' => '', 'ref_id' => $ref_id, 'http' => $http, 'code' => 0];
+    }
+
+    $as_int = is_numeric($raw_body) ? (int) $raw_body : -1;
+    $out = [
+        'ok'    => false,
+        'error' => $as_int >= 0 ? casting_sms_error_message($as_int) : ('ارسال HTTP ناموفق بود: ' . $raw_clip),
+        'code'  => $as_int >= 0 ? $as_int : -1,
+        'http'  => $http,
+    ];
+    $debug['ok'] = false;
+    $debug['parsed_error'] = $out['error'];
+    casting_sms_remember_last($debug);
+
+    return $out;
+}
+
 /**
  * @return array{ok:bool,error:string,ref_id?:string}
  */
@@ -359,14 +536,32 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
         return ['ok' => false, 'error' => 'متن پیامک خالی است.'];
     }
 
-    // روش ۱ مستند: OTP با PatternId روی POST /SMS/Send
+    // روش ۱ مستند REST: OTP با PatternId روی POST /SMS/Send
     $pattern_id = casting_sms_otp_pattern_id();
     if ($pattern_id !== '' && $otp_code !== '') {
         return casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
     }
 
-    // روش ۲ مستند: POST /SMS/SmartOTP
-    return casting_sms_send_smart_otp($mobile, $message);
+    // روش ۲ مستند REST: POST /SMS/SmartOTP — متن باید با الگوی پنل یکی باشد
+    $result = casting_sms_send_smart_otp($mobile, $message, $otp_code);
+    $code = (int) ($result['code'] ?? 0);
+    if ($result['ok'] || $code !== 19 || !casting_sms_http_is_configured()) {
+        return $result;
+    }
+
+    // روش ۳ مستند HTTP GET پنل (وقتی REST به‌خاطر الگو رد شد)
+    $last = $result;
+    foreach (casting_sms_otp_content_candidates($message, $otp_code) as $content) {
+        $last = casting_sms_send_http_get($mobile, $content);
+        if (!empty($last['ok'])) {
+            return $last;
+        }
+        if ((int) ($last['code'] ?? 0) !== 19) {
+            return $last;
+        }
+    }
+
+    return $last;
 }
 
 /**
@@ -419,44 +614,55 @@ function casting_sms_send_otp_pattern(string $mobile, string $otp_code, string $
  *
  * @return array{ok:bool,error:string,ref_id?:string}
  */
-function casting_sms_send_smart_otp(string $mobile, string $message): array
+function casting_sms_send_smart_otp(string $mobile, string $message, string $otp_code = ''): array
 {
     $otp_sender = casting_sms_otp_sender();
     if ($otp_sender === '') {
         $otp_sender = 'Auto';
     }
-
-    $payload = [
-        'OTPSender' => $otp_sender,
-        'ToNumber'  => $mobile,
-        'Content'   => $message,
-    ];
-
-    $result = casting_sms_request('SMS/SmartOTP', $payload);
-
-    // اگر فرستنده خط اختصاصی رد شد، طبق مستند با Auto دوباره بفرست
-    $code = (int) ($result['code'] ?? 0);
-    if (!$result['ok'] && $code === 3 && strcasecmp($otp_sender, 'Auto') !== 0) {
-        $result = casting_sms_request('SMS/SmartOTP', [
-            'OTPSender' => 'Auto',
-            'ToNumber'  => $mobile,
-            'Content'   => $message,
-        ]);
-        $code = (int) ($result['code'] ?? 0);
+    $otp_code = preg_replace('/\D+/', '', $otp_code) ?? '';
+    if ($otp_code === '' && preg_match('/\d{4,8}/', $message, $m)) {
+        $otp_code = $m[0];
     }
 
-    // بدون خط OTP، SmartOTP کار نمی‌کند — اگر الگو تعریف شده باشد همان را بزن
-    if (!$result['ok'] && $code === 17 && casting_sms_otp_pattern_id() !== '') {
-        if (preg_match('/\d{4,8}/', $message, $m)) {
-            return casting_sms_send_otp_pattern($mobile, $m[0]);
+    $last = ['ok' => false, 'error' => 'ارسال OTP ناموفق بود.', 'code' => -1];
+    foreach (casting_sms_otp_content_candidates($message, $otp_code) as $content) {
+        $payload = [
+            'OTPSender' => $otp_sender,
+            'ToNumber'  => $mobile,
+            'Content'   => $content,
+        ];
+        $result = casting_sms_request('SMS/SmartOTP', $payload);
+        $code = (int) ($result['code'] ?? 0);
+
+        if (!$result['ok'] && $code === 3 && strcasecmp($otp_sender, 'Auto') !== 0) {
+            $result = casting_sms_request('SMS/SmartOTP', [
+                'OTPSender' => 'Auto',
+                'ToNumber'  => $mobile,
+                'Content'   => $content,
+            ]);
+            $code = (int) ($result['code'] ?? 0);
+        }
+
+        if ($result['ok']) {
+            return [
+                'ok'     => true,
+                'error'  => '',
+                'ref_id' => (string) ($result['ref_id'] ?? ''),
+            ];
+        }
+        $last = [
+            'ok'     => false,
+            'error'  => $result['error'],
+            'ref_id' => (string) ($result['ref_id'] ?? ''),
+            'code'   => $code,
+        ];
+        if ($code !== 19) {
+            break;
         }
     }
 
-    return [
-        'ok'     => $result['ok'],
-        'error'  => $result['error'],
-        'ref_id' => (string) ($result['ref_id'] ?? ''),
-    ];
+    return $last;
 }
 
 /**

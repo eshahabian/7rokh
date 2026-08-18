@@ -4,38 +4,36 @@
  * این فایل در git ذخیره نمی‌شود و با deploy خودکار کپی نمی‌شود.
  *
  * WebOne SMS — پنل: https://webone-sms.ir
- * API: https://api.payamakapi.ir/api/v1
- * هدر الزامی: X-API-KEY
  *
- * OTP طبق RestDocument v1.4 دو روش دارد:
- * 1) SmartOTP: POST /SMS/SmartOTP
- *    { "OTPSender": "Auto", "ToNumber": "0912...", "Content": "کد: 123456" }
- * 2) الگو: POST /SMS/Send
- *    { "From": "1000...", "ToNumber": "0912...", "PatternId": "12345",
- *      "PatternParameterData": { "ParameterValue": "123456" } }
+ * REST: https://api.payamakapi.ir/api/v1  هدر X-API-KEY
+ * HTTP GET: https://webone-sms.ir/SMSInOutBox/SendSms?username=&password=&from=&to=&text=
+ *
+ * روی خطوط خدماتی متن باید با الگوی تأییدشده پنل یکی باشد (خطای ۱۹).
  */
 define('CASTING_SMTP_PASS', 'رمز-ایمیل-noreply-اینجا');
 
 /** کلید API از منوی وب‌سرویس پنل WebOne */
 define('CASTING_SMS_API_KEY', 'کلید-api-اینجا');
 
-/** شماره خط فرستنده برای پیامک متنی و OTP الگویی */
+/** شماره خط فرستنده */
 define('CASTING_SMS_FROM', '1000xxxx');
 
-/**
- * فرستنده SmartOTP — طبق مستند: Auto (بدون خط اختصاصی) یا شماره خط OTP
- */
 define('CASTING_SMS_OTP_SENDER', 'Auto');
 
 /**
- * اگر از خطوط خدماتی استفاده می‌کنید و الگو در پنل تأیید شده، PatternId را بگذارید.
- * در این صورت OTP با روش الگو ارسال می‌شود نه SmartOTP.
+ * بهترین روش برای خط خدماتی: شناسه الگوی تأییدشده در پنل
  */
 // define('CASTING_SMS_OTP_PATTERN_ID', '12345');
 // define('CASTING_SMS_OTP_PATTERN_PARAM', 'ParameterValue');
 
+/** اگر PatternId ندارید، متن دقیق الگو را بگذارید؛ {code} جای کد می‌نشیند */
+// define('CASTING_SMS_OTP_TEMPLATE', 'کد تایید: {code}');
+
+/**
+ * متد HTTP GET پنل (اختیاری) — نام کاربری و رمز ورود پنل WebOne
+ */
+// define('CASTING_SMS_USERNAME', 'نام-کاربری-پنل');
+// define('CASTING_SMS_PASSWORD', 'رمز-پنل');
+
 /** فعال‌سازی تأیید موبایل در ثبت‌نام (بعد از تست موفق) */
 // define('CASTING_MOBILE_OTP_ENABLED', true);
-
-/** اگر لازم شد آدرس API را عوض کنید (پیش‌فرض api.payamakapi.ir است) */
-// define('CASTING_SMS_API_BASE', 'https://api.payamakapi.ir/api/v1/');

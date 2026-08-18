@@ -168,7 +168,9 @@ function casting_otp_send(string $purpose, string $mobile): array
     set_transient($cd_key, 1, casting_otp_resend_gap());
 
     $brand = casting_brand();
-    $message = "کد تأیید {$brand}: {$code}";
+    $message = function_exists('casting_sms_otp_text')
+        ? casting_sms_otp_text($code)
+        : ('کد تأیید ' . $brand . ': ' . $code);
     $sms = casting_sms_send_otp($mobile, $message, $code);
     if (!$sms['ok']) {
         delete_transient(casting_otp_storage_key($purpose, $mobile));
