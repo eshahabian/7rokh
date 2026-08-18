@@ -374,10 +374,10 @@ function casting_sms_otp_text(string $code): string
     return trim($rendered);
 }
 
-/** pattern = OTP با PatternId — smart = متن کامل مطابق الگو روی SmartOTP */
+/** pattern = با PatternId — send = SMS/Send با متن مطابق الگو (تشخیص خودکار {x}) */
 function casting_sms_otp_method(): string
 {
-    return casting_sms_otp_pattern_id() !== '' ? 'pattern' : 'smart';
+    return casting_sms_otp_pattern_id() !== '' ? 'pattern' : 'send';
 }
 
 /**
@@ -544,22 +544,62 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
         return ['ok' => false, 'error' => 'متن پیامک خالی است.'];
     }
 
-    // روش ۱ مستند REST: OTP با PatternId روی POST /SMS/Send
+    // روش ۱: اگر کد الگو در تنظیمات باشد (Otino / RestDocument)
     $pattern_id = casting_sms_otp_pattern_id();
     if ($pattern_id !== '' && $otp_code !== '') {
         return casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
     }
 
-    // روش ۲ مستند REST: POST /SMS/SmartOTP — متن باید با الگوی پنل یکی باشد
-    $result = casting_sms_send_smart_otp($mobile, $message, $otp_code);
+    // روش ۲: ارسال متن کامل مطابق الگو تا پنل خودش {x} را تشخیص دهد
+    $matched = $otp_code !== '' ? casting_sms_otp_text($otp_code) : $message;
+    $result = casting_sms_send_otp_matched_text($mobile, $matched, $otp_code);
     $code = (int) ($result['code'] ?? 0);
-    if ($result['ok'] || $code !== 19 || !casting_sms_http_is_configured()) {
+    if (!empty($result['ok']) || ($code !== 19 && $code !== 0)) {
         return $result;
     }
 
-    // روش ۳ مستند HTTP GET پنل (وقتی REST به‌خاطر الگو رد شد)
+    // روش ۳: SmartOTP فقط با رقم‌های کد (اگر الگوی پنل فقط {x} باشد)
+    if ($otp_code !== '') {
+        $otp_sender = casting_sms_otp_sender();
+        if ($otp_sender === '') {
+            $otp_sender = 'Auto';
+        }
+        $smart = casting_sms_request('SMS/SmartOTP', [
+            'OTPSender' => $otp_sender,
+            'ToNumber'  => $mobile,
+            'Content'   => $otp_code,
+        ]);
+        if (!empty($smart['ok'])) {
+            return [
+                'ok'     => true,
+                'error'  => '',
+                'ref_id' => (string) ($smart['ref_id'] ?? ''),
+            ];
+        }
+        $smart_code = (int) ($smart['code'] ?? 0);
+        if ($smart_code !== 19) {
+            return [
+                'ok'     => false,
+                'error'  => $smart['error'],
+                'ref_id' => (string) ($smart['ref_id'] ?? ''),
+                'code'   => $smart_code,
+            ];
+        }
+        $result = [
+            'ok'     => false,
+            'error'  => $smart['error'],
+            'ref_id' => (string) ($smart['ref_id'] ?? ''),
+            'code'   => 19,
+        ];
+        $code = 19;
+    }
+
+    if ($code !== 19 || !casting_sms_http_is_configured()) {
+        return $result;
+    }
+
     $last = $result;
-    foreach (casting_sms_otp_content_candidates($message, $otp_code) as $content) {
+    foreach (casting_sms_otp_content_candidates($matched, $otp_code) as $content) {
         $last = casting_sms_send_http_get($mobile, $content);
         if (!empty($last['ok'])) {
             return $last;
@@ -570,6 +610,50 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
     }
 
     return $last;
+}
+
+/**
+ * ارسال OTP با متن منطبق بر الگو — POST /SMS/Send
+ * پنل بخش ثابت را با الگو مقایسه می‌کند و مقدار {x} را از متن برمی‌دارد.
+ *
+ * @return array{ok:bool,error:string,ref_id?:string,code?:int}
+ */
+function casting_sms_send_otp_matched_text(string $mobile, string $content, string $otp_code = ''): array
+{
+    $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
+    if ($from === '') {
+        return ['ok' => false, 'error' => 'برای ارسال با الگو، CASTING_SMS_FROM لازم است.', 'code' => 3];
+    }
+    $content = trim($content);
+    if ($content === '') {
+        return ['ok' => false, 'error' => 'متن پیامک خالی است.'];
+    }
+
+    $payload = [
+        'From'     => $from,
+        'ToNumber' => $mobile,
+        'Content'  => $content,
+    ];
+    if ($otp_code !== '') {
+        $payload['PatternParameterData'] = [
+            casting_sms_otp_var_name() => $otp_code,
+        ];
+    }
+
+    $result = casting_sms_request('SMS/Send', $payload);
+    $code = (int) ($result['code'] ?? 0);
+    if (!$result['ok'] && $code === 19 && isset($payload['PatternParameterData'])) {
+        unset($payload['PatternParameterData']);
+        $result = casting_sms_request('SMS/Send', $payload);
+        $code = (int) ($result['code'] ?? 0);
+    }
+
+    return [
+        'ok'     => $result['ok'],
+        'error'  => $result['error'],
+        'ref_id' => (string) ($result['ref_id'] ?? ''),
+        'code'   => $code,
+    ];
 }
 
 /**

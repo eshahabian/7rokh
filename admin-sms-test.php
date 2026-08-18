@@ -74,7 +74,7 @@ $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
 $otp_sender = '';
 $api_base = '';
 $pattern_id = '';
-$otp_method = 'smart';
+$otp_method = 'send';
 $http_set = false;
 $otp_template = '';
 $otp_var = 'x';
@@ -118,6 +118,13 @@ casting_render_flash();
 <section class="dash-card panel-wide">
   <h1>تست پیامک WebOne</h1>
   <p class="lede">الگو باید یک بخش ثابت و یک متغیر انگلیسی مثل <code dir="ltr">{x}</code> داشته باشد. متن ارسالی همان بخش ثابت است و فقط مقدار داخل آکولاد عوض می‌شود.</p>
+  <p class="admin-sms-pattern" dir="rtl">
+    <strong>متن الگو:</strong>
+    <?= casting_e($otp_template !== '' ? $otp_template : 'کد ورود شما {x}') ?>
+    <br>
+    <strong>نمونه ارسال:</strong>
+    <?= casting_e(casting_sms_otp_text('123456')) ?>
+  </p>
 
   <dl class="admin-mail-status">
     <dt>API Base</dt>
@@ -128,16 +135,14 @@ casting_render_flash();
     <dd><?= $from !== '' ? '<code dir="ltr">' . casting_e($from) . '</code>' : '✗ خالی — برای پیامک متنی و OTP الگویی لازم است' ?></dd>
     <dt>روش OTP</dt>
     <dd><?php if ($otp_method === 'pattern') : ?>
-      الگو — <code dir="ltr">POST /SMS/Send</code> با <code>ToNumber</code> + <code>PatternId</code>
+      الگو با PatternId — <code dir="ltr">POST /SMS/Send</code>
     <?php else : ?>
-      SmartOTP — <code dir="ltr">POST /SMS/SmartOTP</code> با <code>OTPSender</code> + <code>ToNumber</code> + <code>Content</code>
+      متن مطابق الگو — <code dir="ltr">POST /SMS/Send</code> با <code>From</code> + <code>ToNumber</code> + <code>Content</code>
     <?php endif; ?></dd>
     <dt>OTP Sender</dt>
     <dd><code dir="ltr"><?= casting_e($otp_sender !== '' ? $otp_sender : 'Auto') ?></code></dd>
-    <dt>OTP Pattern</dt>
-    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code>' : 'تنظیم نشده — متن کامل مطابق الگو با SmartOTP ارسال می‌شود' ?></dd>
-    <dt>متن الگو</dt>
-    <dd><code><?= casting_e($otp_template !== '' ? $otp_template : 'کد ورود شما {x}') ?></code> — متغیر: <code dir="ltr">{<?= casting_e($otp_var) ?>}</code></dd>
+    <dt>کد الگو (PatternId)</dt>
+    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code>' : 'هنوز وارد نشده — از متن کامل الگو استفاده می‌شود' ?></dd>
     <dt>HTTP GET</dt>
     <dd><?= !empty($http_set) ? '✓ نام کاربری/رمز پنل تنظیم شده' : '✗ تنظیم نشده — برای متد GET پنل، USERNAME و PASSWORD لازم است' ?></dd>
     <dt>مانده اعتبار</dt>
@@ -180,7 +185,7 @@ casting_render_flash();
     </div>
     <fieldset class="field field-radio-row">
       <legend>نوع تست</legend>
-      <label class="radio-inline"><input type="radio" name="mode" value="otp" <?= $mode === 'otp' ? 'checked' : '' ?>> OTP (<?= $otp_method === 'pattern' ? 'الگو' : 'SmartOTP' ?>)</label>
+      <label class="radio-inline"><input type="radio" name="mode" value="otp" <?= $mode === 'otp' ? 'checked' : '' ?>> OTP (الگو)</label>
       <label class="radio-inline"><input type="radio" name="mode" value="text" <?= $mode === 'text' ? 'checked' : '' ?>> پیامک متنی</label>
     </fieldset>
     <button class="btn btn-primary" type="submit">ارسال تست</button>

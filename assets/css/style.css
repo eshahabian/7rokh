@@ -7944,6 +7944,15 @@ button.is-follow-locked {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.admin-sms-pattern {
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(212, 175, 106, 0.08);
+  line-height: 1.8;
+}
+
 .admin-mail-test-form {
   display: flex;
   flex-wrap: wrap;
