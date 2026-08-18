@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "icons": "python scripts/generate-android-icons.py"
+    "icons": "python scripts/generate-android-icons.py",
+    "splash": "python scripts/generate-android-icons.py"
   },
   "keywords": [],
   "author": "",

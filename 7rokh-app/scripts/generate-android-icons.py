@@ -93,6 +93,50 @@ def main() -> None:
     with_white_bg(store).save(RES / "icon.png")
     print("wrote", RES / "icon.png")
 
+    write_splashes(logo)
+
+
+SPLASH_SIZES = [
+    ("drawable", 480, 800),
+    ("drawable-port-mdpi", 320, 480),
+    ("drawable-port-hdpi", 480, 800),
+    ("drawable-port-xhdpi", 720, 1280),
+    ("drawable-port-xxhdpi", 1080, 1920),
+    ("drawable-port-xxxhdpi", 1440, 2560),
+    ("drawable-land-mdpi", 480, 320),
+    ("drawable-land-hdpi", 800, 480),
+    ("drawable-land-xhdpi", 1280, 720),
+    ("drawable-land-xxhdpi", 1920, 1080),
+    ("drawable-land-xxxhdpi", 2560, 1440),
+]
+
+
+def make_splash(logo: Image.Image, width: int, height: int, fill_ratio: float = 0.38) -> Image.Image:
+    canvas = Image.new("RGBA", (width, height), (255, 255, 255, 255))
+    max_side = int(min(width, height) * fill_ratio)
+    lw, lh = logo.size
+    scale = min(max_side / lw, max_side / lh)
+    nw, nh = max(1, int(lw * scale)), max(1, int(lh * scale))
+    resized = logo.resize((nw, nh), Image.Resampling.LANCZOS)
+    x = (width - nw) // 2
+    y = (height - nh) // 2
+    canvas.alpha_composite(resized, (x, y))
+    return canvas.convert("RGB")
+
+
+def write_splashes(logo: Image.Image) -> None:
+    for folder, width, height in SPLASH_SIZES:
+        d = OUT / folder
+        d.mkdir(parents=True, exist_ok=True)
+        make_splash(logo, width, height).save(d / "splash.png", optimize=True)
+        print(folder, "splash", width, "x", height)
+
+    # Android 12+ center icon: logo in the inner ~2/3 so the system mask does not crop it
+    icon = fit_on_canvas(logo, 960, 0.62)
+    with_white_bg(icon).save(OUT / "drawable" / "splash_icon.png", optimize=True)
+    print("wrote splash_icon.png")
+
 
 if __name__ == "__main__":
     main()
+
