@@ -76,6 +76,8 @@ $api_base = '';
 $pattern_id = '';
 $otp_method = 'smart';
 $http_set = false;
+$otp_template = '';
+$otp_var = 'x';
 $credit_info = ['ok' => false, 'error' => 'بررسی نشده'];
 $debug = null;
 
@@ -85,6 +87,8 @@ try {
     $pattern_id = casting_sms_otp_pattern_id();
     $otp_method = casting_sms_otp_method();
     $http_set = casting_sms_http_is_configured();
+    $otp_template = casting_sms_otp_template();
+    $otp_var = casting_sms_otp_var_name();
     // اعتبار را فقط وقتی کاربر خواست بخوان (جلوگیری از fatal/timeout هنگام باز کردن صفحه)
     $want_credit = isset($_GET['credit']) || isset($_POST['check_credit']);
     if ($want_credit && casting_sms_is_configured()) {
@@ -113,7 +117,7 @@ casting_render_flash();
 ?>
 <section class="dash-card panel-wide">
   <h1>تست پیامک WebOne</h1>
-  <p class="lede">خطای الگو یعنی متن پیامک باید عین الگوی تأییدشده در پنل WebOne باشد. PatternId یا متن دقیق الگو را از بخش الگوها بردارید.</p>
+  <p class="lede">الگو باید یک بخش ثابت و یک متغیر انگلیسی مثل <code dir="ltr">{x}</code> داشته باشد. متن ارسالی همان بخش ثابت است و فقط مقدار داخل آکولاد عوض می‌شود.</p>
 
   <dl class="admin-mail-status">
     <dt>API Base</dt>
@@ -131,7 +135,9 @@ casting_render_flash();
     <dt>OTP Sender</dt>
     <dd><code dir="ltr"><?= casting_e($otp_sender !== '' ? $otp_sender : 'Auto') ?></code></dd>
     <dt>OTP Pattern</dt>
-    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code>' : 'تنظیم نشده — از SmartOTP استفاده می‌شود' ?></dd>
+    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code>' : 'تنظیم نشده — متن کامل مطابق الگو با SmartOTP ارسال می‌شود' ?></dd>
+    <dt>متن الگو</dt>
+    <dd><code><?= casting_e($otp_template !== '' ? $otp_template : 'کد ورود شما {x}') ?></code> — متغیر: <code dir="ltr">{<?= casting_e($otp_var) ?>}</code></dd>
     <dt>HTTP GET</dt>
     <dd><?= !empty($http_set) ? '✓ نام کاربری/رمز پنل تنظیم شده' : '✗ تنظیم نشده — برای متد GET پنل، USERNAME و PASSWORD لازم است' ?></dd>
     <dt>مانده اعتبار</dt>

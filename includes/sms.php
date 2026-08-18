@@ -317,9 +317,10 @@ function casting_sms_error_message(int $code): string
         16 => 'شماره موبایل گیرنده یافت نشد / نامعتبر است.',
         17 => 'خط OTP برای این حساب یافت نشد. در پنل WebOne خط OTP را فعال کنید یا PatternId الگو را بگذارید.',
         18 => 'با این خط فقط ارسال تکی مجاز است.',
-        19 => 'متن با الگوی تأییدشده پنل یکی نیست. در پنل WebOne بخش الگوها، متن دقیق الگو و شناسه (PatternId) را بردارید و در CASTING_SMS_OTP_PATTERN_ID بگذارید.',
+        19 => 'متن با الگوی پنل یکی نیست. بخش ثابت باید عین الگو باشد و فقط مقدار داخل {x} عوض شود.',
         21 => 'IP سرور برای وب‌سرویس مجاز نیست؛ IP را در پنل ثبت کنید.',
         22 => 'احراز هویت پنل (کارت ملی) تکمیل نشده است.',
+        23 => 'بخش متغیر الگو نباید لینک یا IP باشد؛ فقط کد عددی بفرستید.',
     ];
 
     return $map[$code] ?? ('ارسال پیامک ناموفق بود (کد ' . $code . ').');
@@ -330,63 +331,70 @@ function casting_sms_otp_pattern_id(): string
     return defined('CASTING_SMS_OTP_PATTERN_ID') ? trim((string) CASTING_SMS_OTP_PATTERN_ID) : '';
 }
 
-function casting_sms_otp_pattern_param(): string
+/** الگوی Otino/WebOne: یک بخش ثابت + یک متغیر {x} — پیش‌فرض همان مثال پنل */
+function casting_sms_otp_template(): string
 {
-    $param_key = defined('CASTING_SMS_OTP_PATTERN_PARAM')
-        ? trim((string) CASTING_SMS_OTP_PATTERN_PARAM)
-        : 'ParameterValue';
+    $tpl = defined('CASTING_SMS_OTP_TEMPLATE') ? trim((string) CASTING_SMS_OTP_TEMPLATE) : '';
 
-    return $param_key !== '' ? $param_key : 'ParameterValue';
+    return $tpl !== '' ? $tpl : 'کد ورود شما {x}';
 }
 
-/** pattern = OTP با PatternId روی SMS/Send — smart = SMS/SmartOTP */
+/** نام متغیر داخل {} — فقط حروف انگلیسی: x, otp, p, u */
+function casting_sms_otp_var_name(): string
+{
+    $param = defined('CASTING_SMS_OTP_PATTERN_PARAM')
+        ? trim((string) CASTING_SMS_OTP_PATTERN_PARAM)
+        : '';
+    if ($param !== '' && strcasecmp($param, 'ParameterValue') !== 0) {
+        return $param;
+    }
+    $tpl = casting_sms_otp_template();
+    if (preg_match('/\{([A-Za-z][A-Za-z0-9_]*)\}/', $tpl, $m)) {
+        return $m[1];
+    }
+
+    return 'x';
+}
+
+function casting_sms_otp_pattern_param(): string
+{
+    return casting_sms_otp_var_name();
+}
+
+/** متن نهایی: بخش ثابت الگو + جایگزینی {x} با کد (بدون لینک/IP) */
+function casting_sms_otp_text(string $code): string
+{
+    $code = preg_replace('/\D+/', '', $code) ?? '';
+    $tpl = casting_sms_otp_template();
+    $var = preg_quote(casting_sms_otp_var_name(), '/');
+    $rendered = preg_replace('/\{' . $var . '\}/i', $code, $tpl) ?? $tpl;
+    $rendered = str_replace(['{code}', '{CODE}', '%code%'], $code, $rendered);
+    $rendered = preg_replace('/\{[A-Za-z][A-Za-z0-9_]*\}/', $code, $rendered) ?? $rendered;
+
+    return trim($rendered);
+}
+
+/** pattern = OTP با PatternId — smart = متن کامل مطابق الگو روی SmartOTP */
 function casting_sms_otp_method(): string
 {
     return casting_sms_otp_pattern_id() !== '' ? 'pattern' : 'smart';
 }
 
-function casting_sms_otp_template(): string
-{
-    return defined('CASTING_SMS_OTP_TEMPLATE') ? trim((string) CASTING_SMS_OTP_TEMPLATE) : '';
-}
-
-/** متن OTP طبق الگوی پنل — {code} با رقم‌ها عوض می‌شود */
-function casting_sms_otp_text(string $code): string
-{
-    $code = preg_replace('/\D+/', '', $code) ?? '';
-    $tpl = casting_sms_otp_template();
-    if ($tpl !== '') {
-        return str_replace(['{code}', '{CODE}', '%code%'], $code, $tpl);
-    }
-    $brand = function_exists('casting_brand') ? casting_brand() : '۷ رخ';
-
-    return 'کد تأیید ' . $brand . ': ' . $code;
-}
-
 /**
- * متن‌هایی که برای SmartOTP امتحان می‌شوند (خط خدماتی باید با الگوی پنل یکی باشد)
- *
  * @return list<string>
  */
 function casting_sms_otp_content_candidates(string $message, string $otp_code): array
 {
-    $out = [];
-    $tpl = casting_sms_otp_template();
-    if ($tpl !== '' && $otp_code !== '') {
-        $out[] = str_replace(['{code}', '{CODE}', '%code%'], $otp_code, $tpl);
-        return $out;
+    $code = preg_replace('/\D+/', '', $otp_code) ?? '';
+    if ($code === '' && preg_match('/\d{4,8}/', $message, $m)) {
+        $code = $m[0];
     }
-    if ($otp_code !== '') {
-        $out[] = $otp_code;
-        $out[] = 'کد تایید: ' . $otp_code;
-        $out[] = 'کد تأیید: ' . $otp_code;
+    if ($code !== '') {
+        return [casting_sms_otp_text($code)];
     }
     $message = trim($message);
-    if ($message !== '' && !in_array($message, $out, true)) {
-        $out[] = $message;
-    }
 
-    return $out !== [] ? $out : [$message];
+    return $message !== '' ? [$message] : [];
 }
 
 /**
@@ -595,7 +603,7 @@ function casting_sms_send_otp_pattern(string $mobile, string $otp_code, string $
         'ToNumber'             => $mobile,
         'PatternId'            => $pattern_id,
         'PatternParameterData' => [
-            casting_sms_otp_pattern_param() => $otp_code,
+            casting_sms_otp_var_name() => $otp_code,
         ],
     ]);
 

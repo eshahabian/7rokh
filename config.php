@@ -121,9 +121,9 @@ if (!defined('CASTING_MAIL_FROM_NAME')) {
  * در پنل WebOne حتماً:
  * 1) API Key بسازید (منوی وب‌سرویس)
  * 2) در تنظیمات عمومی پنل، IP سرور را در آی‌پی‌های مجاز REST ثبت کنید
- * 3) OTP روی خط خدماتی: در پنل یک الگو بسازید و PatternId را بگذارید
- *    یا متن الگو را در CASTING_SMS_OTP_TEMPLATE با {code} بگذارید
- * 4) اختیاری: ارسال HTTP GET با نام کاربری/رمز پنل (SMSInOutBox/SendSms)
+ * 3) OTP: الگو با یک متغیر انگلیسی مثل {x}
+ *    مثال پنل: «کد ورود شما {x}» — CASTING_SMS_OTP_TEMPLATE و در صورت وجود PatternId
+ * 4) اختیاری: ارسال HTTP GET با نام کاربری/رمز پنل
  * 5) برای پیامک متنی، شماره فرستنده (From) را از پنل بردارید
  */
 /**
@@ -155,13 +155,13 @@ if (!defined('CASTING_SMS_OTP_SENDER')) {
 if (!defined('CASTING_SMS_OTP_PATTERN_ID')) {
     define('CASTING_SMS_OTP_PATTERN_ID', '');
 }
-/** نام پارامتر الگو — پیش‌فرض ParameterValue طبق نمونه مستند */
+/** نام متغیر الگو — طبق Otino فقط یک حرف انگلیسی داخل {} مثل x */
 if (!defined('CASTING_SMS_OTP_PATTERN_PARAM')) {
-    define('CASTING_SMS_OTP_PATTERN_PARAM', 'ParameterValue');
+    define('CASTING_SMS_OTP_PATTERN_PARAM', 'x');
 }
-/** متن دقیق الگوی پنل — مثلاً "کد تایید: {code}" */
+/** متن الگوی پنل: بخش ثابت + {x} — باید با الگوی تأییدشده یکی باشد */
 if (!defined('CASTING_SMS_OTP_TEMPLATE')) {
-    define('CASTING_SMS_OTP_TEMPLATE', '');
+    define('CASTING_SMS_OTP_TEMPLATE', 'کد ورود شما {x}');
 }
 /** نام کاربری پنل برای ارسال HTTP GET (اختیاری) */
 if (!defined('CASTING_SMS_USERNAME')) {
