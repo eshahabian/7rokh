@@ -181,8 +181,8 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <?php if (!$panel_menu && !$is_member) : ?>
         <nav class="site-header-quick" aria-label="دسترسی سریع">
           <a href="<?= casting_e(casting_main_site_url()) ?>" class="site-header-quick-link"><?= casting_brand_html() ?></a>
-          <a href="register.php" class="site-header-quick-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
-          <a href="login.php" class="site-header-quick-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود به پنل کاربری</a>
+          <a href="register.php" class="site-header-quick-link nav-auth-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
+          <a href="login.php" class="site-header-quick-link nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود به پنل کاربری</a>
           <a href="<?= casting_e(casting_url('app.php')) ?>" class="site-header-quick-link<?= $active === 'app' ? ' is-active' : '' ?>" data-app-download>اپلیکیشن</a>
         </nav>
       <?php endif; ?>
@@ -201,8 +201,8 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
         <a href="logout.php">خروج</a>
       <?php else : ?>
         <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
-        <a href="register.php" class="<?= $active === 'register' ? 'is-active' : '' ?>">ثبت نام</a>
-        <a href="login.php" class="<?= $active === 'login' ? 'is-active' : '' ?>">ورود به پنل کاربری</a>
+        <a href="register.php" class="nav-auth-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
+        <a href="login.php" class="nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود به پنل کاربری</a>
         <a href="<?= casting_e(casting_url('app.php')) ?>" class="<?= $active === 'app' ? 'is-active' : '' ?>" data-app-download>اپلیکیشن موبایل</a>
         <a href="contact.php" class="<?= $active === 'contact' ? 'is-active' : '' ?>">تماس با ما</a>
         <a href="faq.php" class="<?= $active === 'faq' ? 'is-active' : '' ?>">سوالات متداول</a>

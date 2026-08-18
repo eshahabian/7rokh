@@ -402,6 +402,12 @@ html[data-theme="day"] .brand-mark-rokh {
   align-items: center;
 }
 
+.nav a.nav-auth-link {
+  font-size: clamp(1.05rem, 1.45vw, 1.2rem);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .nav a:hover,
 .nav a.is-active {
   color: var(--ink);
@@ -3487,6 +3493,10 @@ html[data-theme="day"] .filter-bar--sticky {
 
   body:not(.has-panel-drawer) .site-header-quick {
     display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.3rem 0.55rem;
+    min-width: 0;
   }
 
   body:not(.has-panel-drawer) .site-header-quick-link {
@@ -3496,8 +3506,29 @@ html[data-theme="day"] .filter-bar--sticky {
     font-size: 0.72rem;
     font-weight: 600;
     line-height: 1.2;
-    padding: 0.28rem 0.2rem;
+    padding: 0.28rem 0.15rem;
     text-decoration: none;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  body:not(.has-panel-drawer) .site-header-quick-link.nav-auth-link {
+    font-size: clamp(0.9rem, 3.2vw, 1.08rem);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  body:not(.has-panel-drawer) .site-header-quick-link[data-app-download] {
+    display: none;
+  }
+
+  body:not(.has-panel-drawer) .site-header-quick-link:not(.nav-auth-link) {
+    font-size: 0.78rem;
+  }
+
+  body:not(.has-panel-drawer) .site-header .nav a.nav-auth-link {
+    font-size: 1.15rem;
+    font-weight: 700;
     white-space: nowrap;
   }
 
@@ -3664,6 +3695,16 @@ html[data-theme="day"] .filter-bar--sticky {
 
   .chat-back-inbox {
     display: inline-flex;
+  }
+}
+
+@media (max-width: 420px) {
+  body:not(.has-panel-drawer) .site-header-quick-link:not(.nav-auth-link) {
+    display: none;
+  }
+
+  body:not(.has-panel-drawer) .site-header-quick-link.nav-auth-link {
+    font-size: clamp(0.86rem, 4.1vw, 1rem);
   }
 }
 
