@@ -12,8 +12,8 @@
 define('CASTING_SMTP_PASS', 'رمز-ایمیل-noreply-اینجا');
 
 define('CASTING_SMS_API_KEY', 'کلید-api-اینجا');
-define('CASTING_SMS_FROM', '10002147');
-define('CASTING_SMS_OTP_SENDER', '10002147');
+define('CASTING_SMS_FROM', '9998624065');
+define('CASTING_SMS_OTP_SENDER', '9998624065');
 
 /** باید عین الگوی تأییدشده در پنل باشد (یک {x}) */
 define('CASTING_SMS_OTP_TEMPLATE', 'کد ورود شما {x}');

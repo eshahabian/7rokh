@@ -142,11 +142,11 @@ if (!defined('CASTING_SMS_API_KEY')) {
 }
 /** شماره خط فرستنده برای پیامک متنی (لینک بازیابی و …) */
 if (!defined('CASTING_SMS_FROM')) {
-    define('CASTING_SMS_FROM', '10002147');
+    define('CASTING_SMS_FROM', '9998624065');
 }
 /** فرستنده OTP — خط پنل WebOne */
 if (!defined('CASTING_SMS_OTP_SENDER')) {
-    define('CASTING_SMS_OTP_SENDER', '10002147');
+    define('CASTING_SMS_OTP_SENDER', '9998624065');
 }
 /**
  * اختیاری: OTP با الگو (RestDocument: POST /SMS/Send + PatternId).

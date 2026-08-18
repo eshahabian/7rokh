@@ -64,7 +64,7 @@ function casting_sms_line_number(): string
         return $line;
     }
 
-    return '10002147';
+    return '9998624065';
 }
 
 /**
