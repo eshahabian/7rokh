@@ -4,21 +4,35 @@
  * این فایل در git ذخیره نمی‌شود و با deploy خودکار کپی نمی‌شود.
  *
  * WebOne SMS — پنل: https://webone-sms.ir
- * در پنل: API Key + IP مجاز سرور + خط OTP + شماره فرستنده
+ * API: https://api.payamakapi.ir/api/v1
+ * هدر الزامی: X-API-KEY
+ *
+ * OTP طبق RestDocument v1.4 دو روش دارد:
+ * 1) SmartOTP: POST /SMS/SmartOTP
+ *    { "OTPSender": "Auto", "ToNumber": "0912...", "Content": "کد: 123456" }
+ * 2) الگو: POST /SMS/Send
+ *    { "From": "1000...", "ToNumber": "0912...", "PatternId": "12345",
+ *      "PatternParameterData": { "ParameterValue": "123456" } }
  */
 define('CASTING_SMTP_PASS', 'رمز-ایمیل-noreply-اینجا');
 
 /** کلید API از منوی وب‌سرویس پنل WebOne */
 define('CASTING_SMS_API_KEY', 'کلید-api-اینجا');
 
-/** شماره خط فرستنده برای پیامک متنی (مثلاً لینک بازیابی رمز) */
+/** شماره خط فرستنده برای پیامک متنی و OTP الگویی */
 define('CASTING_SMS_FROM', '1000xxxx');
 
 /**
- * اختیاری: فرستنده OTP (مثلاً Auto یا شماره خط OTP)
- * اگر خالی باشد، SmartOTP فقط با ToNumber+Content ارسال می‌شود.
+ * فرستنده SmartOTP — طبق مستند: Auto (بدون خط اختصاصی) یا شماره خط OTP
  */
-// define('CASTING_SMS_OTP_SENDER', 'Auto');
+define('CASTING_SMS_OTP_SENDER', 'Auto');
+
+/**
+ * اگر از خطوط خدماتی استفاده می‌کنید و الگو در پنل تأیید شده، PatternId را بگذارید.
+ * در این صورت OTP با روش الگو ارسال می‌شود نه SmartOTP.
+ */
+// define('CASTING_SMS_OTP_PATTERN_ID', '12345');
+// define('CASTING_SMS_OTP_PATTERN_PARAM', 'ParameterValue');
 
 /** فعال‌سازی تأیید موبایل در ثبت‌نام (بعد از تست موفق) */
 // define('CASTING_MOBILE_OTP_ENABLED', true);

@@ -74,13 +74,15 @@ $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
 $otp_sender = '';
 $api_base = '';
 $pattern_id = '';
+$otp_method = 'smart';
 $credit_info = ['ok' => false, 'error' => 'بررسی نشده'];
 $debug = null;
 
 try {
     $otp_sender = casting_sms_otp_sender();
     $api_base = casting_sms_api_base();
-    $pattern_id = defined('CASTING_SMS_OTP_PATTERN_ID') ? trim((string) CASTING_SMS_OTP_PATTERN_ID) : '';
+    $pattern_id = casting_sms_otp_pattern_id();
+    $otp_method = casting_sms_otp_method();
     // اعتبار را فقط وقتی کاربر خواست بخوان (جلوگیری از fatal/timeout هنگام باز کردن صفحه)
     $want_credit = isset($_GET['credit']) || isset($_POST['check_credit']);
     if ($want_credit && casting_sms_is_configured()) {
@@ -117,11 +119,17 @@ casting_render_flash();
     <dt>CASTING_SMS_API_KEY</dt>
     <dd><?= $api_set ? '✓ تنظیم شده' : '✗ خالی است — روی سرور در config.local.php بگذارید' ?></dd>
     <dt>CASTING_SMS_FROM</dt>
-    <dd><?= $from !== '' ? '<code dir="ltr">' . casting_e($from) . '</code>' : '✗ خالی — برای پیامک متنی لازم است' ?></dd>
+    <dd><?= $from !== '' ? '<code dir="ltr">' . casting_e($from) . '</code>' : '✗ خالی — برای پیامک متنی و OTP الگویی لازم است' ?></dd>
+    <dt>روش OTP</dt>
+    <dd><?php if ($otp_method === 'pattern') : ?>
+      الگو — <code dir="ltr">POST /SMS/Send</code> با <code>ToNumber</code> + <code>PatternId</code>
+    <?php else : ?>
+      SmartOTP — <code dir="ltr">POST /SMS/SmartOTP</code> با <code>OTPSender</code> + <code>ToNumber</code> + <code>Content</code>
+    <?php endif; ?></dd>
     <dt>OTP Sender</dt>
-    <dd><?= $otp_sender !== '' ? '<code dir="ltr">' . casting_e($otp_sender) . '</code>' : 'پیش‌فرض SmartOTP (بدون OTPSender)' ?></dd>
+    <dd><code dir="ltr"><?= casting_e($otp_sender !== '' ? $otp_sender : 'Auto') ?></code></dd>
     <dt>OTP Pattern</dt>
-    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code> (الگو)' : 'SmartOTP' ?></dd>
+    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code>' : 'تنظیم نشده — از SmartOTP استفاده می‌شود' ?></dd>
     <dt>مانده اعتبار</dt>
     <dd><?php
     if (!empty($credit_info['ok'])) {
@@ -162,7 +170,7 @@ casting_render_flash();
     </div>
     <fieldset class="field field-radio-row">
       <legend>نوع تست</legend>
-      <label class="radio-inline"><input type="radio" name="mode" value="otp" <?= $mode === 'otp' ? 'checked' : '' ?>> OTP (SmartOTP)</label>
+      <label class="radio-inline"><input type="radio" name="mode" value="otp" <?= $mode === 'otp' ? 'checked' : '' ?>> OTP (<?= $otp_method === 'pattern' ? 'الگو' : 'SmartOTP' ?>)</label>
       <label class="radio-inline"><input type="radio" name="mode" value="text" <?= $mode === 'text' ? 'checked' : '' ?>> پیامک متنی</label>
     </fieldset>
     <button class="btn btn-primary" type="submit">ارسال تست</button>
