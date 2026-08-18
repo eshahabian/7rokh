@@ -131,13 +131,20 @@ casting_render_flash();
     <dd><code dir="ltr"><?= casting_e($api_base) ?></code></dd>
     <dt>CASTING_SMS_API_KEY</dt>
     <dd><?= $api_set ? '✓ تنظیم شده' : '✗ خالی است — روی سرور در config.local.php بگذارید' ?></dd>
-    <dt>CASTING_SMS_FROM</dt>
-    <dd><?= $from !== '' ? '<code dir="ltr">' . casting_e($from) . '</code>' : '✗ خالی — برای پیامک متنی و OTP الگویی لازم است' ?></dd>
+    <dt>خط فرستنده پنل (From)</dt>
+    <dd><?php if ($from === '') : ?>
+      ✗ خالی
+    <?php else : ?>
+      <code dir="ltr"><?= casting_e($from) ?></code>
+      <?php if (preg_match('/^09\d{9}$/', $from)) : ?>
+        — این شماره موبایل است نه خط ۱۰۰۰ پنل؛ OTP با SmartOTP و OTPSender=Auto می‌رود
+      <?php endif; ?>
+    <?php endif; ?></dd>
     <dt>روش OTP</dt>
     <dd><?php if ($otp_method === 'pattern') : ?>
       الگو با PatternId — <code dir="ltr">POST /SMS/Send</code>
     <?php else : ?>
-      متن مطابق الگو — <code dir="ltr">POST /SMS/Send</code> با <code>From</code> + <code>ToNumber</code> + <code>Content</code>
+      SmartOTP — گیرنده در <code>ToNumber</code> (موبایل کاربر)، فرستنده <code>Auto</code>
     <?php endif; ?></dd>
     <dt>OTP Sender</dt>
     <dd><code dir="ltr"><?= casting_e($otp_sender !== '' ? $otp_sender : 'Auto') ?></code></dd>
@@ -180,8 +187,9 @@ casting_render_flash();
   <form class="form" method="post" action="admin-sms-test.php">
     <?php wp_nonce_field('casting_sms_test'); ?>
     <div class="field">
-      <label for="mobile">موبایل گیرنده</label>
+      <label for="mobile">موبایل گیرنده (همان شماره پروفایل کاربر)</label>
       <input id="mobile" name="mobile" type="tel" required pattern="09[0-9]{9}" value="<?= casting_e($test_mobile) ?>" placeholder="09121234567">
+      <p class="field-hint">پیش‌فرض از پروفایل شماست. OTP به <code>ToNumber</code> می‌رود، نه به خط فرستنده.</p>
     </div>
     <fieldset class="field field-radio-row">
       <legend>نوع تست</legend>

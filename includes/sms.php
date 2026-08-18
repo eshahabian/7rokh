@@ -374,10 +374,10 @@ function casting_sms_otp_text(string $code): string
     return trim($rendered);
 }
 
-/** pattern = با PatternId — send = SMS/Send با متن مطابق الگو (تشخیص خودکار {x}) */
+/** pattern = با PatternId — smart = SmartOTP به ToNumber کاربر */
 function casting_sms_otp_method(): string
 {
-    return casting_sms_otp_pattern_id() !== '' ? 'pattern' : 'send';
+    return casting_sms_otp_pattern_id() !== '' ? 'pattern' : 'smart';
 }
 
 /**
@@ -550,48 +550,63 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
         return casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
     }
 
-    // روش ۲: ارسال متن کامل مطابق الگو تا پنل خودش {x} را تشخیص دهد
     $matched = $otp_code !== '' ? casting_sms_otp_text($otp_code) : $message;
-    $result = casting_sms_send_otp_matched_text($mobile, $matched, $otp_code);
-    $code = (int) ($result['code'] ?? 0);
-    if (!empty($result['ok']) || ($code !== 19 && $code !== 0)) {
-        return $result;
+    $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
+    $from_is_mobile = $from !== '' && (bool) preg_match('/^09\d{9}$/', $from);
+
+    // SMS/Send فقط با خط فرستنده پنل (۱۰۰۰…) — موبایل ۰۹ به‌عنوان From نامعتبر است
+    if ($from !== '' && !$from_is_mobile) {
+        $result = casting_sms_send_otp_matched_text($mobile, $matched, $otp_code);
+        $code = (int) ($result['code'] ?? 0);
+        if (!empty($result['ok']) || ($code !== 19 && $code !== 0)) {
+            return $result;
+        }
     }
 
-    // روش ۳: SmartOTP فقط با رقم‌های کد (اگر الگوی پنل فقط {x} باشد)
-    if ($otp_code !== '') {
-        $otp_sender = casting_sms_otp_sender();
-        if ($otp_sender === '') {
-            $otp_sender = 'Auto';
-        }
-        $smart = casting_sms_request('SMS/SmartOTP', [
+    $otp_sender = casting_sms_otp_sender();
+    if ($otp_sender === '' || $from_is_mobile) {
+        $otp_sender = 'Auto';
+    }
+    $smart = casting_sms_request('SMS/SmartOTP', [
+        'OTPSender' => $otp_sender,
+        'ToNumber'  => $mobile,
+        'Content'   => $matched,
+    ]);
+    if (!empty($smart['ok'])) {
+        return [
+            'ok'     => true,
+            'error'  => '',
+            'ref_id' => (string) ($smart['ref_id'] ?? ''),
+        ];
+    }
+    $result = [
+        'ok'     => false,
+        'error'  => $smart['error'],
+        'ref_id' => (string) ($smart['ref_id'] ?? ''),
+        'code'   => (int) ($smart['code'] ?? 0),
+    ];
+    $code = (int) ($result['code'] ?? 0);
+
+    if ($otp_code !== '' && $code === 19) {
+        $smart2 = casting_sms_request('SMS/SmartOTP', [
             'OTPSender' => $otp_sender,
             'ToNumber'  => $mobile,
             'Content'   => $otp_code,
         ]);
-        if (!empty($smart['ok'])) {
+        if (!empty($smart2['ok'])) {
             return [
                 'ok'     => true,
                 'error'  => '',
-                'ref_id' => (string) ($smart['ref_id'] ?? ''),
-            ];
-        }
-        $smart_code = (int) ($smart['code'] ?? 0);
-        if ($smart_code !== 19) {
-            return [
-                'ok'     => false,
-                'error'  => $smart['error'],
-                'ref_id' => (string) ($smart['ref_id'] ?? ''),
-                'code'   => $smart_code,
+                'ref_id' => (string) ($smart2['ref_id'] ?? ''),
             ];
         }
         $result = [
             'ok'     => false,
-            'error'  => $smart['error'],
-            'ref_id' => (string) ($smart['ref_id'] ?? ''),
-            'code'   => 19,
+            'error'  => $smart2['error'],
+            'ref_id' => (string) ($smart2['ref_id'] ?? ''),
+            'code'   => (int) ($smart2['code'] ?? 0),
         ];
-        $code = 19;
+        $code = (int) ($result['code'] ?? 0);
     }
 
     if ($code !== 19 || !casting_sms_http_is_configured()) {
