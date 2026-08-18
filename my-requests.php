@@ -230,7 +230,7 @@ casting_render_flash();
     <?php else : ?>
       <p class="lede"><?= $view === 'archive'
           ? 'فراخوان‌های ارسالی بایگانی‌شده.'
-          : 'فراخوان‌های کستینگ که برای اعضا ارسال کرده‌اید (جدا از پیام کاربران).' ?></p>
+          : 'فراخوان‌های کستینگ که برای اعضا ارسال کرده‌اید (جدا از پیام‌ها).' ?></p>
       <?php if ($view === 'active') :
           $highlighted_talents = casting_director_list_highlighted_talents($user_id);
           if ($compose_error !== '') {

@@ -1298,7 +1298,7 @@ function casting_render_director_send_request_compose(
       <summary class="request-compose-summary">ارسال دعوت همکاری</summary>
       <div class="request-compose-body">
         <?php if ($highlighted !== []) : ?>
-          <p class="field-hint">دعوت همکاری جدا از پیام کاربران است. بازیگر و جزئیات پروژه را پر کنید.</p>
+          <p class="field-hint">دعوت همکاری جدا از پیام‌ها است. بازیگر و جزئیات پروژه را پر کنید.</p>
           <form class="form request-compose-form" method="post" action="my-requests.php?box=sent#request-compose">
             <?php wp_nonce_field('casting_send_request'); ?>
             <input type="hidden" name="send_collaboration_request" value="1">

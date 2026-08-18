@@ -263,14 +263,14 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
         <?php endif; ?>
         <?php if ($viewer_id !== $member_id) : ?>
           <?php if (!empty($chat_open['ok'])) : ?>
-            <a class="btn member-preview-btn member-preview-btn--interest" href="chat.php?with=<?= (int) $member_id ?>">ارسال پیام</a>
+            <a class="btn member-preview-btn member-preview-btn--interest" href="chat.php?with=<?= (int) $member_id ?>">پیام به این کاربر</a>
           <?php else : ?>
             <button
               type="button"
               class="btn member-preview-btn member-preview-btn--interest is-disabled"
               disabled
               title="<?= casting_e((string) ($chat_open['error'] ?? 'طبق جدول دسترسی پیام‌رسان، امکان ارسال پیام نیست.')) ?>"
-            >ارسال پیام</button>
+            >پیام به این کاربر</button>
           <?php endif; ?>
         <?php endif; ?>
         <?php if ($show_actions) : ?>

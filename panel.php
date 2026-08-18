@@ -132,7 +132,7 @@ casting_render_flash();
     <div class="ig-profile-actions">
       <a class="btn btn-primary" href="<?= casting_e(casting_url('edit-profile.php')) ?>">ویرایش پروفایل</a>
       <a class="btn btn-ghost ig-profile-action-badge" href="<?= casting_e(casting_url('chat.php')) ?>">
-        پیام کاربران
+        پیام‌ها
         <?php if ($unread_messages > 0) : ?>
           <span class="nav-badge" aria-label="<?= casting_e((string) $unread_messages) ?> پیام جدید"><?= (int) $unread_messages ?></span>
         <?php endif; ?>

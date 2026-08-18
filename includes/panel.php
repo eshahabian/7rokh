@@ -23,7 +23,7 @@ function casting_panel_nav_groups(): array
             'items' => [
                 ['key' => 'home',     'label' => 'صفحه اصلی',    'href' => 'home.php'],
                 ['key' => 'panel',    'label' => 'پروفایل من',    'href' => 'panel.php'],
-                ['key' => 'messages', 'label' => 'پیام کاربران', 'href' => 'chat.php'],
+                ['key' => 'messages', 'label' => 'پیام‌ها', 'href' => 'chat.php'],
             ],
         ],
         [
@@ -783,7 +783,7 @@ function casting_panel_bottom_nav_items(): array
         ['key' => 'opportunities', 'label' => 'فرصت‌ها', 'href' => 'opportunities.php'],
         ['key' => 'home', 'label' => 'صفحه اصلی', 'href' => 'home.php'],
         ['key' => 'search', 'label' => 'جستجو', 'href' => 'search-users.php'],
-        ['key' => 'messages', 'label' => 'پیام', 'href' => 'chat.php', 'badge' => $unread],
+        ['key' => 'messages', 'label' => 'پیام‌ها', 'href' => 'chat.php', 'badge' => $unread],
         ['key' => 'panel', 'label' => 'پروفایل', 'href' => 'panel.php'],
     ];
 }
@@ -2232,58 +2232,10 @@ function casting_render_messages_dock(): void
         if (!function_exists('casting_dm_conversations')) {
             require_once __DIR__ . '/chat.php';
         }
-        if (!function_exists('casting_user_is_super_admin')) {
-            require_once __DIR__ . '/admin-access.php';
-        }
 
-        $is_admin_chat = casting_user_is_portal_owner($user_id) || casting_user_is_super_admin($user_id);
         $conversations = casting_dm_conversations($user_id);
         $unread_total = casting_dm_unread_peer_count($user_id);
-        $unread_map = [];
-        $last_map = [];
-        foreach ($conversations as $conv) {
-            $pid = (int) ($conv['peer_id'] ?? 0);
-            if ($pid <= 0) {
-                continue;
-            }
-            $unread_map[$pid] = (int) ($conv['unread'] ?? 0);
-            $last_map[$pid] = trim((string) ($conv['last_message'] ?? ''));
-        }
-
-        $preview = [];
-        if ($is_admin_chat) {
-            $contacts = casting_dm_allowed_contacts($user_id);
-            foreach ($contacts as $contact) {
-                $pid = (int) ($contact['id'] ?? 0);
-                if ($pid <= 0) {
-                    continue;
-                }
-                $role_key = (string) ($contact['role'] ?? '');
-                $role = $role_key !== '' ? casting_role_label($role_key) : '';
-                if ($role === '') {
-                    $role = casting_dm_peer_role_label($pid);
-                }
-                $preview[] = [
-                    'peer_id'      => $pid,
-                    'name'         => (string) ($contact['name'] ?? ''),
-                    'role'         => $role,
-                    'avatar'       => '',
-                    'unread'       => (int) ($unread_map[$pid] ?? 0),
-                    'last_message' => (string) ($last_map[$pid] ?? ''),
-                ];
-            }
-            usort($preview, static function (array $a, array $b): int {
-                $ua = (int) ($a['unread'] ?? 0);
-                $ub = (int) ($b['unread'] ?? 0);
-                if ($ua !== $ub) {
-                    return $ub <=> $ua;
-                }
-
-                return strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
-            });
-        } else {
-            $preview = array_slice($conversations, 0, 10);
-        }
+        $preview = array_slice($conversations, 0, 30);
     } catch (Throwable $e) {
         return;
     }
@@ -2303,12 +2255,12 @@ function casting_render_messages_dock(): void
     <div class="messages-dock-panel" id="messages-dock-panel" data-messages-dock-panel hidden>
       <div class="messages-dock-view is-active" data-messages-dock-list-view>
         <header class="messages-dock-panel-head">
-          <strong><?= $is_admin_chat ? 'پیام به اعضا' : 'پیام‌ها' ?></strong>
+          <strong>پیام‌ها</strong>
           <a href="<?= casting_e(casting_url('chat.php')) ?>">صفحه کامل</a>
         </header>
-        <?php if ($is_admin_chat && $preview !== []) : ?>
+        <?php if ($preview !== []) : ?>
           <div class="messages-dock-search">
-            <input type="search" placeholder="جستجوی عضو…" data-messages-dock-filter aria-label="جستجوی عضو">
+            <input type="search" placeholder="جستجوی گفتگو…" data-messages-dock-filter aria-label="جستجوی گفتگو">
           </div>
         <?php endif; ?>
         <?php if ($preview === []) : ?>
@@ -2327,13 +2279,11 @@ function casting_render_messages_dock(): void
                 if ($name === '') {
                     continue;
                 }
-                $role = (string) ($conv['role'] ?? '');
-                if ($role === '' && !$is_admin_chat) {
-                    try {
-                        $role = casting_dm_peer_role_label($peer);
-                    } catch (Throwable $e) {
-                        $role = '';
-                    }
+                $role = '';
+                try {
+                    $role = casting_dm_peer_role_label($peer);
+                } catch (Throwable $e) {
+                    $role = '';
                 }
                 $avatar = (string) ($conv['avatar'] ?? '');
                 if ($avatar === '') {

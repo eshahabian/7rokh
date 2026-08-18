@@ -8,6 +8,7 @@ require_once __DIR__ . '/sms.php';
  * فلگ: CASTING_MOBILE_OTP_ENABLED در config.php / config.local.php
  *
  * موقت خاموش: پنل/سرویس پیامک هنوز پایدار نیست.
+ * در فرم ثبت‌نام بلوک «تأییدیه موبایل» دیده می‌شود ولی غیرفعال است.
  * برای روشن کردن دوباره، return زیر را حذف کنید و فقط خط فلگ را برگردانید.
  */
 function casting_mobile_otp_enabled(): bool

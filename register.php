@@ -481,6 +481,7 @@ $pending_video = $pending_media['video'];
 
       <?php if ($otp_enabled) : ?>
       <div class="otp-verify-block">
+        <h2 class="otp-verify-title">تأییدیه موبایل</h2>
         <?php if (!$mobile_verified) : ?>
           <div class="field">
             <label for="otp_code">کد تأیید موبایل <span class="req-mark">*</span></label>
@@ -494,6 +495,19 @@ $pending_video = $pending_media['video'];
         <?php else : ?>
           <input type="hidden" name="otp_code" value="verified">
         <?php endif; ?>
+      </div>
+      <?php else : ?>
+      <div class="otp-verify-block is-inactive" aria-disabled="true">
+        <h2 class="otp-verify-title">تأییدیه موبایل</h2>
+        <p class="field-hint">این بخش جایگذاری شده و فعلاً فعال نیست. پس از راه‌اندازی پیامک، شماره موبایل در همین‌جا تأیید می‌شود.</p>
+        <div class="field">
+          <label for="otp_code_placeholder">کد تأیید موبایل</label>
+          <input id="otp_code_placeholder" type="text" inputmode="numeric" maxlength="6" placeholder="۶ رقم پیامک‌شده" disabled>
+        </div>
+        <div class="cta-row otp-actions">
+          <button class="btn btn-ghost" type="button" disabled>ارسال کد پیامک</button>
+          <button class="btn btn-ghost" type="button" disabled>تأیید کد</button>
+        </div>
       </div>
       <?php endif; ?>
 

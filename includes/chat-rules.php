@@ -260,3 +260,36 @@ function casting_render_member_message_button(int $viewer_id, int $target_id, st
 <button type="button" class="btn btn-ghost btn-sm member-card-msg is-disabled" disabled title="<?= casting_e($reason) ?>" aria-label="<?= casting_e($reason) ?>"><?= casting_e($label) ?></button>
     <?php
 }
+
+/**
+ * بخش «پیام به این کاربر» روی پروفایل کامل
+ *
+ * @param array{ok?:bool,error?:string} $allow
+ */
+function casting_render_profile_message_cta(int $viewer_id, int $target_id, string $display_name = '', array $allow = []): void
+{
+    if ($viewer_id <= 0 || $target_id <= 0 || $viewer_id === $target_id) {
+        return;
+    }
+    if ($allow === []) {
+        $allow = casting_can_user_open_dm($viewer_id, $target_id);
+    }
+    $ok = !empty($allow['ok']);
+    $reason = trim((string) ($allow['error'] ?? ''));
+    if ($reason === '') {
+        $reason = 'طبق جدول دسترسی پیام‌رسان، امکان ارسال پیام نیست.';
+    }
+    $aria = $display_name !== '' ? ('پیام به ' . $display_name) : 'پیام به این کاربر';
+    ?>
+<section class="profile-message-section" aria-labelledby="profile-message-heading">
+  <h3 id="profile-message-heading" class="profile-message-title">پیام به این کاربر</h3>
+  <p class="meta">اگر بعد از دیدن پروفایل خواستید گفتگو کنید، از اینجا پیام بدهید.</p>
+  <?php if ($ok) : ?>
+    <a class="btn btn-primary" href="chat.php?with=<?= (int) $target_id ?>" aria-label="<?= casting_e($aria) ?>">ارسال پیام</a>
+  <?php else : ?>
+    <button type="button" class="btn btn-primary is-disabled" disabled title="<?= casting_e($reason) ?>" aria-label="<?= casting_e($reason) ?>">ارسال پیام</button>
+    <p class="field-hint"><?= casting_e($reason) ?></p>
+  <?php endif; ?>
+</section>
+    <?php
+}

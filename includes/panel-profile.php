@@ -368,13 +368,9 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           if (!function_exists('casting_follow_can_target')) {
               require_once __DIR__ . '/follows.php';
           }
-          if (!function_exists('casting_render_member_message_button')) {
-              require_once __DIR__ . '/chat-rules.php';
-          }
           ?>
       <div class="profile-follow-row">
         <span class="meta profile-followers-count"><?= (int) casting_followers_count($member_id) ?> دنبال‌کننده</span>
-        <?php casting_render_member_message_button($viewer_id, $member_id, (string) $member->display_name); ?>
         <?php if (casting_follow_can_target($viewer_id, $member_id)) : ?>
           <?php casting_render_follow_button($viewer_id, $member_id, 'btn-sm'); ?>
         <?php endif; ?>
@@ -382,27 +378,23 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           <?php
       }
       ?>
-      <?php if (!$is_self) : ?>
+      <?php if (!$is_self && $viewer_id > 0) : ?>
+        <?php
+        if (!function_exists('casting_render_profile_message_cta')) {
+            require_once __DIR__ . '/chat-rules.php';
+        }
+        casting_render_profile_message_cta($viewer_id, $member_id, (string) $member->display_name, $chat_allow);
+        ?>
         <div class="block-user-section">
           <?php if ($is_blocked) : ?>
-            <div class="cta-row">
-              <?php if ($chat_allow['ok']) : ?>
-                <a class="btn btn-primary" href="chat.php?with=<?= $member_id ?>">پیام به این کاربر</a>
-              <?php else : ?>
-                <button type="button" class="btn btn-primary is-disabled" disabled title="<?= casting_e((string) ($chat_allow['error'] ?? 'امکان پیام نیست')) ?>">پیام به این کاربر</button>
-              <?php endif; ?>
-              <form method="post" action="member.php?id=<?= $member_id ?>" style="display:inline">
-                <?php wp_nonce_field('casting_block'); ?>
-                <input type="hidden" name="block_id" value="<?= $member_id ?>">
-                <button class="btn btn-ghost" type="submit" name="block_action" value="unblock">رفع بلاک</button>
-              </form>
-            </div>
+            <form method="post" action="member.php?id=<?= $member_id ?>">
+              <?php wp_nonce_field('casting_block'); ?>
+              <input type="hidden" name="block_id" value="<?= $member_id ?>">
+              <button class="btn btn-ghost" type="submit" name="block_action" value="unblock">رفع بلاک</button>
+            </form>
           <?php else : ?>
             <div class="block-user-wrap">
-              <?php
-                $block_message_href = $chat_allow['ok'] ? 'chat.php?with=' . $member_id : '';
-                casting_render_block_user_form('member.php?id=' . $member_id, $member_id, 'casting_block', 'member', $block_message_href);
-              ?>
+              <?php casting_render_block_user_form('member.php?id=' . $member_id, $member_id, 'casting_block', 'member'); ?>
             </div>
           <?php endif; ?>
         </div>
@@ -736,7 +728,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     <?php $invite_types = casting_invitation_project_type_labels(); ?>
     <div class="bio-block request-box" id="request-box">
       <h3>ارسال دعوت همکاری</h3>
-      <p class="field-hint">این دعوت در بخش «فراخوان کستینگ» دیده می‌شود و وارد پیام کاربران نمی‌شود.</p>
+      <p class="field-hint">این دعوت در بخش «فراخوان کستینگ» دیده می‌شود و وارد پیام‌ها نمی‌شود.</p>
       <form class="form" method="post" action="member.php?id=<?= $member_id ?>">
         <?php wp_nonce_field('casting_request_' . $member_id); ?>
         <div class="form-grid">

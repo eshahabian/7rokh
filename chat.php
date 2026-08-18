@@ -123,11 +123,6 @@ if ($peer_id > 0) {
 }
 
 $conversations = casting_dm_conversations($my_id);
-if (!function_exists('casting_user_is_super_admin')) {
-    require_once __DIR__ . '/includes/admin-access.php';
-}
-$contacts = casting_dm_allowed_contacts($my_id);
-$is_admin_chat = casting_user_is_portal_owner($my_id) || casting_user_is_super_admin($my_id);
 $compose_default = '';
 $compose_locked = false;
 if ($peer_id > 0 && !empty($peer_allow['ok']) && casting_is_employer_role(casting_get_user_role($my_id))) {
@@ -145,17 +140,17 @@ if ($error !== '') {
 casting_render_flash();
 ?>
 <section class="dash-card chat-card">
-  <?php casting_render_panel_heading('پیام کاربران'); ?>
-  <p class="meta">پیام خصوصی · در صورت مزاحمت می‌توانید کاربر را بلاک کنید.</p>
+  <?php casting_render_panel_heading('پیام‌ها'); ?>
+  <p class="meta">کسانی که به شما پیام داده‌اند. روی هر ردیف بزنید تا گفتگو باز شود. برای شروع پیام جدید، به پروفایل همان کاربر بروید.</p>
   <?php if ($employer_free_hint !== '') : ?>
     <p class="meta chat-employer-quota"><?= casting_e($employer_free_hint) ?></p>
   <?php endif; ?>
 
-  <div class="chat-layout">
+  <div class="chat-layout<?= $peer && $peer_id > 0 ? ' chat-layout--thread' : ' chat-layout--inbox' ?>">
     <aside class="chat-sidebar">
       <h2 class="chat-side-title">گفتگوها</h2>
       <?php if (!$conversations) : ?>
-        <p class="empty-state chat-side-empty">هنوز گفتگویی ندارید.</p>
+        <p class="empty-state chat-side-empty">هنوز کسی به شما پیام نداده. از پروفایل اعضا می‌توانید پیام بدهید.</p>
       <?php else : ?>
         <ul class="chat-conv-list">
           <?php foreach ($conversations as $conv) :
@@ -171,60 +166,38 @@ casting_render_flash();
               if ($conv_name === '') {
                   continue;
               }
+              $conv_last = trim((string) ($conv['last_message'] ?? ''));
+              if ($conv_last !== '') {
+                  if (function_exists('mb_strlen') && mb_strlen($conv_last, 'UTF-8') > 48) {
+                      $conv_last = mb_substr($conv_last, 0, 48, 'UTF-8') . '…';
+                  } elseif (strlen($conv_last) > 48) {
+                      $conv_last = substr($conv_last, 0, 48) . '…';
+                  }
+              }
               ?>
             <li>
               <a class="chat-conv-item<?= $peer_id === $conv_peer ? ' is-active' : '' ?><?= $conv_unread > 0 ? ' has-unread' : '' ?><?= !empty($conv['locked']) ? ' is-locked' : '' ?>" href="chat.php?with=<?= $conv_peer ?>">
                 <?php casting_render_chat_avatar($conv_peer, $conv_name, $conv_unread > 0); ?>
-                <strong class="chat-conv-name"><?= casting_e($conv_name) ?></strong>
+                <span class="chat-conv-body">
+                  <strong class="chat-conv-name"><?= casting_e($conv_name) ?></strong>
+                  <?php if ($conv_last !== '') : ?>
+                    <span class="chat-conv-snippet"><?= casting_e($conv_last) ?></span>
+                  <?php endif; ?>
+                </span>
+                <?php if ($conv_unread > 0) : ?>
+                  <span class="chat-conv-badge"><?= $conv_unread > 9 ? '۹+' : (string) $conv_unread ?></span>
+                <?php endif; ?>
               </a>
             </li>
           <?php endforeach; ?>
         </ul>
       <?php endif; ?>
-
-      <form class="chat-start-form form" method="post" action="chat.php">
-        <?php wp_nonce_field('casting_dm'); ?>
-        <input type="hidden" name="action" value="start">
-        <div class="field">
-          <label for="peer_id"><?= $is_admin_chat ? 'پیام به همه اعضا' : 'شروع گفتگوی جدید' ?></label>
-          <?php if ($contacts === []) : ?>
-            <p class="field-hint">فعلاً مخاطب مجازی برای شروع گفتگو ندارید. دسترسی نقش‌ها را در جدول پیام‌رسان بررسی کنید.</p>
-          <?php else : ?>
-            <?php if ($is_admin_chat) : ?>
-              <input type="search" class="chat-contact-filter" data-chat-contact-filter placeholder="جستجوی عضو…" aria-label="جستجوی عضو" autocomplete="off">
-            <?php endif; ?>
-            <select id="peer_id" name="peer_id" required size="<?= $is_admin_chat ? '12' : '1' ?>" class="<?= $is_admin_chat ? 'chat-contact-select--admin' : '' ?>" data-chat-contact-select>
-              <?php if (!$is_admin_chat) : ?>
-                <option value="">انتخاب مخاطب…</option>
-              <?php endif; ?>
-              <?php foreach ($contacts as $contact) :
-                  $cid = (int) ($contact['id'] ?? 0);
-                  if ($cid <= 0) {
-                      continue;
-                  }
-                  $cname = (string) ($contact['name'] ?? '');
-                  $crole = casting_user_public_role_label($cid);
-                  $label = $cname . ($crole !== '' ? ' — ' . $crole : '');
-                  ?>
-                <option
-                  value="<?= $cid ?>"
-                  <?= $peer_id === $cid ? 'selected' : '' ?>
-                  data-contact-label="<?= casting_e(function_exists('mb_strtolower') ? mb_strtolower($label, 'UTF-8') : strtolower($label)) ?>"
-                ><?= casting_e($label) ?></option>
-              <?php endforeach; ?>
-            </select>
-            <?php if ($is_admin_chat) : ?>
-              <p class="field-hint"><?= count($contacts) ?> عضو قابل پیام</p>
-            <?php endif; ?>
-          <?php endif; ?>
-        </div>
-        <button class="btn btn-ghost" type="submit" <?= $contacts === [] ? 'disabled' : '' ?>>باز کردن</button>
-      </form>
     </aside>
 
     <div class="chat-main">
       <?php if ($peer && $peer_id > 0) : ?>
         <header class="chat-peer-head">
+          <a class="btn btn-ghost btn-sm chat-back-inbox" href="chat.php">بازگشت به پیام‌ها</a>
           <div class="chat-peer-title">
             <?php casting_render_chat_avatar($peer_id, casting_dm_peer_display_name($peer_id), $peer_had_unread); ?>
             <div>
@@ -357,7 +330,7 @@ casting_render_flash();
         <?php endif; ?>
       <?php else : ?>
         <div class="chat-empty-main">
-          <p>یک گفتگو انتخاب کنید یا مخاطب جدید باز کنید.</p>
+          <p>یک گفتگو را از فهرست انتخاب کنید. برای شروع پیام، به پروفایل همان کاربر بروید.</p>
         </div>
       <?php endif; ?>
     </div>

@@ -3031,6 +3031,31 @@ html[data-theme="day"] .filter-bar--sticky {
   align-items: stretch;
 }
 
+.chat-layout--thread {
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+}
+
+.chat-layout--inbox {
+  grid-template-columns: 1fr;
+}
+
+.chat-layout--inbox .chat-main {
+  display: none;
+}
+
+.chat-layout--inbox .chat-sidebar {
+  max-width: 42rem;
+  width: 100%;
+}
+
+.chat-layout--inbox .chat-conv-list {
+  max-height: min(70vh, 36rem);
+}
+
+.chat-back-inbox {
+  display: none;
+}
+
 .chat-sidebar {
   display: flex;
   flex-direction: column;
@@ -3078,11 +3103,28 @@ html[data-theme="day"] .filter-bar--sticky {
   background: rgba(224, 122, 106, 0.08);
 }
 
-.chat-conv-name {
+.chat-conv-body {
   min-width: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.chat-conv-name {
+  min-width: 0;
   font-size: 0.95rem;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-conv-snippet {
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--ink-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3278,6 +3320,10 @@ html[data-theme="day"] .filter-bar--sticky {
 }
 
 .chat-conv-item.is-locked .chat-conv-name {
+  color: var(--accent);
+}
+
+.chat-conv-item.is-locked .chat-conv-snippet {
   color: var(--accent);
 }
 
@@ -3607,8 +3653,17 @@ html[data-theme="day"] .filter-bar--sticky {
     grid-template-columns: 1fr;
   }
 
+  .chat-layout--thread .chat-sidebar {
+    display: none;
+  }
+
+  .chat-layout--inbox .chat-conv-list,
   .chat-conv-list {
-    max-height: 180px;
+    max-height: none;
+  }
+
+  .chat-back-inbox {
+    display: inline-flex;
   }
 }
 
@@ -6433,6 +6488,27 @@ a.panel-home-filter-chip:focus-visible {
   align-self: center;
 }
 
+.profile-message-section {
+  margin: 0 0 1rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.profile-message-title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.profile-message-section > .meta {
+  margin: 0 0 0.75rem;
+}
+
+.profile-message-section .field-hint {
+  margin: 0.5rem 0 0;
+}
+
 .profile-media-gallery {
   margin: 1.25rem 0;
 }
@@ -8554,6 +8630,15 @@ html.is-native-app [data-app-download] {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.02);
+}
+
+.otp-verify-title {
+  margin: 0 0 0.45rem;
+  font-size: 1.05rem;
+}
+
+.otp-verify-block.is-inactive {
+  opacity: 0.78;
 }
 
 .otp-actions {
