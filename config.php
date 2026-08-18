@@ -144,7 +144,7 @@ if (!defined('CASTING_SMS_API_KEY')) {
 if (!defined('CASTING_SMS_FROM')) {
     define('CASTING_SMS_FROM', '');
 }
-/** فرستنده OTP — "Auto" یا شماره خط OTP (مستند SmartOTP) */
+/** فرستنده OTP — شماره خط پنل یا Auto */
 if (!defined('CASTING_SMS_OTP_SENDER')) {
     define('CASTING_SMS_OTP_SENDER', '');
 }

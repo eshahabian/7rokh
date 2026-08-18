@@ -132,19 +132,12 @@ casting_render_flash();
     <dt>CASTING_SMS_API_KEY</dt>
     <dd><?= $api_set ? '✓ تنظیم شده' : '✗ خالی است — روی سرور در config.local.php بگذارید' ?></dd>
     <dt>خط فرستنده پنل (From)</dt>
-    <dd><?php if ($from === '') : ?>
-      ✗ خالی
-    <?php else : ?>
-      <code dir="ltr"><?= casting_e($from) ?></code>
-      <?php if (preg_match('/^09\d{9}$/', $from)) : ?>
-        — این شماره موبایل است نه خط ۱۰۰۰ پنل؛ OTP با SmartOTP و OTPSender=Auto می‌رود
-      <?php endif; ?>
-    <?php endif; ?></dd>
+    <dd><?= $from !== '' ? '<code dir="ltr">' . casting_e($from) . '</code>' : '✗ خالی' ?></dd>
     <dt>روش OTP</dt>
     <dd><?php if ($otp_method === 'pattern') : ?>
       الگو با PatternId — <code dir="ltr">POST /SMS/Send</code>
     <?php else : ?>
-      SmartOTP — گیرنده در <code>ToNumber</code> (موبایل کاربر)، فرستنده <code>Auto</code>
+      SmartOTP — گیرنده <code>ToNumber</code>، فرستنده <code>OTPSender</code>
     <?php endif; ?></dd>
     <dt>OTP Sender</dt>
     <dd><code dir="ltr"><?= casting_e($otp_sender !== '' ? $otp_sender : 'Auto') ?></code></dd>
