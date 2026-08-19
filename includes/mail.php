@@ -45,18 +45,66 @@ function casting_read_local_smtp_pass(): string
 
 function casting_smtp_password(): string
 {
-    static $cached = null;
-    if ($cached !== null) {
-        return $cached;
+    if (function_exists('get_option')) {
+        $from_opt = trim((string) get_option('casting_smtp_pass', ''));
+        if ($from_opt !== '') {
+            return $from_opt;
+        }
+    }
+    $pass = defined('CASTING_SMTP_PASS') ? trim((string) CASTING_SMTP_PASS) : '';
+    if ($pass !== '') {
+        return $pass;
     }
 
-    $pass = defined('CASTING_SMTP_PASS') ? (string) CASTING_SMTP_PASS : '';
+    return casting_read_local_smtp_pass();
+}
+
+function casting_smtp_escape_php_string(string $value): string
+{
+    return str_replace(['\\', "'"], ['\\\\', "\\'"], $value);
+}
+
+/**
+ * ذخیره رمز SMTP در دیتابیس (و در صورت امکان در config.local.php)
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_smtp_store_password(string $pass): array
+{
+    $pass = trim($pass);
     if ($pass === '') {
-        $pass = casting_read_local_smtp_pass();
+        return ['ok' => false, 'error' => 'رمز SMTP خالی است.'];
+    }
+    if (!function_exists('update_option')) {
+        return ['ok' => false, 'error' => 'ذخیره در وردپرس ممکن نیست.'];
     }
 
-    $cached = $pass;
-    return $cached;
+    update_option('casting_smtp_pass', $pass, false);
+
+    $path = casting_local_config_path();
+    if (is_string($path) && $path !== '' && (is_writable($path) || (!file_exists($path) && is_writable(dirname($path))))) {
+        $quoted = casting_smtp_escape_php_string($pass);
+        $line = "define('CASTING_SMTP_PASS', '" . $quoted . "');\n";
+        $src = is_readable($path) ? (string) file_get_contents($path) : '';
+        if ($src === '') {
+            $src = "<?php\n" . $line;
+        } elseif (preg_match("/define\s*\(\s*['\"]CASTING_SMTP_PASS['\"]\s*,\s*['\"][^'\"]*['\"]\s*\)\s*;/", $src)) {
+            $src = preg_replace(
+                "/define\s*\(\s*['\"]CASTING_SMTP_PASS['\"]\s*,\s*['\"][^'\"]*['\"]\s*\)\s*;/",
+                "define('CASTING_SMTP_PASS', '" . $quoted . "');",
+                $src,
+                1
+            ) ?? $src;
+        } else {
+            if (!str_contains($src, '<?php')) {
+                $src = "<?php\n" . $src;
+            }
+            $src = rtrim($src) . "\n" . $line;
+        }
+        @file_put_contents($path, $src, LOCK_EX);
+    }
+
+    return ['ok' => true, 'error' => ''];
 }
 
 function casting_mail_is_smtp_ready(): bool
@@ -76,7 +124,7 @@ function casting_mail_setup_hint(): string
     if (!casting_mail_is_smtp_ready()) {
         $local = is_readable(casting_local_config_path());
         if ($local) {
-            return ' فایل config.local.php روی سرور هست ولی CASTING_SMTP_PASS خالی یا اشتباه است — رمز noreply@7rokh.ir را در public_html/casting-portal/config.local.php بگذارید.';
+            return ' رمز SMTP ذخیره نشده. در پنل «تست ایمیل SMTP» رمز noreply@7rokh.ir را وارد و ذخیره کنید.';
         }
 
         return ' فایل public_html/casting-portal/config.local.php روی سرور نیست — از config.local.php.example کپی کنید و CASTING_SMTP_PASS را با رمز noreply@7rokh.ir پر کنید.';

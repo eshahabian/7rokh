@@ -14,7 +14,6 @@ if (!casting_user_is_super_admin($user_id)) {
 
 casting_nocache();
 
-$status = casting_mail_status();
 $error = '';
 $success = '';
 $test_to = (string) $user->user_email;
@@ -25,6 +24,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['clear_rate_limits'])) {
         casting_rate_limit_clear_all();
         $success = 'محدودیت درخواست برای IP فعلی (' . casting_client_ip() . ') پاک شد.';
+    } elseif (isset($_POST['save_smtp_pass'])) {
+        $result = casting_smtp_store_password((string) ($_POST['smtp_pass'] ?? ''));
+        if (!$result['ok']) {
+            $error = $result['error'];
+        } else {
+            $success = 'رمز SMTP ذخیره شد. حالا یک ایمیل تست بفرستید.';
+        }
     } else {
         $test_to = sanitize_email((string) ($_POST['test_to'] ?? ''));
         if (!is_email($test_to)) {
@@ -33,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $subject = sprintf('[%s] تست SMTP پورتال', casting_brand());
             $body = "این یک ایمیل تست از پورتال " . casting_brand() . " است.\n"
                 . 'زمان: ' . current_time('mysql') . "\n"
-                . 'فرستنده: ' . $status['from'] . "\n";
+                . 'فرستنده: ' . casting_mail_from_address() . "\n";
             $result = casting_send_mail($test_to, $subject, $body);
             if (!$result['ok']) {
                 $error = $result['error'];
@@ -43,6 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$status = casting_mail_status();
 
 casting_render_panel_start('تست ایمیل SMTP', 'admin-mail');
 casting_render_flash();
@@ -57,7 +65,7 @@ casting_render_flash();
     <dt>رمز SMTP خوانده شد</dt>
     <dd><?= !empty($status['pass_loaded']) ? '✓ بله' : '✗ خیر' ?></dd>
     <dt>SMTP آماده</dt>
-    <dd><?= $status['smtp_ready'] ? '✓ بله' : '✗ خیر — رمز noreply@7rokh.ir در config.local.php نیست' ?></dd>
+    <dd><?= $status['smtp_ready'] ? '✓ بله' : '✗ خیر — رمز را در فرم زیر ذخیره کنید' ?></dd>
     <dt>Host</dt>
     <dd><code><?= casting_e($status['host']) ?></code></dd>
     <dt>Port / Secure</dt>
@@ -66,19 +74,6 @@ casting_render_flash();
     <dd><code><?= casting_e($status['user']) ?></code></dd>
   </dl>
 
-  <?php if (!$status['local_config']) : ?>
-    <div class="flash flash-error admin-mail-error" role="alert">
-      <p><strong>علت احتمالی خطا:</strong> فایل <code>config.local.php</code> روی سرور وجود ندارد.</p>
-      <p>این فایل در git نیست و با deploy خودکار کپی نمی‌شود. در cPanel → File Manager مسیر <code>public_html/casting-portal/</code> فایل بسازید:</p>
-      <pre class="code-block">&lt;?php
-define('CASTING_SMTP_PASS', 'رمز-noreply-در-cPanel');</pre>
-    </div>
-  <?php elseif (!$status['smtp_ready']) : ?>
-    <div class="flash flash-error admin-mail-error" role="alert">
-      <p><strong>علت احتمالی خطا:</strong> <code>CASTING_SMTP_PASS</code> در config.local.php خالی است یا فایل درست load نشده.</p>
-    </div>
-  <?php endif; ?>
-
   <?php if ($error !== '') : ?>
     <div class="flash flash-error admin-mail-error" role="alert"><?= casting_e($error) ?></div>
   <?php endif; ?>
@@ -86,6 +81,19 @@ define('CASTING_SMTP_PASS', 'رمز-noreply-در-cPanel');</pre>
     <div class="flash flash-success" role="alert"><?= casting_e($success) ?></div>
   <?php endif; ?>
 
+  <h2 class="panel-section-title">رمز SMTP</h2>
+  <p class="meta">رمز اکانت <code>noreply@7rokh.ir</code> در cPanel را اینجا بگذارید (همان رمزی که برای ورود به وب‌میل عوض کردید). لازم نیست فایل سرور را دستی ویرایش کنید.</p>
+  <form class="form" method="post" action="admin-mail-test.php" autocomplete="off">
+    <?php wp_nonce_field('casting_mail_test'); ?>
+    <input type="hidden" name="save_smtp_pass" value="1">
+    <div class="field">
+      <label for="smtp_pass">رمز noreply@7rokh.ir</label>
+      <input id="smtp_pass" name="smtp_pass" type="password" required autocomplete="new-password" placeholder="<?= !empty($status['pass_loaded']) ? 'رمز ذخیره‌شده — برای تغییر، رمز جدید را بنویسید' : 'رمز ایمیل را وارد کنید' ?>">
+    </div>
+    <button class="btn btn-primary" type="submit">ذخیره رمز SMTP</button>
+  </form>
+
+  <h2 class="panel-section-title">ارسال تست</h2>
   <form class="form admin-mail-test-form" method="post" action="admin-mail-test.php">
     <?php wp_nonce_field('casting_mail_test'); ?>
     <div class="field">
@@ -102,7 +110,5 @@ define('CASTING_SMTP_PASS', 'رمز-noreply-در-cPanel');</pre>
     <input type="hidden" name="clear_rate_limits" value="1">
     <button class="btn btn-secondary" type="submit">ریست محدودیت IP من</button>
   </form>
-
-  <p class="meta">رمز باید همان رمز اکانت <code>noreply@7rokh.ir</code> در cPanel باشد (نه رمز ایمیل قدیمی contact.us).</p>
 </section>
 <?php casting_render_panel_end(); ?>
