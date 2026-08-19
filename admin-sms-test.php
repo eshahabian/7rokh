@@ -82,14 +82,14 @@ $credit_info = ['ok' => false, 'error' => 'بررسی نشده'];
 $debug = null;
 
 try {
-    $otp_sender = casting_sms_line_number();
+    $from = casting_sms_line_number();
+    $otp_sender = casting_sms_otp_sender();
     $api_base = casting_sms_api_base();
-    $from = $otp_sender;
     $pattern_id = casting_sms_otp_pattern_id();
     $otp_method = casting_sms_otp_method();
     $http_set = casting_sms_http_is_configured();
     $otp_template = casting_sms_otp_template();
-    $otp_var = casting_sms_otp_var_name();
+    $otp_var = 'ParameterValue';
     // اعتبار را فقط وقتی کاربر خواست بخوان (جلوگیری از fatal/timeout هنگام باز کردن صفحه)
     $want_credit = isset($_GET['credit']) || isset($_POST['check_credit']);
     if ($want_credit && casting_sms_is_configured()) {
@@ -118,7 +118,7 @@ casting_render_flash();
 ?>
 <section class="dash-card panel-wide">
   <h1>تست پیامک WebOne</h1>
-  <p class="lede">الگو باید یک بخش ثابت و یک متغیر انگلیسی مثل <code dir="ltr">{x}</code> داشته باشد. متن ارسالی همان بخش ثابت است و فقط مقدار داخل آکولاد عوض می‌شود.</p>
+  <p class="lede">طبق RestDocument: OTP با <code>PatternId</code> متن نمی‌خواهد؛ مقدار کد در <code>PatternParameterData.ParameterValue</code> می‌رود. بدون PatternId از SmartOTP با <code>OTPSender=Auto</code> استفاده می‌شود.</p>
   <p class="admin-sms-pattern" dir="rtl">
     <strong>متن الگو:</strong>
     <?= casting_e($otp_template !== '' ? $otp_template : 'کد ورود شما {x}') ?>
@@ -140,10 +140,10 @@ casting_render_flash();
     <?php else : ?>
       SmartOTP — گیرنده <code>ToNumber</code>، فرستنده <code>OTPSender</code>
     <?php endif; ?></dd>
-    <dt>OTP Sender</dt>
+    <dt>OTP Sender (SmartOTP)</dt>
     <dd><code dir="ltr"><?= casting_e($otp_sender !== '' ? $otp_sender : 'Auto') ?></code></dd>
     <dt>کد الگو (PatternId)</dt>
-    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code>' : 'هنوز وارد نشده — از متن کامل الگو استفاده می‌شود' ?></dd>
+    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code>' : 'خالی — الان SmartOTP با OTPSender=Auto می‌رود. شناسه الگو را از پنل در CASTING_SMS_OTP_PATTERN_ID بگذارید.' ?></dd>
     <dt>HTTP GET</dt>
     <dd><?= !empty($http_set) ? '✓ نام کاربری/رمز پنل تنظیم شده' : '✗ تنظیم نشده — برای متد GET پنل، USERNAME و PASSWORD لازم است' ?></dd>
     <dt>مانده اعتبار</dt>

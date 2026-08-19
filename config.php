@@ -121,10 +121,10 @@ if (!defined('CASTING_MAIL_FROM_NAME')) {
  * در پنل WebOne حتماً:
  * 1) API Key بسازید (منوی وب‌سرویس)
  * 2) در تنظیمات عمومی پنل، IP سرور را در آی‌پی‌های مجاز REST ثبت کنید
- * 3) OTP: الگو با یک متغیر انگلیسی مثل {x}
- *    مثال پنل: «کد ورود شما {x}» — CASTING_SMS_OTP_TEMPLATE و در صورت وجود PatternId
- * 4) اختیاری: ارسال HTTP GET با نام کاربری/رمز پنل
- * 5) برای پیامک متنی، شماره فرستنده (From) را از پنل بردارید
+ * 3) OTP: الگوی تأییدشده + CASTING_SMS_OTP_PATTERN_ID
+ *    POST /SMS/Send با PatternId و PatternParameterData.ParameterValue
+ *    بدون PatternId: POST /SMS/SmartOTP با OTPSender=Auto
+ * 4) برای پیامک متنی، شماره فرستنده (From) را از پنل بردارید
  */
 /**
  * تأیید OTP موبایل در ثبت‌نام.
@@ -144,13 +144,13 @@ if (!defined('CASTING_SMS_API_KEY')) {
 if (!defined('CASTING_SMS_FROM')) {
     define('CASTING_SMS_FROM', '9998624065');
 }
-/** فرستنده OTP — خط پنل WebOne */
+/** فرستنده SmartOTP — RestDocument: Auto یا شماره خط OTP */
 if (!defined('CASTING_SMS_OTP_SENDER')) {
-    define('CASTING_SMS_OTP_SENDER', '9998624065');
+    define('CASTING_SMS_OTP_SENDER', 'Auto');
 }
 /**
- * اختیاری: OTP با الگو (RestDocument: POST /SMS/Send + PatternId).
- * اگر پر باشد به‌جای SmartOTP استفاده می‌شود.
+ * OTP با الگو: POST /SMS/Send + PatternId + PatternParameterData.ParameterValue
+ * شناسه را از پنل بردارید: وب‌سرویس → الگوی پیام وب‌سرویس
  */
 if (!defined('CASTING_SMS_OTP_PATTERN_ID')) {
     define('CASTING_SMS_OTP_PATTERN_ID', '');
