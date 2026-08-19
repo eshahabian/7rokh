@@ -18,6 +18,8 @@ declare(strict_types=1);
  *   password:string,
  *   from:string,
  *   api_key:string,
+ *   pattern_id:string,
+ *   template:string,
  *   option_keys:list<string>
  * }
  */
@@ -36,6 +38,8 @@ function casting_sms_wp_plugin_config(): array
         'password'    => '',
         'from'        => '',
         'api_key'     => '',
+        'pattern_id'  => '',
+        'template'    => '',
         'option_keys' => [],
     ];
     if (!function_exists('get_option')) {
@@ -147,6 +151,12 @@ function casting_sms_wp_plugin_config(): array
         $found['gateway'] = $found['gateway'] !== '' ? $found['gateway'] : $pick($data, [
             'gateway', 'gateway_name', 'sms_gateway', 'webservice',
         ]);
+        $found['pattern_id'] = $found['pattern_id'] !== '' ? $found['pattern_id'] : $pick($data, [
+            'pattern_id', 'PatternId', 'patternid', 'otp_pattern_id', 'patternId',
+        ]);
+        $found['template'] = $found['template'] !== '' ? $found['template'] : $pick($data, [
+            'template', 'otp_template', 'pattern', 'pattern_text', 'otp_pattern', 'message_pattern',
+        ]);
         foreach ($data as $value) {
             if (is_array($value)) {
                 $walk($value, $found);
@@ -154,7 +164,7 @@ function casting_sms_wp_plugin_config(): array
         }
     };
 
-    $found = ['username' => '', 'password' => '', 'from' => '', 'api_key' => '', 'gateway' => ''];
+    $found = ['username' => '', 'password' => '', 'from' => '', 'api_key' => '', 'gateway' => '', 'pattern_id' => '', 'template' => ''];
     foreach ($known as $option_name) {
         $value = get_option($option_name);
         if ($value === false || $value === null || $value === '') {
@@ -175,8 +185,10 @@ function casting_sms_wp_plugin_config(): array
                 $found['from'] = $found['from'] !== '' ? $found['from'] : $trim;
             } elseif (str_contains($lower, 'key') || str_contains($lower, 'token')) {
                 $found['api_key'] = $found['api_key'] !== '' ? $found['api_key'] : $trim;
-            } elseif (str_contains($lower, 'gateway') && !str_contains($lower, 'username')) {
-                $found['gateway'] = $found['gateway'] !== '' ? $found['gateway'] : $trim;
+            } elseif (str_contains($lower, 'pattern_id') || str_contains($lower, 'patternid')) {
+                $found['pattern_id'] = $found['pattern_id'] !== '' ? $found['pattern_id'] : $trim;
+            } elseif (str_contains($lower, 'template') || (str_contains($lower, 'pattern') && !str_contains($lower, 'gateway'))) {
+                $found['template'] = $found['template'] !== '' ? $found['template'] : $trim;
             }
             continue;
         }
@@ -194,6 +206,8 @@ function casting_sms_wp_plugin_config(): array
     $out['from'] = $found['from'];
     $out['api_key'] = $found['api_key'];
     $out['gateway'] = $found['gateway'];
+    $out['pattern_id'] = $found['pattern_id'];
+    $out['template'] = $found['template'];
     $cached = $out;
 
     return $cached;
@@ -586,15 +600,27 @@ function casting_sms_error_message(int $code): string
 
 function casting_sms_otp_pattern_id(): string
 {
-    return defined('CASTING_SMS_OTP_PATTERN_ID') ? trim((string) CASTING_SMS_OTP_PATTERN_ID) : '';
+    $id = defined('CASTING_SMS_OTP_PATTERN_ID') ? trim((string) CASTING_SMS_OTP_PATTERN_ID) : '';
+    if ($id !== '') {
+        return $id;
+    }
+
+    return trim((string) (casting_sms_wp_plugin_config()['pattern_id'] ?? ''));
 }
 
 /** الگوی Otino/WebOne: یک بخش ثابت + یک متغیر {x} — پیش‌فرض همان مثال پنل */
 function casting_sms_otp_template(): string
 {
     $tpl = defined('CASTING_SMS_OTP_TEMPLATE') ? trim((string) CASTING_SMS_OTP_TEMPLATE) : '';
+    if ($tpl !== '') {
+        return $tpl;
+    }
+    $plugin_tpl = trim((string) (casting_sms_wp_plugin_config()['template'] ?? ''));
+    if ($plugin_tpl !== '') {
+        return $plugin_tpl;
+    }
 
-    return $tpl !== '' ? $tpl : 'کد ورود شما {x}';
+    return 'کد ورود شما {x}';
 }
 
 /**
@@ -639,10 +665,10 @@ function casting_sms_otp_text(string $code): string
     return trim($rendered);
 }
 
-/** pattern = با PatternId — smart = SmartOTP به ToNumber کاربر */
+/** pattern = با PatternId — text = همان POST /SMS/Send که پیامک متنی کار می‌کند */
 function casting_sms_otp_method(): string
 {
-    return casting_sms_otp_pattern_id() !== '' ? 'pattern' : 'smart';
+    return casting_sms_otp_pattern_id() !== '' ? 'pattern' : 'text';
 }
 
 /**
@@ -809,14 +835,35 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
         return ['ok' => false, 'error' => 'متن پیامک خالی است.'];
     }
 
+    $last = ['ok' => false, 'error' => 'ارسال کد تأیید ناموفق بود.', 'code' => -1];
+
     // روش ۱ RestDocument: POST /SMS/Send با PatternId — بدون Content
     $pattern_id = casting_sms_otp_pattern_id();
     if ($pattern_id !== '' && $otp_code !== '') {
-        return casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
+        $pattern = casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
+        if (!empty($pattern['ok'])) {
+            return $pattern;
+        }
+        $last = $pattern;
     }
 
-    // روش ۲ RestDocument: POST /SMS/SmartOTP — OTPSender + ToNumber + Content
-    return casting_sms_send_smart_otp($mobile, $message, $otp_code);
+    // روش ۲: همان مسیر پیامک متنی که الان کار می‌کند — POST /SMS/Send
+    // بدون PatternId نباید SmartOTP زد؛ Content باید عین الگوی پنل باشد و کد ۱۹ می‌دهد.
+    $text = casting_sms_send_text($mobile, $message);
+    if (!empty($text['ok'])) {
+        return $text;
+    }
+    $last = $text;
+
+    if (casting_sms_http_is_configured()) {
+        $http = casting_sms_send_http_get($mobile, $message);
+        if (!empty($http['ok'])) {
+            return $http;
+        }
+        $last = $http;
+    }
+
+    return $last;
 }
 
 /**
@@ -889,6 +936,7 @@ function casting_sms_send_otp_pattern(string $mobile, string $otp_code, string $
         'ok'     => $result['ok'],
         'error'  => $result['error'],
         'ref_id' => (string) ($result['ref_id'] ?? ''),
+        'code'   => (int) ($result['code'] ?? 0),
     ];
 }
 
@@ -984,5 +1032,6 @@ function casting_sms_send_text(string $mobile, string $message): array
         'ok'     => $result['ok'],
         'error'  => $result['error'],
         'ref_id' => (string) ($result['ref_id'] ?? ''),
+        'code'   => (int) ($result['code'] ?? 0),
     ];
 }

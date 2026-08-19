@@ -121,9 +121,9 @@ if (!defined('CASTING_MAIL_FROM_NAME')) {
  * در پنل WebOne حتماً:
  * 1) API Key بسازید (منوی وب‌سرویس)
  * 2) در تنظیمات عمومی پنل، IP سرور را در آی‌پی‌های مجاز REST ثبت کنید
- * 3) OTP: الگوی تأییدشده + CASTING_SMS_OTP_PATTERN_ID
+ * 3) OTP با الگو (اختیاری): CASTING_SMS_OTP_PATTERN_ID از پنل
  *    POST /SMS/Send با PatternId و PatternParameterData.ParameterValue
- *    بدون PatternId: POST /SMS/SmartOTP با OTPSender=Auto
+ *    بدون PatternId: همان POST /SMS/Send متنی (خط From) — نه SmartOTP
  * 4) برای پیامک متنی، شماره فرستنده (From) را از پنل بردارید
  */
 /**

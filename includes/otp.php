@@ -176,8 +176,13 @@ function casting_otp_send(string $purpose, string $mobile): array
     if (!$sms['ok']) {
         delete_transient(casting_otp_storage_key($purpose, $mobile));
         delete_transient($cd_key);
+        $err = trim((string) ($sms['error'] ?? ''));
+        $code_num = (int) ($sms['code'] ?? 0);
+        if ($code_num === 19 || str_contains($err, 'الگوی پنل')) {
+            $err = 'ارسال کد تأیید الان ممکن نیست. با رمز عبور وارد شوید یا کمی بعد دوباره تلاش کنید.';
+        }
 
-        return ['ok' => false, 'error' => $sms['error']];
+        return ['ok' => false, 'error' => $err !== '' ? $err : 'ارسال پیامک ناموفق بود.'];
     }
 
     return ['ok' => true, 'error' => ''];

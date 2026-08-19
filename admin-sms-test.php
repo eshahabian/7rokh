@@ -154,6 +154,10 @@ casting_render_flash();
     <dd><?= ($wp_sms['from'] ?? '') !== '' ? '<code dir="ltr">' . casting_e((string) $wp_sms['from']) . '</code>' : 'پیدا نشد' ?></dd>
     <dt>کلید API افزونه</dt>
     <dd><?= ($wp_sms['api_key'] ?? '') !== '' ? '✓ ' . casting_e(casting_sms_mask_secret((string) $wp_sms['api_key'])) : 'پیدا نشد' ?></dd>
+    <dt>PatternId افزونه</dt>
+    <dd><?= ($wp_sms['pattern_id'] ?? '') !== '' ? '<code dir="ltr">' . casting_e((string) $wp_sms['pattern_id']) . '</code>' : 'پیدا نشد' ?></dd>
+    <dt>قالب افزونه</dt>
+    <dd><?= ($wp_sms['template'] ?? '') !== '' ? casting_e((string) $wp_sms['template']) : 'پیدا نشد' ?></dd>
     <dt>گزینه‌های wp_options</dt>
     <dd><?php
     $opt_keys = is_array($wp_sms['option_keys'] ?? null) ? $wp_sms['option_keys'] : [];
@@ -169,12 +173,12 @@ casting_render_flash();
     <dd><?php if ($otp_method === 'pattern') : ?>
       الگو با PatternId — <code dir="ltr">POST /SMS/Send</code>
     <?php else : ?>
-      SmartOTP — گیرنده <code>ToNumber</code>، فرستنده <code>OTPSender</code>
+      پیامک متنی — همان <code dir="ltr">POST /SMS/Send</code> با خط From (بدون SmartOTP)
     <?php endif; ?></dd>
     <dt>OTP Sender (SmartOTP)</dt>
-    <dd><code dir="ltr"><?= casting_e($otp_sender !== '' ? $otp_sender : 'Auto') ?></code></dd>
+    <dd><code dir="ltr"><?= casting_e($otp_sender !== '' ? $otp_sender : 'Auto') ?></code> — فقط اگر بعداً SmartOTP را روشن کنید</dd>
     <dt>کد الگو (PatternId)</dt>
-    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code>' : 'خالی — الان SmartOTP با OTPSender=Auto می‌رود. شناسه الگو را از پنل در CASTING_SMS_OTP_PATTERN_ID بگذارید.' ?></dd>
+    <dd><?= $pattern_id !== '' ? '<code dir="ltr">' . casting_e($pattern_id) . '</code>' : 'خالی — کد تأیید با پیامک متنی از همان خط فرستنده ارسال می‌شود. اگر الگوی پنل دارید، شناسه را در CASTING_SMS_OTP_PATTERN_ID بگذارید.' ?></dd>
     <dt>HTTP GET</dt>
     <dd><?= !empty($http_set) ? '✓ نام کاربری/رمز پنل تنظیم شده' : '✗ تنظیم نشده — برای متد GET پنل، USERNAME و PASSWORD لازم است' ?></dd>
     <dt>مانده اعتبار</dt>
