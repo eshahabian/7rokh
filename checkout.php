@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_cancel'])) {
     }
 }
 
-// پرداخت — فقط وقتی درگاه آماده باشد (فعلاً off تا دریافت درگاه بانکی)
+// پرداخت — فقط وقتی درگاه sandbox یا live باشد
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_pay'])) {
     if (!$gateway_ready) {
         $error = 'درگاه بانکی هنوز فعال نشده است. فعلاً بعد از خلاصه سفارش پرداختی انجام نمی‌شود.';

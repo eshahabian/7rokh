@@ -58,7 +58,7 @@ casting_render_panel_start($page_title, 'membership');
       <a class="btn btn-ghost" href="transactions.php">تراکنش‌های مالی</a>
     </div>
   <?php else : ?>
-    <div class="flash flash-error">پرداخت ناموفق بود یا توسط کاربر لغو شد.</div>
+    <div class="flash flash-error"><?= $status === 'cancel' ? 'پرداخت لغو شد.' : 'پرداخت ناموفق بود یا توسط کاربر لغو شد.' ?></div>
     <ul class="info-list checkout-summary-list">
       <li><strong>وضعیت پرداخت:</strong> ناموفق</li>
       <li><strong>عنوان خدمت:</strong> <?= casting_e((string) $order['title']) ?></li>

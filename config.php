@@ -33,20 +33,6 @@ define('CASTING_EMPLOYER_ROLES', ['director', 'producer']);
 define('CASTING_PAYMENT_CARD', '6037-9971-0000-0000');
 define('CASTING_PAYMENT_HOLDER', '۷ رخ');
 
-/** حالت درگاه پرداخت: sandbox | live | off — تا دریافت درگاه بانکی، off بماند */
-if (!defined('CASTING_GATEWAY_MODE')) {
-    define('CASTING_GATEWAY_MODE', 'off');
-}
-if (!defined('CASTING_BEHPARDAKHT_TERMINAL_ID')) {
-    define('CASTING_BEHPARDAKHT_TERMINAL_ID', '');
-}
-if (!defined('CASTING_BEHPARDAKHT_USERNAME')) {
-    define('CASTING_BEHPARDAKHT_USERNAME', '');
-}
-if (!defined('CASTING_BEHPARDAKHT_PASSWORD')) {
-    define('CASTING_BEHPARDAKHT_PASSWORD', '');
-}
-
 /**
  * n8n — وقتی کسی ثبت‌نام کرد، JSON به این آدرس POST می‌شود.
  * خالی بگذارید = غیرفعال
@@ -82,9 +68,32 @@ define('CASTING_CONTACT_NOTIFY_EMAILS', [
     'eshahabian@gmail.com',
 ]);
 
-/** تنظیمات محلی (رمز SMTP و …) — در git نیست؛ باید قبل از defineهای SMTP لود شود */
+/** تنظیمات محلی (رمز SMTP، درگاه ملت، …) — در git نیست؛ باید قبل از defineهای حساس لود شود */
 if (file_exists(__DIR__ . '/config.local.php')) {
     require_once __DIR__ . '/config.local.php';
+}
+
+/**
+ * درگاه به‌پرداخت ملت — مشخصات ترمینال فقط در config.local.php
+ * sandbox = شبیه‌ساز داخلی | live = درگاه واقعی | off = پرداخت بسته
+ */
+if (!defined('CASTING_GATEWAY_MODE')) {
+    define('CASTING_GATEWAY_MODE', 'off');
+}
+if (!defined('CASTING_BEHPARDAKHT_TERMINAL_ID')) {
+    define('CASTING_BEHPARDAKHT_TERMINAL_ID', '');
+}
+if (!defined('CASTING_BEHPARDAKHT_USERNAME')) {
+    define('CASTING_BEHPARDAKHT_USERNAME', '');
+}
+if (!defined('CASTING_BEHPARDAKHT_PASSWORD')) {
+    define('CASTING_BEHPARDAKHT_PASSWORD', '');
+}
+if (!defined('CASTING_MELLAT_WSDL')) {
+    define('CASTING_MELLAT_WSDL', 'https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl');
+}
+if (!defined('CASTING_MELLAT_PAY_URL')) {
+    define('CASTING_MELLAT_PAY_URL', 'https://bpm.shaparak.ir/pgwchannel/startpay.mellat');
 }
 
 /**

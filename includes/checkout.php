@@ -366,6 +366,61 @@ function casting_get_order_by_id(int $id): array
     return casting_order_from_row(is_array($row) ? $row : null);
 }
 
+function casting_get_order_by_gateway_ref(string $ref): array
+{
+    casting_orders_ensure_table();
+    $ref = sanitize_text_field($ref);
+    if ($ref === '') {
+        return [];
+    }
+    global $wpdb;
+    $table = casting_orders_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $row = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$table} WHERE gateway_ref = %s ORDER BY id DESC LIMIT 1",
+        $ref
+    ), ARRAY_A);
+
+    return casting_order_from_row(is_array($row) ? $row : null);
+}
+
+function casting_get_order_by_gateway_trace(string $trace): array
+{
+    casting_orders_ensure_table();
+    $trace = sanitize_text_field($trace);
+    if ($trace === '') {
+        return [];
+    }
+    global $wpdb;
+    $table = casting_orders_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $row = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$table} WHERE gateway_trace = %s ORDER BY id DESC LIMIT 1",
+        $trace
+    ), ARRAY_A);
+
+    return casting_order_from_row(is_array($row) ? $row : null);
+}
+
+/**
+ * @param array<string, mixed> $patch
+ */
+function casting_order_merge_meta(int $order_id, array $patch): bool
+{
+    $order = casting_get_order_by_id($order_id);
+    if ($order === [] || $patch === []) {
+        return false;
+    }
+    $meta = is_array($order['meta'] ?? null) ? $order['meta'] : [];
+    foreach ($patch as $key => $value) {
+        $meta[(string) $key] = $value;
+    }
+
+    return casting_order_update($order_id, [
+        'meta_json' => wp_json_encode($meta, JSON_UNESCAPED_UNICODE),
+    ]);
+}
+
 /**
  * ساخت مشخصات سفارش از سرویس/پلن
  *

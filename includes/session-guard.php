@@ -153,6 +153,16 @@ function casting_session_idle_message(): string
     return 'به‌دلیل ۵ دقیقه عدم فعالیت، از حساب خارج شدید. لطفاً دوباره وارد شوید.';
 }
 
+/** بازگشت از درگاه بانک ممکن است بیشتر از مهلت بی‌فعالیتی طول بکشد. */
+function casting_session_is_payment_return(): bool
+{
+    $script = strtolower(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '')));
+
+    return str_ends_with($script, '/checkout-callback.php')
+        || str_ends_with($script, '/checkout-result.php')
+        || str_ends_with($script, '/checkout-gateway.php');
+}
+
 /**
  * بررسی اعتبار نشست فعلی — در صورت نامعتبر بودن، کاربر را خارج می‌کند.
  *
@@ -170,6 +180,7 @@ function casting_session_validate_current(int $user_id): array
     $local_token = (string) ($_SESSION['casting_session_token'] ?? '');
     $local_last = (int) ($_SESSION['casting_last_active'] ?? 0);
     $active = casting_session_get_active($user_id);
+    $skip_idle = casting_session_is_payment_return();
 
     // نشست قدیمی بدون توکن: یک‌بار صادر کن تا قطع نشود
     if ($local_token === '' && !casting_session_is_active_record($active)) {
@@ -182,7 +193,7 @@ function casting_session_validate_current(int $user_id): array
         return ['ok' => false, 'reason' => 'replaced'];
     }
 
-    if ($local_last > 0 && (time() - $local_last) > casting_session_idle_seconds()) {
+    if (!$skip_idle && $local_last > 0 && (time() - $local_last) > casting_session_idle_seconds()) {
         return ['ok' => false, 'reason' => 'idle'];
     }
 
@@ -190,7 +201,7 @@ function casting_session_validate_current(int $user_id): array
         return ['ok' => false, 'reason' => 'replaced'];
     }
 
-    if (!casting_session_is_active_record($active)) {
+    if (!$skip_idle && !casting_session_is_active_record($active)) {
         return ['ok' => false, 'reason' => 'idle'];
     }
 

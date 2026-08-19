@@ -2,8 +2,7 @@
 declare(strict_types=1);
 
 /**
- * شبیه‌سازی درگاه بانکی (sandbox) — برای تست فرآیند و ارائه به به‌پرداخت
- * در حالت live با درگاه واقعی جایگزین می‌شود.
+ * انتقال به درگاه: live = POST به ملت | sandbox = شبیه‌ساز
  */
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/checkout.php';
@@ -14,7 +13,6 @@ casting_nocache();
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 
-// تا فعال‌سازی درگاه واقعی، شبیه‌سازی پرداخت بسته است
 if (casting_gateway_mode() === 'off') {
     $back = sanitize_text_field((string) ($_GET['order'] ?? ''));
     casting_set_flash('error', 'درگاه بانکی هنوز فعال نشده است.');
@@ -34,6 +32,49 @@ if ((string) ($order['status'] ?? '') === 'paid') {
     casting_redirect('checkout-result.php?order=' . rawurlencode($order_code) . '&status=success');
 }
 
+if (casting_gateway_mode() === 'live') {
+    $ref_id = (string) ($order['gateway_ref'] ?? '');
+    if ($ref_id === '' || !in_array((string) ($order['status'] ?? ''), ['awaiting_payment', 'pending', 'failed'], true)) {
+        casting_set_flash('error', 'برای این سفارش درخواست درگاه معتبر نیست. از صفحه پرداخت دوباره اقدام کنید.');
+        casting_redirect('checkout.php?order=' . rawurlencode($order_code));
+    }
+
+    $pay_url = casting_mellat_pay_url();
+    $mobile = casting_mellat_mobile_no($user_id);
+    header('Content-Type: text/html; charset=utf-8');
+    ?>
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>انتقال به درگاه بانک ملت</title>
+  <style>
+    body { font-family: Tahoma, sans-serif; background: #111; color: #eee; text-align: center; padding: 3rem 1rem; }
+    button { font-size: 1rem; padding: .7rem 1.4rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <p>در حال انتقال به درگاه بانک ملت…</p>
+  <form id="mellat-pay" method="post" action="<?= casting_e($pay_url) ?>">
+    <input type="hidden" name="RefId" value="<?= casting_e($ref_id) ?>">
+    <?php if ($mobile !== '') : ?>
+      <input type="hidden" name="MobileNo" value="<?= casting_e($mobile) ?>">
+    <?php endif; ?>
+    <noscript>
+      <p>جاوااسکریپت غیرفعال است. برای ورود به درگاه دکمه زیر را بزنید.</p>
+      <button type="submit">ورود به درگاه بانک ملت</button>
+    </noscript>
+  </form>
+  <script>
+    document.getElementById('mellat-pay').submit();
+  </script>
+</body>
+</html>
+    <?php
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_gateway_sandbox_' . $order_code)) {
         casting_set_flash('error', 'درخواست نامعتبر است.');
@@ -50,7 +91,7 @@ casting_render_panel_start('درگاه پرداخت', 'membership');
 ?>
 <section class="dash-card checkout-card checkout-gateway-card">
   <h1>انتقال به درگاه بانکی</h1>
-  <p class="meta">حالت آزمایشی درگاه — برای بررسی فرآیند پرداخت و ارائه به شرکت به‌پرداخت. در نسخه نهایی به درگاه بانکی متصل می‌شود.</p>
+  <p class="meta">حالت آزمایشی درگاه — پرداخت واقعی انجام نمی‌شود.</p>
 
   <ul class="info-list">
     <li><strong>شماره سفارش:</strong> <?= casting_e((string) $order['order_code']) ?></li>

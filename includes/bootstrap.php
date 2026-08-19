@@ -34,19 +34,36 @@ if (!function_exists('str_contains')) {
     }
 }
 
+if (!function_exists('str_ends_with')) {
+    function str_ends_with(string $haystack, string $needle): bool
+    {
+        if ($needle === '') {
+            return true;
+        }
+
+        return substr($haystack, -strlen($needle)) === $needle;
+    }
+}
+
 require_once __DIR__ . '/portal-auth.php';
 require_once __DIR__ . '/session-guard.php';
 
 if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path'     => casting_portal_cookie_path(),
-        'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
-    session_name('casting_portal_sid');
-    session_start();
+    $script_name = strtolower(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '')));
+    $is_bank_callback = str_ends_with($script_name, '/checkout-callback.php');
+    $has_portal_session = !empty($_COOKIE['casting_portal_sid']);
+    // POST بانک کراس‌سایت است و کوکی SameSite=Lax را نمی‌فرستد؛ نشست خالی جدید نباید لاگین را خراب کند.
+    if (!($is_bank_callback && !$has_portal_session)) {
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path'     => casting_portal_cookie_path(),
+            'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+        session_name('casting_portal_sid');
+        session_start();
+    }
 }
 
 casting_bootstrap_portal_auth();
@@ -379,12 +396,15 @@ function casting_get_user_role(int $user_id): string
 
 function casting_set_flash(string $type, string $message): void
 {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return;
+    }
     $_SESSION['casting_flash'] = ['type' => $type, 'message' => $message];
 }
 
 function casting_get_flash(): ?array
 {
-    if (empty($_SESSION['casting_flash'])) {
+    if (session_status() !== PHP_SESSION_ACTIVE || empty($_SESSION['casting_flash'])) {
         return null;
     }
     $flash = $_SESSION['casting_flash'];
