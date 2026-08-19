@@ -78,7 +78,7 @@ if (file_exists(__DIR__ . '/config.local.php')) {
  * sandbox = شبیه‌ساز داخلی | live = درگاه واقعی | off = پرداخت بسته
  */
 if (!defined('CASTING_GATEWAY_MODE')) {
-    define('CASTING_GATEWAY_MODE', 'off');
+    define('CASTING_GATEWAY_MODE', 'live');
 }
 if (!defined('CASTING_BEHPARDAKHT_TERMINAL_ID')) {
     define('CASTING_BEHPARDAKHT_TERMINAL_ID', '');

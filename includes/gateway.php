@@ -8,14 +8,116 @@ declare(strict_types=1);
 
 function casting_gateway_mode(): string
 {
-    if (defined('CASTING_GATEWAY_MODE')) {
-        $mode = strtolower(trim((string) CASTING_GATEWAY_MODE));
-        if (in_array($mode, ['sandbox', 'live', 'off'], true)) {
-            return $mode;
+    $mode = '';
+    if (function_exists('get_option')) {
+        $from_opt = strtolower(trim((string) get_option('casting_gateway_mode', '')));
+        if (in_array($from_opt, ['sandbox', 'live', 'off'], true)) {
+            $mode = $from_opt;
         }
     }
+    if ($mode === '' && defined('CASTING_GATEWAY_MODE')) {
+        $raw = strtolower(trim((string) CASTING_GATEWAY_MODE));
+        if (in_array($raw, ['sandbox', 'live', 'off'], true)) {
+            $mode = $raw;
+        }
+    }
+    if ($mode === '') {
+        $mode = 'live';
+    }
+    if ($mode === 'off' && casting_behpardakht_has_credentials()) {
+        return 'live';
+    }
 
-    return 'off';
+    return $mode;
+}
+
+function casting_behpardakht_setting(string $option_key, string $constant_name): string
+{
+    if (function_exists('get_option')) {
+        $from_opt = trim((string) get_option($option_key, ''));
+        if ($from_opt !== '') {
+            return $from_opt;
+        }
+    }
+    if (defined($constant_name)) {
+        return trim((string) constant($constant_name));
+    }
+
+    return '';
+}
+
+function casting_behpardakht_terminal_id(): string
+{
+    return casting_behpardakht_setting('casting_behpardakht_terminal_id', 'CASTING_BEHPARDAKHT_TERMINAL_ID');
+}
+
+function casting_behpardakht_username(): string
+{
+    return casting_behpardakht_setting('casting_behpardakht_username', 'CASTING_BEHPARDAKHT_USERNAME');
+}
+
+function casting_behpardakht_password(): string
+{
+    return casting_behpardakht_setting('casting_behpardakht_password', 'CASTING_BEHPARDAKHT_PASSWORD');
+}
+
+function casting_behpardakht_has_credentials(): bool
+{
+    return casting_behpardakht_terminal_id() !== ''
+        && casting_behpardakht_username() !== ''
+        && casting_behpardakht_password() !== '';
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_gateway_store_credentials(string $terminal, string $username, string $password): array
+{
+    $terminal = trim($terminal);
+    $username = trim($username);
+    $password = trim($password);
+    if ($terminal === '' || $username === '' || $password === '') {
+        return ['ok' => false, 'error' => 'شماره پایانه، نام کاربری و رمز درگاه را کامل وارد کنید.'];
+    }
+    if (!function_exists('update_option')) {
+        return ['ok' => false, 'error' => 'ذخیره در وردپرس ممکن نیست.'];
+    }
+
+    update_option('casting_gateway_mode', 'live', false);
+    update_option('casting_behpardakht_terminal_id', $terminal, false);
+    update_option('casting_behpardakht_username', $username, false);
+    update_option('casting_behpardakht_password', $password, false);
+
+    $path = function_exists('casting_local_config_path')
+        ? casting_local_config_path()
+        : (dirname(__DIR__) . '/config.local.php');
+    if (is_string($path) && $path !== '' && (is_writable($path) || (!file_exists($path) && is_writable(dirname($path))))) {
+        $pairs = [
+            'CASTING_GATEWAY_MODE'           => 'live',
+            'CASTING_BEHPARDAKHT_TERMINAL_ID' => $terminal,
+            'CASTING_BEHPARDAKHT_USERNAME'   => $username,
+            'CASTING_BEHPARDAKHT_PASSWORD'   => $password,
+        ];
+        $src = is_readable($path) ? (string) file_get_contents($path) : "<?php\n";
+        if (!str_contains($src, '<?php')) {
+            $src = "<?php\n" . $src;
+        }
+        $escape = static function (string $value): string {
+            return str_replace(['\\', "'"], ['\\\\', "\\'"], $value);
+        };
+        foreach ($pairs as $name => $value) {
+            $line = "define('" . $name . "', '" . $escape($value) . "');";
+            $pattern = "/define\s*\(\s*['\"]" . preg_quote($name, '/') . "['\"]\s*,\s*['\"][^'\"]*['\"]\s*\)\s*;/";
+            if (preg_match($pattern, $src)) {
+                $src = preg_replace($pattern, $line, $src, 1) ?? $src;
+            } else {
+                $src = rtrim($src) . "\n" . $line . "\n";
+            }
+        }
+        @file_put_contents($path, $src, LOCK_EX);
+    }
+
+    return ['ok' => true, 'error' => ''];
 }
 
 /**
@@ -301,11 +403,11 @@ function casting_gateway_handle_mellat_callback(array $payload): array
  */
 function casting_mellat_start_payment(array $order): array
 {
-    $terminal = defined('CASTING_BEHPARDAKHT_TERMINAL_ID') ? trim((string) CASTING_BEHPARDAKHT_TERMINAL_ID) : '';
-    $user = defined('CASTING_BEHPARDAKHT_USERNAME') ? trim((string) CASTING_BEHPARDAKHT_USERNAME) : '';
-    $pass = defined('CASTING_BEHPARDAKHT_PASSWORD') ? (string) CASTING_BEHPARDAKHT_PASSWORD : '';
+    $terminal = casting_behpardakht_terminal_id();
+    $user = casting_behpardakht_username();
+    $pass = casting_behpardakht_password();
     if ($terminal === '' || $user === '' || $pass === '') {
-        return ['ok' => false, 'error' => 'مشخصات درگاه بانکی روی سرور تنظیم نشده است.'];
+        return ['ok' => false, 'error' => 'مشخصات درگاه بانکی روی سرور تنظیم نشده است. از منوی ادمین «درگاه ملت» ذخیره کنید.'];
     }
     if (!class_exists('SoapClient')) {
         return ['ok' => false, 'error' => 'افزونه PHP SOAP روی سرور فعال نیست. از میزبان بخواهید php-soap را نصب کند.'];
@@ -477,9 +579,9 @@ function casting_mellat_verify_and_settle(int $order_id, int $sale_reference_id)
 function casting_mellat_auth_params(): array
 {
     return [
-        'terminalId'   => (int) CASTING_BEHPARDAKHT_TERMINAL_ID,
-        'userName'     => (string) CASTING_BEHPARDAKHT_USERNAME,
-        'userPassword' => (string) CASTING_BEHPARDAKHT_PASSWORD,
+        'terminalId'   => (int) casting_behpardakht_terminal_id(),
+        'userName'     => casting_behpardakht_username(),
+        'userPassword' => casting_behpardakht_password(),
     ];
 }
 
