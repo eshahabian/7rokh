@@ -1334,6 +1334,11 @@ fieldset.field legend {
   z-index: 20;
 }
 
+.panel-content > .flash {
+  width: min(720px, 100%);
+  margin: 0 0 1rem;
+}
+
 .flash-error {
   background: rgba(224, 122, 106, 0.15);
   border: 1px solid rgba(224, 122, 106, 0.4);
