@@ -30,8 +30,14 @@ function casting_read_local_smtp_pass(): string
         return '';
     }
 
-    if (preg_match("/define\s*\(\s*['\"]CASTING_SMTP_PASS['\"]\s*,\s*['\"]([^'\"]*)['\"]\s*\)/", $src, $m)) {
-        return (string) $m[1];
+    if (!preg_match_all("/define\s*\(\s*['\"]CASTING_SMTP_PASS['\"]\s*,\s*['\"]([^'\"]*)['\"]\s*\)/", $src, $matches)) {
+        return '';
+    }
+    foreach (array_reverse($matches[1]) as $candidate) {
+        $candidate = trim((string) $candidate);
+        if ($candidate !== '') {
+            return $candidate;
+        }
     }
 
     return '';
