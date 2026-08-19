@@ -304,21 +304,82 @@ function casting_sms_otp_sender(): string
     return $raw;
 }
 
+function casting_sms_ascii_digits(string $value): string
+{
+    $map = [
+        '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+        '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+        '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+        '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+    ];
+
+    return preg_replace('/\D+/', '', strtr($value, $map)) ?? '';
+}
+
+/**
+ * خط پنل: 9998624065 — نه 09998624065 (با صفر اضافه شبیه موبایل ۰۹ می‌شود).
+ */
+function casting_sms_normalize_from(string $raw): string
+{
+    $raw = trim($raw);
+    if ($raw === '' || strcasecmp($raw, 'Auto') === 0) {
+        return '';
+    }
+    $digits = casting_sms_ascii_digits($raw);
+    if ($digits === '') {
+        return '';
+    }
+    if (preg_match('/^0(999\d{7,}|1000\d+|2000\d+|3000\d+|5000\d+)$/', $digits, $m)) {
+        return $m[1];
+    }
+
+    return $digits;
+}
+
+function casting_sms_is_panel_line(string $from): bool
+{
+    $from = casting_sms_normalize_from($from);
+    if ($from === '' || preg_match('/^09\d{9}$/', $from)) {
+        return false;
+    }
+
+    return (bool) preg_match('/^\d{5,14}$/', $from);
+}
+
+/**
+ * @return list<string>
+ */
+function casting_sms_from_candidates(): array
+{
+    $raw = [
+        defined('CASTING_SMS_FROM') ? (string) CASTING_SMS_FROM : '',
+        (string) (casting_sms_wp_plugin_config()['from'] ?? ''),
+        '9998624065',
+    ];
+    $out = [];
+    foreach ($raw as $item) {
+        $line = casting_sms_normalize_from($item);
+        if (!casting_sms_is_panel_line($line) || in_array($line, $out, true)) {
+            continue;
+        }
+        $out[] = $line;
+    }
+    if ($out === []) {
+        $out[] = '9998624065';
+    }
+
+    return $out;
+}
+
 /**
  * خط From برای POST /SMS/Send (پیامک متنی و ارسال با PatternId).
  * Auto و موبایل شخصی ۰۹ اینجا مجاز نیست.
  */
 function casting_sms_line_number(): string
 {
-    $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
-    if ($from === '' || strcasecmp($from, 'Auto') === 0 || preg_match('/^09\d{9}$/', $from)) {
-        $from = trim((string) (casting_sms_wp_plugin_config()['from'] ?? ''));
-    }
-    if ($from !== '' && strcasecmp($from, 'Auto') !== 0 && !preg_match('/^09\d{9}$/', $from)) {
-        return $from;
-    }
+    $lines = casting_sms_from_candidates();
 
-    return '9998624065';
+    return $lines[0] ?? '9998624065';
 }
 
 /**
@@ -574,8 +635,8 @@ function casting_sms_error_message(int $code): string
         0  => 'ارسال با موفقیت انجام شد.',
         1  => 'کلید API یا نام کاربری/رمز نامعتبر است.',
         2  => 'حساب پیامک مسدود شده است.',
-        3  => 'شماره فرستنده نامعتبر است.',
-        4  => 'محدودیت ارسال روزانه.',
+        3  => 'شماره فرستنده نامعتبر است. در پنل WebOne خط را از «خطوط» کپی کنید (مثلاً 9998624065 بدون صفر اضافه). اگر زیاد تست کرده‌اید، ممکن است محدودیت روزانه باشد.',
+        4  => 'محدودیت ارسال روزانه، یا شماره فرستنده نامعتبر است. کمی بعد دوباره تلاش کنید یا خط From پنل را چک کنید.',
         5  => 'تعداد گیرندگان بیش از حد مجاز است (حداکثر ۱۰۰).',
         6  => 'خط فرستنده غیرفعال است.',
         7  => 'متن پیامک شامل کلمات فیلترشده است.',
@@ -600,12 +661,7 @@ function casting_sms_error_message(int $code): string
 
 function casting_sms_otp_pattern_id(): string
 {
-    $id = defined('CASTING_SMS_OTP_PATTERN_ID') ? trim((string) CASTING_SMS_OTP_PATTERN_ID) : '';
-    if ($id !== '') {
-        return $id;
-    }
-
-    return trim((string) (casting_sms_wp_plugin_config()['pattern_id'] ?? ''));
+    return defined('CASTING_SMS_OTP_PATTERN_ID') ? trim((string) CASTING_SMS_OTP_PATTERN_ID) : '';
 }
 
 /** الگوی Otino/WebOne: یک بخش ثابت + یک متغیر {x} — پیش‌فرض همان مثال پنل */
@@ -1021,17 +1077,28 @@ function casting_sms_send_text(string $mobile, string $message): array
         return ['ok' => false, 'error' => 'متن پیامک خالی است.'];
     }
 
-    // ارسال تکی طبق مستند: ToNumber — گروهی: ToNumbers
-    $result = casting_sms_request('SMS/Send', [
-        'From'     => $from,
-        'ToNumber' => $mobile,
-        'Content'  => $message,
-    ]);
+    $last = ['ok' => false, 'error' => 'ارسال پیامک ناموفق بود.', 'code' => -1];
+    foreach (casting_sms_from_candidates() as $from) {
+        $result = casting_sms_request('SMS/Send', [
+            'From'     => $from,
+            'ToNumber' => $mobile,
+            'Content'  => $message,
+        ]);
+        $code = (int) ($result['code'] ?? 0);
+        $last = [
+            'ok'     => $result['ok'],
+            'error'  => $result['error'],
+            'ref_id' => (string) ($result['ref_id'] ?? ''),
+            'code'   => $code,
+        ];
+        if (!empty($result['ok'])) {
+            return $last;
+        }
+        // ۳ فرستنده نامعتبر، ۶ خط غیرفعال — خط بعدی را امتحان کن
+        if ($code !== 3 && $code !== 6) {
+            return $last;
+        }
+    }
 
-    return [
-        'ok'     => $result['ok'],
-        'error'  => $result['error'],
-        'ref_id' => (string) ($result['ref_id'] ?? ''),
-        'code'   => (int) ($result['code'] ?? 0),
-    ];
+    return $last;
 }

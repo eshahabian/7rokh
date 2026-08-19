@@ -125,7 +125,7 @@ casting_render_flash();
 ?>
 <section class="dash-card panel-wide">
   <h1>تست پیامک WebOne</h1>
-  <p class="lede">طبق RestDocument: OTP با <code>PatternId</code> متن نمی‌خواهد؛ مقدار کد در <code>PatternParameterData.ParameterValue</code> می‌رود. بدون PatternId از SmartOTP با <code>OTPSender=Auto</code> استفاده می‌شود.</p>
+  <p class="lede">کد تأیید بدون PatternId با همان <code>POST /SMS/Send</code> و خط From پنل می‌رود (نه SmartOTP). اگر PatternId داشته باشید، همان مسیر با الگوی پنل استفاده می‌شود.</p>
   <p class="admin-sms-pattern" dir="rtl">
     <strong>متن الگو:</strong>
     <?= casting_e($otp_template !== '' ? $otp_template : 'کد ورود شما {x}') ?>
@@ -168,7 +168,15 @@ casting_render_flash();
     <dt>CASTING_SMS_API_KEY</dt>
     <dd><?= $api_set ? '✓ تنظیم شده' : '✗ خالی است — روی سرور در config.local.php بگذارید' ?></dd>
     <dt>خط فرستنده پنل (From)</dt>
-    <dd><?= $from !== '' ? '<code dir="ltr">' . casting_e($from) . '</code>' : '✗ خالی' ?></dd>
+    <dd><?php
+    $from_list = function_exists('casting_sms_from_candidates') ? casting_sms_from_candidates() : [$from];
+    if ($from_list === []) {
+        echo '✗ خالی';
+    } else {
+        echo '<code dir="ltr">' . casting_e(implode(' → ', $from_list)) . '</code>';
+        echo ' <span class="meta">(اگر خط اول رد شود، بعدی امتحان می‌شود)</span>';
+    }
+    ?></dd>
     <dt>روش OTP</dt>
     <dd><?php if ($otp_method === 'pattern') : ?>
       الگو با PatternId — <code dir="ltr">POST /SMS/Send</code>
