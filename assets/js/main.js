@@ -3561,11 +3561,19 @@
         }
         if (data.locked) {
           renderMessages([]);
+          if (compose) compose.hidden = true;
           if (errEl) {
             errEl.hidden = false;
-            errEl.textContent = "برای مشاهده این گفتگو عضویت ویژه لازم است.";
+            errEl.innerHTML = "";
+            errEl.textContent = data.error || "برای مشاهده و پاسخ، عضویت ویژه لازم است.";
+            const cartUrl = data.cart_url || "cart.php";
+            const cartLink = document.createElement("a");
+            cartLink.href = cartUrl;
+            cartLink.className = "btn btn-primary btn-sm";
+            cartLink.textContent = "خرید اشتراک";
+            errEl.appendChild(document.createElement("br"));
+            errEl.appendChild(cartLink);
           }
-          if (compose) compose.hidden = true;
           return;
         }
         if (compose) {

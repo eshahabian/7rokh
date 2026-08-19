@@ -55,6 +55,14 @@ if ($action === 'thread') {
     }
 
     $blocked = function_exists('casting_users_block_each_other') && casting_users_block_each_other($my_id, $peer_id);
+    $error = '';
+    if ($locked) {
+        $error = casting_dm_premium_required_notice_message();
+    } elseif (empty($allow['ok'])) {
+        $error = (string) ($allow['error'] ?? '');
+    } elseif ($blocked) {
+        $error = 'به‌دلیل بلاک امکان پیام نیست.';
+    }
     echo wp_json_encode([
         'ok'      => true,
         'peer'    => [
@@ -64,9 +72,10 @@ if ($action === 'thread') {
             'avatar' => $blocked ? '' : casting_chat_peer_avatar_url($peer_id),
         ],
         'locked'  => $locked,
-        'can_send'=> !empty($allow['ok']) && !$blocked,
-        'error'   => empty($allow['ok']) ? (string) ($allow['error'] ?? '') : ($blocked ? 'به‌دلیل بلاک امکان پیام نیست.' : ''),
-        'messages'=> $messages,
+        'can_send'=> !$locked && !empty($allow['ok']) && !$blocked,
+        'error'   => $error,
+        'cart_url'=> $locked ? casting_url('cart.php') : '',
+        'messages'=> $locked ? [] : $messages,
     ]);
     exit;
 }

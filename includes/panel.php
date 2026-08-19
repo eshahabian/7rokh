@@ -2229,6 +2229,9 @@ function casting_render_messages_dock(): void
         if ($active === 'messages') {
             return;
         }
+        if (function_exists('wp_is_mobile') && wp_is_mobile()) {
+            return;
+        }
         if (!function_exists('casting_dm_conversations')) {
             require_once __DIR__ . '/chat.php';
         }
@@ -2303,7 +2306,7 @@ function casting_render_messages_dock(): void
               <li data-dock-user-row data-dock-user-name="<?= casting_e(function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name)) ?>">
                 <button
                   type="button"
-                  class="messages-dock-row<?= $unread > 0 ? ' is-unread' : '' ?>"
+                  class="messages-dock-row<?= $unread > 0 ? ' is-unread' : '' ?><?= !empty($conv['locked']) ? ' is-locked' : '' ?>"
                   data-messages-dock-open="<?= $peer ?>"
                   data-peer-name="<?= casting_e($name) ?>"
                   data-peer-role="<?= casting_e($role) ?>"

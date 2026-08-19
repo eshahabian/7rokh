@@ -139,33 +139,16 @@ function casting_dm_premium_notice_recently_sent(int $recipient_id): bool
     return (int) $found > 0;
 }
 
+function casting_dm_locked_preview_message(bool $has_unread = false): string
+{
+    return $has_unread
+        ? 'پیام جدید — برای مشاهده عضویت ویژه لازم است'
+        : 'برای مشاهده و پاسخ، عضویت ویژه لازم است';
+}
+
 function casting_dm_maybe_send_premium_required_notice(int $recipient_id, int $sender_id): void
 {
-    if ($recipient_id <= 0 || $sender_id <= 0 || $recipient_id === $sender_id) {
-        return;
-    }
-    if (!casting_user_requires_premium_for_dm($recipient_id)) {
-        return;
-    }
-    if (casting_dm_is_support_peer($sender_id)) {
-        return;
-    }
-    if (casting_dm_premium_notice_recently_sent($recipient_id)) {
-        return;
-    }
-
-    $support_id = casting_dm_support_sender_id();
-    if ($support_id <= 0 || $support_id === $recipient_id) {
-        return;
-    }
-
-    casting_dm_insert_raw(
-        $support_id,
-        $recipient_id,
-        casting_dm_premium_required_notice_message(),
-        '',
-        false
-    );
+    // دیگر به‌صورت پیام چت ارسال نمی‌شود تا کاربر بدون اشتراک، متن پیام دریافت نکند.
 }
 
 /**
@@ -1176,17 +1159,17 @@ function casting_dm_conversations(int $user_id): array
             continue;
         }
         $locked = casting_dm_thread_locked_for_user($user_id, $peer);
-        $last_message = (string) $row['message'];
-        if ($locked && (int) ($unread_map[$peer] ?? 0) > 0) {
-            $last_message = 'پیام جدید — برای مشاهده عضویت ویژه لازم است';
-        }
+        $unread = (int) ($unread_map[$peer] ?? 0);
+        $last_message = $locked
+            ? casting_dm_locked_preview_message($unread > 0)
+            : (string) $row['message'];
         $out[] = [
             'peer_id'      => $peer,
             'name'         => casting_dm_peer_display_name($peer),
             'role'         => casting_get_user_role($peer),
             'last_message' => $last_message,
             'last_at'      => (string) $row['created_at'],
-            'unread'       => (int) ($unread_map[$peer] ?? 0),
+            'unread'       => $unread,
             'avatar'       => casting_chat_peer_avatar_url($peer),
             'locked'       => $locked,
         ];
