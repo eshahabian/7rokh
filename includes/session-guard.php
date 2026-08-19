@@ -157,10 +157,20 @@ function casting_session_idle_message(): string
 function casting_session_is_payment_return(): bool
 {
     $script = strtolower(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '')));
-
-    return str_ends_with($script, '/checkout-callback.php')
+    if (str_ends_with($script, '/checkout-callback.php')
         || str_ends_with($script, '/checkout-result.php')
-        || str_ends_with($script, '/checkout-gateway.php');
+        || str_ends_with($script, '/checkout-gateway.php')) {
+        return true;
+    }
+    if (str_ends_with($script, '/cart.php')) {
+        $ref = (string) ($_POST['RefId'] ?? $_GET['RefId'] ?? $_POST['refId'] ?? $_GET['refId'] ?? '');
+        $res = (string) ($_POST['ResCode'] ?? $_GET['ResCode'] ?? $_POST['resCode'] ?? $_GET['resCode'] ?? '');
+        $sale = (string) ($_POST['SaleOrderId'] ?? $_GET['SaleOrderId'] ?? '');
+
+        return $ref !== '' && ($res !== '' || $sale !== '');
+    }
+
+    return false;
 }
 
 /**

@@ -95,6 +95,10 @@ if (!defined('CASTING_MELLAT_WSDL')) {
 if (!defined('CASTING_MELLAT_PAY_URL')) {
     define('CASTING_MELLAT_PAY_URL', 'https://bpm.shaparak.ir/pgwchannel/startpay.mellat');
 }
+/** آدرس ثبت‌شده در به‌پرداخت (درخواست ۸۶۹۰) */
+if (!defined('CASTING_MELLAT_CALLBACK_URL')) {
+    define('CASTING_MELLAT_CALLBACK_URL', 'https://7rokh.ir/casting-portal/cart.php');
+}
 
 /**
  * SMTP — برای ارسال ایمیل (تماس با ما، بازیابی رمز، …)

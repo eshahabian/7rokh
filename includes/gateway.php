@@ -205,6 +205,36 @@ function casting_gateway_complete_payment(string $order_code, string $token, boo
     return ['ok' => true, 'error' => '', 'order' => $order];
 }
 
+function casting_request_is_mellat_callback(): bool
+{
+    $payload = array_merge($_GET, $_POST);
+    $ref = trim((string) ($payload['RefId'] ?? $payload['refId'] ?? ''));
+    $res = trim((string) ($payload['ResCode'] ?? $payload['resCode'] ?? ''));
+    $sale = trim((string) ($payload['SaleOrderId'] ?? $payload['saleOrderId'] ?? ''));
+
+    return $ref !== '' && ($res !== '' || $sale !== '');
+}
+
+function casting_gateway_finish_mellat_callback(): void
+{
+    $result = casting_gateway_handle_mellat_callback(array_merge($_GET, $_POST));
+
+    if (!empty($result['error']) && empty($result['ok']) && empty($result['cancelled'])) {
+        error_log('[casting-mellat] callback: ' . (string) $result['error']);
+    }
+
+    $redirect = (string) ($result['redirect'] ?? 'membership.php');
+    if (!empty($result['ok'])) {
+        casting_set_flash('success', 'پرداخت شما با موفقیت انجام شد.');
+    } elseif (!empty($result['cancelled'])) {
+        casting_set_flash('error', 'پرداخت لغو شد.');
+    } else {
+        casting_set_flash('error', (string) ($result['error'] !== '' ? $result['error'] : 'پرداخت ناموفق بود.'));
+    }
+
+    casting_redirect($redirect);
+}
+
 /**
  * بازگشت بانک ملت (بدون نیاز به ورود)
  *
@@ -475,7 +505,7 @@ function casting_mellat_callback_url(): string
     }
     $origin = rtrim((string) CASTING_MAIN_SITE_URL, '/');
 
-    return $origin . '/casting-portal/checkout-callback.php';
+    return $origin . '/casting-portal/cart.php';
 }
 
 function casting_mellat_pay_url(): string
