@@ -69,7 +69,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$api_set = defined('CASTING_SMS_API_KEY') && trim((string) CASTING_SMS_API_KEY) !== '';
+$api_set = casting_sms_api_key() !== '';
+$wp_sms = [];
+try {
+    $wp_sms = function_exists('casting_sms_wp_plugin_config') ? casting_sms_wp_plugin_config() : [];
+} catch (Throwable $e) {
+    $wp_sms = ['plugins' => [], 'option_keys' => []];
+    $error = $error !== '' ? $error : ('خواندن تنظیمات افزونه پیامک ناموفق بود: ' . $e->getMessage());
+}
 $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
 $otp_sender = '';
 $api_base = '';
@@ -128,6 +135,30 @@ casting_render_flash();
   </p>
 
   <dl class="admin-mail-status">
+    <dt>افزونه پیامک وردپرس</dt>
+    <dd><?php
+    $plugin_list = is_array($wp_sms['plugins'] ?? null) ? $wp_sms['plugins'] : [];
+    if ($plugin_list === []) {
+        echo 'افزونه فعالی با نام sms/webone در wp-content/plugins پیدا نشد.';
+    } else {
+        echo '<code dir="ltr">' . casting_e(implode(', ', $plugin_list)) . '</code>';
+    }
+    ?></dd>
+    <dt>درگاه افزونه</dt>
+    <dd><?= ($wp_sms['gateway'] ?? '') !== '' ? '<code dir="ltr">' . casting_e((string) $wp_sms['gateway']) . '</code>' : '—' ?></dd>
+    <dt>نام کاربری افزونه</dt>
+    <dd><?= ($wp_sms['username'] ?? '') !== '' ? '<code dir="ltr">' . casting_e(casting_sms_mask_secret((string) $wp_sms['username'])) . '</code>' : 'پیدا نشد' ?></dd>
+    <dt>رمز افزونه</dt>
+    <dd><?= ($wp_sms['password'] ?? '') !== '' ? '✓ خوانده شد (' . casting_e(casting_sms_mask_secret((string) $wp_sms['password'])) . ')' : 'پیدا نشد' ?></dd>
+    <dt>خط فرستنده افزونه</dt>
+    <dd><?= ($wp_sms['from'] ?? '') !== '' ? '<code dir="ltr">' . casting_e((string) $wp_sms['from']) . '</code>' : 'پیدا نشد' ?></dd>
+    <dt>کلید API افزونه</dt>
+    <dd><?= ($wp_sms['api_key'] ?? '') !== '' ? '✓ ' . casting_e(casting_sms_mask_secret((string) $wp_sms['api_key'])) : 'پیدا نشد' ?></dd>
+    <dt>گزینه‌های wp_options</dt>
+    <dd><?php
+    $opt_keys = is_array($wp_sms['option_keys'] ?? null) ? $wp_sms['option_keys'] : [];
+    echo $opt_keys !== [] ? '<code dir="ltr">' . casting_e(implode(', ', $opt_keys)) . '</code>' : '—';
+    ?></dd>
     <dt>API Base</dt>
     <dd><code dir="ltr"><?= casting_e($api_base) ?></code></dd>
     <dt>CASTING_SMS_API_KEY</dt>

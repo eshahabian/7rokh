@@ -9,13 +9,248 @@ declare(strict_types=1);
  * هدر الزامی: X-API-KEY
  */
 
+/**
+ * @return array{
+ *   plugin:string,
+ *   plugins:list<string>,
+ *   gateway:string,
+ *   username:string,
+ *   password:string,
+ *   from:string,
+ *   api_key:string,
+ *   option_keys:list<string>
+ * }
+ */
+function casting_sms_wp_plugin_config(): array
+{
+    static $cached = null;
+    if (is_array($cached)) {
+        return $cached;
+    }
+
+    $out = [
+        'plugin'      => '',
+        'plugins'     => [],
+        'gateway'     => '',
+        'username'    => '',
+        'password'    => '',
+        'from'        => '',
+        'api_key'     => '',
+        'option_keys' => [],
+    ];
+    if (!function_exists('get_option')) {
+        $cached = $out;
+
+        return $cached;
+    }
+
+    $plugin_dirs = [];
+    $plugin_root = defined('WP_PLUGIN_DIR') ? (string) WP_PLUGIN_DIR : '';
+    if ($plugin_root !== '' && is_dir($plugin_root)) {
+        $scan = @scandir($plugin_root);
+        if (is_array($scan)) {
+            foreach ($scan as $name) {
+                if ($name === '.' || $name === '..') {
+                    continue;
+                }
+                if (!preg_match('/sms|payamak|webone|digits|otino|ippanel|kavenegar|melipayamak|faraz/i', $name)) {
+                    continue;
+                }
+                $plugin_dirs[] = $name;
+            }
+        }
+    }
+    $active = (array) get_option('active_plugins', []);
+    foreach ($active as $file) {
+        $file = (string) $file;
+        if (!preg_match('/sms|payamak|webone|digits|otino|ippanel|kavenegar|melipayamak|faraz/i', $file)) {
+            continue;
+        }
+        $slug = explode('/', $file)[0] ?? $file;
+        if ($slug !== '' && !in_array($slug, $plugin_dirs, true)) {
+            $plugin_dirs[] = $slug;
+        }
+    }
+    $out['plugins'] = $plugin_dirs;
+    if ($plugin_dirs !== []) {
+        $out['plugin'] = $plugin_dirs[0];
+    }
+
+    $candidates = [];
+    $known = [
+        'wpsms_settings',
+        'wps_settings',
+        'pwoosms_settings',
+        'pwsms_settings',
+        'sms_gateway',
+        'sms_gateway_username',
+        'sms_gateway_password',
+        'sms_gateway_sender',
+        'sms_gateway_name',
+        'woocommerce_pwoosms_settings',
+        'digit_api',
+        'digit_settings',
+        'digits_settings',
+    ];
+    if (isset($GLOBALS['wpdb']) && is_object($GLOBALS['wpdb']) && method_exists($GLOBALS['wpdb'], 'get_col')) {
+        global $wpdb;
+        $rows = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s LIMIT 80",
+                '%' . $wpdb->esc_like('sms') . '%',
+                '%' . $wpdb->esc_like('wpsms') . '%',
+                '%' . $wpdb->esc_like('pwoo') . '%',
+                '%' . $wpdb->esc_like('webone') . '%',
+                '%' . $wpdb->esc_like('payamak') . '%'
+            )
+        );
+        if (is_array($rows)) {
+            foreach ($rows as $name) {
+                $known[] = (string) $name;
+            }
+        }
+    }
+    $known = array_values(array_unique($known));
+
+    $pick = static function (array $bag, array $keys): string {
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $bag)) {
+                continue;
+            }
+            $val = $bag[$key];
+            if (is_scalar($val)) {
+                $val = trim((string) $val);
+                if ($val !== '') {
+                    return $val;
+                }
+            }
+        }
+
+        return '';
+    };
+    $walk = static function ($data, array &$found) use (&$walk, $pick): void {
+        if (!is_array($data)) {
+            return;
+        }
+        $found['username'] = $found['username'] !== '' ? $found['username'] : $pick($data, [
+            'username', 'userName', 'user_name', 'gateway_username', 'sms_gateway_username', 'ws_username',
+        ]);
+        $found['password'] = $found['password'] !== '' ? $found['password'] : $pick($data, [
+            'password', 'passwd', 'gateway_password', 'sms_gateway_password', 'ws_password',
+        ]);
+        $found['from'] = $found['from'] !== '' ? $found['from'] : $pick($data, [
+            'from', 'sender', 'sender_id', 'gateway_sender_id', 'sms_gateway_sender', 'fromNumber', 'from_number', 'senderNumber',
+        ]);
+        $found['api_key'] = $found['api_key'] !== '' ? $found['api_key'] : $pick($data, [
+            'api_key', 'apiKey', 'apikey', 'gateway_key', 'has_key', 'token', 'key', 'X-API-KEY',
+        ]);
+        $found['gateway'] = $found['gateway'] !== '' ? $found['gateway'] : $pick($data, [
+            'gateway', 'gateway_name', 'sms_gateway', 'webservice',
+        ]);
+        foreach ($data as $value) {
+            if (is_array($value)) {
+                $walk($value, $found);
+            }
+        }
+    };
+
+    $found = ['username' => '', 'password' => '', 'from' => '', 'api_key' => '', 'gateway' => ''];
+    foreach ($known as $option_name) {
+        $value = get_option($option_name);
+        if ($value === false || $value === null || $value === '') {
+            continue;
+        }
+        $out['option_keys'][] = $option_name;
+        if (is_string($value) && !is_array($value)) {
+            $lower = strtolower($option_name);
+            $trim = trim($value);
+            if ($trim === '') {
+                continue;
+            }
+            if (str_contains($lower, 'username') || str_contains($lower, 'user_name')) {
+                $found['username'] = $found['username'] !== '' ? $found['username'] : $trim;
+            } elseif (str_contains($lower, 'password') || str_contains($lower, 'passwd')) {
+                $found['password'] = $found['password'] !== '' ? $found['password'] : $trim;
+            } elseif (str_contains($lower, 'sender') || str_contains($lower, 'from')) {
+                $found['from'] = $found['from'] !== '' ? $found['from'] : $trim;
+            } elseif (str_contains($lower, 'key') || str_contains($lower, 'token')) {
+                $found['api_key'] = $found['api_key'] !== '' ? $found['api_key'] : $trim;
+            } elseif (str_contains($lower, 'gateway') && !str_contains($lower, 'username')) {
+                $found['gateway'] = $found['gateway'] !== '' ? $found['gateway'] : $trim;
+            }
+            continue;
+        }
+        if (is_array($value)) {
+            $walk($value, $found);
+        }
+    }
+
+    if ($found['api_key'] === '' && $found['username'] !== '' && preg_match('/^[0-9a-f-]{8,}\.[0-9a-f-]{8,}/i', $found['username'])) {
+        $found['api_key'] = $found['username'];
+    }
+
+    $out['username'] = $found['username'];
+    $out['password'] = $found['password'];
+    $out['from'] = $found['from'];
+    $out['api_key'] = $found['api_key'];
+    $out['gateway'] = $found['gateway'];
+    $cached = $out;
+
+    return $cached;
+}
+
+function casting_sms_mask_secret(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+    $len = function_exists('mb_strlen') ? (int) mb_strlen($value, 'UTF-8') : strlen($value);
+    if ($len <= 4) {
+        return str_repeat('•', $len);
+    }
+    $head = function_exists('mb_substr') ? (string) mb_substr($value, 0, 2, 'UTF-8') : substr($value, 0, 2);
+    $tail = function_exists('mb_substr') ? (string) mb_substr($value, -2, null, 'UTF-8') : substr($value, -2);
+
+    return $head . str_repeat('•', min(12, $len - 4)) . $tail;
+}
+
+function casting_sms_api_key(): string
+{
+    $key = defined('CASTING_SMS_API_KEY') ? trim((string) CASTING_SMS_API_KEY) : '';
+    if ($key !== '') {
+        return $key;
+    }
+
+    return trim((string) (casting_sms_wp_plugin_config()['api_key'] ?? ''));
+}
+
+function casting_sms_username(): string
+{
+    $user = defined('CASTING_SMS_USERNAME') ? trim((string) CASTING_SMS_USERNAME) : '';
+    if ($user !== '') {
+        return $user;
+    }
+
+    return trim((string) (casting_sms_wp_plugin_config()['username'] ?? ''));
+}
+
+function casting_sms_password(): string
+{
+    $pass = defined('CASTING_SMS_PASSWORD') ? trim((string) CASTING_SMS_PASSWORD) : '';
+    if ($pass !== '') {
+        return $pass;
+    }
+
+    return trim((string) (casting_sms_wp_plugin_config()['password'] ?? ''));
+}
+
 function casting_sms_is_configured(): bool
 {
     if (defined('CASTING_SMS_ENABLED') && !CASTING_SMS_ENABLED) {
         return false;
     }
-    $key = defined('CASTING_SMS_API_KEY') ? trim((string) CASTING_SMS_API_KEY) : '';
-    if ($key !== '') {
+    if (casting_sms_api_key() !== '') {
         return true;
     }
 
@@ -24,10 +259,7 @@ function casting_sms_is_configured(): bool
 
 function casting_sms_http_is_configured(): bool
 {
-    $user = defined('CASTING_SMS_USERNAME') ? trim((string) CASTING_SMS_USERNAME) : '';
-    $pass = defined('CASTING_SMS_PASSWORD') ? trim((string) CASTING_SMS_PASSWORD) : '';
-
-    return $user !== '' && $pass !== '';
+    return casting_sms_username() !== '' && casting_sms_password() !== '';
 }
 
 function casting_sms_api_base(): string
@@ -65,6 +297,9 @@ function casting_sms_otp_sender(): string
 function casting_sms_line_number(): string
 {
     $from = defined('CASTING_SMS_FROM') ? trim((string) CASTING_SMS_FROM) : '';
+    if ($from === '' || strcasecmp($from, 'Auto') === 0 || preg_match('/^09\d{9}$/', $from)) {
+        $from = trim((string) (casting_sms_wp_plugin_config()['from'] ?? ''));
+    }
     if ($from !== '' && strcasecmp($from, 'Auto') !== 0 && !preg_match('/^09\d{9}$/', $from)) {
         return $from;
     }
@@ -123,7 +358,7 @@ function casting_sms_request(string $endpoint, array $body): array
             return ['ok' => false, 'error' => 'ارسال پیامک پیکربندی نشده است. کلید API را در config.local.php بگذارید.'];
         }
 
-        $api_key = trim((string) CASTING_SMS_API_KEY);
+        $api_key = casting_sms_api_key();
         $url = casting_sms_api_base() . ltrim($endpoint, '/');
 
         $response = wp_remote_post($url, [
@@ -275,7 +510,7 @@ function casting_sms_get_credit(): array
             return ['ok' => false, 'error' => 'کلید API تنظیم نشده است.'];
         }
 
-        $api_key = trim((string) CASTING_SMS_API_KEY);
+        $api_key = casting_sms_api_key();
         $url = casting_sms_api_base() . 'SMS/GetCredit';
         $response = wp_remote_get($url, [
             'timeout' => 12,
@@ -452,8 +687,8 @@ function casting_sms_send_http_get(string $mobile, string $message): array
         $url_base = 'https://webone-sms.ir/SMSInOutBox/SendSms';
     }
     $query = [
-        'username' => trim((string) CASTING_SMS_USERNAME),
-        'password' => trim((string) CASTING_SMS_PASSWORD),
+        'username' => casting_sms_username(),
+        'password' => casting_sms_password(),
         'from'     => $from,
         'to'       => $mobile,
         'text'     => $message,
