@@ -334,6 +334,47 @@ function casting_reset_password_with_key(string $login, string $key, string $pas
 }
 
 /**
+ * تعیین رمز جدید پس از تأیید OTP پیامک (فراموشی رمز)
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_reset_password_with_otp(string $mobile, string $password, string $password2): array
+{
+    if (!function_exists('casting_normalize_mobile')) {
+        require_once __DIR__ . '/profile.php';
+    }
+    $mobile = casting_normalize_mobile($mobile);
+    if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
+        return ['ok' => false, 'error' => 'شماره موبایل نامعتبر است.'];
+    }
+    if (!function_exists('casting_otp_session_is_verified') || !casting_otp_session_is_verified('reset', $mobile)) {
+        return ['ok' => false, 'error' => 'ابتدا موبایل را با کد پیامک تأیید کنید.'];
+    }
+    if ($password === '' || strlen($password) < 8) {
+        return ['ok' => false, 'error' => 'رمز عبور باید حداقل ۸ کاراکتر باشد.'];
+    }
+    if ($password !== $password2) {
+        return ['ok' => false, 'error' => 'تکرار رمز عبور مطابقت ندارد.'];
+    }
+
+    $found = casting_find_user_by_mobile($mobile);
+    if (empty($found['ok']) || empty($found['user_id'])) {
+        return ['ok' => false, 'error' => 'حسابی با این موبایل پیدا نشد.'];
+    }
+    $user = get_user_by('id', (int) $found['user_id']);
+    if (!$user || casting_get_user_role((int) $user->ID) === '') {
+        return ['ok' => false, 'error' => 'این حساب برای پورتال ۷ رخ ثبت نشده است.'];
+    }
+
+    reset_password($user, $password);
+    if (function_exists('casting_otp_clear_session')) {
+        casting_otp_clear_session('reset');
+    }
+
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
  * @return array{ok:bool,error:string}
  */
 function casting_change_password(int $user_id, string $current, string $new, string $confirm): array

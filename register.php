@@ -442,7 +442,7 @@ $pending_video = $pending_media['video'];
         <div class="field<?= $reg_invalid('email') ?>">
           <label for="email">ایمیل <span class="req-mark">*</span></label>
           <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($email) ?>">
-          <p class="field-hint">برای بازیابی رمز عبور، لینک بازنشانی به همین ایمیل ارسال می‌شود.</p>
+          <p class="field-hint">برای ورود و اعلان‌ها. بازیابی رمز با پیامک به موبایل انجام می‌شود.</p>
           <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
         </div>
       </div>
