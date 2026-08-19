@@ -64,6 +64,15 @@ function casting_user_is_super_admin(int $user_id): bool
 }
 
 /**
+ * شماره موبایل / تلفن اعضا فقط برای مدیران اصلی پورتال (eshahabian و ardavan).
+ * سایر اعضا، کارمندان با دسترسی جزئی، و خودِ پروفایل عمومی این شماره‌ها را نمی‌بینند.
+ */
+function casting_user_can_view_contact_numbers(int $viewer_id): bool
+{
+    return casting_user_is_super_admin($viewer_id);
+}
+
+/**
  * @return array<int, string>
  */
 function casting_user_staff_permissions(int $user_id): array

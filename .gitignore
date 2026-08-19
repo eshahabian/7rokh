@@ -22,6 +22,8 @@ mobile/node_modules/
 mobile/.capacitor/
 7rokh-app/node_modules/
 7rokh-app/.capacitor/
+7rokh-app/.jdk17/
+7rokh-app/.jdk21/
 **/android/.gradle/
 **/android/**/build/
 **/android/local.properties

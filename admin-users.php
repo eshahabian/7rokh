@@ -93,6 +93,9 @@ casting_render_flash();
       <ul class="info-list">
         <li><strong>نام کاربری:</strong> <?= casting_e($target->user_login) ?></li>
         <li><strong>ایمیل:</strong> <?= casting_e($target->user_email) ?></li>
+        <?php if (casting_user_can_view_contact_numbers($user_id)) : ?>
+          <?php casting_render_contact_number_items(casting_get_profile($target_id)); ?>
+        <?php endif; ?>
         <li><strong>نقش:</strong> <?= casting_e(casting_role_label(casting_get_user_role($target_id))) ?></li>
         <li><strong>وضعیت:</strong> <?= $suspended ? 'غیرفعال' : 'فعال' ?></li>
         <?php

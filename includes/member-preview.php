@@ -204,7 +204,9 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
     $last_active = casting_format_jalali_datetime_compact((string) get_user_meta($member_id, 'casting_last_active', true));
     $visit_count = casting_member_preview_visit_count($member_id);
     $completion = casting_member_preview_completion_percent($profile, $member_id);
-    $mobile_ok = (string) ($profile['mobile'] ?? '') !== '' && preg_match('/^09\d{9}$/', (string) $profile['mobile']);
+    $show_phones = function_exists('casting_viewer_can_see_contact_numbers')
+        && casting_viewer_can_see_contact_numbers($viewer_id)
+        && $viewer_id !== $member_id;
     $show_actions = casting_member_preview_show_employer_actions($viewer_id, $member_id);
     $can_favorite = casting_user_is_director_role($viewer_id) && $role === 'talent';
     $is_favorite = $can_favorite && casting_member_preview_is_favorite($viewer_id, $member_id);
@@ -249,7 +251,20 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
       <li><span class="member-preview-icon" aria-hidden="true">📅</span><span><?= casting_e($age_label) ?></span></li>
       <li><span class="member-preview-icon" aria-hidden="true">📍</span><span><?= casting_e($city_label !== '' ? $city_label : '—') ?></span></li>
       <li><span class="member-preview-icon" aria-hidden="true">👤</span><span>عضویت <?= $premium ? 'ویژه' : 'عادی' ?></span></li>
-      <li><span class="member-preview-icon" aria-hidden="true">📱</span><span><?= $mobile_ok ? 'تأیید شماره موبایل' : 'موبایل ثبت نشده' ?></span></li>
+      <?php if ($show_phones) : ?>
+        <?php
+        $nums = casting_profile_contact_numbers($profile);
+        if ($nums['mobile'] !== '') :
+            ?>
+          <li><span class="member-preview-icon" aria-hidden="true">📱</span><span dir="ltr"><?= casting_e($nums['mobile']) ?></span></li>
+        <?php endif; ?>
+        <?php if ($nums['mobile2'] !== '') : ?>
+          <li><span class="member-preview-icon" aria-hidden="true">📱</span><span dir="ltr"><?= casting_e($nums['mobile2']) ?></span></li>
+        <?php endif; ?>
+        <?php if ($nums['phone'] !== '') : ?>
+          <li><span class="member-preview-icon" aria-hidden="true">☎</span><span dir="ltr"><?= casting_e($nums['phone']) ?></span></li>
+        <?php endif; ?>
+      <?php endif; ?>
       <li><span class="member-preview-icon" aria-hidden="true">🗓</span><span>تاریخ عضویت: <?= casting_e($join_at) ?></span></li>
       <li><span class="member-preview-icon" aria-hidden="true">🕒</span><span>آخرین فعالیت: <?= casting_e($last_active) ?></span></li>
       <li><span class="member-preview-icon" aria-hidden="true">👁</span><span>بازدید: <?= (int) $visit_count ?> بار</span></li>

@@ -2103,7 +2103,7 @@ function casting_render_optional_mobile2_field(string $mobile2 = '', bool $inval
         >
         <button type="button" class="btn btn-ghost btn-sm" data-mobile2-remove title="حذف شماره دوم">حذف</button>
       </div>
-      <p class="field-hint">اگر لازم دارید شماره جایگزین ثبت کنید؛ این فیلد اجباری نیست.</p>
+      <p class="field-hint">اگر لازم دارید شماره جایگزین ثبت کنید؛ این فیلد اجباری نیست و برای دیگر اعضا نمایش داده نمی‌شود.</p>
     </div>
   </div>
     <?php
@@ -2112,6 +2112,45 @@ function casting_render_optional_mobile2_field(string $mobile2 = '', bool $inval
 function casting_normalize_phone(string $phone): string
 {
     return preg_replace('/\D+/', '', $phone) ?? '';
+}
+
+/**
+ * @return array{mobile:string,mobile2:string,phone:string}
+ */
+function casting_profile_contact_numbers(array $profile): array
+{
+    return [
+        'mobile'  => trim((string) ($profile['mobile'] ?? '')),
+        'mobile2' => trim((string) ($profile['mobile2'] ?? '')),
+        'phone'   => trim((string) ($profile['phone'] ?? '')),
+    ];
+}
+
+function casting_render_contact_number_items(array $profile): void
+{
+    $nums = casting_profile_contact_numbers($profile);
+    if ($nums['mobile'] !== '') {
+        echo '<li><strong>موبایل:</strong> <span dir="ltr">' . casting_e($nums['mobile']) . '</span></li>';
+    }
+    if ($nums['mobile2'] !== '') {
+        echo '<li><strong>موبایل دوم:</strong> <span dir="ltr">' . casting_e($nums['mobile2']) . '</span></li>';
+    }
+    if ($nums['phone'] !== '') {
+        echo '<li><strong>تلفن ثابت:</strong> <span dir="ltr">' . casting_e($nums['phone']) . '</span></li>';
+    }
+}
+
+function casting_viewer_can_see_contact_numbers(int $viewer_id): bool
+{
+    if (!function_exists('casting_user_can_view_contact_numbers')) {
+        $file = __DIR__ . '/admin-access.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
+
+    return function_exists('casting_user_can_view_contact_numbers')
+        && casting_user_can_view_contact_numbers($viewer_id);
 }
 
 function casting_register_focus_for_error(string $error): string

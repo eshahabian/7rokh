@@ -467,6 +467,7 @@ $pending_video = $pending_media['video'];
         <div class="field<?= $reg_invalid('mobile') ?>">
           <label for="mobile">موبایل <span class="req-mark">*</span></label>
           <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($mobile) ?>" placeholder="09121234567" autocomplete="tel-national">
+          <p class="field-hint">این شماره برای دیگر اعضا نمایش داده نمی‌شود.</p>
           <?php if ($mobile_verified) : ?>
             <p class="field-hint otp-verified-hint">موبایل تأیید شد ✓</p>
           <?php endif; ?>

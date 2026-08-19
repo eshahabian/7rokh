@@ -426,9 +426,9 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           <li><strong>ایمیل:</strong> <?= $embedded
               ? casting_panel_missing_label(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '')
               : casting_e(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '—') ?></li>
-          <?php if (($profile['mobile2'] ?? '') !== '') : ?>
-            <li><strong>موبایل دوم:</strong> <?= casting_e((string) $profile['mobile2']) ?></li>
-          <?php endif; ?>
+        <?php endif; ?>
+        <?php if (casting_viewer_can_see_contact_numbers($viewer_id) && !$is_self) : ?>
+          <?php casting_render_contact_number_items($profile); ?>
         <?php endif; ?>
         <li><strong>سن:</strong> <?= $embedded && $is_self
             ? casting_panel_missing_label($profile['age'] !== '' ? $profile['age'] . ' سال' : '')
@@ -852,10 +852,12 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       <div class="field">
         <label for="mobile">موبایل</label>
         <input id="mobile" name="mobile" type="tel" inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($profile['mobile'] ?? '') ?>" placeholder="09121234567">
+        <p class="field-hint">فقط خودتان و مدیران اصلی سایت این شماره را می‌بینند.</p>
       </div>
       <div class="field">
         <label for="phone">تلفن ثابت</label>
         <input id="phone" name="phone" type="tel" inputmode="numeric" value="<?= casting_e($profile['phone'] ?? '') ?>" placeholder="02112345678">
+        <p class="field-hint">برای دیگر اعضا نمایش داده نمی‌شود.</p>
       </div>
     </div>
     <?php casting_render_optional_mobile2_field((string) ($profile['mobile2'] ?? '')); ?>

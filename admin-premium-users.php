@@ -159,6 +159,9 @@ casting_render_flash();
       <ul class="info-list">
         <li><strong>نام کاربری:</strong> <?= casting_e($target->user_login) ?></li>
         <li><strong>ایمیل:</strong> <?= casting_e($target->user_email) ?></li>
+        <?php if (casting_user_can_view_contact_numbers($user_id)) : ?>
+          <?php casting_render_contact_number_items(casting_get_profile($target_id)); ?>
+        <?php endif; ?>
         <li><strong>نقش:</strong> <?= casting_e(casting_user_profile_chip_label($target_id, $user_id)) ?></li>
         <li><strong>وضعیت حساب:</strong> <?= $suspended ? 'غیرفعال (تعلیق)' : 'فعال' ?></li>
         <li><strong>مدت فعال بودن:</strong> <?= casting_e(casting_user_active_duration_label($target_id)) ?></li>
