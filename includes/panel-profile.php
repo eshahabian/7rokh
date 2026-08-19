@@ -845,7 +845,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <div class="field">
       <label for="email">ایمیل</label>
       <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($profile['email'] ?? '') ?>">
-      <p class="field-hint">برای ورود و اعلان‌ها. بازیابی رمز با پیامک به موبایل انجام می‌شود. برای دیگر اعضا نمایش داده نمی‌شود.</p>
+      <p class="field-hint">برای ورود و اعلان‌ها. بازیابی رمز با پیامک یا ایمیل. برای دیگر اعضا نمایش داده نمی‌شود.</p>
     </div>
 
     <div class="form-grid">
