@@ -3484,6 +3484,7 @@
     const peerRoleEl = messagesDock.querySelector("[data-messages-dock-peer-role]");
     const fullLink = messagesDock.querySelector("[data-messages-dock-full]");
     const cfg = window.CASTING_CHAT_DOCK || {};
+    let dockLastId = 0;
 
     const setOpen = (open) => {
       if (!(panel instanceof HTMLElement) || !(toggle instanceof HTMLElement)) return;
@@ -3512,6 +3513,7 @@
       (messages || []).forEach((msg) => {
         const bubble = document.createElement("div");
         bubble.className = "messages-dock-bubble " + (msg.is_mine ? "is-mine" : "is-theirs");
+        if (msg.id) bubble.setAttribute("data-msg-id", String(msg.id));
         bubble.textContent = msg.message || "";
         threadEl.appendChild(bubble);
       });
@@ -3520,6 +3522,7 @@
 
     const openThread = async (peerId, meta = {}) => {
       if (!cfg.url || !cfg.nonce || !peerId) return;
+      dockLastId = 0;
       setOpen(true);
       showThread();
       if (peerNameEl) peerNameEl.textContent = meta.name || "گفتگو";
@@ -3584,6 +3587,7 @@
           errEl.textContent = data.error;
         }
         renderMessages(data.messages || []);
+        if (typeof data.last_id === "number") dockLastId = data.last_id;
         input?.focus();
       } catch (e) {
         if (threadEl) threadEl.innerHTML = "";
@@ -3684,6 +3688,180 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") setOpen(false);
     });
+
+    const pollDockThread = async () => {
+      if (!(threadView instanceof HTMLElement) || threadView.hidden || document.hidden) return;
+      const peerId = Number(peerIdInput instanceof HTMLInputElement ? peerIdInput.value : 0);
+      if (!peerId || !cfg.url || !cfg.nonce) return;
+      try {
+        const url = new URL(cfg.url, window.location.origin);
+        url.searchParams.set("action", "thread");
+        url.searchParams.set("peer_id", String(peerId));
+        url.searchParams.set("after_id", String(dockLastId));
+        url.searchParams.set("_wpnonce", cfg.nonce);
+        const res = await fetch(url.toString(), { credentials: "same-origin", headers: { Accept: "application/json" } });
+        const data = await res.json();
+        if (!data || !data.ok || data.locked) return;
+        const incoming = Array.isArray(data.messages) ? data.messages : [];
+        incoming.forEach((msg) => {
+          if (!(threadEl instanceof HTMLElement)) return;
+          if (threadEl.querySelector('[data-msg-id="' + String(msg.id || "") + '"]')) return;
+          const bubble = document.createElement("div");
+          bubble.className = "messages-dock-bubble " + (msg.is_mine ? "is-mine" : "is-theirs");
+          bubble.setAttribute("data-msg-id", String(msg.id || ""));
+          bubble.textContent = msg.message || "";
+          threadEl.appendChild(bubble);
+        });
+        if (typeof data.last_id === "number" && data.last_id > dockLastId) {
+          dockLastId = data.last_id;
+        }
+        if (incoming.length && threadEl instanceof HTMLElement) {
+          threadEl.scrollTop = threadEl.scrollHeight;
+        }
+      } catch (_err) {
+        /* silent */
+      }
+    };
+    window.setInterval(pollDockThread, 3500);
+  }
+
+  // چت زنده: پیام جدید بدون رفرش
+  const liveThread = document.querySelector("[data-chat-live]");
+  const chatDockCfg = window.CASTING_CHAT_DOCK || {};
+  const appendLiveBubble = (root, msg, peerName) => {
+    if (!(root instanceof HTMLElement) || !msg) return;
+    const id = String(msg.id || "");
+    if (id && root.querySelector('[data-msg-id="' + id + '"]')) return;
+    root.querySelector("[data-chat-empty]")?.remove();
+    let latest = root.querySelector("#latest");
+    const article = document.createElement("article");
+    article.className = "chat-bubble " + (msg.is_mine ? "is-mine" : "");
+    if (id) article.setAttribute("data-msg-id", id);
+    const header = document.createElement("header");
+    const strong = document.createElement("strong");
+    strong.textContent = msg.is_mine ? "شما" : (peerName || "کاربر");
+    const time = document.createElement("time");
+    time.textContent = msg.created_at || "";
+    header.appendChild(strong);
+    header.appendChild(time);
+    const p = document.createElement("p");
+    p.textContent = msg.message || "";
+    article.appendChild(header);
+    article.appendChild(p);
+    if (latest) {
+      root.insertBefore(article, latest);
+    } else {
+      root.appendChild(article);
+    }
+    root.scrollTop = root.scrollHeight;
+  };
+
+  if (liveThread instanceof HTMLElement && chatDockCfg.url && chatDockCfg.nonce) {
+    let lastId = Number(liveThread.getAttribute("data-last-id") || "0");
+    const peerId = Number(liveThread.getAttribute("data-peer-id") || "0");
+    const peerName = liveThread.getAttribute("data-peer-name") || "";
+    const locked = liveThread.getAttribute("data-locked") === "1";
+    const pollLive = async () => {
+      if (document.hidden || !peerId || locked) return;
+      try {
+        const url = new URL(chatDockCfg.url, window.location.origin);
+        url.searchParams.set("action", "thread");
+        url.searchParams.set("peer_id", String(peerId));
+        url.searchParams.set("after_id", String(lastId));
+        url.searchParams.set("_wpnonce", chatDockCfg.nonce);
+        const res = await fetch(url.toString(), {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        const data = await res.json();
+        if (!data || !data.ok) return;
+        if (data.locked) {
+          window.location.reload();
+          return;
+        }
+        (data.messages || []).forEach((msg) => appendLiveBubble(liveThread, msg, peerName));
+        if (typeof data.last_id === "number" && data.last_id > lastId) {
+          lastId = data.last_id;
+          liveThread.setAttribute("data-last-id", String(lastId));
+        }
+      } catch (_err) {
+        /* silent */
+      }
+    };
+    window.setInterval(pollLive, 3000);
+
+    const liveForm = document.querySelector("[data-chat-live-send]");
+    if (liveForm instanceof HTMLFormElement) {
+      liveForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const textarea = liveForm.querySelector("#message, textarea[name='message']");
+        const hiddenMsg = liveForm.querySelector("input[name='message']");
+        const message = String(
+          (hiddenMsg instanceof HTMLInputElement && hiddenMsg.value) ||
+          (textarea instanceof HTMLTextAreaElement ? textarea.value : "") ||
+          ""
+        ).trim();
+        if (!message || !peerId) return;
+        const submitBtn = liveForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+        try {
+          const body = new FormData();
+          body.set("action", "send");
+          body.set("peer_id", String(peerId));
+          body.set("message", message);
+          body.set("_wpnonce", chatDockCfg.nonce);
+          const res = await fetch(chatDockCfg.url, {
+            method: "POST",
+            credentials: "same-origin",
+            body,
+            headers: { Accept: "application/json" },
+          });
+          const data = await res.json();
+          if (!data || !data.ok) {
+            window.alert((data && data.error) || "ارسال ناموفق بود.");
+            return;
+          }
+          if (textarea instanceof HTMLTextAreaElement && !(hiddenMsg instanceof HTMLInputElement)) {
+            textarea.value = "";
+          }
+          if (data.message) {
+            appendLiveBubble(liveThread, data.message, peerName);
+            const newId = Number(data.message.id || 0);
+            if (newId > lastId) {
+              lastId = newId;
+              liveThread.setAttribute("data-last-id", String(lastId));
+            }
+          }
+        } catch (_err) {
+          window.alert("خطا در ارسال پیام.");
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
+      });
+    }
+  }
+
+  const inboxRoot = document.querySelector("[data-chat-inbox]");
+  if (inboxRoot instanceof HTMLElement && chatDockCfg.url && chatDockCfg.nonce && !liveThread) {
+    let fingerprint = inboxRoot.getAttribute("data-chat-inbox") || "";
+    window.setInterval(async () => {
+      if (document.hidden) return;
+      try {
+        const url = new URL(chatDockCfg.url, window.location.origin);
+        url.searchParams.set("action", "inbox");
+        url.searchParams.set("_wpnonce", chatDockCfg.nonce);
+        const res = await fetch(url.toString(), {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        const data = await res.json();
+        if (data && data.ok && data.fingerprint && data.fingerprint !== fingerprint) {
+          window.location.reload();
+        }
+      } catch (_err) {
+        /* silent */
+      }
+    }, 5000);
   }
 
   // فیلتر مخاطبین در صفحه چت کامل (ادمین)

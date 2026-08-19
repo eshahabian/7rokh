@@ -132,6 +132,15 @@ if ($peer_id > 0 && !empty($peer_allow['ok']) && casting_is_employer_role(castin
     $compose_locked = casting_employer_must_use_fixed_outreach($my_id);
 }
 $employer_free_hint = casting_employer_free_messages_hint($my_id);
+$thread_last_id = 0;
+foreach ($thread as $msg) {
+    $thread_last_id = max($thread_last_id, (int) ($msg['id'] ?? 0));
+}
+$inbox_fp_parts = [];
+foreach ($conversations as $conv) {
+    $inbox_fp_parts[] = ((int) ($conv['peer_id'] ?? 0)) . '-' . ((int) ($conv['unread'] ?? 0)) . '-' . (string) ($conv['last_at'] ?? '');
+}
+$inbox_fp = md5(implode('|', $inbox_fp_parts));
 
 casting_render_panel_start('پیام‌های من', 'messages');
 if ($error !== '') {
@@ -146,13 +155,13 @@ casting_render_flash();
     <p class="meta chat-employer-quota"><?= casting_e($employer_free_hint) ?></p>
   <?php endif; ?>
 
-  <div class="chat-layout<?= $peer && $peer_id > 0 ? ' chat-layout--thread' : ' chat-layout--inbox' ?>">
+  <div class="chat-layout<?= $peer && $peer_id > 0 ? ' chat-layout--thread' : ' chat-layout--inbox' ?>" data-chat-inbox="<?= casting_e($inbox_fp) ?>">
     <aside class="chat-sidebar">
       <h2 class="chat-side-title">گفتگوها</h2>
       <?php if (!$conversations) : ?>
         <p class="empty-state chat-side-empty">هنوز کسی به شما پیام نداده. از پروفایل اعضا می‌توانید پیام بدهید.</p>
       <?php else : ?>
-        <ul class="chat-conv-list">
+        <ul class="chat-conv-list" data-chat-inbox="<?= casting_e($inbox_fp) ?>">
           <?php foreach ($conversations as $conv) :
               $conv_unread = (int) ($conv['unread'] ?? 0);
               $conv_peer = (int) ($conv['peer_id'] ?? 0);
@@ -267,7 +276,15 @@ casting_render_flash();
           </div>
         <?php endif; ?>
 
-        <div class="chat-thread" id="chat-thread">
+        <div
+          class="chat-thread"
+          id="chat-thread"
+          data-chat-live
+          data-peer-id="<?= (int) $peer_id ?>"
+          data-last-id="<?= (int) $thread_last_id ?>"
+          data-peer-name="<?= casting_e(casting_dm_peer_display_name($peer_id)) ?>"
+          data-locked="<?= $thread_locked ? '1' : '0' ?>"
+        >
           <?php if ($thread_locked) : ?>
             <div class="chat-premium-gate">
               <p><?= casting_e(casting_dm_premium_required_notice_message()) ?></p>
@@ -277,10 +294,10 @@ casting_render_flash();
               </div>
             </div>
           <?php elseif (!$thread) : ?>
-            <p class="empty-state">هنوز پیامی نیست.</p>
+            <p class="empty-state" data-chat-empty>هنوز پیامی نیست.</p>
           <?php else : ?>
             <?php foreach ($thread as $msg) : ?>
-              <article class="chat-bubble <?= !empty($msg['is_mine']) ? 'is-mine' : '' ?>">
+              <article class="chat-bubble <?= !empty($msg['is_mine']) ? 'is-mine' : '' ?>" data-msg-id="<?= (int) ($msg['id'] ?? 0) ?>">
                 <header>
                   <strong><?= !empty($msg['is_mine']) ? 'شما' : casting_e(casting_dm_peer_display_name($peer_id)) ?></strong>
                   <time><?= casting_e($msg['created_at']) ?></time>
@@ -298,7 +315,7 @@ casting_render_flash();
         </div>
 
         <?php if ($peer_allow['ok']) : ?>
-          <form class="chat-compose form" method="post" action="chat.php?with=<?= $peer_id ?>">
+          <form class="chat-compose form" method="post" action="chat.php?with=<?= $peer_id ?>" data-chat-live-send>
             <?php wp_nonce_field('casting_dm'); ?>
             <input type="hidden" name="action" value="send">
             <input type="hidden" name="peer_id" value="<?= $peer_id ?>">

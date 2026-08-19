@@ -299,7 +299,7 @@ function casting_render_footer(): void
       fullUrl: <?= wp_json_encode(casting_url('chat.php')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=112" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=113" defer></script>
 </body>
 </html>
 <?php

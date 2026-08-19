@@ -65,7 +65,12 @@ function casting_user_requires_premium_for_dm(int $user_id): bool
     if ($user_id <= 0) {
         return false;
     }
-    if (casting_user_is_portal_owner($user_id) || casting_dm_is_support_peer($user_id)) {
+    if (!function_exists('casting_user_is_super_admin')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if (casting_user_is_portal_owner($user_id)
+        || casting_user_is_super_admin($user_id)
+        || casting_dm_is_support_peer($user_id)) {
         return false;
     }
     if (!function_exists('casting_user_is_premium')) {
@@ -162,10 +167,10 @@ function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
     if (!$allow['ok']) {
         return $allow;
     }
-    if (casting_dm_is_support_peer($recipient_id)) {
-        return ['ok' => true, 'error' => ''];
+    if (!function_exists('casting_user_is_super_admin')) {
+        require_once __DIR__ . '/admin-access.php';
     }
-    if (function_exists('casting_user_is_public_support_contact') && casting_user_is_public_support_contact($recipient_id)) {
+    if (casting_user_is_portal_owner($sender_id) || casting_user_is_super_admin($sender_id)) {
         return ['ok' => true, 'error' => ''];
     }
     if (!casting_user_requires_premium_for_dm($sender_id)) {
@@ -187,20 +192,14 @@ function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
 
 function casting_user_needs_premium_to_read_inbox(int $user_id): bool
 {
-    if (!casting_user_requires_premium_for_dm($user_id)) {
-        return false;
-    }
-    // کارگردان/تهیه‌کننده برای ارسال سهمیه رایگان دارند؛ inboxشان قفل نمی‌شود.
-    if (casting_user_is_employer_account($user_id)) {
-        return false;
-    }
-
-    return true;
+    return casting_user_requires_premium_for_dm($user_id);
 }
 
 function casting_dm_thread_locked_for_user(int $user_id, int $peer_id): bool
 {
-    return casting_user_needs_premium_to_read_inbox($user_id) && !casting_dm_is_support_peer($peer_id);
+    unset($peer_id);
+
+    return casting_user_needs_premium_to_read_inbox($user_id);
 }
 
 function casting_employer_free_dm_limit(): int
@@ -977,10 +976,11 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
         return ['ok' => false, 'error' => 'ارسال پیام ناموفق بود.'];
     }
 
+    $id = (int) $wpdb->insert_id;
     casting_employer_maybe_consume_free_message($sender_id);
     casting_dm_maybe_send_premium_required_notice($recipient_id, $sender_id);
 
-    return ['ok' => true];
+    return ['ok' => true, 'id' => $id];
 }
 
 function casting_dm_insert_raw(

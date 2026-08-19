@@ -33,6 +33,7 @@ if ($action === 'thread') {
         exit;
     }
 
+    $after_id = (int) ($_GET['after_id'] ?? $_POST['after_id'] ?? 0);
     $locked = casting_dm_thread_locked_for_user($my_id, $peer_id);
     casting_dm_mark_delivered($my_id, $peer_id);
     if (!$locked) {
@@ -45,9 +46,17 @@ if ($action === 'thread') {
     }
     $allow = casting_can_user_send_dm($my_id, $peer_id);
     $messages = [];
+    $last_id = 0;
     foreach ($thread as $msg) {
+        $id = (int) ($msg['id'] ?? 0);
+        if ($id > $last_id) {
+            $last_id = $id;
+        }
+        if ($after_id > 0 && $id <= $after_id) {
+            continue;
+        }
         $messages[] = [
-            'id'         => (int) ($msg['id'] ?? 0),
+            'id'         => $id,
             'is_mine'    => !empty($msg['is_mine']),
             'message'    => (string) ($msg['message'] ?? ''),
             'created_at' => (string) ($msg['created_at'] ?? ''),
@@ -75,7 +84,38 @@ if ($action === 'thread') {
         'can_send'=> !$locked && !empty($allow['ok']) && !$blocked,
         'error'   => $error,
         'cart_url'=> $locked ? casting_url('cart.php') : '',
+        'last_id' => $last_id,
         'messages'=> $locked ? [] : $messages,
+    ]);
+    exit;
+}
+
+if ($action === 'inbox') {
+    $conversations = casting_dm_conversations($my_id);
+    $rows = [];
+    $fp_parts = [];
+    foreach ($conversations as $conv) {
+        $peer = (int) ($conv['peer_id'] ?? 0);
+        if ($peer <= 0) {
+            continue;
+        }
+        $unread = (int) ($conv['unread'] ?? 0);
+        $last_at = (string) ($conv['last_at'] ?? '');
+        $fp_parts[] = $peer . '-' . $unread . '-' . $last_at;
+        $rows[] = [
+            'peer_id'      => $peer,
+            'name'         => (string) ($conv['name'] ?? ''),
+            'unread'       => $unread,
+            'locked'       => !empty($conv['locked']),
+            'last_message' => (string) ($conv['last_message'] ?? ''),
+            'last_at'      => $last_at,
+        ];
+    }
+    echo wp_json_encode([
+        'ok'           => true,
+        'unread_total' => casting_dm_unread_peer_count($my_id),
+        'fingerprint'  => md5(implode('|', $fp_parts)),
+        'conversations'=> $rows,
     ]);
     exit;
 }
