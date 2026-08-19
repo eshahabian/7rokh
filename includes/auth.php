@@ -95,6 +95,37 @@ function casting_update_user_email(int $user_id, string $email): array
     return ['ok' => true];
 }
 
+/**
+ * تغییر ایمیل حساب با تأیید رمز فعلی
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_change_email(int $user_id, string $password, string $email): array
+{
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
+    }
+    if (!wp_check_password($password, $user->user_pass, $user_id)) {
+        return ['ok' => false, 'error' => 'رمز عبور اشتباه است.'];
+    }
+
+    $email = sanitize_email($email);
+    if (!is_email($email)) {
+        return ['ok' => false, 'error' => 'ایمیل معتبر نیست.'];
+    }
+    if (strcasecmp($email, (string) $user->user_email) === 0) {
+        return ['ok' => false, 'error' => 'این همان ایمیل فعلی شماست.'];
+    }
+
+    $result = casting_update_user_email($user_id, $email);
+
+    return [
+        'ok'    => !empty($result['ok']),
+        'error' => (string) ($result['error'] ?? ''),
+    ];
+}
+
 function casting_delete_registered_user(int $user_id): void
 {
     if ($user_id <= 0) {

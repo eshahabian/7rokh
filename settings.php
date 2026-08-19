@@ -10,6 +10,11 @@ $can_photo = casting_user_can_upload_portraits($user_id);
 
 $tiles = [
     [
+        'title' => 'تغییر ایمیل',
+        'desc'  => 'به‌روزرسانی ایمیل ورود و اعلان‌ها',
+        'href'  => 'change-email.php',
+    ],
+    [
         'title' => 'تغییر رمز عبور',
         'desc'  => 'به‌روزرسانی رمز ورود به حساب',
         'href'  => 'change-password.php',
@@ -35,7 +40,7 @@ casting_render_flash();
 ?>
 <section class="dash-card">
   <?php casting_render_panel_heading('تنظیمات'); ?>
-  <p class="meta">رمز عبور، تصویر پروفایل و کاربران بلاک‌شده.</p>
+  <p class="meta">ایمیل، رمز عبور، تصویر پروفایل و کاربران بلاک‌شده.</p>
   <?php casting_render_panel_hub_tiles($tiles); ?>
 </section>
 <?php casting_render_panel_end(); ?>

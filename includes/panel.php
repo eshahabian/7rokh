@@ -118,6 +118,7 @@ function casting_panel_nav_highlight_key(string $active): string
         'cancel'       => 'cancel',
         'password'     => 'password',
         'phone'        => 'panel',
+        'email'        => 'panel',
         'photo'        => 'photo',
         'gallery'      => 'gallery',
         'following'    => 'following',
@@ -676,6 +677,7 @@ function casting_panel_back_config(?string $active = null): ?array
     $to_panel = [
         'messages',
         'phone',
+        'email',
         'edit-profile',
         'my-profile',
         'gallery',

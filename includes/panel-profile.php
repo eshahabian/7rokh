@@ -179,7 +179,7 @@ function casting_profile_completion_items(array $profile, int $user_id = 0): arr
     $checks = [
         ['label' => 'تاریخ تولد', 'done' => (bool) (($profile['birthdate'] ?? '') !== '' || ($profile['age'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'جنسیت', 'done' => (bool) (($profile['gender'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'ایمیل', 'done' => (bool) is_email((string) ($profile['email'] ?? '')), 'href' => '#edit-profile', 'hint' => ''],
+        ['label' => 'ایمیل', 'done' => (bool) is_email((string) ($profile['email'] ?? '')), 'href' => 'change-email.php', 'hint' => ''],
         ['label' => 'موبایل', 'done' => (bool) (($profile['mobile'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
         ['label' => 'استان و شهر', 'done' => (bool) (($profile['province'] ?? '') !== '' && ($profile['city'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
     ];
@@ -425,7 +425,8 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
           <li><strong>مدت فعال بودن:</strong> <?= casting_e($self_active_duration) ?></li>
           <li><strong>ایمیل:</strong> <?= $embedded
               ? casting_panel_missing_label(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '')
-              : casting_e(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '—') ?></li>
+              : casting_e(is_email((string) ($profile['email'] ?? '')) ? (string) $profile['email'] : '—') ?>
+            <?php if ($is_self) : ?> · <a href="change-email.php">ویرایش</a><?php endif; ?></li>
         <?php endif; ?>
         <?php if (casting_viewer_can_see_contact_numbers($viewer_id) && !$is_self) : ?>
           <?php casting_render_contact_number_items($profile); ?>
@@ -840,19 +841,18 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
   <form class="form" method="post" action="edit-profile.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
     <?php wp_nonce_field('casting_profile'); ?>
 
-    <?php casting_render_activity_fields($profile['activities'] ?? [], true, $user_id); ?>
-
+    <h3 class="panel-section-title" id="account-email">اطلاعات حساب</h3>
     <div class="field">
       <label for="email">ایمیل</label>
       <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($profile['email'] ?? '') ?>">
-      <p class="field-hint">برای ورود و اعلان‌ها. بازیابی رمز با پیامک یا ایمیل. برای دیگر اعضا نمایش داده نمی‌شود.</p>
+      <p class="field-hint">برای ورود، اعلان‌ها و بازیابی رمز. برای دیگر اعضا نمایش داده نمی‌شود. می‌توانید از <a href="change-email.php">تغییر ایمیل</a> هم استفاده کنید.</p>
     </div>
 
     <div class="form-grid">
       <div class="field">
         <label for="mobile">موبایل</label>
         <input id="mobile" name="mobile" type="tel" inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($profile['mobile'] ?? '') ?>" placeholder="09121234567">
-        <p class="field-hint">فقط خودتان و مدیران اصلی سایت این شماره را می‌بینند.</p>
+        <p class="field-hint">فقط خودتان و مدیران اصلی سایت این شماره را می‌بینند. برای تغییر با تأیید پیامک به <a href="change-phone.php">تغییر شماره تلفن</a> بروید.</p>
       </div>
       <div class="field">
         <label for="phone">تلفن ثابت</label>
@@ -861,6 +861,8 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       </div>
     </div>
     <?php casting_render_optional_mobile2_field((string) ($profile['mobile2'] ?? '')); ?>
+
+    <?php casting_render_activity_fields($profile['activities'] ?? [], true, $user_id); ?>
 
     <?php casting_render_jalali_birthday_fields($profile['birthdate'], false); ?>
     <div class="field">

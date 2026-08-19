@@ -138,6 +138,7 @@ casting_render_flash();
         <?php endif; ?>
       </a>
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('change-phone.php')) ?>">تغییر شماره تلفن</a>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('change-email.php')) ?>">تغییر ایمیل</a>
       <?php if ($can_photos) : ?>
         <a class="btn btn-ghost" href="<?= casting_e(casting_url('profile-photo.php')) ?>">تغییر عکس</a>
       <?php endif; ?>
