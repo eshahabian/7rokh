@@ -300,14 +300,6 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
             <?php
             continue;
         }
-        if ($item['key'] === 'my-ads' && empty($ctx['ads_unlocked']) && empty($ctx['ads_is_admin'])) {
-            ?>
-          <span class="panel-nav-link is-disabled is-locked" aria-disabled="true" title="پس از پرداخت هزینهٔ تبلیغات در خرید اشتراک فعال می‌شود">
-            <span class="panel-nav-label"><?= casting_brandify($item_label) ?></span>
-          </span>
-            <?php
-            continue;
-        }
         ?>
           <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>">
             <span class="panel-nav-label"><?= casting_brandify($item_label) ?></span>

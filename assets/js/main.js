@@ -4130,4 +4130,14 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeImageZoom();
   });
+
+  document.addEventListener("change", (event) => {
+    const input = event.target.closest?.("[data-file-pick]");
+    if (!input) return;
+    const wrap = input.closest(".file-pick");
+    const nameEl = wrap?.querySelector("[data-file-pick-name]");
+    if (nameEl) {
+      nameEl.textContent = input.files && input.files[0] ? input.files[0].name : "فایلی انتخاب نشده";
+    }
+  });
 })();

@@ -306,6 +306,54 @@ function casting_user_can_open_ad_posters(int $user_id): bool
     return casting_user_ads_unlocked_meta($user_id) === '1';
 }
 
+function casting_user_can_submit_ad_poster(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    $credits = casting_user_ad_open_credits($user_id, true);
+    foreach ($credits as $credit) {
+        if (!empty($credit['virtual'])) {
+            return function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id);
+        }
+        if ((int) ($credit['id'] ?? 0) > 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * @param array{id:string,name?:string,disabled?:bool,required?:bool,accept?:string,max_bytes?:int} $opts
+ */
+function casting_render_file_pick(array $opts): void
+{
+    $id = (string) ($opts['id'] ?? 'poster_file');
+    $name = (string) ($opts['name'] ?? 'poster_file');
+    $disabled = !empty($opts['disabled']);
+    $required = !empty($opts['required']) && !$disabled;
+    $accept = (string) ($opts['accept'] ?? 'image/jpeg,image/png,image/webp');
+    $max_bytes = (int) ($opts['max_bytes'] ?? 0);
+    ?>
+    <div class="file-pick<?= $disabled ? ' is-disabled' : '' ?>">
+      <input
+        id="<?= casting_e($id) ?>"
+        class="file-pick-input"
+        name="<?= casting_e($name) ?>"
+        type="file"
+        accept="<?= casting_e($accept) ?>"
+        data-file-pick
+        <?php if ($max_bytes > 0) : ?>data-upload-kind="image" data-max-bytes="<?= $max_bytes ?>"<?php endif; ?>
+        <?= $required ? 'required' : '' ?>
+        <?= $disabled ? 'disabled' : '' ?>
+      >
+      <label class="btn btn-ghost file-pick-btn<?= $disabled ? ' is-disabled' : '' ?>" for="<?= casting_e($id) ?>">انتخاب فایل</label>
+      <span class="file-pick-name" data-file-pick-name>فایلی انتخاب نشده</span>
+    </div>
+    <?php
+}
+
 /**
  * @return list<array<string, mixed>>
  */
@@ -625,7 +673,7 @@ function casting_ad_poster_submit(int $user_id, int $credit_id, string $field, s
     if ($user_id <= 0) {
         return ['ok' => false, 'error' => 'کاربر نامعتبر است.'];
     }
-    if (!casting_user_can_open_ad_posters($user_id)) {
+    if (!casting_user_can_submit_ad_poster($user_id)) {
         return ['ok' => false, 'error' => 'برای ارسال پوستر ابتدا هزینه تبلیغات را پرداخت کنید.'];
     }
     $title = sanitize_text_field($title);

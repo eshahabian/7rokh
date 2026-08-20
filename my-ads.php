@@ -9,11 +9,6 @@ $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $is_admin = casting_user_can_moderate_ad_posters($user_id);
 
-if (!casting_user_can_open_ad_posters($user_id)) {
-    casting_set_flash('error', 'برای ارسال پوستر ابتدا هزینهٔ تبلیغات را از خرید اشتراک پرداخت کنید. پس از پرداخت، این بخش باز می‌شود.');
-    casting_redirect('cart.php#shop-ads');
-}
-
 $allowed_inbox = ['pending', 'approved', 'rejected', 'all'];
 $tab = sanitize_key((string) ($_GET['tab'] ?? ''));
 if ($tab !== 'inbox' && $tab !== 'mine') {
@@ -100,6 +95,27 @@ foreach ($open_credits as $c) {
     }
 }
 $can_upload = $paid_credits !== [] || ($is_owner && $open_credits !== []);
+$has_pending = false;
+$has_approved = false;
+foreach ($items as $row) {
+    $st = (string) ($row['status'] ?? '');
+    if ($st === 'pending') {
+        $has_pending = true;
+    }
+    if ($st === 'approved') {
+        $has_approved = true;
+    }
+}
+$upload_hint = '';
+if (!$can_upload) {
+    if ($has_pending) {
+        $upload_hint = 'پوستر شما در انتظار تأیید است. پس از تأیید ادمین، برای پوستر بعدی باید دوباره هزینه تبلیغات را پرداخت کنید.';
+    } elseif ($has_approved) {
+        $upload_hint = 'پوستر تأیید و منتشر شد. برای ارسال پوستر جدید از خرید اشتراک اقدام کنید.';
+    } else {
+        $upload_hint = 'پس از پرداخت هزینهٔ تبلیغات، انتخاب فایل و ارسال برای تأیید فعال می‌شود.';
+    }
+}
 $pending_count = $is_admin ? casting_admin_pending_ad_posters_count() : 0;
 $inbox_items = $is_admin && $tab === 'inbox' ? casting_admin_ad_posters_list($inbox_status, 100) : [];
 $page_title = $is_admin ? 'پوستر' : 'ارسال پوستر';
@@ -207,7 +223,7 @@ casting_render_flash();
     <?php endif; ?>
 
   <?php else : ?>
-    <p class="lede"><?= $is_admin ? 'پوستر خودتان را از اینجا بفرستید.' : 'پس از پرداخت، پوستر را بفرستید. تا تأیید مدیر در بنر تبلیغات صفحه اصلی دیده نمی‌شود. فقط پوسترهای خودتان را می‌بینید.' ?></p>
+    <p class="lede"><?= $is_admin ? 'پوستر خودتان را از اینجا بفرستید.' : 'می‌توانید این صفحه را ببینید. انتخاب فایل و ارسال برای تأیید فقط بعد از پرداخت هزینهٔ تبلیغات فعال می‌شود. تا تأیید مدیر در بنر صفحه اصلی دیده نمی‌شود.' ?></p>
 
     <div class="ad-spec-box" role="note">
       <h2>فرمت و اندازه لازم</h2>
@@ -220,47 +236,57 @@ casting_render_flash();
       </ul>
     </div>
 
-    <?php if ($can_upload) : ?>
-      <form class="form" method="post" enctype="multipart/form-data" action="my-ads.php">
-        <?php wp_nonce_field('casting_ad_poster'); ?>
-        <input type="hidden" name="ad_action" value="upload">
-        <?php if ($paid_credits !== []) : ?>
-          <div class="field">
-            <label for="credit_id">سهمیه پرداخت‌شده</label>
-            <select id="credit_id" name="credit_id" required>
-              <?php foreach ($paid_credits as $credit) : ?>
-                <option value="<?= (int) ($credit['id'] ?? 0) ?>">
-                  <?= casting_e(casting_ad_type_label((string) ($credit['ad_type'] ?? ''))) ?>
-                  · سفارش <?= casting_e((string) ($credit['order_code'] ?? '')) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-        <?php elseif ($is_owner) : ?>
-          <input type="hidden" name="credit_id" value="0">
-          <div class="field">
-            <label for="ad_type">نوع بنر</label>
-            <select id="ad_type" name="ad_type" required>
-              <?php foreach (casting_ad_type_labels() as $key => $label) : ?>
-                <option value="<?= casting_e($key) ?>"><?= casting_e($label) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
+    <?php if ($upload_hint !== '') : ?>
+      <p class="meta ad-upload-hint"><?= casting_e($upload_hint) ?>
+        <?php if (!$has_pending) : ?>
+          <a href="<?= casting_e(casting_url('cart.php#shop-ads')) ?>">خرید اشتراک</a>
         <?php endif; ?>
-        <div class="field">
-          <label for="title">عنوان (اختیاری)</label>
-          <input id="title" name="title" type="text" maxlength="120" placeholder="مثلاً نام نمایش یا فیلم">
-        </div>
-        <div class="field">
-          <label for="poster_file">فایل پوستر</label>
-          <input id="poster_file" name="poster_file" type="file" accept="image/jpeg,image/png,image/webp" required data-upload-kind="image" data-max-bytes="<?= (int) $spec['max_bytes'] ?>">
-          <p class="field-hint">JPG / PNG / WebP — حداقل <?= (int) $spec['min_width'] ?>×<?= (int) $spec['min_height'] ?> — حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></p>
-        </div>
-        <button class="btn btn-primary" type="submit">ارسال برای تأیید</button>
-      </form>
-    <?php else : ?>
-      <p class="empty-state">سهمیهٔ باز ندارید. اگر پوستر در انتظار تأیید است صبر کنید؛ اگر رد شده از لیست پایین دوباره بفرستید. برای سهمیه جدید از <a href="<?= casting_e(casting_url('cart.php#shop-ads')) ?>">خرید اشتراک</a> اقدام کنید.</p>
+      </p>
     <?php endif; ?>
+
+    <form class="form ad-upload-form<?= $can_upload ? '' : ' is-disabled' ?>" method="post" enctype="multipart/form-data" action="my-ads.php"<?= $can_upload ? '' : ' onsubmit="return false;"' ?>>
+      <?php wp_nonce_field('casting_ad_poster'); ?>
+      <input type="hidden" name="ad_action" value="upload">
+      <?php if ($paid_credits !== []) : ?>
+        <div class="field">
+          <label for="credit_id">سهمیه پرداخت‌شده</label>
+          <select id="credit_id" name="credit_id" required<?= $can_upload ? '' : ' disabled' ?>>
+            <?php foreach ($paid_credits as $credit) : ?>
+              <option value="<?= (int) ($credit['id'] ?? 0) ?>">
+                <?= casting_e(casting_ad_type_label((string) ($credit['ad_type'] ?? ''))) ?>
+                · سفارش <?= casting_e((string) ($credit['order_code'] ?? '')) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      <?php elseif ($is_owner) : ?>
+        <input type="hidden" name="credit_id" value="0">
+        <div class="field">
+          <label for="ad_type">نوع بنر</label>
+          <select id="ad_type" name="ad_type" required<?= $can_upload ? '' : ' disabled' ?>>
+            <?php foreach (casting_ad_type_labels() as $key => $label) : ?>
+              <option value="<?= casting_e($key) ?>"><?= casting_e($label) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      <?php endif; ?>
+      <div class="field">
+        <label for="title">عنوان (اختیاری)</label>
+        <input id="title" name="title" type="text" maxlength="120" placeholder="مثلاً نام نمایش یا فیلم"<?= $can_upload ? '' : ' disabled' ?>>
+      </div>
+      <div class="field">
+        <label for="poster_file">فایل پوستر</label>
+        <?php casting_render_file_pick([
+            'id'        => 'poster_file',
+            'name'      => 'poster_file',
+            'disabled'  => !$can_upload,
+            'required'  => true,
+            'max_bytes' => (int) $spec['max_bytes'],
+        ]); ?>
+        <p class="field-hint">JPG / PNG / WebP — حداقل <?= (int) $spec['min_width'] ?>×<?= (int) $spec['min_height'] ?> — حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></p>
+      </div>
+      <button class="btn btn-primary" type="submit"<?= $can_upload ? '' : ' disabled' ?>>ارسال برای تأیید</button>
+    </form>
 
     <h2 class="panel-section-title">پوسترهای شما</h2>
     <?php if ($items === []) : ?>
@@ -303,7 +329,12 @@ casting_render_flash();
                     </div>
                     <div class="field">
                       <label for="edit_file_<?= (int) $item['id'] ?>">پوستر جدید</label>
-                      <input id="edit_file_<?= (int) $item['id'] ?>" name="poster_file" type="file" accept="image/jpeg,image/png,image/webp" required data-upload-kind="image" data-max-bytes="<?= (int) $spec['max_bytes'] ?>">
+                      <?php casting_render_file_pick([
+                          'id'        => 'edit_file_' . (int) $item['id'],
+                          'name'      => 'poster_file',
+                          'required'  => true,
+                          'max_bytes' => (int) $spec['max_bytes'],
+                      ]); ?>
                     </div>
                     <div class="cta-row">
                       <button class="btn btn-primary btn-sm" type="submit">ارسال مجدد</button>
