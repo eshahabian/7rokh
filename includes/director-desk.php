@@ -1222,6 +1222,28 @@ function casting_director_send_casting_call(
         return ['ok' => false, 'error' => 'به هیچ عضوی ارسال نشد و فید عمومی هم ثبت نشد.'];
     }
 
+    if ($opportunity_id > 0 && function_exists('casting_store_sent_broadcast_call')) {
+        $director = $director ?: get_user_by('id', $director_id);
+        casting_store_sent_broadcast_call($director_id, [
+            'id'                => $call_id,
+            'employer_id'       => $director_id,
+            'talent_id'         => 0,
+            'employer'          => $director ? (string) $director->display_name : '',
+            'talent_name'       => 'فید عمومی فرصت‌ها',
+            'project'           => (string) ($project['title'] ?? 'فراخوان کستینگ'),
+            'project_type'      => $extra['project_type'] ?? '',
+            'role_needed'       => $role_needed,
+            'project_id'        => $project_id,
+            'opportunity_id'    => $opportunity_id,
+            'message'           => $message,
+            'created_at'        => $sent_at,
+            'status'            => 'public',
+            'kind'              => 'casting_call',
+            'matched'           => $matched,
+            'sent'              => $sent,
+        ]);
+    }
+
     $log = get_user_meta($director_id, 'casting_director_call_log', true);
     if (!is_array($log)) {
         $log = [];
@@ -1254,6 +1276,47 @@ function casting_director_send_casting_call(
 }
 
 /**
+ * خلاصهٔ فراخوان‌های قبلی میز کارگردان برای نمایش در صندوق ارسالی
+ *
+ * @return list<array<string, mixed>>
+ */
+function casting_director_call_log_as_sent_requests(int $director_id): array
+{
+    if ($director_id <= 0) {
+        return [];
+    }
+    $log = get_user_meta($director_id, 'casting_director_call_log', true);
+    if (!is_array($log) || $log === []) {
+        return [];
+    }
+    $out = [];
+    foreach ($log as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $is_public = !empty($row['public']) || (int) ($row['opportunity_id'] ?? 0) > 0;
+        $out[] = [
+            'id'             => (string) ($row['call_id'] ?? ''),
+            'employer_id'    => $director_id,
+            'talent_id'      => 0,
+            'talent_name'    => $is_public ? 'فید عمومی فرصت‌ها' : 'اعضای منطبق',
+            'project'        => (string) ($row['project_title'] ?? 'فراخوان کستینگ'),
+            'message'        => (string) ($row['message'] ?? ''),
+            'created_at'     => (string) ($row['sent_at'] ?? ''),
+            'status'         => $is_public ? 'public' : 'pending',
+            'kind'           => 'casting_call',
+            'opportunity_id' => (int) ($row['opportunity_id'] ?? 0),
+            'project_id'     => (int) ($row['project_id'] ?? 0),
+            'role_needed'    => (string) ($row['filters'] ?? ''),
+            'matched'        => (int) ($row['matched'] ?? 0),
+            'sent'           => (int) ($row['sent'] ?? 0),
+        ];
+    }
+
+    return $out;
+}
+
+/**
  * @param array<string, string> $filters
  */
 function casting_render_director_casting_call_form(int $project_id, array $filters = [], string $message = '', int $director_id = 0): void
@@ -1264,13 +1327,21 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
     if (!function_exists('casting_cart_add_url')) {
         require_once __DIR__ . '/cart.php';
     }
+    if ($director_id <= 0) {
+        $user = wp_get_current_user();
+        $director_id = (int) ($user->ID ?? 0);
+    }
     $project = $director_id > 0 ? casting_director_get_project($director_id, $project_id) : [];
     $type_key = casting_checkout_map_project_type((string) ($project['project_type'] ?? ''));
     $catalog = casting_paid_services_catalog();
     $call_types = $catalog['casting_call']['types'] ?? [];
     $price_base = ($type_key !== '' && isset($call_types[$type_key])) ? (int) $call_types[$type_key]['amount_base'] : 0;
     $price_final = $price_base > 0 ? casting_checkout_calc_amounts($price_base)['final'] : 0;
-    $has_credit = $director_id > 0 && casting_user_has_casting_call_credit($director_id, $project_id);
+    $is_portal_owner = $director_id > 0
+        && function_exists('casting_user_is_portal_owner')
+        && casting_user_is_portal_owner($director_id);
+    $has_credit = $is_portal_owner || ($director_id > 0 && casting_user_has_casting_call_credit($director_id, $project_id));
+    $can_submit_call = $has_credit && ($type_key !== '' || $is_portal_owner);
     $checkout_href = $type_key !== ''
         ? casting_cart_add_url('casting_call', $type_key, (int) $project_id)
         : '';
@@ -1280,10 +1351,6 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
     }
     if (!function_exists('casting_opportunities_list_for_director')) {
         require_once __DIR__ . '/opportunities.php';
-    }
-    if ($director_id <= 0) {
-        $user = wp_get_current_user();
-        $director_id = (int) ($user->ID ?? 0);
     }
     $genders = casting_gender_labels();
     $defs = casting_body_metric_defs();
@@ -1322,7 +1389,11 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
     <div class="director-casting-call">
       <h2 class="panel-section-title">فراخوان کستینگ</h2>
       <p class="field-hint">برای اعضای منطبق ارسال می‌شود و به‌صورت پیش‌فرض در فید عمومی «فرصت‌ها» هم منتشر می‌شود تا دیگران بتوانند اپلای کنند.</p>
-      <?php if ($type_key === '') : ?>
+      <?php if ($is_portal_owner) : ?>
+        <div class="bio-block checkout-call-price">
+          <p class="meta flash-success" style="margin:0">حساب مدیر اصلی بدون هزینه می‌تواند فراخوان بفرستد.</p>
+        </div>
+      <?php elseif ($type_key === '') : ?>
         <div class="flash flash-error">نوع پروژه برای قیمت‌گذاری فراخوان مناسب نیست. نوع را روی تئاتر، فیلم کوتاه، مستند، سینمایی یا تلویزیونی تنظیم کنید.</div>
       <?php else : ?>
         <div class="bio-block checkout-call-price">
@@ -1374,8 +1445,8 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
           <input type="checkbox" name="publish_public" value="1" checked>
           در فید عمومی فرصت‌ها هم منتشر شود (اپلای باز)
         </label>
-        <button class="btn btn-primary" type="submit"<?= (!$has_credit || $type_key === '') ? ' disabled title="ابتدا هزینه فراخوان را پرداخت کنید"' : '' ?>>ارسال و انتشار فراخوان</button>
-        <?php if (!$has_credit && $checkout_href !== '') : ?>
+        <button class="btn btn-primary" type="submit"<?= !$can_submit_call ? ' disabled title="ابتدا هزینه فراخوان را پرداخت کنید"' : '' ?>>ارسال و انتشار فراخوان</button>
+        <?php if (!$has_credit && !$is_portal_owner && $checkout_href !== '') : ?>
           <a class="btn btn-ghost" href="<?= casting_e($checkout_href) ?>">افزودن به خرید اشتراک</a>
         <?php endif; ?>
       </form>

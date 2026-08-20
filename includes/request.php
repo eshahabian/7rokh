@@ -63,6 +63,21 @@ function casting_request_open_url(string $request_id, array $extra = []): string
     return $url;
 }
 
+function casting_user_can_send_casting_requests(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
+    if (function_exists('casting_user_is_director_role') && casting_user_is_director_role($user_id)) {
+        return true;
+    }
+
+    return casting_is_employer_role(casting_get_user_role($user_id));
+}
+
 /**
  * ارسال دعوت همکاری کارفرما به هنرمند (جدا از پیام عادی)
  *
@@ -76,7 +91,7 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
     if (!$employer || !$talent) {
         return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
     }
-    if (casting_get_user_role($employer_id) === '' || !casting_is_employer_role(casting_get_user_role($employer_id))) {
+    if (!casting_user_can_send_casting_requests($employer_id)) {
         return ['ok' => false, 'error' => 'فقط کارفرما می‌تواند دعوت بفرستد.'];
     }
     $to_role = casting_get_user_role($talent_id);
@@ -201,6 +216,24 @@ function casting_store_request_for_users(array $request): void
 }
 
 /**
+ * ثبت خلاصهٔ فراخوان عمومی در صندوق ارسالی کارگردان (بدون گیرندهٔ شخصی)
+ *
+ * @param array<string, mixed> $request
+ */
+function casting_store_sent_broadcast_call(int $director_id, array $request): void
+{
+    if ($director_id <= 0) {
+        return;
+    }
+    $outbox = get_user_meta($director_id, 'casting_sent_requests', true);
+    if (!is_array($outbox)) {
+        $outbox = [];
+    }
+    array_unshift($outbox, $request);
+    update_user_meta($director_id, 'casting_sent_requests', array_slice($outbox, 0, 100));
+}
+
+/**
  * @return array{active:string,archive:string}|null
  */
 function casting_user_request_storage_keys(int $user_id): ?array
@@ -223,14 +256,14 @@ function casting_user_request_directions(int $user_id): array
 {
     $role = casting_get_user_role($user_id);
     $directions = [];
-    if ($role === 'talent' || $role === 'director') {
+    if ($role === 'talent' || $role === 'director' || (function_exists('casting_user_is_director_role') && casting_user_is_director_role($user_id))) {
         $directions[] = 'received';
     }
-    if (casting_is_employer_role($role)) {
+    if (casting_user_can_send_casting_requests($user_id)) {
         $directions[] = 'sent';
     }
 
-    return $directions;
+    return array_values(array_unique($directions));
 }
 
 function casting_request_list_meta_key(int $user_id, string $direction, string $bucket): ?string
@@ -243,10 +276,10 @@ function casting_request_list_meta_key(int $user_id, string $direction, string $
     }
 
     $role = casting_get_user_role($user_id);
-    if ($direction === 'received' && ($role === 'talent' || $role === 'director')) {
+    if ($direction === 'received' && ($role === 'talent' || $role === 'director' || (function_exists('casting_user_is_director_role') && casting_user_is_director_role($user_id)))) {
         return $bucket === 'archive' ? 'casting_requests_archive' : 'casting_requests';
     }
-    if ($direction === 'sent' && casting_is_employer_role($role)) {
+    if ($direction === 'sent' && casting_user_can_send_casting_requests($user_id)) {
         return $bucket === 'archive' ? 'casting_sent_requests_archive' : 'casting_sent_requests';
     }
 
@@ -1004,6 +1037,12 @@ function casting_request_status_label(string $status): string
     if ($status === 'pending') {
         return 'در انتظار پاسخ';
     }
+    if ($status === 'public') {
+        return 'منتشرشده در فرصت‌ها';
+    }
+    if ($status === 'closed') {
+        return 'بسته‌شده';
+    }
     return $status;
 }
 
@@ -1150,7 +1189,7 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
             echo '<p class="meta">بایگانی خالی است.</p>';
         } else {
             ?>
-    <p class="meta">هنوز فراخوانی نفرستاده‌اید. از <a href="search-users.php">جستجوی کاربران</a> یا میز کارگردان شروع کنید.</p>
+    <p class="meta">هنوز دعوت مستقیمی به یک عضو نفرستاده‌اید. فراخوان عمومی از <a href="director-desk.php">پروژه‌ها</a> در بخش بالا (و در «فرصت‌ها») می‌آید؛ دعوت نفر‌به‌نفر از همین صفحه یا جستجوی کاربران.</p>
             <?php
         }
         return;
@@ -1258,13 +1297,37 @@ function casting_render_employer_sent_requests_list(int $employer_id, array $req
           <div class="cta-row">
             <a class="btn btn-ghost" href="member.php?id=<?= (int) $req['talent_id'] ?>">مشاهده پروفایل</a>
           </div>
-          <?php else : ?>
+          <?php else :
+            $opp_id = (int) ($req['opportunity_id'] ?? 0);
+            $project_id = (int) ($req['project_id'] ?? 0);
+            $public_href = $opp_id > 0 ? casting_url('opportunities.php?id=' . $opp_id) : '';
+            $desk_href = $project_id > 0
+                ? casting_url('director-desk.php?project=' . $project_id . ($opp_id > 0 ? '&opp=' . $opp_id : ''))
+                : casting_url('director-desk.php');
+            ?>
             <header>
-              <strong><?= casting_e((string) ($req['talent_name'] ?? 'کاربر')) ?></strong>
+              <strong><?= casting_e((string) ($req['talent_name'] ?? 'فید عمومی فرصت‌ها')) ?></strong>
               <time><?= casting_e((string) ($req['created_at'] ?? '')) ?></time>
+              <?php if ($is_call) : ?>
+                <span class="req-kind-badge">فراخوان کستینگ</span>
+              <?php endif; ?>
               <span class="req-status"><?= casting_e(casting_request_status_label($status)) ?></span>
             </header>
-            <p><?= nl2br(casting_e((string) ($req['message'] ?? ''))) ?></p>
+            <?php if (!empty($req['project'])) : ?>
+              <p><strong>پروژه:</strong> <?= casting_e((string) $req['project']) ?></p>
+            <?php endif; ?>
+            <?php if ($is_call && !empty($req['role_needed'])) : ?>
+              <p><strong>نوع فعالیت:</strong> <?= casting_e((string) $req['role_needed']) ?></p>
+            <?php endif; ?>
+            <?php if (trim((string) ($req['message'] ?? '')) !== '') : ?>
+              <p><?= nl2br(casting_e(casting_chat_preview((string) $req['message'], 160))) ?></p>
+            <?php endif; ?>
+            <div class="cta-row">
+              <?php if ($public_href !== '') : ?>
+                <a class="btn btn-ghost btn-sm" href="<?= casting_e($public_href) ?>">مشاهده در فرصت‌ها</a>
+              <?php endif; ?>
+              <a class="btn btn-primary btn-sm" href="<?= casting_e($desk_href) ?>">میز پروژه</a>
+            </div>
           <?php endif; ?>
         </article>
       <?php endforeach; ?>

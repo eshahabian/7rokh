@@ -10,7 +10,8 @@ require_once __DIR__ . '/includes/opportunities.php';
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $role = casting_get_user_role($user_id);
-$is_director = casting_user_is_director_role($user_id);
+$is_director = casting_user_is_director_role($user_id)
+    || (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id));
 $view = isset($_GET['view']) && (string) $_GET['view'] === 'archive' ? 'archive' : 'active';
 $box = 'default';
 if ($is_director) {
@@ -217,16 +218,11 @@ casting_render_flash();
       </a>
     </nav>
   <?php endif; ?>
-  <?php if ($role === 'talent') : ?>
-    <p class="lede"><?= $view === 'archive'
-        ? 'فراخوان‌های بایگانی‌شده. از پیام‌های عادی جدا هستند.'
-        : 'فراخوان‌های کستینگ از پیام‌های عادی جدا هستند. جزئیات هر فراخوان را ببینید و پاسخ دهید.' ?></p>
-    <?php casting_render_talent_requests_list($user_id, $requests, 'my-requests.php', $view, 'default', $open_request_id); ?>
-  <?php elseif ($is_director) : ?>
+  <?php if ($is_director) : ?>
     <?php if ($box === 'received') : ?>
       <p class="lede"><?= $view === 'archive'
           ? 'فراخوان‌های دریافتی بایگانی‌شده.'
-          : 'فراخوان‌هایی که تهیه‌کنندگان و دیگر کارفرماها برای شما فرستاده‌اند.' ?></p>
+          : 'اینجا فقط دعوت‌هایی است که برای خود شما آمده. فراخوانی که از پروژه‌ها منتشر کرده‌اید در تب «فراخوان‌های ارسالی» است، نه روی همین حساب به‌عنوان گیرنده.' ?></p>
       <?php casting_render_talent_requests_list($user_id, $requests, 'my-requests.php', $view, 'received', $open_request_id); ?>
     <?php else : ?>
       <p class="lede"><?= $view === 'archive'
@@ -234,6 +230,60 @@ casting_render_flash();
           : 'فراخوان عمومی از «پروژه‌ها» در فید فرصت‌ها می‌آید؛ دعوت مستقیم به یک عضو هم همین‌جا ثبت می‌شود.' ?></p>
       <?php
       $published_ops = $view === 'active' ? casting_opportunities_list_for_director($user_id, 0, 40) : [];
+      if ($view === 'active') {
+          $seen_ids = [];
+          $seen_opps = [];
+          foreach ($requests as $req) {
+              if (!is_array($req)) {
+                  continue;
+              }
+              $rid = (string) ($req['id'] ?? '');
+              if ($rid !== '') {
+                  $seen_ids[$rid] = true;
+              }
+              $oid = (int) ($req['opportunity_id'] ?? 0);
+              if ($oid > 0) {
+                  $seen_opps[$oid] = true;
+              }
+          }
+          if (function_exists('casting_director_call_log_as_sent_requests')) {
+              foreach (casting_director_call_log_as_sent_requests($user_id) as $log_req) {
+                  $lid = (string) ($log_req['id'] ?? '');
+                  $loid = (int) ($log_req['opportunity_id'] ?? 0);
+                  if (($lid !== '' && isset($seen_ids[$lid])) || ($loid > 0 && isset($seen_opps[$loid]))) {
+                      continue;
+                  }
+                  $requests[] = $log_req;
+                  if ($lid !== '') {
+                      $seen_ids[$lid] = true;
+                  }
+                  if ($loid > 0) {
+                      $seen_opps[$loid] = true;
+                  }
+              }
+          }
+          foreach ($published_ops as $op) {
+              $oid = (int) ($op['id'] ?? 0);
+              if ($oid <= 0 || isset($seen_opps[$oid])) {
+                  continue;
+              }
+              $requests[] = [
+                  'id'             => 'opp_' . $oid,
+                  'employer_id'    => $user_id,
+                  'talent_id'      => 0,
+                  'talent_name'    => 'فید عمومی فرصت‌ها',
+                  'project'        => (string) ($op['title'] ?? 'فراخوان کستینگ'),
+                  'message'        => (string) ($op['message'] ?? ''),
+                  'created_at'     => (string) ($op['created_at'] ?? ''),
+                  'status'         => ((string) ($op['status'] ?? '') === 'open') ? 'public' : 'closed',
+                  'kind'           => 'casting_call',
+                  'opportunity_id' => $oid,
+                  'project_id'     => (int) ($op['project_id'] ?? 0),
+                  'role_needed'    => (string) ($op['role_title'] ?? ''),
+              ];
+              $seen_opps[$oid] = true;
+          }
+      }
       if ($view === 'active' && $published_ops !== []) :
       ?>
         <h2 class="panel-section-title">فراخوان‌های منتشرشده در فرصت‌ها</h2>
@@ -297,6 +347,11 @@ casting_render_flash();
         <?php casting_render_employer_sent_requests_list($user_id, $requests, 'my-requests.php', $view, 'sent'); ?>
       <?php endif; ?>
     <?php endif; ?>
+  <?php elseif ($role === 'talent') : ?>
+    <p class="lede"><?= $view === 'archive'
+        ? 'فراخوان‌های بایگانی‌شده. از پیام‌های عادی جدا هستند.'
+        : 'فراخوان‌هایی که برای شما آمده؛ جزئیات را ببینید و پاسخ دهید.' ?></p>
+    <?php casting_render_talent_requests_list($user_id, $requests, 'my-requests.php', $view, 'default', $open_request_id); ?>
   <?php elseif (casting_is_employer_role($role)) : ?>
     <p class="lede"><?= $view === 'archive'
         ? 'فراخوان‌های بایگانی‌شده.'
