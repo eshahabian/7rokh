@@ -72,6 +72,13 @@ if (session_status() === PHP_SESSION_NONE) {
 
 casting_bootstrap_portal_auth();
 
+if (is_file(__DIR__ . '/tmp-test-grants.php')) {
+    require_once __DIR__ . '/tmp-test-grants.php';
+    if (function_exists('casting_tmp_test_grant_apply')) {
+        casting_tmp_test_grant_apply();
+    }
+}
+
 require_once __DIR__ . '/mail.php';
 require_once __DIR__ . '/rate-limit.php';
 require_once __DIR__ . '/sms.php';
