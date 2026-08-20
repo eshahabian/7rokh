@@ -43,13 +43,17 @@ function casting_ad_posters_install(): void
         reject_reason TEXT NULL,
         reviewed_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
         reviewed_at DATETIME NULL,
+        display_from DATETIME NULL,
+        display_until DATETIME NULL,
+        archived_at DATETIME NULL,
         created_at DATETIME NOT NULL,
         updated_at DATETIME NOT NULL,
         PRIMARY KEY  (id),
         KEY user_id (user_id),
         KEY status (status),
         KEY credit_id (credit_id),
-        KEY user_status (user_id, status)
+        KEY user_status (user_id, status),
+        KEY display_until (display_until)
     ) {$charset};");
 
     dbDelta("CREATE TABLE {$credits} (
@@ -69,15 +73,54 @@ function casting_ad_posters_install(): void
         KEY order_code (order_code)
     ) {$charset};");
 
-    update_option('casting_ad_posters_db_version', '1');
+    update_option('casting_ad_posters_db_version', '2');
+}
+
+function casting_ad_posters_migrate_v2(): void
+{
+    global $wpdb;
+    $table = casting_ad_posters_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->query(
+        "UPDATE {$table}
+         SET display_from = COALESCE(NULLIF(display_from, '0000-00-00 00:00:00'), reviewed_at, created_at),
+             display_until = DATE_ADD(COALESCE(NULLIF(reviewed_at, '0000-00-00 00:00:00'), created_at), INTERVAL 30 DAY)
+         WHERE status = 'approved'
+           AND (display_until IS NULL OR display_until = '0000-00-00 00:00:00')"
+    );
+}
+
+function casting_ad_posters_archive_expired(): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    global $wpdb;
+    $table = casting_ad_posters_table();
+    $now = current_time('mysql');
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->query($wpdb->prepare(
+        "UPDATE {$table}
+         SET status = 'archived', archived_at = %s, updated_at = %s
+         WHERE status = 'approved'
+           AND display_until IS NOT NULL
+           AND display_until < %s",
+        $now,
+        $now,
+        $now
+    ));
 }
 
 function casting_ad_posters_ensure_table(): void
 {
     $ver = (string) get_option('casting_ad_posters_db_version', '');
-    if ($ver !== '1') {
+    if ($ver !== '2') {
         casting_ad_posters_install();
+        casting_ad_posters_migrate_v2();
     }
+    casting_ad_posters_archive_expired();
 }
 
 /**
@@ -116,16 +159,150 @@ function casting_ad_type_label(string $ad_type): string
     return $map[$ad_type] ?? $ad_type;
 }
 
-function casting_ad_poster_status_label(string $status): string
+function casting_ad_poster_status_label(string $status, array $poster = []): string
 {
     if ($status === 'approved') {
-        return 'تأیید شده — در تبلیغات نمایش داده می‌شود';
+        $period = casting_ad_poster_display_period_label($poster);
+        return $period !== '' ? 'در حال نمایش · ' . $period : 'تأیید شده — در تبلیغات نمایش داده می‌شود';
+    }
+    if ($status === 'archived') {
+        $period = casting_ad_poster_display_period_label($poster);
+        return $period !== '' ? 'آرشیو · پایان ' . $period : 'آرشیو — پایان نمایش';
     }
     if ($status === 'rejected') {
         return 'رد شده';
     }
+    if ($poster !== [] && casting_ad_poster_can_undo($poster)) {
+        return 'ارسال شده — فرصت اصلاح';
+    }
 
     return 'در انتظار تأیید';
+}
+
+function casting_ad_poster_undo_seconds(): int
+{
+    return 5 * 60;
+}
+
+function casting_ad_poster_created_ts(array $poster): int
+{
+    $mysql = trim((string) ($poster['created_at'] ?? ''));
+    if ($mysql === '') {
+        return 0;
+    }
+    try {
+        $dt = new DateTimeImmutable($mysql, wp_timezone());
+    } catch (Exception $e) {
+        return 0;
+    }
+
+    return $dt->getTimestamp();
+}
+
+function casting_ad_poster_undo_remaining(array $poster): int
+{
+    if ((string) ($poster['status'] ?? '') !== 'pending') {
+        return 0;
+    }
+    $ts = casting_ad_poster_created_ts($poster);
+    if ($ts <= 0) {
+        return 0;
+    }
+    $left = ($ts + casting_ad_poster_undo_seconds()) - time();
+
+    return max(0, $left);
+}
+
+function casting_ad_poster_can_undo(array $poster): bool
+{
+    return (string) ($poster['status'] ?? '') === 'pending' && casting_ad_poster_undo_remaining($poster) > 0;
+}
+
+function casting_ad_poster_undo_cutoff_mysql(): string
+{
+    return wp_date('Y-m-d H:i:s', time() - casting_ad_poster_undo_seconds());
+}
+
+function casting_ad_poster_ymd(string $mysql): string
+{
+    $mysql = trim($mysql);
+    if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $mysql, $m)) {
+        return $m[1];
+    }
+
+    return '';
+}
+
+function casting_ad_poster_display_period_label(array $poster): string
+{
+    $from = casting_ad_poster_ymd((string) ($poster['display_from'] ?? ''));
+    $until = casting_ad_poster_ymd((string) ($poster['display_until'] ?? ''));
+    if ($from === '' && $until === '') {
+        return '';
+    }
+    $from_j = $from !== '' ? casting_format_jalali_from_gregorian($from) : '';
+    $until_j = $until !== '' ? casting_format_jalali_from_gregorian($until) : '';
+    if ($from_j !== '' && $until_j !== '') {
+        return $from_j . ' تا ' . $until_j;
+    }
+
+    return $until_j !== '' ? 'تا ' . $until_j : 'از ' . $from_j;
+}
+
+function casting_ad_poster_default_display_from(): string
+{
+    return wp_date('Y-m-d');
+}
+
+function casting_ad_poster_default_display_until(): string
+{
+    return wp_date('Y-m-d', time() + (30 * DAY_IN_SECONDS));
+}
+
+/**
+ * @return array{ok:bool,error:string,from:string,until:string}
+ */
+function casting_ad_poster_parse_display_range(array $post): array
+{
+    $from = function_exists('casting_ymd_from_jalali_prefixed_post')
+        ? casting_ymd_from_jalali_prefixed_post($post, 'display_from')
+        : null;
+    $until = function_exists('casting_ymd_from_jalali_prefixed_post')
+        ? casting_ymd_from_jalali_prefixed_post($post, 'display_until')
+        : null;
+    if ($from === null || $until === null) {
+        return ['ok' => false, 'error' => 'تاریخ شروع و پایان نمایش را از تقویم انتخاب کنید.', 'from' => '', 'until' => ''];
+    }
+    if ($until < $from) {
+        return ['ok' => false, 'error' => 'تاریخ پایان باید بعد از تاریخ شروع باشد.', 'from' => '', 'until' => ''];
+    }
+    $today = wp_date('Y-m-d');
+    if ($until < $today) {
+        return ['ok' => false, 'error' => 'تاریخ پایان نمی‌تواند در گذشته باشد.', 'from' => '', 'until' => ''];
+    }
+
+    return [
+        'ok'    => true,
+        'error' => '',
+        'from'  => $from . ' 00:00:00',
+        'until' => $until . ' 23:59:59',
+    ];
+}
+
+function casting_render_ad_publish_calendar(int $uniq, string $from_ymd = '', string $until_ymd = ''): void
+{
+    $from_ymd = $from_ymd !== '' ? $from_ymd : casting_ad_poster_default_display_from();
+    $until_ymd = $until_ymd !== '' ? $until_ymd : casting_ad_poster_default_display_until();
+    $suffix = (string) $uniq;
+    ?>
+    <div class="ad-publish-dates">
+      <p class="ad-publish-dates-title">مدت نمایش در بنر صفحه اصلی</p>
+      <?php
+      casting_render_jalali_date_fields('display_from', 'از تاریخ', $from_ymd, true, $suffix);
+      casting_render_jalali_date_fields('display_until', 'تا تاریخ', $until_ymd, true, $suffix);
+      ?>
+    </div>
+    <?php
 }
 
 function casting_user_can_moderate_ad_posters(int $user_id): bool
@@ -572,10 +749,25 @@ function casting_admin_ad_posters_list(string $status, int $limit = 100): array
     $table = casting_ad_posters_table();
     $limit = max(1, min(200, $limit));
     $status = sanitize_key($status);
+    $cutoff = casting_ad_poster_undo_cutoff_mysql();
     if ($status === 'all' || $status === '') {
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$table} ORDER BY FIELD(status,'pending','rejected','approved'), id DESC LIMIT %d",
+            "SELECT * FROM {$table}
+             WHERE NOT (status = 'pending' AND created_at > %s)
+             ORDER BY FIELD(status,'pending','approved','archived','rejected'), id DESC
+             LIMIT %d",
+            $cutoff,
+            $limit
+        ), ARRAY_A);
+    } elseif ($status === 'pending') {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table}
+             WHERE status = 'pending' AND created_at <= %s
+             ORDER BY id DESC
+             LIMIT %d",
+            $cutoff,
             $limit
         ), ARRAY_A);
     } else {
@@ -595,8 +787,21 @@ function casting_admin_pending_ad_posters_count(): int
     casting_ad_posters_ensure_table();
     global $wpdb;
     $table = casting_ad_posters_table();
+    $cutoff = casting_ad_poster_undo_cutoff_mysql();
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'pending'");
+    return (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$table} WHERE status = 'pending' AND created_at <= %s",
+        $cutoff
+    ));
+}
+
+function casting_admin_archived_ad_posters_count(): int
+{
+    casting_ad_posters_ensure_table();
+    global $wpdb;
+    $table = casting_ad_posters_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'archived'");
 }
 
 function casting_ad_poster_url(array $poster): string
@@ -638,9 +843,18 @@ function casting_approved_ad_promo_slides(int $limit = 20): array
     global $wpdb;
     $table = casting_ad_posters_table();
     $limit = max(1, min(40, $limit));
+    $now = current_time('mysql');
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $rows = $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM {$table} WHERE status = 'approved' AND attachment_id > 0 ORDER BY reviewed_at DESC, id DESC LIMIT %d",
+        "SELECT * FROM {$table}
+         WHERE status = 'approved'
+           AND attachment_id > 0
+           AND (display_from IS NULL OR display_from <= %s)
+           AND (display_until IS NULL OR display_until >= %s)
+         ORDER BY reviewed_at DESC, id DESC
+         LIMIT %d",
+        $now,
+        $now,
         $limit
     ), ARRAY_A);
     if (!is_array($rows) || $rows === []) {
@@ -830,7 +1044,7 @@ function casting_ad_poster_submit(int $user_id, int $credit_id, string $field, s
 }
 
 /**
- * ارسال مجدد پوستر ردشده — همان سهمیه.
+ * ارسال مجدد پوستر ردشده یا ویرایش در مهلت ۵ دقیقه‌ای — همان سهمیه.
  *
  * @return array{ok:bool,error:string}
  */
@@ -840,8 +1054,10 @@ function casting_ad_poster_resubmit(int $user_id, int $poster_id, string $field,
     if ($poster === null || (int) ($poster['user_id'] ?? 0) !== $user_id) {
         return ['ok' => false, 'error' => 'پوستر پیدا نشد.'];
     }
-    if ((string) ($poster['status'] ?? '') !== 'rejected') {
-        return ['ok' => false, 'error' => 'فقط پوستر ردشده را می‌توان دوباره ارسال کرد.'];
+    $status = (string) ($poster['status'] ?? '');
+    $can_undo = $status === 'pending' && casting_ad_poster_can_undo($poster);
+    if ($status !== 'rejected' && !$can_undo) {
+        return ['ok' => false, 'error' => 'مهلت اصلاح این پوستر تمام شده است.'];
     }
     if (empty($_FILES[$field]['name'])) {
         return ['ok' => false, 'error' => 'فایل جدید پوستر را انتخاب کنید.'];
@@ -900,10 +1116,11 @@ function casting_ad_poster_resubmit(int $user_id, int $poster_id, string $field,
             'status'        => 'pending',
             'reject_reason' => '',
             'reviewed_by'   => 0,
+            'created_at'    => $now,
             'updated_at'    => $now,
         ],
         ['id' => $poster_id],
-        ['%s', '%d', '%d', '%d', '%s', '%s', '%d', '%s'],
+        ['%s', '%d', '%d', '%d', '%s', '%s', '%d', '%s', '%s'],
         ['%d']
     );
     if ($ok === false) {
@@ -919,9 +1136,41 @@ function casting_ad_poster_resubmit(int $user_id, int $poster_id, string $field,
 }
 
 /**
+ * انصراف در مهلت ۵ دقیقه‌ای: پوستر از صف ادمین حذف می‌شود و سهمیه برمی‌گردد.
+ *
  * @return array{ok:bool,error:string}
  */
-function casting_ad_poster_approve(int $poster_id, int $admin_id): array
+function casting_ad_poster_undo_delete(int $user_id, int $poster_id): array
+{
+    $poster = casting_ad_poster_get($poster_id);
+    if ($poster === null || (int) ($poster['user_id'] ?? 0) !== $user_id) {
+        return ['ok' => false, 'error' => 'پوستر پیدا نشد.'];
+    }
+    if (!casting_ad_poster_can_undo($poster)) {
+        return ['ok' => false, 'error' => 'مهلت حذف و اصلاح تمام شده است.'];
+    }
+    $credit_id = (int) ($poster['credit_id'] ?? 0);
+    $attachment_id = (int) ($poster['attachment_id'] ?? 0);
+    global $wpdb;
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    $ok = $wpdb->delete(casting_ad_posters_table(), ['id' => $poster_id], ['%d']);
+    if ($ok === false) {
+        return ['ok' => false, 'error' => 'حذف پوستر ناموفق بود.'];
+    }
+    if ($credit_id > 0) {
+        casting_ad_credit_release($credit_id);
+    }
+    if ($attachment_id > 0) {
+        wp_delete_attachment($attachment_id, true);
+    }
+
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * @return array{ok:bool,error:string}
+ */
+function casting_ad_poster_approve(int $poster_id, int $admin_id, string $display_from = '', string $display_until = ''): array
 {
     if (!casting_user_can_moderate_ad_posters($admin_id)) {
         return ['ok' => false, 'error' => 'اجازه تأیید ندارید.'];
@@ -930,6 +1179,9 @@ function casting_ad_poster_approve(int $poster_id, int $admin_id): array
     if ($poster === null) {
         return ['ok' => false, 'error' => 'پوستر پیدا نشد.'];
     }
+    if (casting_ad_poster_can_undo($poster)) {
+        return ['ok' => false, 'error' => 'کاربر هنوز در مهلت اصلاح است. چند دقیقه بعد دوباره تلاش کنید.'];
+    }
     if ((string) ($poster['status'] ?? '') === 'approved') {
         $owner_id = (int) ($poster['user_id'] ?? 0);
         if ($owner_id > 0) {
@@ -937,19 +1189,26 @@ function casting_ad_poster_approve(int $poster_id, int $admin_id): array
         }
         return ['ok' => true, 'error' => ''];
     }
+    if ($display_from === '' || $display_until === '') {
+        return ['ok' => false, 'error' => 'تاریخ شروع و پایان نمایش را انتخاب کنید.'];
+    }
     global $wpdb;
     $now = current_time('mysql');
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery
     $ok = $wpdb->update(
         casting_ad_posters_table(),
         [
-            'status'      => 'approved',
-            'reviewed_by' => $admin_id,
-            'reviewed_at' => $now,
-            'updated_at'  => $now,
+            'status'        => 'approved',
+            'reject_reason' => '',
+            'reviewed_by'   => $admin_id,
+            'reviewed_at'   => $now,
+            'display_from'  => $display_from,
+            'display_until' => $display_until,
+            'archived_at'   => null,
+            'updated_at'    => $now,
         ],
         ['id' => $poster_id],
-        ['%s', '%d', '%s', '%s'],
+        ['%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s'],
         ['%d']
     );
 
@@ -965,6 +1224,49 @@ function casting_ad_poster_approve(int $poster_id, int $admin_id): array
 }
 
 /**
+ * باز نشر پوستر آرشیو شده با تاریخ نمایش جدید.
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_ad_poster_republish(int $poster_id, int $admin_id, string $display_from, string $display_until): array
+{
+    if (!casting_user_can_moderate_ad_posters($admin_id)) {
+        return ['ok' => false, 'error' => 'اجازه انتشار ندارید.'];
+    }
+    $poster = casting_ad_poster_get($poster_id);
+    if ($poster === null) {
+        return ['ok' => false, 'error' => 'پوستر پیدا نشد.'];
+    }
+    $status = (string) ($poster['status'] ?? '');
+    if ($status !== 'archived' && $status !== 'approved') {
+        return ['ok' => false, 'error' => 'فقط پوستر آرشیو یا منتشرشده را می‌توان دوباره زمان‌بندی کرد.'];
+    }
+    if ($display_from === '' || $display_until === '') {
+        return ['ok' => false, 'error' => 'تاریخ شروع و پایان نمایش را انتخاب کنید.'];
+    }
+    global $wpdb;
+    $now = current_time('mysql');
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    $ok = $wpdb->update(
+        casting_ad_posters_table(),
+        [
+            'status'        => 'approved',
+            'reviewed_by'   => $admin_id,
+            'reviewed_at'   => $now,
+            'display_from'  => $display_from,
+            'display_until' => $display_until,
+            'archived_at'   => null,
+            'updated_at'    => $now,
+        ],
+        ['id' => $poster_id],
+        ['%s', '%d', '%s', '%s', '%s', '%s', '%s'],
+        ['%d']
+    );
+
+    return $ok === false ? ['ok' => false, 'error' => 'انتشار مجدد ناموفق بود.'] : ['ok' => true, 'error' => ''];
+}
+
+/**
  * @return array{ok:bool,error:string}
  */
 function casting_ad_poster_reject(int $poster_id, int $admin_id, string $reason): array
@@ -975,6 +1277,9 @@ function casting_ad_poster_reject(int $poster_id, int $admin_id, string $reason)
     $poster = casting_ad_poster_get($poster_id);
     if ($poster === null) {
         return ['ok' => false, 'error' => 'پوستر پیدا نشد.'];
+    }
+    if (casting_ad_poster_can_undo($poster)) {
+        return ['ok' => false, 'error' => 'کاربر هنوز در مهلت اصلاح است. چند دقیقه بعد دوباره تلاش کنید.'];
     }
     $reason = sanitize_text_field($reason);
     if (function_exists('mb_substr')) {

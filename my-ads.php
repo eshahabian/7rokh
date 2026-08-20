@@ -9,7 +9,7 @@ $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 $is_admin = casting_user_can_moderate_ad_posters($user_id);
 
-$allowed_inbox = ['pending', 'approved', 'rejected', 'all'];
+$allowed_inbox = ['pending', 'approved', 'archived', 'rejected', 'all'];
 $tab = sanitize_key((string) ($_GET['tab'] ?? ''));
 if ($tab !== 'inbox' && $tab !== 'mine') {
     $tab = $is_admin ? 'inbox' : 'mine';
@@ -29,7 +29,7 @@ $inbox_url = static function (string $status = 'pending'): string {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = sanitize_key((string) ($_POST['ad_action'] ?? 'upload'));
-    $is_mod_action = in_array($action, ['approve', 'reject'], true);
+    $is_mod_action = in_array($action, ['approve', 'reject', 'republish'], true);
     $return = $is_mod_action
         ? $inbox_url(sanitize_key((string) ($_POST['return_status'] ?? 'pending')))
         : $mine_url;
@@ -44,28 +44,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         casting_redirect($return);
     }
 
-    if ($action === 'approve' || $action === 'reject') {
+    if ($action === 'approve' || $action === 'reject' || $action === 'republish') {
         if (!$is_admin) {
             casting_set_flash('error', 'اجازه تأیید ندارید.');
             casting_redirect($mine_url);
         }
         $poster_id = (int) ($_POST['poster_id'] ?? 0);
-        if ($action === 'approve') {
-            $res = casting_ad_poster_approve($poster_id, $user_id);
-            casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'تأیید شد و در بنر تبلیغات صفحه اصلی نمایش داده می‌شود.' : $res['error']);
-        } else {
+        if ($action === 'reject') {
             $res = casting_ad_poster_reject($poster_id, $user_id, (string) ($_POST['reject_reason'] ?? ''));
             casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'رد شد. کاربر می‌تواند پوستر را اصلاح و دوباره بفرستد.' : $res['error']);
+        } else {
+            $range = casting_ad_poster_parse_display_range($_POST);
+            if (!$range['ok']) {
+                casting_set_flash('error', $range['error']);
+                casting_redirect($return);
+            }
+            if ($action === 'approve') {
+                $res = casting_ad_poster_approve($poster_id, $user_id, $range['from'], $range['until']);
+                casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'منتشر شد و تا تاریخ انتخاب‌شده در بنر صفحه اصلی نمایش داده می‌شود.' : $res['error']);
+            } else {
+                $res = casting_ad_poster_republish($poster_id, $user_id, $range['from'], $range['until']);
+                casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'دوباره منتشر شد و در بازه جدید در تبلیغات نمایش داده می‌شود.' : $res['error']);
+            }
         }
         casting_redirect($return);
     }
 
     $title = (string) ($_POST['title'] ?? '');
-    if ($action === 'resubmit') {
+    if ($action === 'undo_delete') {
+        $res = casting_ad_poster_undo_delete($user_id, (int) ($_POST['poster_id'] ?? 0));
+        casting_set_flash(
+            $res['ok'] ? 'success' : 'error',
+            $res['ok'] ? 'پوستر حذف شد و به صف ادمین نرفت. می‌توانید دوباره ارسال کنید.' : $res['error']
+        );
+    } elseif ($action === 'resubmit') {
         $res = casting_ad_poster_resubmit($user_id, (int) ($_POST['poster_id'] ?? 0), 'poster_file', $title);
         casting_set_flash(
             $res['ok'] ? 'success' : 'error',
-            $res['ok'] ? 'پوستر دوباره برای تأیید ارسال شد.' : $res['error']
+            $res['ok'] ? 'پوستر دوباره ارسال شد. تا ۵ دقیقه می‌توانید حذف یا ویرایش کنید.' : $res['error']
         );
     } else {
         $credit_id = (int) ($_POST['credit_id'] ?? 0);
@@ -73,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $res = casting_ad_poster_submit($user_id, $credit_id, 'poster_file', $title, $owner_type);
         casting_set_flash(
             $res['ok'] ? 'success' : 'error',
-            $res['ok'] ? 'پوستر ارسال شد و پس از تأیید در قسمت تبلیغات نمایش داده می‌شود.' : $res['error']
+            $res['ok'] ? 'پوستر ارسال شد. تا ۵ دقیقه می‌توانید حذف یا ویرایش کنید؛ بعد از آن برای تأیید ادمین می‌رود.' : $res['error']
         );
     }
     casting_redirect($mine_url);
@@ -97,10 +113,14 @@ foreach ($open_credits as $c) {
 $can_upload = casting_user_can_submit_ad_poster($user_id);
 $has_pending = false;
 $has_approved = false;
+$has_undo = false;
 foreach ($items as $row) {
     $st = (string) ($row['status'] ?? '');
     if ($st === 'pending') {
         $has_pending = true;
+        if (casting_ad_poster_can_undo($row)) {
+            $has_undo = true;
+        }
     }
     if ($st === 'approved') {
         $has_approved = true;
@@ -108,7 +128,9 @@ foreach ($items as $row) {
 }
 $upload_hint = '';
 if (!$can_upload) {
-    if ($has_pending) {
+    if ($has_undo) {
+        $upload_hint = 'تا ۵ دقیقه می‌توانید همین پوستر را حذف یا ویرایش کنید. بعد از آن برای تأیید ادمین می‌رود و دیگر قابل تغییر نیست.';
+    } elseif ($has_pending) {
         $upload_hint = 'پوستر شما در انتظار تأیید است. پس از تأیید ادمین، برای پوستر بعدی باید دوباره هزینه تبلیغات را پرداخت کنید.';
     } elseif ($has_approved) {
         $upload_hint = 'پوستر تأیید و منتشر شد. برای ارسال پوستر جدید از خرید اشتراک اقدام کنید.';
@@ -117,6 +139,7 @@ if (!$can_upload) {
     }
 }
 $pending_count = $is_admin ? casting_admin_pending_ad_posters_count() : 0;
+$archived_count = $is_admin ? casting_admin_archived_ad_posters_count() : 0;
 $inbox_items = $is_admin && $tab === 'inbox' ? casting_admin_ad_posters_list($inbox_status, 100) : [];
 $page_title = $is_admin ? 'پوستر' : 'ارسال پوستر';
 
@@ -138,7 +161,7 @@ casting_render_flash();
   <?php endif; ?>
 
   <?php if ($is_admin && $tab === 'inbox') : ?>
-    <p class="lede">پوسترهای ارسال‌شده را بررسی کنید. پس از تأیید، در بنر تبلیغات صفحه اصلی نمایش داده می‌شوند.</p>
+    <p class="lede">پوسترها بعد از ۵ دقیقه مهلت اصلاح کاربر اینجا می‌آیند. برای انتشار، مدت نمایش را از تقویم انتخاب کنید. بعد از پایان آن زمان به آرشیو می‌روند تا در صورت نیاز دوباره منتشر شوند.</p>
     <div class="admin-tabs admin-media-tabs" role="tablist" aria-label="وضعیت پوسترها">
       <a class="admin-tab<?= $inbox_status === 'pending' ? ' is-active' : '' ?>" href="<?= casting_e($inbox_url('pending')) ?>">
         <span class="admin-tab-mark admin-tab-mark--pending" aria-hidden="true"></span>
@@ -146,7 +169,11 @@ casting_render_flash();
       </a>
       <a class="admin-tab<?= $inbox_status === 'approved' ? ' is-active' : '' ?>" href="<?= casting_e($inbox_url('approved')) ?>">
         <span class="admin-tab-mark admin-tab-mark--approved" aria-hidden="true"></span>
-        <span>تأییدشده</span>
+        <span>در حال نمایش</span>
+      </a>
+      <a class="admin-tab<?= $inbox_status === 'archived' ? ' is-active' : '' ?>" href="<?= casting_e($inbox_url('archived')) ?>">
+        <span class="admin-tab-mark admin-tab-mark--archived" aria-hidden="true"></span>
+        <span>آرشیو<?= $archived_count > 0 ? ' (' . (int) $archived_count . ')' : '' ?></span>
       </a>
       <a class="admin-tab<?= $inbox_status === 'rejected' ? ' is-active' : '' ?>" href="<?= casting_e($inbox_url('rejected')) ?>">
         <span class="admin-tab-mark admin-tab-mark--rejected" aria-hidden="true"></span>
@@ -180,7 +207,7 @@ casting_render_flash();
                 @<?= casting_e($owner ? (string) $owner->user_login : '') ?>
                 · <?= casting_e(casting_ad_type_label((string) ($item['ad_type'] ?? ''))) ?>
                 · <?= (int) ($item['width'] ?? 0) ?>×<?= (int) ($item['height'] ?? 0) ?>
-                · <?= casting_e(casting_ad_poster_status_label($item_status)) ?>
+                · <?= casting_e(casting_ad_poster_status_label($item_status, $item)) ?>
                 · <?= casting_e((string) ($item['created_at'] ?? '')) ?>
               </p>
               <?php if ($item_title !== '') : ?>
@@ -190,13 +217,16 @@ casting_render_flash();
                 <p class="meta admin-media-reject-reason">دلیل رد: <?= casting_e((string) ($item['reject_reason'])) ?></p>
               <?php endif; ?>
               <?php if ($item_status === 'pending') : ?>
-                <div class="cta-row">
-                  <form method="post" action="my-ads.php">
+                <div class="ad-admin-review">
+                  <form method="post" action="my-ads.php" class="ad-publish-form">
                     <?php wp_nonce_field('casting_ad_poster'); ?>
                     <input type="hidden" name="return_status" value="<?= casting_e($inbox_status) ?>">
                     <input type="hidden" name="poster_id" value="<?= (int) $item['id'] ?>">
                     <input type="hidden" name="ad_action" value="approve">
-                    <button class="btn btn-primary" type="submit">تأیید و انتشار</button>
+                    <?php casting_render_ad_publish_calendar((int) $item['id']); ?>
+                    <div class="cta-row">
+                      <button class="btn btn-primary" type="submit">تأیید و انتشار</button>
+                    </div>
                   </form>
                   <form method="post" action="my-ads.php" class="admin-media-reject">
                     <?php wp_nonce_field('casting_ad_poster'); ?>
@@ -208,12 +238,32 @@ casting_render_flash();
                   </form>
                 </div>
               <?php elseif ($item_status === 'rejected') : ?>
-                <form method="post" action="my-ads.php">
+                <form method="post" action="my-ads.php" class="ad-publish-form">
                   <?php wp_nonce_field('casting_ad_poster'); ?>
                   <input type="hidden" name="return_status" value="<?= casting_e($inbox_status) ?>">
                   <input type="hidden" name="poster_id" value="<?= (int) $item['id'] ?>">
                   <input type="hidden" name="ad_action" value="approve">
+                  <?php casting_render_ad_publish_calendar((int) $item['id']); ?>
                   <button class="btn btn-ghost btn-sm" type="submit">تأیید همین فایل</button>
+                </form>
+              <?php elseif ($item_status === 'archived' || $item_status === 'approved') : ?>
+                <form method="post" action="my-ads.php" class="ad-publish-form">
+                  <?php wp_nonce_field('casting_ad_poster'); ?>
+                  <input type="hidden" name="return_status" value="<?= casting_e($inbox_status) ?>">
+                  <input type="hidden" name="poster_id" value="<?= (int) $item['id'] ?>">
+                  <input type="hidden" name="ad_action" value="republish">
+                  <?php
+                  $from_ymd = casting_ad_poster_ymd((string) ($item['display_from'] ?? ''));
+                  $until_ymd = casting_ad_poster_ymd((string) ($item['display_until'] ?? ''));
+                  if ($item_status === 'archived') {
+                      $from_ymd = casting_ad_poster_default_display_from();
+                      $until_ymd = casting_ad_poster_default_display_until();
+                  }
+                  casting_render_ad_publish_calendar((int) $item['id'], $from_ymd, $until_ymd);
+                  ?>
+                  <button class="btn <?= $item_status === 'archived' ? 'btn-primary' : 'btn-ghost' ?> btn-sm" type="submit">
+                    <?= $item_status === 'archived' ? 'باز نشر با تاریخ جدید' : 'تغییر مدت نمایش' ?>
+                  </button>
                 </form>
               <?php endif; ?>
             </div>
@@ -223,7 +273,7 @@ casting_render_flash();
     <?php endif; ?>
 
   <?php else : ?>
-    <p class="lede"><?= $is_admin ? 'پوستر خودتان را از اینجا بفرستید.' : 'می‌توانید این صفحه را ببینید. انتخاب فایل و ارسال برای تأیید فقط بعد از پرداخت هزینهٔ تبلیغات فعال می‌شود. تا تأیید مدیر در بنر صفحه اصلی دیده نمی‌شود.' ?></p>
+    <p class="lede"><?= $is_admin ? 'پوستر خودتان را از اینجا بفرستید.' : 'بعد از ارسال تا ۵ دقیقه مثل undo ایمیل می‌توانید پوستر را حذف یا عوض کنید. بعد از آن برای تأیید ادمین می‌رود. انتخاب فایل فقط بعد از پرداخت هزینهٔ تبلیغات فعال است.' ?></p>
 
     <div class="ad-spec-box" role="note">
       <h2>فرمت و اندازه لازم</h2>
@@ -297,15 +347,19 @@ casting_render_flash();
             $url = casting_ad_poster_url($item);
             $status = (string) ($item['status'] ?? 'pending');
             $is_rejected = $status === 'rejected';
-            $is_editing = $edit_id === (int) $item['id'];
+            $can_undo = casting_ad_poster_can_undo($item);
+            $can_edit_now = $is_rejected || $can_undo;
+            $is_editing = $edit_id === (int) $item['id'] && $can_edit_now;
             $item_title = trim((string) ($item['title'] ?? ''));
+            $undo_left = $can_undo ? casting_ad_poster_undo_remaining($item) : 0;
+            $undo_until = $can_undo ? (casting_ad_poster_created_ts($item) + casting_ad_poster_undo_seconds()) : 0;
             ?>
           <article class="ad-poster-card ad-poster-card--<?= casting_e($status) ?>"<?= $is_editing ? ' id="ad-edit-focus"' : '' ?>>
             <?php if ($url !== '') : ?>
               <?php casting_render_ad_poster_zoom($url, $item_title !== '' ? $item_title : 'پوستر'); ?>
             <?php endif; ?>
             <div class="ad-poster-card-body">
-              <span class="chip<?= $is_rejected ? ' chip-danger' : '' ?>"><?= casting_e(casting_ad_poster_status_label($status)) ?></span>
+              <span class="chip<?= $is_rejected ? ' chip-danger' : ($status === 'archived' ? ' chip-muted' : '') ?>"><?= casting_e(casting_ad_poster_status_label($status, $item)) ?></span>
               <p class="meta">
                 <?= casting_e(casting_ad_type_label((string) ($item['ad_type'] ?? ''))) ?>
                 · <?= (int) ($item['width'] ?? 0) ?>×<?= (int) ($item['height'] ?? 0) ?>
@@ -314,10 +368,15 @@ casting_render_flash();
               <?php if ($item_title !== '') : ?>
                 <p><?= casting_e($item_title) ?></p>
               <?php endif; ?>
+              <?php if ($can_undo) : ?>
+                <p class="meta ad-undo-hint" data-undo-until="<?= (int) $undo_until ?>">
+                  تا <strong data-undo-remain><?= (int) floor($undo_left / 60) ?>:<?= sprintf('%02d', $undo_left % 60) ?></strong> می‌توانید این پوستر را حذف یا ویرایش کنید. بعد از آن برای تأیید ادمین می‌رود.
+                </p>
+              <?php endif; ?>
               <?php if ($is_rejected && trim((string) ($item['reject_reason'] ?? '')) !== '') : ?>
                 <p class="meta gallery-reject-reason">دلیل رد: <?= casting_e((string) ($item['reject_reason'])) ?></p>
               <?php endif; ?>
-              <?php if ($is_rejected) : ?>
+              <?php if ($can_edit_now) : ?>
                 <?php if ($is_editing) : ?>
                   <form class="form" method="post" enctype="multipart/form-data" action="my-ads.php">
                     <?php wp_nonce_field('casting_ad_poster'); ?>
@@ -342,7 +401,17 @@ casting_render_flash();
                     </div>
                   </form>
                 <?php else : ?>
-                  <a class="btn btn-primary btn-sm" href="my-ads.php?tab=mine&edit=<?= (int) $item['id'] ?>">اصلاح و ارسال مجدد</a>
+                  <div class="cta-row" data-undo-actions>
+                    <a class="btn btn-primary btn-sm" href="my-ads.php?tab=mine&edit=<?= (int) $item['id'] ?>"><?= $can_undo ? 'ویرایش و ارسال مجدد' : 'اصلاح و ارسال مجدد' ?></a>
+                    <?php if ($can_undo) : ?>
+                      <form method="post" action="my-ads.php" onsubmit="return confirm('پوستر از صف تأیید ادمین حذف می‌شود و سهمیه برای ارسال دوباره آزاد می‌گردد. ادامه می‌دهید؟');">
+                        <?php wp_nonce_field('casting_ad_poster'); ?>
+                        <input type="hidden" name="ad_action" value="undo_delete">
+                        <input type="hidden" name="poster_id" value="<?= (int) $item['id'] ?>">
+                        <button class="btn btn-ghost btn-sm" type="submit">حذف</button>
+                      </form>
+                    <?php endif; ?>
+                  </div>
                 <?php endif; ?>
               <?php endif; ?>
             </div>

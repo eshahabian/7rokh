@@ -313,12 +313,11 @@
     return jalaliLeap(jy) ? 30 : 29;
   };
 
-  const birthBox = document.querySelector("[data-jalali-birth]");
-  const ageOut = document.querySelector("[data-age-output]");
-  if (birthBox && ageOut) {
-    const yearEl = birthBox.querySelector("[data-jalali-year]");
-    const monthEl = birthBox.querySelector("[data-jalali-month]");
-    const dayEl = birthBox.querySelector("[data-jalali-day]");
+  const bindJalaliBox = (box, withAge) => {
+    const yearEl = box.querySelector("[data-jalali-year]");
+    const monthEl = box.querySelector("[data-jalali-month]");
+    const dayEl = box.querySelector("[data-jalali-day]");
+    if (!yearEl || !monthEl || !dayEl) return;
 
     const refreshDays = () => {
       const jy = Number(yearEl.value || 0);
@@ -336,6 +335,9 @@
     };
 
     const calcAge = () => {
+      if (!withAge) return;
+      const ageOut = document.querySelector("[data-age-output]");
+      if (!ageOut) return;
       const jy = Number(yearEl.value || 0);
       const jm = Number(monthEl.value || 0);
       const jd = Number(dayEl.value || 0);
@@ -378,7 +380,10 @@
     dayEl.addEventListener("change", calcAge);
     refreshDays();
     calcAge();
-  }
+  };
+
+  document.querySelectorAll("[data-jalali-birth]").forEach((box) => bindJalaliBox(box, true));
+  document.querySelectorAll("[data-jalali-date]").forEach((box) => bindJalaliBox(box, false));
 
   const thread = document.getElementById("chat-thread");
   if (thread) {
@@ -4139,5 +4144,28 @@
     if (nameEl) {
       nameEl.textContent = input.files && input.files[0] ? input.files[0].name : "فایلی انتخاب نشده";
     }
+  });
+
+  document.querySelectorAll("[data-undo-until]").forEach((el) => {
+    const until = Number(el.getAttribute("data-undo-until") || 0);
+    const remainEl = el.querySelector("[data-undo-remain]");
+    if (!until || !remainEl) return;
+    const pad = (n) => String(n).padStart(2, "0");
+    const tick = () => {
+      const left = Math.max(0, until - Math.floor(Date.now() / 1000));
+      remainEl.textContent = Math.floor(left / 60) + ":" + pad(left % 60);
+      if (left <= 0) {
+        remainEl.textContent = "۰:۰۰";
+        el.textContent = "مهلت اصلاح تمام شد. پوستر برای تأیید ادمین ارسال شد.";
+        el.closest("article")?.querySelector("[data-undo-actions]")?.remove();
+      }
+    };
+    tick();
+    const timer = window.setInterval(() => {
+      tick();
+      if (until - Math.floor(Date.now() / 1000) <= 0) {
+        window.clearInterval(timer);
+      }
+    }, 1000);
   });
 })();

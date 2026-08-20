@@ -144,16 +144,25 @@ function casting_jalali_today(): array
  */
 function casting_birthdate_from_jalali_post(array $post): ?string
 {
-    $jy = (int) ($post['birth_jy'] ?? 0);
-    $jm = (int) ($post['birth_jm'] ?? 0);
-    $jd = (int) ($post['birth_jd'] ?? 0);
-    if ($jy < 1300 || $jy > 1500 || $jm < 1 || $jm > 12 || $jd < 1) {
+    return casting_ymd_from_jalali_prefixed_post($post, 'birth');
+}
+
+/**
+ * از فیلدهای فرم شمسی با پیشوند (مثلاً display_from_jy) → تاریخ میلادی Y-m-d
+ */
+function casting_ymd_from_jalali_prefixed_post(array $post, string $prefix): ?string
+{
+    $jy = (int) ($post[$prefix . '_jy'] ?? 0);
+    $jm = (int) ($post[$prefix . '_jm'] ?? 0);
+    $jd = (int) ($post[$prefix . '_jd'] ?? 0);
+    if ($jy < 1300 || $jy > 1600 || $jm < 1 || $jm > 12 || $jd < 1) {
         return null;
     }
     if ($jd > casting_jalali_month_days($jy, $jm)) {
         return null;
     }
     [$gy, $gm, $gd] = casting_jalali_to_gregorian($jy, $jm, $jd);
+
     return sprintf('%04d-%02d-%02d', $gy, $gm, $gd);
 }
 
@@ -220,6 +229,59 @@ function casting_render_jalali_birthday_fields(string $gregorian = '', bool $req
       <select id="birth_jy" name="birth_jy" data-jalali-year <?= $req ?>>
         <option value="">سال</option>
         <?php for ($y = $maxYear; $y >= $minYear; $y--) : ?>
+          <option value="<?= $y ?>" <?= $selJy === $y ? 'selected' : '' ?>><?= $y ?></option>
+        <?php endfor; ?>
+      </select>
+    </div>
+  </div>
+    <?php
+}
+
+/**
+ * تقویم شمسی عمومی (سال جاری تا چند سال بعد) برای انتخاب بازه نمایش.
+ */
+function casting_render_jalali_date_fields(
+    string $name_prefix,
+    string $label,
+    string $gregorian = '',
+    bool $required = true,
+    string $id_suffix = '',
+    int $year_span = 5
+): void {
+    $parts = casting_jalali_parts_from_gregorian($gregorian);
+    $today = casting_jalali_today();
+    $minYear = $today[0];
+    $maxYear = $today[0] + max(1, $year_span);
+    $selJy = $parts['jy'] > 0 ? $parts['jy'] : $today[0];
+    $selJm = $parts['jm'] > 0 ? $parts['jm'] : $today[1];
+    $selJd = $parts['jd'] > 0 ? $parts['jd'] : $today[2];
+    $req = $required ? 'required' : '';
+    $id = $name_prefix . ($id_suffix !== '' ? '_' . preg_replace('/[^a-zA-Z0-9_-]/', '', $id_suffix) : '');
+    $dayId = $id . '_jd';
+    $monthId = $id . '_jm';
+    $yearId = $id . '_jy';
+    ?>
+  <div class="field jalali-birth" data-jalali-date>
+    <span class="jalali-label"><?= casting_e($label) ?><?= $required ? ' <span class="req-mark">*</span>' : '' ?></span>
+    <div class="jalali-row">
+      <label class="sr-only" for="<?= casting_e($dayId) ?>">روز</label>
+      <select id="<?= casting_e($dayId) ?>" name="<?= casting_e($name_prefix) ?>_jd" data-jalali-day <?= $req ?>>
+        <option value="">روز</option>
+        <?php for ($d = 1; $d <= 31; $d++) : ?>
+          <option value="<?= $d ?>" <?= $selJd === $d ? 'selected' : '' ?>><?= $d ?></option>
+        <?php endfor; ?>
+      </select>
+      <label class="sr-only" for="<?= casting_e($monthId) ?>">ماه</label>
+      <select id="<?= casting_e($monthId) ?>" name="<?= casting_e($name_prefix) ?>_jm" data-jalali-month <?= $req ?>>
+        <option value="">ماه</option>
+        <?php foreach (casting_jalali_months() as $num => $name) : ?>
+          <option value="<?= $num ?>" <?= $selJm === $num ? 'selected' : '' ?>><?= casting_e($name) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <label class="sr-only" for="<?= casting_e($yearId) ?>">سال</label>
+      <select id="<?= casting_e($yearId) ?>" name="<?= casting_e($name_prefix) ?>_jy" data-jalali-year <?= $req ?>>
+        <option value="">سال</option>
+        <?php for ($y = $minYear; $y <= $maxYear; $y++) : ?>
           <option value="<?= $y ?>" <?= $selJy === $y ? 'selected' : '' ?>><?= $y ?></option>
         <?php endfor; ?>
       </select>
