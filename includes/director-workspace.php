@@ -47,6 +47,14 @@ function casting_director_workspace_ensure_table(): void
 
 function casting_user_is_director_role(int $user_id): bool
 {
+    if ($user_id <= 0) {
+        return false;
+    }
+    // مالک پورتال (eshahabian) بدون محدودیت به میز کارگردان و فراخوان دسترسی دارد
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
+
     return casting_get_user_role($user_id) === 'director';
 }
 

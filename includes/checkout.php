@@ -736,6 +736,9 @@ function casting_user_has_casting_call_credit(int $user_id, int $project_id): bo
     if ($user_id <= 0) {
         return false;
     }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
     if ($project_id > 0) {
         $code = (string) get_user_meta($user_id, 'casting_casting_call_credit_' . $project_id, true);
         if ($code !== '') {
@@ -765,6 +768,9 @@ function casting_user_has_casting_call_credit(int $user_id, int $project_id): bo
 function casting_consume_casting_call_credit(int $user_id, int $project_id): void
 {
     if ($user_id <= 0 || $project_id <= 0) {
+        return;
+    }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
         return;
     }
     $code = (string) get_user_meta($user_id, 'casting_casting_call_credit_' . $project_id, true);
