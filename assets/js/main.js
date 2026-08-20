@@ -45,6 +45,27 @@
     }
   }
 
+  // وب‌ویو موبایل: اولین لمس نباید فقط :hover بماند — کلیک همان لحظه اعمال شود
+  const castingIsCoarsePointer = () =>
+    castingIsNativeAppShell()
+    || window.matchMedia("(hover: none)").matches
+    || window.matchMedia("(pointer: coarse)").matches;
+
+  if (castingIsCoarsePointer()) {
+    document.addEventListener(
+      "click",
+      (e) => {
+        const el = e.target && e.target.closest
+          ? e.target.closest("a, button, [role='button'], [data-member-preview], label, summary")
+          : null;
+        if (el && typeof el.blur === "function") {
+          window.requestAnimationFrame(() => el.blur());
+        }
+      },
+      true
+    );
+  }
+
   // در سایت/اپ: لینک‌های ۷رخ در همان صفحه باز شوند؛ تب/صفحه جدید نه
   document.addEventListener(
     "click",
@@ -1524,7 +1545,7 @@
     });
   }
 
-  if ("serviceWorker" in navigator && window.CASTING_PWA && window.CASTING_PWA.swUrl) {
+  if ("serviceWorker" in navigator && window.CASTING_PWA && window.CASTING_PWA.swUrl && !castingIsNativeAppShell()) {
     window.addEventListener("load", () => {
       navigator.serviceWorker
         .register(window.CASTING_PWA.swUrl, { scope: window.CASTING_PWA.scope || undefined })
@@ -3171,15 +3192,16 @@
     }
   });
 
-  // خروج خودکار پس از ۵ دقیقه عدم فعالیت
+  // خروج خودکار پس از عدم فعالیت (مهلت از CASTING_SESSION.idleSeconds)
   const sessionCfg = window.CASTING_SESSION;
   if (sessionCfg && sessionCfg.active) {
-    const idleMs = Math.max(60, Number(sessionCfg.idleSeconds) || 300) * 1000;
+    const idleMs = Math.max(60, Number(sessionCfg.idleSeconds) || 900) * 1000;
     const pingUrl = String(sessionCfg.pingUrl || "");
     const logoutUrl = String(sessionCfg.logoutUrl || "logout.php?reason=idle");
     let idleTimer = 0;
     let lastPing = 0;
     let loggingOut = false;
+    let idleResetQueued = 0;
 
     const doIdleLogout = () => {
       if (loggingOut) return;
@@ -3206,12 +3228,16 @@
 
     const resetIdle = () => {
       if (loggingOut) return;
-      window.clearTimeout(idleTimer);
-      idleTimer = window.setTimeout(doIdleLogout, idleMs);
-      pingSession();
+      if (idleResetQueued) return;
+      idleResetQueued = window.setTimeout(() => {
+        idleResetQueued = 0;
+        window.clearTimeout(idleTimer);
+        idleTimer = window.setTimeout(doIdleLogout, idleMs);
+        pingSession();
+      }, 200);
     };
 
-    ["pointerdown", "keydown", "scroll", "touchstart", "mousemove", "visibilitychange"].forEach((evt) => {
+    ["pointerdown", "keydown", "scroll", "visibilitychange"].forEach((evt) => {
       document.addEventListener(
         evt,
         () => {
@@ -3468,9 +3494,9 @@
     }
   });
 
-  // ویجت شناور پیام‌ها + چت داخل همان پنل
+  // ویجت شناور پیام‌ها + چت داخل همان پنل (در اپ موبایل مخفی است؛ JS را هم اجرا نکن)
   const messagesDock = document.querySelector("[data-messages-dock]");
-  if (messagesDock) {
+  if (messagesDock && !castingIsNativeAppShell()) {
     const toggle = messagesDock.querySelector("[data-messages-dock-toggle]");
     const panel = messagesDock.querySelector("[data-messages-dock-panel]");
     const listView = messagesDock.querySelector("[data-messages-dock-list-view]");

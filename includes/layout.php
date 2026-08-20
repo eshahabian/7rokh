@@ -25,7 +25,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=197">
+  <link rel="stylesheet" href="<?= $css ?>?v=198">
   <script>
     (function () {
       try {
@@ -289,7 +289,7 @@ function casting_render_footer(): void
     };
     window.CASTING_SESSION = {
       active: <?= casting_current_user() ? 'true' : 'false' ?>,
-      idleSeconds: <?= (int) (function_exists('casting_session_idle_seconds') ? casting_session_idle_seconds() : 300) ?>,
+      idleSeconds: <?= (int) (function_exists('casting_session_idle_seconds') ? casting_session_idle_seconds() : 900) ?>,
       pingUrl: <?= wp_json_encode(casting_url('session-ping.php')) ?>,
       logoutUrl: <?= wp_json_encode(casting_url('logout.php?reason=idle')) ?>
     };
@@ -299,7 +299,7 @@ function casting_render_footer(): void
       fullUrl: <?= wp_json_encode(casting_url('chat.php')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=113" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=114" defer></script>
 </body>
 </html>
 <?php

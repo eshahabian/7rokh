@@ -3,14 +3,14 @@ declare(strict_types=1);
 
 /**
  * محدودیت نشست پورتال:
- * - خروج خودکار پس از ۵ دقیقه عدم فعالیت
+ * - خروج خودکار پس از ۱۵ دقیقه عدم فعالیت
  * - فقط یک نشست هم‌زمان برای هر کاربر
  * - ورود دوم از دسکتاپ: پیام تأیید (موبایل مستثنی است)
  */
 
 function casting_session_idle_seconds(): int
 {
-    return 5 * 60;
+    return 15 * 60;
 }
 
 function casting_session_meta_key(): string
@@ -150,7 +150,7 @@ function casting_session_replaced_message(): string
 
 function casting_session_idle_message(): string
 {
-    return 'به‌دلیل ۵ دقیقه عدم فعالیت، از حساب خارج شدید. لطفاً دوباره وارد شوید.';
+    return 'به‌دلیل ۱۵ دقیقه عدم فعالیت، از حساب خارج شدید. لطفاً دوباره وارد شوید.';
 }
 
 /** بازگشت از درگاه بانک ممکن است بیشتر از مهلت بی‌فعالیتی طول بکشد. */

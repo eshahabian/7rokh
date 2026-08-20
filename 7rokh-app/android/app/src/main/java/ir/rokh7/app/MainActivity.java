@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.WindowManager;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import androidx.core.splashscreen.SplashScreen;
 import com.getcapacitor.BridgeActivity;
@@ -61,5 +62,13 @@ public class MainActivity extends BridgeActivity {
         }
         webView.setBackgroundColor(Color.TRANSPARENT);
         webView.setBackgroundResource(R.drawable.splash);
+        WebView.setWebContentsDebuggingEnabled(false);
+        WebSettings settings = webView.getSettings();
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
+        settings.setSupportZoom(false);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
     }
 }

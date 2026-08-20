@@ -4869,6 +4869,70 @@ html.is-native-app .messages-dock {
   display: none !important;
 }
 
+html.is-native-app,
+html.is-pwa {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+html.is-native-app a,
+html.is-native-app button,
+html.is-native-app [role="button"],
+html.is-native-app [data-member-preview],
+html.is-native-app .member-card,
+html.is-native-app .panel-ad-card,
+html.is-native-app .talent-card,
+html.is-native-app .opp-card,
+html.is-native-app .panel-nav-link,
+html.is-native-app .panel-hub-tile {
+  touch-action: manipulation;
+}
+
+html.is-native-app .bg-atmosphere,
+html.is-pwa .bg-atmosphere {
+  background-attachment: scroll;
+}
+
+html.is-native-app .stat-item,
+html.is-native-app .gate-card,
+html.is-native-app .panel,
+html.is-native-app .site-header {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.is-native-app .member-card--portrait:hover .member-card-photo img,
+html.is-pwa .member-card--portrait:hover .member-card-photo img {
+  transform: none;
+}
+
+html.is-native-app .talent-card:hover,
+html.is-native-app .gate-card:hover,
+html.is-pwa .talent-card:hover,
+html.is-pwa .gate-card:hover {
+  transform: none;
+}
+
+html.is-native-app .panel-ad-card--portrait:hover .panel-ad-card-media.has-photo,
+html.is-pwa .panel-ad-card--portrait:hover .panel-ad-card-media.has-photo {
+  filter: none;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .member-card--portrait:hover .member-card-photo img {
+    transform: none;
+  }
+
+  .talent-card:hover,
+  .gate-card:hover {
+    transform: none;
+  }
+
+  .panel-ad-card--portrait:hover .panel-ad-card-media.has-photo {
+    filter: none;
+  }
+}
+
 .panel-nav {
   display: flex;
   flex-direction: column;
