@@ -350,16 +350,15 @@ function casting_user_can_submit_ad_poster(int $user_id): bool
     if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
         return true;
     }
-    $has_active = casting_user_has_active_ad_poster($user_id);
+    foreach (casting_user_ad_posters_list($user_id, 50) as $row) {
+        if ((string) ($row['status'] ?? '') === 'pending') {
+            return false;
+        }
+    }
     foreach (casting_user_ad_open_credits($user_id, false) as $credit) {
-        if ((int) ($credit['id'] ?? 0) <= 0) {
-            continue;
+        if ((int) ($credit['id'] ?? 0) > 0) {
+            return true;
         }
-        if ($has_active && casting_ad_credit_is_tmp_test($credit)) {
-            continue;
-        }
-
-        return true;
     }
 
     return false;
@@ -826,7 +825,6 @@ function casting_ad_poster_submit(int $user_id, int $credit_id, string $field, s
     if ($credit_id > 0) {
         casting_ad_credit_mark_used($credit_id, $poster_id);
     }
-    casting_ad_tmp_test_close_open_credits($user_id);
 
     return ['ok' => true, 'error' => '', 'poster_id' => $poster_id];
 }
