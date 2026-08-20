@@ -6823,6 +6823,31 @@ a.panel-home-filter-chip:focus-visible {
   padding-bottom: 0.15rem;
 }
 
+html.is-native-app .panel-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: visible;
+  gap: 0.4rem;
+}
+
+html.is-native-app .panel-stat-card {
+  min-width: 0;
+  padding: 0.45rem 0.4rem;
+  gap: 0.3rem;
+}
+
+html.is-native-app .panel-stat-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.68rem;
+}
+
+html.is-native-app .panel-stat-card span {
+  font-size: 0.58rem;
+  line-height: 1.25;
+  white-space: normal;
+}
+
 .panel-stat-card {
   display: flex;
   align-items: center;
@@ -6885,16 +6910,28 @@ a.panel-home-filter-chip:focus-visible {
   }
 
   .panel-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
     gap: 0.4rem;
   }
 
   .panel-stat-card {
-    min-width: 6.8rem;
-    padding: 0.5rem 0.55rem;
+    min-width: 0;
+    padding: 0.45rem 0.4rem;
+    gap: 0.3rem;
+  }
+
+  .panel-stat-icon {
+    width: 1.35rem;
+    height: 1.35rem;
+    font-size: 0.68rem;
   }
 
   .panel-stat-card span {
-    font-size: 0.62rem;
+    font-size: 0.58rem;
+    line-height: 1.25;
+    white-space: normal;
   }
 }
 
