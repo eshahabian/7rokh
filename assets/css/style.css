@@ -577,6 +577,15 @@ html[data-theme="day"] .brand-mark-rokh {
   text-align: center;
 }
 
+html.is-native-app .stat-item--total {
+  align-items: flex-start;
+  text-align: start;
+}
+
+html.is-native-app .stat-item--total span {
+  text-align: start;
+}
+
 .stat-item strong {
   display: block;
   font-size: clamp(1rem, 1.8vw, 1.3rem);
