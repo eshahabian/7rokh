@@ -306,19 +306,60 @@ function casting_user_can_open_ad_posters(int $user_id): bool
     return casting_user_ads_unlocked_meta($user_id) === '1';
 }
 
+function casting_ad_credit_is_tmp_test(array $credit): bool
+{
+    $order = (string) ($credit['order_code'] ?? '');
+    $slot = (string) ($credit['slot_key'] ?? '');
+
+    return $order === 'TMP-TEST' || str_starts_with($slot, 'tmp-test-');
+}
+
+function casting_user_has_active_ad_poster(int $user_id): bool
+{
+    foreach (casting_user_ad_posters_list($user_id, 50) as $row) {
+        $status = (string) ($row['status'] ?? '');
+        if ($status === 'pending' || $status === 'approved') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function casting_ad_tmp_test_close_open_credits(int $user_id): void
+{
+    if ($user_id <= 0) {
+        return;
+    }
+    foreach (casting_user_ad_open_credits($user_id, false) as $credit) {
+        if (!is_array($credit) || !casting_ad_credit_is_tmp_test($credit)) {
+            continue;
+        }
+        $id = (int) ($credit['id'] ?? 0);
+        if ($id > 0) {
+            casting_ad_credit_mark_used($id, (int) ($credit['poster_id'] ?? 0));
+        }
+    }
+}
+
 function casting_user_can_submit_ad_poster(int $user_id): bool
 {
     if ($user_id <= 0) {
         return false;
     }
-    $credits = casting_user_ad_open_credits($user_id, true);
-    foreach ($credits as $credit) {
-        if (!empty($credit['virtual'])) {
-            return function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id);
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
+    $has_active = casting_user_has_active_ad_poster($user_id);
+    foreach (casting_user_ad_open_credits($user_id, false) as $credit) {
+        if ((int) ($credit['id'] ?? 0) <= 0) {
+            continue;
         }
-        if ((int) ($credit['id'] ?? 0) > 0) {
-            return true;
+        if ($has_active && casting_ad_credit_is_tmp_test($credit)) {
+            continue;
         }
+
+        return true;
     }
 
     return false;
@@ -608,6 +649,13 @@ function casting_approved_ad_promo_slides(int $limit = 20): array
     }
     $slides = [];
     foreach ($rows as $row) {
+        if ((string) ($row['order_code'] ?? '') === 'TMP-TEST') {
+            continue;
+        }
+        $owner = get_user_by('id', (int) ($row['user_id'] ?? 0));
+        if ($owner && strtolower((string) $owner->user_login) === 'shaverdi') {
+            continue;
+        }
         $src = casting_ad_poster_url($row);
         if ($src === '') {
             continue;
@@ -778,6 +826,7 @@ function casting_ad_poster_submit(int $user_id, int $credit_id, string $field, s
     if ($credit_id > 0) {
         casting_ad_credit_mark_used($credit_id, $poster_id);
     }
+    casting_ad_tmp_test_close_open_credits($user_id);
 
     return ['ok' => true, 'error' => '', 'poster_id' => $poster_id];
 }
@@ -884,6 +933,10 @@ function casting_ad_poster_approve(int $poster_id, int $admin_id): array
         return ['ok' => false, 'error' => 'پوستر پیدا نشد.'];
     }
     if ((string) ($poster['status'] ?? '') === 'approved') {
+        $owner_id = (int) ($poster['user_id'] ?? 0);
+        if ($owner_id > 0) {
+            casting_ad_tmp_test_close_open_credits($owner_id);
+        }
         return ['ok' => true, 'error' => ''];
     }
     global $wpdb;
@@ -902,7 +955,15 @@ function casting_ad_poster_approve(int $poster_id, int $admin_id): array
         ['%d']
     );
 
-    return $ok === false ? ['ok' => false, 'error' => 'تأیید ناموفق بود.'] : ['ok' => true, 'error' => ''];
+    if ($ok === false) {
+        return ['ok' => false, 'error' => 'تأیید ناموفق بود.'];
+    }
+    $owner_id = (int) ($poster['user_id'] ?? 0);
+    if ($owner_id > 0) {
+        casting_ad_tmp_test_close_open_credits($owner_id);
+    }
+
+    return ['ok' => true, 'error' => ''];
 }
 
 /**

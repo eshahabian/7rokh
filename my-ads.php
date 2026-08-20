@@ -94,7 +94,7 @@ foreach ($open_credits as $c) {
         $paid_credits[] = $c;
     }
 }
-$can_upload = $paid_credits !== [] || ($is_owner && $open_credits !== []);
+$can_upload = casting_user_can_submit_ad_poster($user_id);
 $has_pending = false;
 $has_approved = false;
 foreach ($items as $row) {
