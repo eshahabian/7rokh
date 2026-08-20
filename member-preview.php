@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     $action = sanitize_key((string) ($_POST['action'] ?? ''));
-    $result = casting_member_preview_handle_action($viewer_id, $member_id, $action);
+    $result = casting_member_preview_handle_action($viewer_id, $member_id, $action, $_POST);
     echo wp_json_encode($result, JSON_UNESCAPED_UNICODE);
     exit;
 }

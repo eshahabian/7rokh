@@ -651,6 +651,94 @@ function casting_director_add_talent_to_role(int $director_id, int $role_id, int
 }
 
 /**
+ * @return array<string, list<array{id:int,title:string}>>
+ */
+function casting_director_projects_roles_map(int $director_id): array
+{
+    $map = [];
+    foreach (casting_director_list_projects($director_id) as $project) {
+        $pid = (int) ($project['id'] ?? 0);
+        if ($pid <= 0) {
+            continue;
+        }
+        $map[(string) $pid] = array_map(
+            static fn(array $role): array => [
+                'id'    => (int) ($role['id'] ?? 0),
+                'title' => (string) ($role['title'] ?? ''),
+            ],
+            casting_director_list_roles($director_id, $pid)
+        );
+    }
+
+    return $map;
+}
+
+/**
+ * افزودن سریع بازیگر به پروژه/نقش از پیش‌نمایش
+ *
+ * @param array<string, mixed> $input
+ * @return array{ok:bool,error:string,message?:string}
+ */
+function casting_director_quick_add_talent(int $director_id, int $talent_id, array $input): array
+{
+    if (!casting_director_can_manage_talent($director_id, $talent_id)) {
+        return ['ok' => false, 'error' => 'این کاربر را نمی‌توان به پروژه اضافه کرد.'];
+    }
+
+    $project_id = (int) ($input['project_id'] ?? 0);
+    $role_id = (int) ($input['role_id'] ?? 0);
+    $role_title = sanitize_text_field((string) ($input['role_title'] ?? ''));
+    $project_title = sanitize_text_field((string) ($input['project_title'] ?? ''));
+    $project_type = sanitize_key((string) ($input['project_type'] ?? 'theater'));
+
+    if ($project_id <= 0 && $project_title !== '') {
+        $created = casting_director_create_project($director_id, $project_title, $project_type);
+        if (empty($created['ok'])) {
+            return ['ok' => false, 'error' => (string) ($created['error'] ?? 'ساخت پروژه ناموفق بود.')];
+        }
+        $project_id = (int) ($created['project_id'] ?? 0);
+    }
+    if ($project_id <= 0) {
+        return ['ok' => false, 'error' => 'پروژه را انتخاب کنید یا نام پروژه جدید را بنویسید.'];
+    }
+    if (!casting_director_get_project($director_id, $project_id)) {
+        return ['ok' => false, 'error' => 'پروژه پیدا نشد.'];
+    }
+
+    if ($role_id <= 0 && $role_title !== '') {
+        $created_role = casting_director_create_role($director_id, $project_id, $role_title, '');
+        if (empty($created_role['ok'])) {
+            return ['ok' => false, 'error' => (string) ($created_role['error'] ?? 'ساخت نقش ناموفق بود.')];
+        }
+        $role_id = (int) ($created_role['role_id'] ?? 0);
+    }
+    if ($role_id <= 0) {
+        $roles = casting_director_list_roles($director_id, $project_id);
+        if (count($roles) === 1) {
+            $role_id = (int) ($roles[0]['id'] ?? 0);
+        }
+    }
+    if ($role_id <= 0) {
+        return ['ok' => false, 'error' => 'نقش را انتخاب کنید یا نام نقش جدید را بنویسید.'];
+    }
+
+    $add = casting_director_add_talent_to_role($director_id, $role_id, $talent_id);
+    if (empty($add['ok'])) {
+        return ['ok' => false, 'error' => (string) ($add['error'] ?? 'افزودن به نقش ناموفق بود.')];
+    }
+
+    $role = casting_director_get_role($director_id, $role_id);
+    $project = casting_director_get_project($director_id, $project_id);
+
+    return [
+        'ok'      => true,
+        'error'   => '',
+        'message' => 'به پروژه «' . (string) ($project['title'] ?? '') . '»' .
+            (!empty($role['title']) ? ' · ' . (string) $role['title'] : '') . ' اضافه شد.',
+    ];
+}
+
+/**
  * @param array<string, mixed> $data
  * @return array{ok:bool,error?:string}
  */

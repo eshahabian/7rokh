@@ -96,12 +96,29 @@ function casting_member_preview_is_favorite(int $viewer_id, int $member_id): boo
 }
 
 /**
- * @return array{ok:bool,error:string,redirect?:string,highlight?:bool}
+ * @param array<string, mixed> $payload
+ * @return array{ok:bool,error:string,redirect?:string,highlight?:bool,message?:string}
  */
-function casting_member_preview_handle_action(int $viewer_id, int $member_id, string $action): array
+function casting_member_preview_handle_action(int $viewer_id, int $member_id, string $action, array $payload = []): array
 {
     if (!casting_member_preview_can_view($viewer_id, $member_id)) {
         return ['ok' => false, 'error' => 'دسترسی مجاز نیست.'];
+    }
+
+    if ($action === 'add_to_project') {
+        if (!function_exists('casting_director_quick_add_talent')) {
+            require_once __DIR__ . '/director-desk.php';
+        }
+        $result = casting_director_quick_add_talent($viewer_id, $member_id, $payload);
+        if (empty($result['ok'])) {
+            return ['ok' => false, 'error' => (string) ($result['error'] ?? 'افزودن به پروژه ناموفق بود.')];
+        }
+
+        return [
+            'ok'      => true,
+            'error'   => '',
+            'message' => (string) ($result['message'] ?? 'به پروژه اضافه شد.'),
+        ];
     }
 
     if ($action === 'favorite') {
@@ -302,6 +319,56 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
           ><?= $is_favorite ? 'حذف کاندید' : 'لیست کاندیدا' ?></button>
         <?php endif; ?>
       </div>
+      <?php if ($can_favorite) : ?>
+        <?php
+        if (!function_exists('casting_director_list_projects')) {
+            require_once __DIR__ . '/director-desk.php';
+        }
+        $preview_projects = casting_director_list_projects($viewer_id);
+        $preview_roles_map = casting_director_projects_roles_map($viewer_id);
+        $preview_types = casting_director_project_type_labels();
+        unset($preview_types['film'], $preview_types['series'], $preview_types['other']);
+        ?>
+        <form class="form member-preview-add-project" data-preview-add-project data-member-id="<?= (int) $member_id ?>" data-preview-roles="<?= casting_e((string) wp_json_encode($preview_roles_map, JSON_UNESCAPED_UNICODE)) ?>">
+          <h3 class="member-preview-add-title">افزودن به پروژه</h3>
+          <?php if ($preview_projects !== []) : ?>
+            <div class="field">
+              <label for="preview-project-<?= (int) $member_id ?>">پروژه</label>
+              <select id="preview-project-<?= (int) $member_id ?>" name="project_id" data-preview-project-select>
+                <option value="">انتخاب پروژه</option>
+                <?php foreach ($preview_projects as $project) : ?>
+                  <option value="<?= (int) $project['id'] ?>"><?= casting_e((string) $project['title']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="field">
+              <label for="preview-role-<?= (int) $member_id ?>">نقش موجود</label>
+              <select id="preview-role-<?= (int) $member_id ?>" name="role_id" data-preview-role-select>
+                <option value="">ابتدا پروژه را انتخاب کنید</option>
+              </select>
+            </div>
+          <?php endif; ?>
+          <?php if ($preview_projects === []) : ?>
+            <div class="field">
+              <label for="preview-project-title-<?= (int) $member_id ?>">نام پروژه جدید</label>
+              <input id="preview-project-title-<?= (int) $member_id ?>" name="project_title" type="text" maxlength="191" placeholder="مثلاً نام فیلم">
+            </div>
+            <div class="field">
+              <label for="preview-project-type-<?= (int) $member_id ?>">نوع</label>
+              <select id="preview-project-type-<?= (int) $member_id ?>" name="project_type">
+                <?php foreach ($preview_types as $key => $label) : ?>
+                  <option value="<?= casting_e($key) ?>"><?= casting_e($label) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          <?php endif; ?>
+          <div class="field">
+            <label for="preview-role-title-<?= (int) $member_id ?>">یا نقش جدید</label>
+            <input id="preview-role-title-<?= (int) $member_id ?>" name="role_title" type="text" maxlength="191" placeholder="مثلاً نقش اصلی">
+          </div>
+          <button class="btn btn-primary member-preview-btn" type="submit">افزودن به پروژه</button>
+        </form>
+      <?php endif; ?>
       <?php if ($show_actions && $free_hint !== '') : ?>
         <p class="field-hint member-preview-hint"><?= casting_e($free_hint) ?></p>
       <?php endif; ?>

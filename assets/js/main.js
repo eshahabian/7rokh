@@ -1714,6 +1714,8 @@
         memberPreviewBody.innerHTML = `<p class="empty-state">${msg}</p>`;
       } else {
         memberPreviewBody.innerHTML = data.html;
+        const previewForm = memberPreviewBody.querySelector("[data-preview-add-project]");
+        if (previewForm) fillPreviewRoles(previewForm);
       }
     } catch (_err) {
       memberPreviewBody.innerHTML = '<p class="empty-state">خطا در بارگذاری پروفایل.</p>';
@@ -1723,11 +1725,16 @@
     }
   };
 
-  const postMemberPreviewAction = async (memberId, action) => {
+  const postMemberPreviewAction = async (memberId, action, extra = {}) => {
     const body = new FormData();
     body.append("_wpnonce", memberPreviewNonce);
     body.append("member_id", String(memberId));
     body.append("action", action);
+    Object.keys(extra).forEach((key) => {
+      if (extra[key] !== undefined && extra[key] !== null) {
+        body.append(key, String(extra[key]));
+      }
+    });
     const res = await fetch("member-preview.php", {
       method: "POST",
       credentials: "same-origin",
@@ -1736,6 +1743,69 @@
     });
     return res.json();
   };
+
+  const fillPreviewRoles = (form) => {
+    if (!form) return;
+    const projectSelect = form.querySelector("[data-preview-project-select]");
+    const roleSelect = form.querySelector("[data-preview-role-select]");
+    if (!projectSelect || !roleSelect) return;
+    let rolesMap = {};
+    try {
+      rolesMap = JSON.parse(form.getAttribute("data-preview-roles") || "{}") || {};
+    } catch (_err) {
+      rolesMap = {};
+    }
+    const projectId = String(projectSelect.value || "");
+    const roles = Array.isArray(rolesMap[projectId]) ? rolesMap[projectId] : [];
+    roleSelect.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = roles.length ? "انتخاب نقش" : "نقشی نیست؛ پایین نقش جدید بنویسید";
+    roleSelect.appendChild(placeholder);
+    roles.forEach((role) => {
+      const opt = document.createElement("option");
+      opt.value = String(role.id || "");
+      opt.textContent = String(role.title || "");
+      roleSelect.appendChild(opt);
+    });
+  };
+
+  document.addEventListener("change", (event) => {
+    const projectSelect = event.target.closest("[data-preview-project-select]");
+    if (!projectSelect || !memberPreviewBody?.contains(projectSelect)) return;
+    fillPreviewRoles(projectSelect.closest("[data-preview-add-project]"));
+  });
+
+  document.addEventListener("submit", async (event) => {
+    const form = event.target.closest("[data-preview-add-project]");
+    if (!form || !memberPreviewBody?.contains(form)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const memberId = form.getAttribute("data-member-id");
+    if (!memberId) return;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+    const extra = {
+      project_id: form.querySelector('[name="project_id"]')?.value || "",
+      role_id: form.querySelector('[name="role_id"]')?.value || "",
+      role_title: form.querySelector('[name="role_title"]')?.value || "",
+      project_title: form.querySelector('[name="project_title"]')?.value || "",
+      project_type: form.querySelector('[name="project_type"]')?.value || "",
+    };
+    try {
+      const data = await postMemberPreviewAction(memberId, "add_to_project", extra);
+      if (!data?.ok) {
+        window.alert(data?.error || "افزودن به پروژه ناموفق بود.");
+        return;
+      }
+      window.alert(data.message || "به پروژه اضافه شد.");
+      await openMemberPreview(memberId);
+    } catch (_err) {
+      window.alert("خطا در افزودن به پروژه.");
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  });
 
   document.addEventListener("click", async (event) => {
     const actionBtn = event.target.closest("[data-member-preview-action]");

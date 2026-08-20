@@ -46,6 +46,7 @@ function casting_opportunities_install(): void
         location VARCHAR(191) NOT NULL DEFAULT '',
         role_title VARCHAR(191) NOT NULL DEFAULT '',
         filters_json TEXT NULL,
+        cover_attachment_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
         status VARCHAR(20) NOT NULL DEFAULT 'open',
         created_at DATETIME NOT NULL,
         updated_at DATETIME NOT NULL,
@@ -80,14 +81,35 @@ function casting_opportunities_install(): void
         KEY user_created (user_id, created_at)
     ) {$charset};");
 
-    update_option('casting_opportunities_db_version', '2');
+    update_option('casting_opportunities_db_version', '3');
+}
+
+function casting_opportunities_ensure_cover_column(): void
+{
+    global $wpdb;
+    $table = casting_opportunities_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists !== $table) {
+        return;
+    }
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $columns = $wpdb->get_col("DESCRIBE `{$table}`", 0);
+    if (!is_array($columns)) {
+        $columns = [];
+    }
+    if (!in_array('cover_attachment_id', $columns, true)) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN cover_attachment_id BIGINT UNSIGNED NOT NULL DEFAULT 0 AFTER filters_json");
+    }
 }
 
 function casting_opportunities_ensure_tables(): void
 {
     $ver = (string) get_option('casting_opportunities_db_version', '');
-    if ($ver !== '2') {
+    if ($ver !== '3') {
         casting_opportunities_install();
+        casting_opportunities_ensure_cover_column();
     }
     casting_opportunities_purge_emad_once();
 }
@@ -261,6 +283,170 @@ function casting_opportunity_publish(
     return ['ok' => true, 'error' => '', 'id' => (int) $wpdb->insert_id];
 }
 
+function casting_user_can_create_opportunity(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (!function_exists('casting_user_can_send_casting_requests')) {
+        require_once __DIR__ . '/request.php';
+    }
+
+    return casting_user_can_send_casting_requests($user_id);
+}
+
+/**
+ * @return array{ok:bool,error:string,id?:int}
+ */
+function casting_opportunity_handle_cover_upload(int $user_id): array
+{
+    if (empty($_FILES['opp_cover']['name'])) {
+        return ['ok' => true, 'error' => '', 'id' => 0];
+    }
+    if (!function_exists('casting_media_handle_upload_as_user')) {
+        require_once __DIR__ . '/profile.php';
+    }
+    $file = &$_FILES['opp_cover'];
+    $norm = casting_normalize_uploaded_file_type($file, 'image');
+    if (!$norm['ok']) {
+        return ['ok' => false, 'error' => (string) ($norm['error'] ?? 'فایل عکس نامعتبر است.')];
+    }
+    $allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    $ftype = (string) ($norm['type'] ?? '');
+    if (!in_array($ftype, $allowed, true)) {
+        return ['ok' => false, 'error' => 'فقط عکس JPG، PNG یا WebP مجاز است.'];
+    }
+    $size_check = casting_uploaded_file_within_limit($file, 'image');
+    if (!$size_check['ok']) {
+        return ['ok' => false, 'error' => (string) $size_check['error']];
+    }
+    $attachment_id = casting_media_handle_upload_as_user('opp_cover', $user_id);
+    if (is_wp_error($attachment_id)) {
+        return ['ok' => false, 'error' => 'آپلود عکس ناموفق بود.'];
+    }
+
+    return ['ok' => true, 'error' => '', 'id' => (int) $attachment_id];
+}
+
+function casting_opportunity_cover_url(array $op, string $size = 'medium'): string
+{
+    $id = (int) ($op['cover_attachment_id'] ?? 0);
+    if ($id <= 0) {
+        return '';
+    }
+    $url = wp_get_attachment_image_url($id, $size);
+    if (!is_string($url) || $url === '') {
+        $url = wp_get_attachment_image_url($id, 'full');
+    }
+
+    return is_string($url) ? $url : '';
+}
+
+/**
+ * ثبت فرصت مستقیم از صفحهٔ فرصت‌ها
+ *
+ * @param array<string, mixed> $input
+ * @return array{ok:bool,error:string,id?:int}
+ */
+function casting_opportunity_create_from_board(int $user_id, array $input): array
+{
+    if (!casting_user_can_create_opportunity($user_id)) {
+        return ['ok' => false, 'error' => 'برای ثبت فرصت باید کارگردان، تهیه‌کننده یا مدیر پورتال باشید.'];
+    }
+    casting_opportunities_ensure_tables();
+
+    $title = sanitize_text_field((string) ($input['title'] ?? ''));
+    $role_title = sanitize_text_field((string) ($input['role_title'] ?? ''));
+    $location = sanitize_text_field((string) ($input['location'] ?? ''));
+    $message = sanitize_textarea_field((string) ($input['message'] ?? ''));
+    $type_key = sanitize_key((string) ($input['project_type'] ?? ''));
+    if (!function_exists('casting_director_project_type_labels')) {
+        require_once __DIR__ . '/director-desk.php';
+    }
+    $types = casting_director_project_type_labels();
+    unset($types['film'], $types['series'], $types['other']);
+    if ($title === '') {
+        return ['ok' => false, 'error' => 'عنوان فرصت را بنویسید.'];
+    }
+    if ($role_title === '') {
+        return ['ok' => false, 'error' => 'بنویسید دنبال چه نقشی هستید.'];
+    }
+    if ($message === '') {
+        return ['ok' => false, 'error' => 'توضیح کوتاه فرصت را بنویسید.'];
+    }
+    if (casting_strlen($message) > 3000) {
+        return ['ok' => false, 'error' => 'توضیح خیلی بلند است.'];
+    }
+    if ($type_key === '' || !isset($types[$type_key])) {
+        $type_key = 'theater';
+    }
+
+    $cover = casting_opportunity_handle_cover_upload($user_id);
+    if (empty($cover['ok'])) {
+        return ['ok' => false, 'error' => (string) ($cover['error'] ?? 'آپلود عکس ناموفق بود.')];
+    }
+
+    $project_id = 0;
+    if (function_exists('casting_user_is_director_role') && casting_user_is_director_role($user_id)) {
+        $created = casting_director_create_project($user_id, $title, $type_key, $message);
+        if (!empty($created['ok'])) {
+            $project_id = (int) ($created['project_id'] ?? 0);
+        }
+    }
+
+    $now = current_time('mysql');
+    global $wpdb;
+    $ok = $wpdb->insert(
+        casting_opportunities_table(),
+        [
+            'director_id'         => $user_id,
+            'project_id'          => $project_id,
+            'role_id'             => 0,
+            'title'               => $title,
+            'message'             => $message,
+            'project_type'        => (string) ($types[$type_key] ?? $type_key),
+            'location'            => $location,
+            'role_title'          => $role_title,
+            'filters_json'        => wp_json_encode(['from_board' => 1], JSON_UNESCAPED_UNICODE),
+            'cover_attachment_id' => (int) ($cover['id'] ?? 0),
+            'status'              => 'open',
+            'created_at'          => $now,
+            'updated_at'          => $now,
+        ],
+        ['%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s']
+    );
+    if (!$ok) {
+        return ['ok' => false, 'error' => 'ثبت فرصت ناموفق بود.'];
+    }
+    $opportunity_id = (int) $wpdb->insert_id;
+    if ($opportunity_id > 0) {
+        if (!function_exists('casting_store_sent_broadcast_call')) {
+            require_once __DIR__ . '/request.php';
+        }
+        if (function_exists('casting_store_sent_broadcast_call')) {
+            $user = get_user_by('id', $user_id);
+            casting_store_sent_broadcast_call($user_id, [
+                'id'             => 'opp_' . $opportunity_id,
+                'employer_id'    => $user_id,
+                'talent_id'      => 0,
+                'employer'       => $user ? (string) $user->display_name : '',
+                'talent_name'    => 'فید عمومی فرصت‌ها',
+                'project'        => $title,
+                'project_type'   => (string) ($types[$type_key] ?? ''),
+                'role_needed'    => $role_title,
+                'project_id'     => $project_id,
+                'opportunity_id' => $opportunity_id,
+                'message'        => $message,
+                'created_at'     => $now,
+                'status'         => 'public',
+                'kind'           => 'casting_call',
+            ]);
+        }
+    }
+
+    return ['ok' => true, 'error' => '', 'id' => $opportunity_id];
+}
+
 /**
  * @return array{ok:bool,error:string}
  */
@@ -335,7 +521,9 @@ function casting_user_can_admin_delete_opportunity(int $user_id): bool
  */
 function casting_admin_delete_opportunity(int $admin_id, int $opportunity_id): array
 {
-    if (!casting_user_can_admin_delete_opportunity($admin_id)) {
+    $row = casting_opportunity_get($opportunity_id);
+    $is_owner = is_array($row) && (int) ($row['director_id'] ?? 0) === $admin_id;
+    if (!$is_owner && !casting_user_can_admin_delete_opportunity($admin_id)) {
         return ['ok' => false, 'error' => 'اجازه حذف فراخوان را ندارید.'];
     }
 
@@ -1145,8 +1333,15 @@ function casting_render_opportunity_card(array $op, array $ctx = []): void
         $classes .= ' opp-card--saved';
     }
     $return_qs = http_build_query(array_merge($list_query, ['id' => $oid]));
+    $cover_url = casting_opportunity_cover_url($op);
+    $project_id = (int) ($op['project_id'] ?? 0);
     ?>
   <article class="<?= casting_e($classes) ?>" id="opp-<?= $oid ?>"<?= $type_key !== '' ? ' data-opp-type="' . casting_e($type_key) . '"' : '' ?>>
+    <?php if ($cover_url !== '') : ?>
+      <div class="opp-card-cover">
+        <img src="<?= casting_e($cover_url) ?>" alt="" width="240" height="240">
+      </div>
+    <?php endif; ?>
     <div class="opp-card-main home-opportunity-body">
       <?php if ($chips !== []) : ?>
         <div class="opp-card-chips" aria-label="خلاصه فراخوان">
@@ -1200,7 +1395,12 @@ function casting_render_opportunity_card(array $op, array $ctx = []): void
           <?= $already ? 'مشاهده' : 'اپلای' ?>
         </a>
       <?php elseif ($is_own) : ?>
-        <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('director-desk.php?project=' . (int) ($op['project_id'] ?? 0) . '&opp=' . $oid)) ?>">متقاضیان</a>
+        <?php
+        $manage_href = $project_id > 0
+            ? casting_url('director-desk.php?project=' . $project_id . '&opp=' . $oid)
+            : casting_url('opportunities.php?tab=posted&id=' . $oid . '#opp-' . $oid);
+        ?>
+        <a class="btn btn-ghost btn-sm" href="<?= casting_e($manage_href) ?>">متقاضیان</a>
       <?php elseif ($already) : ?>
         <a class="btn btn-ghost btn-sm" href="opportunities.php?tab=mine">مشاهده اپلای</a>
       <?php elseif ($expanded) : ?>
@@ -1337,4 +1537,103 @@ function casting_render_opportunity_sort_chips(string $active_sort, string $type
     <?php endforeach; ?>
   </div>
     <?php
+}
+
+/**
+ * @param array<string, string> $values
+ */
+function casting_render_opportunity_create_form(array $values = [], bool $open = false): void
+{
+    if (!function_exists('casting_director_project_type_labels')) {
+        require_once __DIR__ . '/director-desk.php';
+    }
+    $types = casting_director_project_type_labels();
+    unset($types['film'], $types['series'], $types['other']);
+    $title = (string) ($values['title'] ?? '');
+    $role_title = (string) ($values['role_title'] ?? '');
+    $location = (string) ($values['location'] ?? '');
+    $message = (string) ($values['message'] ?? '');
+    $project_type = sanitize_key((string) ($values['project_type'] ?? 'theater'));
+    if (!isset($types[$project_type])) {
+        $project_type = 'theater';
+    }
+    ?>
+  <details class="opp-create" id="opp-create"<?= $open ? ' open' : '' ?>>
+    <summary class="opp-create-summary">ایجاد فرصت</summary>
+    <p class="field-hint">بنویسید دنبال چه نقشی هستید تا در فید فرصت‌ها دیده شود. عکس پوستر اختیاری است.</p>
+    <form class="form" method="post" action="opportunities.php?tab=open#opp-create" enctype="multipart/form-data">
+      <?php wp_nonce_field('casting_opportunity_create'); ?>
+      <input type="hidden" name="opp_action" value="create">
+      <div class="form-grid">
+        <div class="field">
+          <label for="opp_title">عنوان فرصت</label>
+          <input id="opp_title" name="title" type="text" required maxlength="191" value="<?= casting_e($title) ?>" placeholder="مثلاً نام فیلم یا نمایش">
+        </div>
+        <div class="field">
+          <label for="opp_role_title">دنبال چه نقشی هستید؟</label>
+          <input id="opp_role_title" name="role_title" type="text" required maxlength="191" value="<?= casting_e($role_title) ?>" placeholder="مثلاً بازیگر نقش اصلی، فیلمبردار…">
+        </div>
+        <div class="field">
+          <label for="opp_project_type">نوع پروژه</label>
+          <select id="opp_project_type" name="project_type">
+            <?php foreach ($types as $key => $label) : ?>
+              <option value="<?= casting_e($key) ?>" <?= $project_type === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="field">
+          <label for="opp_location">شهر / محل (اختیاری)</label>
+          <input id="opp_location" name="location" type="text" maxlength="191" value="<?= casting_e($location) ?>">
+        </div>
+      </div>
+      <div class="field">
+        <label for="opp_message">توضیح</label>
+        <textarea id="opp_message" name="message" rows="4" required maxlength="3000" placeholder="چه می‌خواهید، شرایط، زمان تست…"><?= casting_e($message) ?></textarea>
+      </div>
+      <div class="field">
+        <label for="opp_cover">عکس پوستر (اختیاری)</label>
+        <input id="opp_cover" name="opp_cover" type="file" accept="image/jpeg,image/png,image/webp">
+        <p class="field-hint">JPG، PNG یا WebP. اگر نگذارید، فرصت بدون عکس منتشر می‌شود.</p>
+      </div>
+      <div class="cta-row">
+        <button class="btn btn-primary" type="submit">انتشار فرصت</button>
+      </div>
+    </form>
+  </details>
+    <?php
+}
+
+/**
+ * @param list<array<string, mixed>> $applicants
+ */
+function casting_render_opportunity_posted_applicants(array $applicants): void
+{
+    if ($applicants === []) {
+        echo '<p class="meta">هنوز اپلایی نیامده است.</p>';
+        return;
+    }
+    echo '<ul class="opp-posted-applicants">';
+    foreach ($applicants as $app) {
+        $tid = (int) ($app['talent_id'] ?? 0);
+        $name = (string) ($app['display_name'] ?? 'عضو');
+        $photo = (string) ($app['photo_url'] ?? '');
+        $city = (string) ($app['city'] ?? '');
+        $status = (string) ($app['status'] ?? 'pending');
+        $labels = casting_opportunity_application_status_labels();
+        echo '<li class="opp-posted-applicant">';
+        if ($photo !== '') {
+            echo '<img src="' . casting_e($photo) . '" alt="" width="48" height="48">';
+        }
+        echo '<div><strong>' . casting_e($name) . '</strong>';
+        echo '<p class="meta">' . casting_e((string) ($labels[$status] ?? $status));
+        if ($city !== '') {
+            echo ' · ' . casting_e($city);
+        }
+        echo '</p></div>';
+        if ($tid > 0) {
+            echo '<a class="btn btn-ghost btn-sm" href="' . casting_e(casting_url('member.php?id=' . $tid)) . '">پروفایل</a>';
+        }
+        echo '</li>';
+    }
+    echo '</ul>';
 }
