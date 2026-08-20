@@ -52,13 +52,6 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
     <p class="panel-home-greeting-sub"><?= casting_brandify($welcome['subline']) ?></p>
   </header>
 
-  <?php if (casting_user_is_director_role($user_id)) : ?>
-    <div class="cta-row panel-home-director-tools">
-      <a class="btn btn-primary" href="<?= casting_e(casting_url('director-desk.php')) ?>">ساخت پروژه</a>
-      <a class="btn btn-ghost" href="<?= casting_e(casting_url('opportunities.php?tab=open&compose=1#opp-create')) ?>">ایجاد فرصت</a>
-    </div>
-  <?php endif; ?>
-
   <?php
   $promo_slides = [
       ['src' => casting_asset('images/promo-slide-1.png'), 'alt' => 'صحنه فیلم‌برداری و صندلی کارگردان'],

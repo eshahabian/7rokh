@@ -291,6 +291,9 @@ function casting_user_can_open_ad_posters(int $user_id): bool
     if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
         return true;
     }
+    if (casting_user_can_moderate_ad_posters($user_id)) {
+        return true;
+    }
     $flag = casting_user_ads_unlocked_meta($user_id);
     if ($flag === '1') {
         return true;

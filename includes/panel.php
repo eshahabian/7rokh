@@ -132,6 +132,7 @@ function casting_panel_nav_highlight_key(string $active): string
         'my-profile'   => 'panel',
         'edit-profile' => 'panel',
         'my-ads'       => 'my-ads',
+        'admin-ads'    => 'my-ads',
         'messages'     => 'messages',
         'news'         => 'news',
         'app'          => 'app',
@@ -277,6 +278,11 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
 
         $is_external = !empty($item['external']);
         $href = (string) $item['href'];
+        $item_label = (string) ($item['label'] ?? '');
+        if ($item['key'] === 'my-ads' && !empty($ctx['ads_is_admin'])) {
+            $item_label = 'پوستر';
+            $href = 'my-ads.php?tab=inbox';
+        }
         if (!$is_external && $href !== '' && !str_starts_with($href, 'http')) {
             $href = casting_url($href);
         }
@@ -294,17 +300,17 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
             <?php
             continue;
         }
-        if ($item['key'] === 'my-ads' && empty($ctx['ads_unlocked'])) {
+        if ($item['key'] === 'my-ads' && empty($ctx['ads_unlocked']) && empty($ctx['ads_is_admin'])) {
             ?>
           <span class="panel-nav-link is-disabled is-locked" aria-disabled="true" title="پس از پرداخت هزینهٔ تبلیغات در خرید اشتراک فعال می‌شود">
-            <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
+            <span class="panel-nav-label"><?= casting_brandify($item_label) ?></span>
           </span>
             <?php
             continue;
         }
         ?>
           <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>">
-            <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
+            <span class="panel-nav-label"><?= casting_brandify($item_label) ?></span>
             <?php if ($item['key'] === 'membership' && $panel_premium_until !== null && $user) : ?>
               <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
                 <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
@@ -323,6 +329,8 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
             <?php elseif (($item['key'] === 'contact' || $item['key'] === 'settings') && $unread_contacts > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
+            <?php elseif ($item['key'] === 'my-ads' && !empty($ctx['ads_is_admin']) && (int) ($ctx['pending_ads'] ?? 0) > 0) : ?>
+              <span class="nav-badge" aria-label="<?= (int) ($ctx['pending_ads'] ?? 0) ?> پوستر در انتظار"><?= (int) ($ctx['pending_ads'] ?? 0) ?></span>
             <?php elseif ($item['key'] === 'my-ads' && (int) ($ctx['open_ad_credits'] ?? 0) > 0) : ?>
               <span class="nav-badge" aria-label="<?= (int) ($ctx['open_ad_credits'] ?? 0) ?> سهمیه پوستر"><?= (int) ($ctx['open_ad_credits'] ?? 0) ?></span>
             <?php endif; ?>
@@ -571,6 +579,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
         'desk_response_count' => $desk_response_count,
         'panel_premium_until' => $panel_premium_until,
         'ads_unlocked'        => false,
+        'ads_is_admin'        => false,
         'open_ad_credits'     => 0,
         'cart_count'          => 0,
     ];
@@ -593,7 +602,9 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
         }
         if (function_exists('casting_user_can_open_ad_posters')) {
             $nav_ctx['ads_unlocked'] = casting_user_can_open_ad_posters((int) $user->ID);
-            if ($nav_ctx['ads_unlocked']) {
+            $nav_ctx['ads_is_admin'] = function_exists('casting_user_can_moderate_ad_posters')
+                && casting_user_can_moderate_ad_posters((int) $user->ID);
+            if ($nav_ctx['ads_unlocked'] && !$nav_ctx['ads_is_admin']) {
                 $open_credits = casting_user_ad_open_credits((int) $user->ID, false);
                 $nav_ctx['open_ad_credits'] = count($open_credits);
             }
