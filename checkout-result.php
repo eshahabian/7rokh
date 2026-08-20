@@ -26,9 +26,18 @@ $page_title = $is_success ? 'پرداخت موفق' : 'پرداخت ناموفق
 
 $retry_url = 'checkout.php?order=' . rawurlencode($order_code);
 $next_url = 'membership.php';
+$includes_ads = false;
+if (!function_exists('casting_order_includes_advertising')) {
+    require_once __DIR__ . '/includes/ad-posters.php';
+}
+if (function_exists('casting_order_includes_advertising')) {
+    $includes_ads = casting_order_includes_advertising($order);
+}
 if ((string) ($order['service_key'] ?? '') === 'casting_call') {
     $pid = (int) ($order['project_id'] ?? 0);
     $next_url = $pid > 0 ? ('director-desk.php?project=' . $pid) : 'director-desk.php';
+} elseif ($includes_ads && $is_success) {
+    $next_url = 'my-ads.php';
 } elseif ((string) ($order['service_key'] ?? '') === 'premium' && $is_success) {
     $next_url = 'cart.php';
 }
@@ -50,6 +59,8 @@ casting_render_panel_start($page_title, 'membership');
     </ul>
     <?php if ((string) ($order['service_key'] ?? '') === 'casting_call') : ?>
       <p class="meta">اکنون می‌توانید فراخوان را از میز کارگردان ارسال کنید.</p>
+    <?php elseif (!empty($includes_ads)) : ?>
+      <p class="meta">اکنون منوی «ارسال پوستر» باز شده است. پوستر را بفرستید تا پس از تأیید در قسمت تبلیغات صفحه اصلی نمایش داده شود.</p>
     <?php elseif ((string) ($order['service_key'] ?? '') === 'premium') : ?>
       <p class="meta">عضویت ویژه روی حساب شما فعال شد.</p>
     <?php endif; ?>

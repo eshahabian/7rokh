@@ -12,6 +12,7 @@ require_once __DIR__ . '/includes/chat.php';
 require_once __DIR__ . '/includes/director-workspace.php';
 require_once __DIR__ . '/includes/follows.php';
 require_once __DIR__ . '/includes/feed.php';
+require_once __DIR__ . '/includes/ad-posters.php';
 
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
@@ -67,30 +68,8 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
       ['src' => casting_asset('images/promo-slide-5.png'), 'alt' => 'میز گریم و آینه پشت صحنه'],
       ['src' => casting_asset('images/promo-slide-6.png'), 'alt' => 'میکروفون بوم و صحنه فیلم‌برداری'],
   ];
+  casting_render_promo_banner($promo_slides);
   ?>
-  <section class="panel-promo-banner" aria-label="مکانی برای دیده شدن" data-promo-slider>
-    <div class="panel-promo-slides">
-      <?php foreach ($promo_slides as $i => $slide) : ?>
-        <figure class="panel-promo-slide<?= $i === 0 ? ' is-active' : '' ?>">
-          <img src="<?= casting_e($slide['src']) ?>" alt="<?= casting_e($slide['alt']) ?>" width="1280" height="720" decoding="<?= $i === 0 ? 'sync' : 'async' ?>">
-        </figure>
-      <?php endforeach; ?>
-    </div>
-    <div class="panel-promo-banner-copy">
-      <h1>مکانی برای دیده شدن</h1>
-    </div>
-    <div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدهای تبلیغات">
-      <?php foreach ($promo_slides as $i => $slide) : ?>
-        <button
-          type="button"
-          class="<?= $i === 0 ? 'is-active' : '' ?>"
-          aria-label="اسلاید <?= (int) ($i + 1) ?>"
-          aria-selected="<?= $i === 0 ? 'true' : 'false' ?>"
-          data-promo-dot="<?= (int) $i ?>"
-        ></button>
-      <?php endforeach; ?>
-    </div>
-  </section>
 
   <?php casting_render_panel_home_quick_filters($can_search); ?>
 

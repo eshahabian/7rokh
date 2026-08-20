@@ -58,6 +58,7 @@ function casting_panel_nav_groups(): array
             'label' => 'حساب',
             'items' => [
                 ['key' => 'cart',         'label' => 'خرید اشتراک',          'href' => 'cart.php'],
+                ['key' => 'my-ads',       'label' => 'ارسال پوستر',         'href' => 'my-ads.php'],
                 ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',      'href' => 'transactions.php'],
                 ['key' => 'cancel',       'label' => 'انصراف از عضویت',      'href' => 'cancel-membership.php'],
                 ['key' => 'rules',        'label' => 'قوانین',               'href' => 'rules.php'],
@@ -130,6 +131,7 @@ function casting_panel_nav_highlight_key(string $active): string
         'newest'       => 'newest',
         'my-profile'   => 'panel',
         'edit-profile' => 'panel',
+        'my-ads'       => 'my-ads',
         'messages'     => 'messages',
         'news'         => 'news',
         'app'          => 'app',
@@ -292,6 +294,14 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
             <?php
             continue;
         }
+        if ($item['key'] === 'my-ads' && empty($ctx['ads_unlocked'])) {
+            ?>
+          <span class="panel-nav-link is-disabled is-locked" aria-disabled="true" title="پس از پرداخت هزینهٔ تبلیغات در خرید اشتراک فعال می‌شود">
+            <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
+          </span>
+            <?php
+            continue;
+        }
         ?>
           <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>">
             <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
@@ -313,6 +323,8 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_peers) ?> پیام جدید"><?= (int) $unread_peers ?></span>
             <?php elseif (($item['key'] === 'contact' || $item['key'] === 'settings') && $unread_contacts > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
+            <?php elseif ($item['key'] === 'my-ads' && (int) ($ctx['open_ad_credits'] ?? 0) > 0) : ?>
+              <span class="nav-badge" aria-label="<?= (int) ($ctx['open_ad_credits'] ?? 0) ?> سهمیه پوستر"><?= (int) ($ctx['open_ad_credits'] ?? 0) ?></span>
             <?php endif; ?>
           </a>
         <?php
@@ -414,6 +426,14 @@ function casting_panel_menu_badge_count(): int
         }
         $badge += casting_admin_pending_media_count();
     }
+    if ($unread_peers === 0) {
+        if (!function_exists('casting_user_can_moderate_ad_posters')) {
+            require_once __DIR__ . '/ad-posters.php';
+        }
+        if (function_exists('casting_user_can_moderate_ad_posters') && casting_user_can_moderate_ad_posters($user_id)) {
+            $badge += casting_admin_pending_ad_posters_count();
+        }
+    }
 
     return $badge;
 }
@@ -423,6 +443,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
     $unread_peers = 0;
     $pending_receipts = 0;
     $pending_media = 0;
+    $pending_ads = 0;
     $unread_contacts = 0;
     $request_count = 0;
     $pending_brief_count = 0;
@@ -472,6 +493,12 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
                 require_once __DIR__ . '/user-media.php';
             }
             $pending_media = casting_admin_pending_media_count();
+        }
+        if (!function_exists('casting_user_can_moderate_ad_posters')) {
+            require_once __DIR__ . '/ad-posters.php';
+        }
+        if (function_exists('casting_user_can_moderate_ad_posters') && casting_user_can_moderate_ad_posters($user_id)) {
+            $pending_ads = casting_admin_pending_ad_posters_count();
         }
         if (!function_exists('casting_contact_unread_count_for_user')) {
             require_once __DIR__ . '/contact-messages.php';
@@ -537,11 +564,14 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
         'unread_peers'        => $unread_peers,
         'pending_receipts'    => $pending_receipts,
         'pending_media'       => $pending_media,
+        'pending_ads'         => $pending_ads,
         'unread_contacts'     => $unread_contacts,
         'request_count'       => $request_count,
         'pending_brief_count' => $pending_brief_count,
         'desk_response_count' => $desk_response_count,
         'panel_premium_until' => $panel_premium_until,
+        'ads_unlocked'        => false,
+        'open_ad_credits'     => 0,
         'cart_count'          => 0,
     ];
     if (!function_exists('casting_cart_count')) {
@@ -556,6 +586,18 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
         }
     } catch (Throwable $e) {
         $nav_ctx['cart_count'] = 0;
+    }
+    if ($user) {
+        if (!function_exists('casting_user_can_open_ad_posters')) {
+            require_once __DIR__ . '/ad-posters.php';
+        }
+        if (function_exists('casting_user_can_open_ad_posters')) {
+            $nav_ctx['ads_unlocked'] = casting_user_can_open_ad_posters((int) $user->ID);
+            if ($nav_ctx['ads_unlocked']) {
+                $open_credits = casting_user_ad_open_credits((int) $user->ID, false);
+                $nav_ctx['open_ad_credits'] = count($open_credits);
+            }
+        }
     }
     ?>
     <div class="panel-shell-nav">
@@ -625,6 +667,8 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
                 <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
               <?php elseif ($item['key'] === 'admin-media' && $pending_media > 0) : ?>
                 <span class="nav-badge" aria-label="<?= casting_e((string) $pending_media) ?> فایل در انتظار"><?= (int) $pending_media ?></span>
+              <?php elseif ($item['key'] === 'admin-ads' && $pending_ads > 0) : ?>
+                <span class="nav-badge" aria-label="<?= casting_e((string) $pending_ads) ?> پوستر در انتظار"><?= (int) $pending_ads ?></span>
               <?php endif; ?>
             </a>
           <?php endforeach; ?>

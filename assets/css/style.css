@@ -5143,9 +5143,76 @@ html.is-pwa .panel-ad-card--portrait:hover .panel-ad-card-media.has-photo {
   flex-shrink: 0;
 }
 
-.panel-nav-link.is-disabled {
+.panel-nav-link.is-locked {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.panel-nav-link.is-locked .panel-nav-label::after {
+  content: " قفل";
+  font-size: 0.72em;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.ad-spec-box {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--accent-strong) 12%);
+}
+
+.ad-spec-box h2 {
+  margin: 0 0 0.55rem;
+  font-size: 1.05rem;
+}
+
+.ad-spec-box .info-list {
+  margin: 0;
+}
+
+.ad-poster-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.ad-poster-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ad-poster-card img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.ad-poster-card-body {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ad-poster-card--rejected {
+  border-color: color-mix(in srgb, #c45c5c 55%, var(--line));
+}
+
+@media (min-width: 720px) {
+  .ad-poster-card {
+    grid-template-columns: minmax(180px, 280px) 1fr;
+    align-items: start;
+  }
+}
+
+html[data-theme="day"] .ad-spec-box {
+  background: color-mix(in srgb, #fff 92%, var(--accent-strong) 8%);
 }
 
 .panel-nav-link:hover,

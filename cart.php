@@ -330,7 +330,7 @@ casting_render_flash();
   <p class="meta">روی هر کاشی بزنید تا به خرید اشتراک اضافه شود.</p>
 
   <?php foreach ($tiles_by_group as $group => $tiles) : ?>
-    <h3 class="shop-group-title"><?= casting_e($group) ?></h3>
+    <h3 class="shop-group-title"<?= $group === 'تبلیغات' ? ' id="shop-ads"' : '' ?>><?= casting_e($group) ?></h3>
     <div class="shop-tile-scroller" role="list">
       <?php foreach ($tiles as $tile) :
           $add_href = casting_cart_add_url((string) $tile['service'], (string) $tile['plan']);

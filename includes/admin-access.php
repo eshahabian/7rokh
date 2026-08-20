@@ -541,6 +541,15 @@ function casting_panel_admin_nav_items(int $user_id): array
     if (casting_user_has_admin_permission($user_id, 'approve_media')) {
         $items[] = ['key' => 'admin-media', 'label' => 'تأیید گالری', 'href' => 'admin-media.php', 'perm' => 'approve_media'];
     }
+    if (!function_exists('casting_user_can_moderate_ad_posters')) {
+        $ads_file = __DIR__ . '/ad-posters.php';
+        if (is_file($ads_file)) {
+            require_once $ads_file;
+        }
+    }
+    if (function_exists('casting_user_can_moderate_ad_posters') && casting_user_can_moderate_ad_posters($user_id)) {
+        $items[] = ['key' => 'admin-ads', 'label' => 'تأیید پوستر تبلیغات', 'href' => 'admin-ads.php', 'perm' => 'approve_ads'];
+    }
     if (casting_user_has_admin_permission($user_id, 'view_transactions')) {
         $items[] = ['key' => 'admin-transactions', 'label' => 'تراکنش کاربران', 'href' => 'admin-transactions.php', 'perm' => 'view_transactions'];
     }

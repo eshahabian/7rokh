@@ -168,7 +168,7 @@ function casting_paid_services_catalog(): array
                     'amount_base' => 1,
                 ],
             ],
-            'success_note' => 'پس از پرداخت موفق، تیم پشتیبانی برای هماهنگی نمایش بنر با شما تماس می‌گیرد.',
+            'success_note' => 'پس از پرداخت موفق، منوی «ارسال پوستر» باز می‌شود؛ پوستر را بفرستید تا پس از تأیید در تبلیغات صفحه اصلی نمایش داده شود.',
         ],
     ];
 }
@@ -654,7 +654,7 @@ function casting_checkout_fulfill_order(array $order): array
 
     // سفارش ترکیبی از سبد
     if ($service === 'cart' && $cart_items !== []) {
-        foreach ($cart_items as $it) {
+        foreach ($cart_items as $i => $it) {
             if (!is_array($it)) {
                 continue;
             }
@@ -683,6 +683,15 @@ function casting_checkout_fulfill_order(array $order): array
                 }
                 update_user_meta($user_id, 'casting_last_casting_call_credit', (string) $order['order_code']);
             }
+            if ($sk === 'advertising') {
+                if (!function_exists('casting_ad_credits_grant_from_order')) {
+                    require_once __DIR__ . '/ad-posters.php';
+                }
+                $it_meta = is_array($it['meta'] ?? null) ? $it['meta'] : [];
+                $ad_type = sanitize_key((string) (($it_meta['ad_type'] ?? '') ?: ($it['plan_key'] ?? '')));
+                casting_ad_credit_grant($user_id, (string) $order['order_code'], $ad_type, (string) $order['order_code'] . ':' . (int) $i);
+                casting_user_set_ads_unlocked($user_id, true);
+            }
         }
     } elseif ($service === 'premium') {
         if (!function_exists('casting_premium_activate_for_user')) {
@@ -704,6 +713,12 @@ function casting_checkout_fulfill_order(array $order): array
             update_user_meta($user_id, 'casting_casting_call_credit_type_' . $type_key, (string) $order['order_code']);
         }
         update_user_meta($user_id, 'casting_last_casting_call_credit', (string) $order['order_code']);
+    } elseif ($service === 'advertising') {
+        if (!function_exists('casting_ad_credits_grant_from_order')) {
+            require_once __DIR__ . '/ad-posters.php';
+        }
+        casting_ad_credits_grant_from_order($order);
+        casting_user_set_ads_unlocked($user_id, true);
     }
 
     if (function_exists('casting_add_transaction')) {
