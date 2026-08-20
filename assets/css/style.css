@@ -619,16 +619,6 @@ html.is-native-app .stat-item span {
   text-align: center;
 }
 
-html.is-native-app .stat-item--total {
-  align-items: flex-start;
-  text-align: start;
-}
-
-html.is-native-app .stat-item--total strong,
-html.is-native-app .stat-item--total span {
-  text-align: start;
-}
-
 .quick-filters {
   display: flex;
   flex-wrap: wrap;
