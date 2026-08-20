@@ -3789,6 +3789,45 @@ function casting_member_counts(): array
     ];
 }
 
+/**
+ * کاشی‌های آمار تخصص (صفحهٔ عمومی و پنل مدیران اصلی)
+ *
+ * @param array{tiles?:list<array{key?:string,label?:string,count?:int}>}|null $counts
+ */
+function casting_render_member_count_tiles(?array $counts = null, string $extra_class = ''): void
+{
+    if ($counts === null) {
+        $counts = casting_member_counts();
+    }
+    $tiles = $counts['tiles'] ?? [];
+    if (!is_array($tiles) || $tiles === []) {
+        return;
+    }
+    $class = 'home-stats';
+    if ($extra_class !== '') {
+        $class .= ' ' . $extra_class;
+    }
+    ?>
+    <div class="<?= casting_e($class) ?>" aria-label="آمار تخصص‌های هنری">
+      <?php foreach ($tiles as $tile) : ?>
+        <?php
+        $key = (string) ($tile['key'] ?? '');
+        $mod = '';
+        if ($key === 'total') {
+            $mod = ' stat-item--total';
+        } elseif ($key === 'discovery') {
+            $mod = ' stat-item--discovery';
+        }
+        ?>
+        <div class="stat-item<?= $mod ?>">
+          <strong><?= (int) ($tile['count'] ?? 0) ?></strong>
+          <span><?= casting_e((string) ($tile['label'] ?? '')) ?></span>
+        </div>
+      <?php endforeach; ?>
+    </div>
+    <?php
+}
+
 function casting_touch_last_active(int $user_id): void
 {
     if ($user_id <= 0) {

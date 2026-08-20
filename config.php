@@ -53,6 +53,14 @@ define('CASTING_PORTAL_ADMINS', [
     'ardavan',
 ]);
 
+/**
+ * آمار تخصص‌ها در صفحهٔ عمومی (index) — فعلاً غیرفعال.
+ * برای نمایش دوباره روی سایت true کنید.
+ */
+if (!defined('CASTING_PUBLIC_HOME_STATS')) {
+    define('CASTING_PUBLIC_HOME_STATS', false);
+}
+
 /** مدیر اصلی بدون محدودیت — فقط این کاربر */
 define('CASTING_PORTAL_OWNER', 'eshahabian');
 

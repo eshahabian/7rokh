@@ -168,6 +168,15 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
     <?php endif; ?>
   </section>
 
+  <?php if (casting_user_is_super_admin($user_id)) : ?>
+    <section class="panel-ads-section panel-home-member-stats" aria-labelledby="panel-member-stats-title">
+      <header class="panel-ads-head">
+        <h2 id="panel-member-stats-title">آمار تخصص‌های هنری</h2>
+      </header>
+      <?php casting_render_member_count_tiles(null, 'home-stats--panel'); ?>
+    </section>
+  <?php endif; ?>
+
   <?php if (!$complete) : ?>
     <p class="meta panel-home-hint">پروفایلتان کامل نیست. از «پنل کاربری» اطلاعات را تکمیل کنید.</p>
   <?php elseif ($premium) : ?>

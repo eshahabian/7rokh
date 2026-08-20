@@ -13,7 +13,7 @@ if ($user) {
     }
 }
 
-$counts = casting_member_counts();
+$counts = CASTING_PUBLIC_HOME_STATS ? casting_member_counts() : ['tiles' => []];
 $home_slides = [
     ['src' => casting_asset('images/home-slide-1.png'), 'alt' => 'صحنه فیلم‌برداری و صندلی کارگردان'],
     ['src' => casting_asset('images/home-slide-2.png'), 'alt' => 'دوربین سینمایی و تجهیزات تولید'],
@@ -55,14 +55,9 @@ casting_render_flash();
 
     <p class="hero-lead"><?= casting_brand_html() ?> - پرتابل ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
 
-    <div class="home-stats" aria-label="آمار تخصص‌های هنری">
-      <?php foreach (($counts['tiles'] ?? []) as $tile) : ?>
-        <div class="stat-item<?= ($tile['key'] ?? '') === 'total' ? ' stat-item--total' : '' ?><?= ($tile['key'] ?? '') === 'discovery' ? ' stat-item--discovery' : '' ?>">
-          <strong><?= (int) ($tile['count'] ?? 0) ?></strong>
-          <span><?= casting_e((string) ($tile['label'] ?? '')) ?></span>
-        </div>
-      <?php endforeach; ?>
-    </div>
+    <?php if (CASTING_PUBLIC_HOME_STATS) : ?>
+      <?php casting_render_member_count_tiles($counts); ?>
+    <?php endif; ?>
   </div>
 </main>
 <?php casting_render_footer(); ?>

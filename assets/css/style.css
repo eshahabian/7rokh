@@ -585,6 +585,17 @@ html[data-theme="day"] .brand-mark-rokh {
   text-overflow: ellipsis;
 }
 
+.panel-home .home-stats--panel {
+  flex-wrap: wrap;
+  margin: 0;
+  gap: 0.5rem;
+}
+
+.panel-home .home-stats--panel .stat-item {
+  flex: 1 1 5.6rem;
+  background: var(--bg-panel);
+}
+
 .quick-filters {
   display: flex;
   flex-wrap: wrap;
