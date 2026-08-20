@@ -174,6 +174,30 @@ function casting_session_is_payment_return(): bool
 }
 
 /**
+ * آیا این درخواست فعالیت واقعی کاربر است و باید زمان بی‌فعالیتی را تمدید کند؟
+ * پینگ‌های پس‌زمینه (چت، بازدید مدیا، استریم) تمدید نمی‌کنند تا خروج ۱۵ دقیقه‌ای واقعاً رخ بدهد.
+ */
+function casting_session_request_should_touch(): bool
+{
+    $script = strtolower(basename(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''))));
+    if ($script === 'chat-dock-api.php') {
+        $action = strtolower(trim((string) ($_POST['action'] ?? $_GET['action'] ?? '')));
+
+        return $action === 'send';
+    }
+    if ($script === 'media-engage.php') {
+        $action = strtolower(trim((string) ($_POST['engage_action'] ?? $_GET['engage_action'] ?? '')));
+
+        return $action !== '' && $action !== 'view';
+    }
+    if ($script === 'media-stream.php') {
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * بررسی اعتبار نشست فعلی — در صورت نامعتبر بودن، کاربر را خارج می‌کند.
  *
  * @return array{ok:bool,reason:string}
@@ -215,7 +239,9 @@ function casting_session_validate_current(int $user_id): array
         return ['ok' => false, 'reason' => 'idle'];
     }
 
-    casting_session_touch($user_id);
+    if (casting_session_request_should_touch()) {
+        casting_session_touch($user_id);
+    }
 
     return ['ok' => true, 'reason' => ''];
 }

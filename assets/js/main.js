@@ -3192,21 +3192,45 @@
     }
   });
 
-  // خروج خودکار پس از عدم فعالیت (مهلت از CASTING_SESSION.idleSeconds)
+  // خروج واقعی پس از ۱۵ دقیقه بدون کلیک/اسکرول/تایپ — پینگ پس‌زمینه تمدید نمی‌کند
   const sessionCfg = window.CASTING_SESSION;
   if (sessionCfg && sessionCfg.active) {
     const idleMs = Math.max(60, Number(sessionCfg.idleSeconds) || 900) * 1000;
     const pingUrl = String(sessionCfg.pingUrl || "");
     const logoutUrl = String(sessionCfg.logoutUrl || "logout.php?reason=idle");
-    let idleTimer = 0;
+    const LAST_KEY = "casting_last_activity_at";
+    let lastActivityAt = Date.now();
+    try {
+      const stored = Number(sessionStorage.getItem(LAST_KEY) || "0");
+      if (stored > 0) lastActivityAt = stored;
+    } catch (_err) {}
     let lastPing = 0;
     let loggingOut = false;
     let idleResetQueued = 0;
 
+    const persistActivity = (ts) => {
+      lastActivityAt = ts;
+      try {
+        sessionStorage.setItem(LAST_KEY, String(ts));
+      } catch (_err) {}
+    };
+
     const doIdleLogout = () => {
       if (loggingOut) return;
       loggingOut = true;
+      try {
+        sessionStorage.removeItem(LAST_KEY);
+      } catch (_err) {}
       window.location.href = logoutUrl;
+    };
+
+    const checkIdleNow = () => {
+      if (loggingOut) return true;
+      if (Date.now() - lastActivityAt >= idleMs) {
+        doIdleLogout();
+        return true;
+      }
+      return false;
     };
 
     const pingSession = () => {
@@ -3226,28 +3250,34 @@
         .catch(() => {});
     };
 
-    const resetIdle = () => {
+    const markActivity = () => {
       if (loggingOut) return;
       if (idleResetQueued) return;
       idleResetQueued = window.setTimeout(() => {
         idleResetQueued = 0;
-        window.clearTimeout(idleTimer);
-        idleTimer = window.setTimeout(doIdleLogout, idleMs);
+        persistActivity(Date.now());
         pingSession();
       }, 200);
     };
 
-    ["pointerdown", "keydown", "scroll", "visibilitychange"].forEach((evt) => {
-      document.addEventListener(
-        evt,
-        () => {
-          if (evt === "visibilitychange" && document.visibilityState !== "visible") return;
-          resetIdle();
-        },
-        { passive: true }
-      );
+    if (!checkIdleNow()) {
+      persistActivity(Date.now());
+      pingSession();
+    }
+
+    ["pointerdown", "keydown", "scroll"].forEach((evt) => {
+      document.addEventListener(evt, markActivity, { passive: true });
     });
-    resetIdle();
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.visibilityState !== "visible") return;
+        checkIdleNow();
+      },
+      { passive: true }
+    );
+    window.setInterval(checkIdleNow, 10000);
+    window.addEventListener("pageshow", checkIdleNow);
   }
 
   // Application Manager: select all applicants in folder
