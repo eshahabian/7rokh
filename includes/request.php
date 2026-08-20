@@ -78,6 +78,18 @@ function casting_user_can_send_casting_requests(int $user_id): bool
     return casting_is_employer_role(casting_get_user_role($user_id));
 }
 
+function casting_user_can_invite_member(int $from_id, int $to_id): bool
+{
+    if ($from_id <= 0 || $to_id <= 0 || $from_id === $to_id) {
+        return false;
+    }
+    if (!casting_user_can_send_casting_requests($from_id)) {
+        return false;
+    }
+
+    return casting_get_user_role($to_id) !== '';
+}
+
 /**
  * ارسال دعوت همکاری کارفرما به هنرمند (جدا از پیام عادی)
  *
@@ -91,25 +103,12 @@ function casting_send_talent_request(int $employer_id, int $talent_id, string $m
     if (!$employer || !$talent) {
         return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
     }
-    if (!casting_user_can_send_casting_requests($employer_id)) {
-        return ['ok' => false, 'error' => 'فقط کارفرما می‌تواند دعوت بفرستد.'];
+    if (!casting_user_can_invite_member($employer_id, $talent_id)) {
+        return ['ok' => false, 'error' => 'ارسال فراخوان به این کاربر مجاز نیست.'];
     }
-    $to_role = casting_get_user_role($talent_id);
-    $from_role = casting_get_user_role($employer_id);
     $kind = sanitize_key((string) ($options['kind'] ?? $extra['kind'] ?? 'invitation'));
     if ($kind === '') {
         $kind = 'invitation';
-    }
-    if ($kind === 'casting_call') {
-        if ($to_role === '') {
-            return ['ok' => false, 'error' => 'گیرنده برای این نوع فراخوان مجاز نیست.'];
-        }
-    } elseif ($to_role === 'talent') {
-        // بازیگر
-    } elseif ($to_role === 'director' && $from_role === 'producer') {
-        // تهیه‌کننده → کارگردان
-    } else {
-        return ['ok' => false, 'error' => 'گیرنده برای این نوع دعوت مجاز نیست.'];
     }
     if (casting_users_block_each_other($employer_id, $talent_id)) {
         return ['ok' => false, 'error' => 'به‌دلیل بلاک، ارسال دعوت ممکن نیست.'];
@@ -254,11 +253,7 @@ function casting_user_request_storage_keys(int $user_id): ?array
  */
 function casting_user_request_directions(int $user_id): array
 {
-    $role = casting_get_user_role($user_id);
-    $directions = [];
-    if ($role === 'talent' || $role === 'director' || (function_exists('casting_user_is_director_role') && casting_user_is_director_role($user_id))) {
-        $directions[] = 'received';
-    }
+    $directions = ['received'];
     if (casting_user_can_send_casting_requests($user_id)) {
         $directions[] = 'sent';
     }
@@ -275,8 +270,7 @@ function casting_request_list_meta_key(int $user_id, string $direction, string $
         return null;
     }
 
-    $role = casting_get_user_role($user_id);
-    if ($direction === 'received' && ($role === 'talent' || $role === 'director' || (function_exists('casting_user_is_director_role') && casting_user_is_director_role($user_id)))) {
+    if ($direction === 'received') {
         return $bucket === 'archive' ? 'casting_requests_archive' : 'casting_requests';
     }
     if ($direction === 'sent' && casting_user_can_send_casting_requests($user_id)) {
@@ -837,28 +831,37 @@ function casting_request_is_unread(int $user_id, array $req): bool
     return false;
 }
 
-function casting_user_new_request_count(int $user_id): int
+function casting_user_received_unread_count(int $user_id): int
 {
-    $role = casting_get_user_role($user_id);
     $count = 0;
-    $seen_ids = [];
-
-    if ($role === 'talent' || $role === 'director') {
-        foreach (casting_user_received_requests($user_id) as $req) {
-            if (!is_array($req) || !casting_request_is_unread($user_id, $req)) {
-                continue;
-            }
-            $rid = (string) ($req['id'] ?? '');
-            if ($rid !== '' && isset($seen_ids[$rid])) {
-                continue;
-            }
-            if ($rid !== '') {
-                $seen_ids[$rid] = true;
-            }
+    foreach (casting_user_received_requests($user_id) as $req) {
+        if (is_array($req) && casting_request_is_unread($user_id, $req)) {
             $count++;
         }
     }
-    if (casting_is_employer_role($role)) {
+
+    return $count;
+}
+
+function casting_user_new_request_count(int $user_id): int
+{
+    $count = 0;
+    $seen_ids = [];
+
+    foreach (casting_user_received_requests($user_id) as $req) {
+        if (!is_array($req) || !casting_request_is_unread($user_id, $req)) {
+            continue;
+        }
+        $rid = (string) ($req['id'] ?? '');
+        if ($rid !== '' && isset($seen_ids[$rid])) {
+            continue;
+        }
+        if ($rid !== '') {
+            $seen_ids[$rid] = true;
+        }
+        $count++;
+    }
+    if (casting_user_can_send_casting_requests($user_id)) {
         foreach (casting_user_sent_requests($user_id) as $req) {
             if (!is_array($req) || !casting_request_is_unread($user_id, $req)) {
                 continue;
@@ -880,7 +883,7 @@ function casting_user_new_request_count(int $user_id): int
 /** تعداد پذیرش‌های جدید فراخوان‌های ارسالی (هنوز توسط صاحب پروژه دیده نشده) */
 function casting_user_new_acceptance_count(int $user_id): int
 {
-    if (!casting_is_employer_role(casting_get_user_role($user_id))) {
+    if (!casting_user_can_send_casting_requests($user_id)) {
         return 0;
     }
     $count = 0;

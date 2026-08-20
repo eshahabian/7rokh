@@ -75,13 +75,11 @@ function casting_member_preview_can_view(int $viewer_id, int $member_id): bool
 
 function casting_member_preview_show_employer_actions(int $viewer_id, int $member_id): bool
 {
-    $viewer_role = casting_get_user_role($viewer_id);
-    $member_role = casting_get_user_role($member_id);
-    if (casting_is_employer_role($viewer_role) && $member_role === 'talent') {
-        return true;
+    if (!function_exists('casting_user_can_invite_member')) {
+        require_once __DIR__ . '/request.php';
     }
 
-    return $viewer_role === 'producer' && $member_role === 'director';
+    return casting_user_can_invite_member($viewer_id, $member_id);
 }
 
 function casting_member_preview_is_favorite(int $viewer_id, int $member_id): bool

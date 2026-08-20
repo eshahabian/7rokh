@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/profile.php';
 require_once __DIR__ . '/director-workspace.php';
 require_once __DIR__ . '/director-desk.php';
+require_once __DIR__ . '/request.php';
 
 function casting_panel_render_section(int $user_id, callable $render, string $section = ''): void
 {
@@ -313,7 +314,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     $skills_text = casting_format_skill_labels($profile['skill_items'] ?? [], (string) ($profile['skills_other'] ?? ''));
     $premium = casting_user_is_premium($member_id);
     $viewer_role = casting_get_user_role($viewer_id);
-    if ($message === '' && !$is_self && casting_is_employer_role($viewer_role)) {
+    if ($message === '' && !$is_self && casting_user_can_send_casting_requests($viewer_id)) {
         $message = casting_employer_default_outreach_message($viewer_id);
     }
     $invite_message_locked = !$is_self
@@ -725,11 +726,11 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     <?php casting_render_director_desk_talent_panel($viewer_id, $member_id, max(0, (int) ($_GET['role'] ?? 0))); ?>
   <?php endif; ?>
 
-  <?php if (!$is_self && casting_is_employer_role($viewer_role) && $member_role === 'talent') : ?>
+  <?php if (!$is_self && casting_user_can_invite_member($viewer_id, $member_id)) : ?>
     <?php $invite_types = casting_invitation_project_type_labels(); ?>
     <div class="bio-block request-box" id="request-box">
-      <h3>ارسال دعوت همکاری</h3>
-      <p class="field-hint">این دعوت در بخش «فراخوان کستینگ» دیده می‌شود و وارد پیام‌ها نمی‌شود.</p>
+      <h3>ارسال فراخوان کستینگ</h3>
+      <p class="field-hint">این فراخوان در بخش «فراخوان کستینگ» گیرنده دیده می‌شود، نه در پیام‌ها.</p>
       <form class="form" method="post" action="member.php?id=<?= $member_id ?>">
         <?php wp_nonce_field('casting_request_' . $member_id); ?>
         <div class="form-grid">
@@ -765,49 +766,7 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
             <textarea id="message" name="message" rows="6" required maxlength="2000"><?= casting_e($message) ?></textarea>
           <?php endif; ?>
         </div>
-        <button class="btn btn-primary" type="submit">ارسال دعوت</button>
-      </form>
-    </div>
-  <?php elseif (!$is_self && $viewer_role === 'producer' && $member_role === 'director') : ?>
-    <?php $invite_types = casting_invitation_project_type_labels(); ?>
-    <div class="bio-block request-box" id="request-box">
-      <h3>ارسال دعوت به کارگردان</h3>
-      <form class="form" method="post" action="member.php?id=<?= $member_id ?>">
-        <?php wp_nonce_field('casting_request_' . $member_id); ?>
-        <div class="form-grid">
-          <div class="field">
-            <label for="project">نام پروژه</label>
-            <input id="project" name="project" type="text" required maxlength="191" value="<?= casting_e($project) ?>">
-          </div>
-          <div class="field">
-            <label for="project_type">نوع پروژه</label>
-            <select id="project_type" name="project_type">
-              <option value="">انتخاب کنید</option>
-              <?php foreach ($invite_types as $key => $label) : ?>
-                <option value="<?= casting_e($key) ?>"><?= casting_e($label) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="field">
-            <label for="role_needed">نقش یا تخصص موردنظر</label>
-            <input id="role_needed" name="role_needed" type="text" maxlength="191">
-          </div>
-          <div class="field">
-            <label for="project_city">شهر پروژه</label>
-            <input id="project_city" name="project_city" type="text" maxlength="120">
-          </div>
-        </div>
-        <div class="field">
-          <label for="message">توضیح کوتاه</label>
-          <?php if ($invite_message_locked) : ?>
-            <input type="hidden" name="message" value="<?= casting_e($message) ?>">
-            <textarea id="message" rows="6" maxlength="2000" readonly><?= casting_e($message) ?></textarea>
-            <p class="field-hint"><?= casting_e(casting_employer_free_messages_hint($viewer_id)) ?></p>
-          <?php else : ?>
-            <textarea id="message" name="message" rows="6" required maxlength="2000"><?= casting_e($message) ?></textarea>
-          <?php endif; ?>
-        </div>
-        <button class="btn btn-primary" type="submit">ارسال دعوت</button>
+        <button class="btn btn-primary" type="submit">ارسال فراخوان</button>
       </form>
     </div>
   <?php endif; ?>

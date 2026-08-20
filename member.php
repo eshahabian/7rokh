@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 casting_redirect('member.php?id=' . $id . '#director-desk');
             }
         }
-    } elseif (casting_is_employer_role(casting_get_user_role($viewer_id)) && $member_role === 'talent') {
+    } elseif (casting_user_can_invite_member($viewer_id, $id)) {
         if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_request_' . $id)) {
             $error = 'نشست منقضی شده. دوباره تلاش کنید.';
         } else {
@@ -143,29 +143,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'project_type' => (string) ($_POST['project_type'] ?? ''),
                 'role_needed'  => (string) ($_POST['role_needed'] ?? ''),
                 'project_city' => (string) ($_POST['project_city'] ?? ''),
+            ], [
+                'kind' => 'casting_call',
             ]);
             if (!$result['ok']) {
                 $error = $result['error'];
             } else {
-                casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'دعوت همکاری ارسال شد.');
-                casting_redirect('member.php?id=' . $id);
-            }
-        }
-    } elseif (casting_get_user_role($viewer_id) === 'producer' && $member_role === 'director') {
-        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_request_' . $id)) {
-            $error = 'نشست منقضی شده. دوباره تلاش کنید.';
-        } else {
-            $project = (string) ($_POST['project'] ?? '');
-            $message = (string) ($_POST['message'] ?? '');
-            $result = casting_send_talent_request($viewer_id, $id, $message, $project, [
-                'project_type' => (string) ($_POST['project_type'] ?? ''),
-                'role_needed'  => (string) ($_POST['role_needed'] ?? ''),
-                'project_city' => (string) ($_POST['project_city'] ?? ''),
-            ]);
-            if (!$result['ok']) {
-                $error = $result['error'];
-            } else {
-                casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'دعوت همکاری ارسال شد.');
+                casting_set_flash('success', !empty($result['warning']) ? $result['warning'] : 'فراخوان برای این کاربر ارسال شد.');
                 casting_redirect('member.php?id=' . $id);
             }
         }

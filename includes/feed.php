@@ -21,7 +21,8 @@ function casting_home_casting_call_feed(int $user_id, int $limit = 8): array
     $all = casting_user_received_requests($user_id, 'active');
     $calls = [];
     foreach ($all as $req) {
-        if (($req['kind'] ?? '') !== 'casting_call') {
+        $kind = (string) ($req['kind'] ?? '');
+        if ($kind !== 'casting_call' && $kind !== 'invitation' && $kind !== '') {
             continue;
         }
         $calls[] = $req;
