@@ -145,11 +145,8 @@ casting_render_flash();
       <?php casting_render_panel_heading('فرصت‌ها و فراخوان‌های باز'); ?>
       <p class="lede opp-board-lede">عنوان، نوع، شهر و تازگی را یک‌نگاه ببینید؛ ذخیره کنید یا اپلای بفرستید.</p>
     </div>
-    <?php if ($can_create) : ?>
-      <a class="btn btn-primary" href="opportunities.php?tab=open&amp;compose=1#opp-create">ایجاد فرصت</a>
-      <?php if (casting_user_is_director_role($user_id)) : ?>
-        <a class="btn btn-ghost" href="<?= casting_e(casting_url('director-desk.php')) ?>">ساخت پروژه</a>
-      <?php endif; ?>
+    <?php if ($can_create && casting_user_is_director_role($user_id)) : ?>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('director-desk.php')) ?>">ساخت پروژه</a>
     <?php endif; ?>
   </div>
 
@@ -217,9 +214,9 @@ casting_render_flash();
     <?php if ($posted_list === []) : ?>
       <div class="empty-state empty-state--search" role="status">
         <h2 class="empty-state-title">هنوز فرصتی ثبت نکرده‌اید</h2>
-        <p class="empty-state-text">از همین صفحه بگویید دنبال چه نقشی هستید تا در فید فرصت‌ها دیده شود.</p>
+        <p class="empty-state-text">از نوار «ایجاد فرصت» در تب فراخوان‌های باز نقش موردنظر را ثبت کنید.</p>
         <div class="cta-row empty-state-actions">
-          <a class="btn btn-primary" href="opportunities.php?tab=open&amp;compose=1#opp-create">ایجاد فرصت</a>
+          <a class="btn btn-ghost" href="opportunities.php?tab=open#opp-create">رفتن به فراخوان‌های باز</a>
         </div>
       </div>
     <?php else : ?>
@@ -263,13 +260,8 @@ casting_render_flash();
       <div class="empty-state empty-state--search" role="status">
         <h2 class="empty-state-title">فعلاً فراخوان بازی نیست</h2>
         <p class="empty-state-text"><?= $can_create
-            ? 'اولین فرصت را از دکمه «ایجاد فرصت» همین صفحه ثبت کنید.'
+            ? 'اولین فرصت را از نوار «ایجاد فرصت» همین صفحه ثبت کنید.'
             : 'به‌زودی فرصت‌های جدید اینجا می‌آیند.' ?></p>
-        <?php if ($can_create) : ?>
-          <div class="cta-row empty-state-actions">
-            <a class="btn btn-primary" href="opportunities.php?tab=open&amp;compose=1#opp-create">ایجاد فرصت</a>
-          </div>
-        <?php endif; ?>
       </div>
     <?php elseif ($open_list === []) : ?>
       <div class="empty-state empty-state--search" role="status">
