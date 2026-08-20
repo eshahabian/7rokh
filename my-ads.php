@@ -155,7 +155,7 @@ casting_render_flash();
           <article class="admin-media-card admin-media-card--<?= casting_e($item_status) ?>">
             <div class="admin-media-preview">
               <?php if ($url !== '') : ?>
-                <img src="<?= casting_e($url) ?>" alt="" loading="lazy">
+                <?php casting_render_ad_poster_zoom($url, $item_title !== '' ? $item_title : 'پوستر'); ?>
               <?php endif; ?>
             </div>
             <div class="admin-media-body">
@@ -276,7 +276,7 @@ casting_render_flash();
             ?>
           <article class="ad-poster-card ad-poster-card--<?= casting_e($status) ?>"<?= $is_editing ? ' id="ad-edit-focus"' : '' ?>>
             <?php if ($url !== '') : ?>
-              <img src="<?= casting_e($url) ?>" alt="" loading="lazy">
+              <?php casting_render_ad_poster_zoom($url, $item_title !== '' ? $item_title : 'پوستر'); ?>
             <?php endif; ?>
             <div class="ad-poster-card-body">
               <span class="chip<?= $is_rejected ? ' chip-danger' : '' ?>"><?= casting_e(casting_ad_poster_status_label($status)) ?></span>

@@ -4087,4 +4087,47 @@
     const ok = await copyReferralCode(code);
     showCopyToast(ok ? "کد کپی شد" : "کپی نشد. دوباره تلاش کنید.");
   });
+
+  let imageZoomEl = null;
+  let imageZoomImg = null;
+  const closeImageZoom = () => {
+    if (!imageZoomEl) return;
+    imageZoomEl.classList.remove("is-open");
+    document.body.style.overflow = "";
+    window.setTimeout(() => {
+      if (imageZoomImg) {
+        imageZoomImg.removeAttribute("src");
+      }
+    }, 200);
+  };
+  const openImageZoom = (src, alt) => {
+    if (!src) return;
+    if (!imageZoomEl) {
+      imageZoomEl = document.createElement("button");
+      imageZoomEl.type = "button";
+      imageZoomEl.className = "image-zoom-lightbox";
+      imageZoomEl.setAttribute("aria-label", "بستن تصویر");
+      imageZoomImg = document.createElement("img");
+      imageZoomImg.draggable = false;
+      imageZoomEl.appendChild(imageZoomImg);
+      imageZoomEl.addEventListener("click", closeImageZoom);
+      document.body.appendChild(imageZoomEl);
+    }
+    imageZoomImg.src = src;
+    imageZoomImg.alt = alt || "";
+    imageZoomEl.classList.add("is-open");
+    document.body.style.overflow = "hidden";
+  };
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-image-zoom]");
+    if (!trigger) return;
+    event.preventDefault();
+    openImageZoom(
+      trigger.getAttribute("data-image-zoom"),
+      trigger.closest(".ad-poster-zoom-wrap")?.querySelector("img")?.alt || ""
+    );
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeImageZoom();
+  });
 })();

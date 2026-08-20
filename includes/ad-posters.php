@@ -526,6 +526,19 @@ function casting_ad_poster_url(array $poster): string
     return is_string($fallback) ? $fallback : '';
 }
 
+function casting_render_ad_poster_zoom(string $url, string $alt = ''): void
+{
+    if ($url === '') {
+        return;
+    }
+    ?>
+    <div class="ad-poster-zoom-wrap">
+      <img src="<?= casting_e($url) ?>" alt="<?= casting_e($alt) ?>" loading="lazy">
+      <button type="button" class="ad-poster-zoom" data-image-zoom="<?= casting_e($url) ?>" aria-label="بزرگ‌نمایی پوستر"></button>
+    </div>
+    <?php
+}
+
 /**
  * اسلایدهای تأییدشده برای بنر تبلیغات صفحه اصلی.
  *

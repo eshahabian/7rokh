@@ -331,8 +331,6 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
               <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
             <?php elseif ($item['key'] === 'my-ads' && !empty($ctx['ads_is_admin']) && (int) ($ctx['pending_ads'] ?? 0) > 0) : ?>
               <span class="nav-badge" aria-label="<?= (int) ($ctx['pending_ads'] ?? 0) ?> پوستر در انتظار"><?= (int) ($ctx['pending_ads'] ?? 0) ?></span>
-            <?php elseif ($item['key'] === 'my-ads' && (int) ($ctx['open_ad_credits'] ?? 0) > 0) : ?>
-              <span class="nav-badge" aria-label="<?= (int) ($ctx['open_ad_credits'] ?? 0) ?> سهمیه پوستر"><?= (int) ($ctx['open_ad_credits'] ?? 0) ?></span>
             <?php endif; ?>
           </a>
         <?php
@@ -604,10 +602,6 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
             $nav_ctx['ads_unlocked'] = casting_user_can_open_ad_posters((int) $user->ID);
             $nav_ctx['ads_is_admin'] = function_exists('casting_user_can_moderate_ad_posters')
                 && casting_user_can_moderate_ad_posters((int) $user->ID);
-            if ($nav_ctx['ads_unlocked'] && !$nav_ctx['ads_is_admin']) {
-                $open_credits = casting_user_ad_open_credits((int) $user->ID, false);
-                $nav_ctx['open_ad_credits'] = count($open_credits);
-            }
         }
     }
     ?>
