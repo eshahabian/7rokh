@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/request.php';
 require_once __DIR__ . '/includes/panel.php';
 require_once __DIR__ . '/includes/director-workspace.php';
+require_once __DIR__ . '/includes/opportunities.php';
 
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
@@ -230,7 +231,48 @@ casting_render_flash();
     <?php else : ?>
       <p class="lede"><?= $view === 'archive'
           ? 'فراخوان‌های ارسالی بایگانی‌شده.'
-          : 'فراخوان‌های کستینگ که برای اعضا ارسال کرده‌اید (جدا از پیام‌ها).' ?></p>
+          : 'فراخوان عمومی از «پروژه‌ها» در فید فرصت‌ها می‌آید؛ دعوت مستقیم به یک عضو هم همین‌جا ثبت می‌شود.' ?></p>
+      <?php
+      $published_ops = $view === 'active' ? casting_opportunities_list_for_director($user_id, 0, 40) : [];
+      if ($view === 'active' && $published_ops !== []) :
+      ?>
+        <h2 class="panel-section-title">فراخوان‌های منتشرشده در فرصت‌ها</h2>
+        <ul class="home-opportunity-list opp-card-list">
+          <?php foreach ($published_ops as $op) :
+              $oid = (int) ($op['id'] ?? 0);
+              $project_id = (int) ($op['project_id'] ?? 0);
+              $count = casting_opportunity_applicant_count($oid);
+              $is_open = (string) ($op['status'] ?? '') === 'open';
+              $desk_href = $project_id > 0
+                  ? casting_url('director-desk.php?project=' . $project_id . ($oid > 0 ? '&opp=' . $oid : ''))
+                  : casting_url('director-desk.php');
+              $public_href = casting_url('opportunities.php?id=' . $oid);
+              ?>
+            <li class="home-opportunity-card">
+              <div class="home-opportunity-body">
+                <h3>
+                  <?= casting_e((string) ($op['title'] ?? 'فراخوان')) ?>
+                  <?php if (!empty($op['role_title'])) : ?> · <?= casting_e((string) $op['role_title']) ?><?php endif; ?>
+                </h3>
+                <p class="meta">
+                  <?= $is_open ? 'باز' : 'بسته' ?>
+                  · <?= (int) $count ?> اپلای
+                  <?php if (!empty($op['created_at'])) : ?>
+                    · <?= casting_e(casting_opportunity_format_date((string) $op['created_at'])) ?>
+                  <?php endif; ?>
+                </p>
+                <?php if (trim((string) ($op['message'] ?? '')) !== '') : ?>
+                  <p><?= nl2br(casting_e(casting_opportunity_excerpt((string) $op['message'], 180))) ?></p>
+                <?php endif; ?>
+              </div>
+              <div class="cta-row">
+                <a class="btn btn-ghost btn-sm" href="<?= casting_e($public_href) ?>">مشاهده در فرصت‌ها</a>
+                <a class="btn btn-primary btn-sm" href="<?= casting_e($desk_href) ?>">میز پروژه</a>
+              </div>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
       <?php if ($view === 'active') :
           $highlighted_talents = casting_director_list_highlighted_talents($user_id);
           if ($compose_error !== '') {
@@ -248,7 +290,12 @@ casting_render_flash();
               $compose_project_city
           );
       endif; ?>
-      <?php casting_render_employer_sent_requests_list($user_id, $requests, 'my-requests.php', $view, 'sent'); ?>
+      <?php if ($requests !== [] || $published_ops === []) : ?>
+        <?php if ($published_ops !== [] && $requests !== []) : ?>
+          <h2 class="panel-section-title">دعوت مستقیم به اعضا</h2>
+        <?php endif; ?>
+        <?php casting_render_employer_sent_requests_list($user_id, $requests, 'my-requests.php', $view, 'sent'); ?>
+      <?php endif; ?>
     <?php endif; ?>
   <?php elseif (casting_is_employer_role($role)) : ?>
     <p class="lede"><?= $view === 'archive'
