@@ -180,6 +180,9 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
     }
 
     if ($action === 'invite_sms') {
+        if (!function_exists('casting_invite_sms_enabled') || !casting_invite_sms_enabled()) {
+            return ['ok' => false, 'error' => 'ارسال پیامک دعوت فعلاً غیرفعال است.'];
+        }
         $result = casting_send_cooperation_invite_sms($viewer_id, $member_id);
         if (empty($result['ok'])) {
             return ['ok' => false, 'error' => (string) ($result['error'] ?? 'ارسال پیامک ناموفق بود.')];
@@ -319,7 +322,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
             >پیام به این کاربر</button>
           <?php endif; ?>
         <?php endif; ?>
-        <?php if ($show_actions) : ?>
+        <?php if ($show_actions && function_exists('casting_invite_sms_enabled') && casting_invite_sms_enabled()) : ?>
           <button
             type="button"
             class="btn member-preview-btn member-preview-btn--sms"
@@ -390,7 +393,7 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
       <?php if ($show_actions && $free_hint !== '') : ?>
         <p class="field-hint member-preview-hint"><?= casting_e($free_hint) ?></p>
       <?php endif; ?>
-      <?php if ($show_actions && !$can_sms) : ?>
+      <?php if ($show_actions && function_exists('casting_invite_sms_enabled') && casting_invite_sms_enabled() && !$can_sms) : ?>
         <p class="field-hint member-preview-hint">دکمه پیامک دعوت به همکاری فقط برای اعضای ویژه فعال است.</p>
       <?php endif; ?>
     <?php endif; ?>

@@ -90,9 +90,14 @@ function casting_user_can_invite_member(int $from_id, int $to_id): bool
     return casting_get_user_role($to_id) !== '';
 }
 
+function casting_invite_sms_enabled(): bool
+{
+    return false;
+}
+
 function casting_user_can_send_invite_sms(int $user_id): bool
 {
-    if ($user_id <= 0) {
+    if (!casting_invite_sms_enabled() || $user_id <= 0) {
         return false;
     }
     if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
