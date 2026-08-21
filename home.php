@@ -143,7 +143,20 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
     <?php if ($newest_members === []) : ?>
       <p class="empty-state">هنوز عضو جدیدی نیست.</p>
     <?php else : ?>
-      <?php casting_render_panel_home_member_row($newest_members, false, 'panel-newest-more', 4, $user_id); ?>
+      <?php
+      // «بیشتر» فقط برای کارگردان‌ها؛ ادمین‌های پورتال همیشه مستثنی‌اند
+      $newest_allow_more = casting_user_is_director_role($user_id)
+          || casting_user_is_super_admin($user_id)
+          || casting_user_is_listed_portal_admin($user_id);
+      casting_render_panel_home_member_row(
+          $newest_members,
+          false,
+          'panel-newest-more',
+          8,
+          $user_id,
+          $newest_allow_more
+      );
+      ?>
     <?php endif; ?>
   </section>
 

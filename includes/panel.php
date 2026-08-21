@@ -2510,15 +2510,22 @@ function casting_render_panel_home_member_tile(WP_User $member, bool $premium_ba
  * یک ردیف اعضا + لینک «بیشتر» برای نمایش بقیه
  *
  * @param array<int, WP_User> $members
+ * @param bool                $allow_more اگر false باشد فقط همان row_size نمایش داده می‌شود و دکمه بیشتر نیست
  */
-function casting_render_panel_home_member_row(array $members, bool $premium_badge, string $more_id, int $row_size = 4, int $viewer_id = 0): void
-{
+function casting_render_panel_home_member_row(
+    array $members,
+    bool $premium_badge,
+    string $more_id,
+    int $row_size = 4,
+    int $viewer_id = 0,
+    bool $allow_more = true
+): void {
     if ($members === []) {
         return;
     }
     $row_size = max(1, $row_size);
     $first = array_slice($members, 0, $row_size);
-    $rest = array_slice($members, $row_size);
+    $rest = $allow_more ? array_slice($members, $row_size) : [];
     ?>
     <div class="panel-ads-grid">
       <?php foreach ($first as $member) : ?>
