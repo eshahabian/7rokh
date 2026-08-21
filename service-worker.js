@@ -1,4 +1,4 @@
-const SW_VERSION = "casting-pwa-v10";
+const SW_VERSION = "casting-pwa-v11";
 const BASE = new URL("./", self.location).pathname;
 
 const PRECACHE = [

@@ -50,7 +50,7 @@ $artistic_other = [];
 $activity_license = '';
 $birthdate = '';
 $work_history = '';
-$awards = '';
+$award_items = [];
 $work_credits = [];
 $artistic_works = [];
 $education = '';
@@ -79,7 +79,7 @@ $apply_register_draft = static function () use (
     &$name, &$username, &$email, &$gender, &$look, &$mobile, &$mobile2, &$phone,
     &$province, &$city, &$residence, &$experience, &$height, &$weight,
     &$health_well, &$health_status, &$artistic_has, &$artistic_orgs, &$artistic_other,
-    &$activity_license, &$birthdate, &$work_history, &$awards, &$work_credits, &$artistic_works,
+    &$activity_license, &$birthdate, &$work_history, &$award_items, &$work_credits, &$artistic_works,
     &$education, &$education_items, &$activities, &$skill_items, &$language_items,
     &$availability, &$eye_color, &$hair_color, &$accent, &$accent_other,
     &$apparent_age_range, &$referral_code
@@ -122,7 +122,12 @@ $apply_register_draft = static function () use (
         $birthdate = casting_birthdate_from_jalali_post($draft) ?? '';
     }
     $work_history = $pick('work_history', $work_history);
-    $awards = $pick('awards', $awards);
+    if ($award_items === [] && function_exists('casting_parse_award_items_post')) {
+        $award_items = casting_parse_award_items_post($draft);
+        if ($award_items === [] && !empty($draft['awards'])) {
+            $award_items = casting_normalize_award_items($draft['awards']);
+        }
+    }
     if ($work_credits === [] && function_exists('casting_parse_work_credits_post')) {
         $work_credits = casting_parse_work_credits_post($draft);
     }
@@ -209,7 +214,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $activity_license = (string) ($_POST['activity_license'] ?? '');
         $birthdate = casting_birthdate_from_jalali_post($_POST) ?? '';
         $work_history = (string) ($_POST['work_history'] ?? '');
-        $awards = (string) ($_POST['awards'] ?? '');
+        $award_items = casting_parse_award_items_post($_POST);
         $work_credits = casting_parse_work_credits_post($_POST);
         $artistic_works = casting_parse_artistic_works_post($_POST);
         $education = (string) ($_POST['education'] ?? '');
@@ -391,7 +396,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'artistic_other_items'=> $artistic_other,
                                 'activity_license'    => $activity_license,
                                 'work_history'     => $work_history,
-                                'awards'           => $awards,
+                                'award_items'      => $award_items,
                                 'work_credits'     => $work_credits,
                                 'artistic_works'   => $artistic_works,
                                 'education'        => $education,
@@ -715,11 +720,7 @@ $pending_video = $pending_media['video'];
         <textarea id="work_history" name="work_history" rows="2" placeholder="توضیح کوتاه…"><?= casting_e($work_history) ?></textarea>
       </div>
 
-      <div class="field">
-        <label for="awards">جوایز و افتخارات (اختیاری)</label>
-        <textarea id="awards" name="awards" rows="3" placeholder="مثلاً جایزه بهترین بازیگر جشنواره …، دیپلم افتخار، رتبه مسابقه، تقدیرنامه…"><?= casting_e($awards) ?></textarea>
-        <p class="field-hint">اگر جایزه، دیپلم یا افتخار هنری/فنی دارید اینجا بنویسید. اجباری نیست.</p>
-      </div>
+      <?php casting_render_award_fields($award_items); ?>
 
       <?php casting_render_education_fields($education_items); ?>
 

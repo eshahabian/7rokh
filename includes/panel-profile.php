@@ -122,7 +122,7 @@ function casting_process_profile_post(int $user_id): array
         'availability'        => $_POST['availability'] ?? '',
         'bio'                 => $_POST['bio'] ?? '',
         'work_history'        => $_POST['work_history'] ?? '',
-        'awards'              => $_POST['awards'] ?? '',
+        'award_items'         => casting_parse_award_items_post($_POST),
         'work_credits'        => casting_parse_work_credits_post($_POST),
         'artistic_works'      => casting_parse_artistic_works_post($_POST),
         'education'           => $_POST['education'] ?? '',
@@ -558,14 +558,15 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
   $language_items = is_array($profile['language_items'] ?? null) ? $profile['language_items'] : [];
   $education_note = trim((string) ($profile['education'] ?? ''));
   $work_history = trim((string) ($profile['work_history'] ?? ''));
-  $awards = trim((string) ($profile['awards'] ?? ''));
+  $award_items = casting_normalize_award_items($profile['award_items'] ?? ($profile['awards'] ?? []));
+  $has_awards = $award_items !== [];
   $video_file = trim((string) ($profile['video_file_url'] ?? ''));
   $video_link = trim((string) ($profile['video_url'] ?? ''));
   $work_types = casting_work_type_labels();
   $degree_labels = casting_education_degree_labels();
   $lang_levels = casting_language_level_labels();
   $has_career_block = $look_label !== '' || $experience_years !== '' || $license_label !== ''
-      || $work_credits !== [] || $artistic_works !== [] || $work_history !== '' || $awards !== ''
+      || $work_credits !== [] || $artistic_works !== [] || $work_history !== '' || $has_awards
       || $education_items !== [] || $education_note !== '' || $language_items !== []
       || $video_file !== '' || $video_link !== '';
   ?>
@@ -652,10 +653,25 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
         </div>
       <?php endif; ?>
 
-      <?php if ($awards !== '') : ?>
+      <?php if ($has_awards) : ?>
         <div class="bio-block">
           <h3>جوایز و افتخارات</h3>
-          <p><?= nl2br(casting_e($awards)) ?></p>
+          <ul class="credit-list">
+            <?php foreach ($award_items as $award) :
+                $atitle = trim((string) ($award['title'] ?? ''));
+                if ($atitle === '') {
+                    continue;
+                }
+                $ayear = trim((string) ($award['year'] ?? ''));
+                ?>
+              <li>
+                <?php if ($ayear !== '') : ?>
+                  <span class="credit-type"><?= casting_e($ayear) ?></span>
+                <?php endif; ?>
+                <?= casting_e($atitle) ?>
+              </li>
+            <?php endforeach; ?>
+          </ul>
         </div>
       <?php endif; ?>
 
@@ -959,11 +975,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       <textarea id="work_history" name="work_history" rows="2"><?= casting_e($profile['work_history']) ?></textarea>
     </div>
 
-    <div class="field">
-      <label for="awards">جوایز و افتخارات (اختیاری)</label>
-      <textarea id="awards" name="awards" rows="3" placeholder="مثلاً جایزه جشنواره، دیپلم افتخار، رتبه مسابقه…"><?= casting_e($profile['awards'] ?? '') ?></textarea>
-      <p class="field-hint">جایزه، دیپلم یا افتخار هنری/فنی — اجباری نیست.</p>
-    </div>
+    <?php casting_render_award_fields($profile['award_items'] ?? []); ?>
 
     <?php casting_render_education_fields($profile['education_items'] ?? []); ?>
 

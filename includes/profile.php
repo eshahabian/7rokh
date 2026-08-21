@@ -1691,6 +1691,135 @@ function casting_render_education_fields(array $items = []): void
     <?php
 }
 
+/**
+ * جوایز و افتخارات (اختیاری — چند ردیف)
+ *
+ * @param mixed $raw
+ * @return array<int, array{title:string,year:string}>
+ */
+function casting_normalize_award_items($raw): array
+{
+    if (is_string($raw)) {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return [];
+        }
+        return [['title' => sanitize_textarea_field($raw), 'year' => '']];
+    }
+    if (!is_array($raw)) {
+        return [];
+    }
+    $out = [];
+    foreach ($raw as $item) {
+        if (is_string($item)) {
+            $title = sanitize_textarea_field(trim($item));
+            if ($title === '') {
+                continue;
+            }
+            $out[] = ['title' => $title, 'year' => ''];
+            continue;
+        }
+        if (!is_array($item)) {
+            continue;
+        }
+        $title = sanitize_textarea_field(trim((string) ($item['title'] ?? '')));
+        if ($title === '') {
+            continue;
+        }
+        $year = sanitize_text_field(trim((string) ($item['year'] ?? '')));
+        if ($year !== '' && !preg_match('/^\d{2,4}$/', $year)) {
+            $year = '';
+        }
+        $out[] = ['title' => $title, 'year' => $year];
+    }
+
+    return $out;
+}
+
+/**
+ * @return array<int, array{title:string,year:string}>
+ */
+function casting_parse_award_items_post(array $post): array
+{
+    $raw = $post['award_items'] ?? [];
+    if (!is_array($raw)) {
+        return [];
+    }
+
+    return casting_normalize_award_items($raw);
+}
+
+/**
+ * بارگذاری جوایز از متای کاربر (با سازگاری متن قدیمی)
+ *
+ * @return array<int, array{title:string,year:string}>
+ */
+function casting_load_award_items(int $user_id): array
+{
+    $items = casting_normalize_award_items(get_user_meta($user_id, 'casting_award_items', true));
+    if ($items !== []) {
+        return $items;
+    }
+    $legacy = (string) get_user_meta($user_id, 'casting_awards', true);
+
+    return casting_normalize_award_items($legacy);
+}
+
+/**
+ * @param array<int, array{title?:string,year?:string}> $items
+ */
+function casting_save_award_items_meta(int $user_id, array $items): void
+{
+    $items = casting_normalize_award_items($items);
+    update_user_meta($user_id, 'casting_award_items', $items);
+    // متن خلاصه برای سازگاری با نمایش‌های قدیمی
+    $summary = [];
+    foreach ($items as $row) {
+        $line = (string) ($row['title'] ?? '');
+        $year = trim((string) ($row['year'] ?? ''));
+        if ($year !== '') {
+            $line .= ' (' . $year . ')';
+        }
+        if ($line !== '') {
+            $summary[] = $line;
+        }
+    }
+    update_user_meta($user_id, 'casting_awards', implode("\n", $summary));
+}
+
+/**
+ * @param array<int, array{title?:string,year?:string}> $items
+ */
+function casting_render_award_fields(array $items = []): void
+{
+    if ($items === []) {
+        $items = [['title' => '', 'year' => '']];
+    }
+    ?>
+  <div class="field work-credits" data-award-items>
+    <span class="jalali-label">جوایز و افتخارات (اختیاری)</span>
+    <p class="field-hint">هر جایزه را جدا بنویسید؛ با + مورد بعدی را اضافه کنید.</p>
+    <div class="work-credits-list" data-award-list>
+      <?php foreach ($items as $i => $item) : ?>
+        <div class="work-credit-row award-row">
+          <input type="text" name="award_items[<?= (int) $i ?>][title]" value="<?= casting_e((string) ($item['title'] ?? '')) ?>" placeholder="مثلاً جایزه بهترین بازیگر جشنواره …" aria-label="عنوان جایزه">
+          <input type="text" name="award_items[<?= (int) $i ?>][year]" value="<?= casting_e((string) ($item['year'] ?? '')) ?>" placeholder="سال" inputmode="numeric" maxlength="4" aria-label="سال" class="award-year">
+          <button type="button" class="btn-icon" data-remove-award aria-label="حذف">−</button>
+        </div>
+      <?php endforeach; ?>
+    </div>
+    <button type="button" class="btn btn-ghost btn-add-credit" data-add-award>+ افزودن جایزه بعدی</button>
+    <template data-award-template>
+      <div class="work-credit-row award-row">
+        <input type="text" name="award_items[__i__][title]" value="" placeholder="مثلاً دیپلم افتخار…" aria-label="عنوان جایزه">
+        <input type="text" name="award_items[__i__][year]" value="" placeholder="سال" inputmode="numeric" maxlength="4" aria-label="سال" class="award-year">
+        <button type="button" class="btn-icon" data-remove-award aria-label="حذف">−</button>
+      </div>
+    </template>
+  </div>
+    <?php
+}
+
 
 function casting_age_from_birthdate(string $birthdate): ?int
 {
@@ -2014,6 +2143,7 @@ function casting_get_profile(int $user_id): array
         'activity_license'  => (string) get_user_meta($user_id, 'casting_activity_license', true),
         'work_history'      => (string) get_user_meta($user_id, 'casting_work_history', true),
         'awards'            => (string) get_user_meta($user_id, 'casting_awards', true),
+        'award_items'       => casting_load_award_items($user_id),
         'work_credits'      => casting_normalize_work_credits(get_user_meta($user_id, 'casting_work_credits', true)),
         'artistic_works'    => casting_normalize_artistic_works(get_user_meta($user_id, 'casting_artistic_works', true)),
         'education'         => (string) get_user_meta($user_id, 'casting_education', true),
@@ -2383,7 +2513,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
     }
 
     $work = sanitize_textarea_field((string) ($data['work_history'] ?? ''));
-    $awards = sanitize_textarea_field((string) ($data['awards'] ?? ''));
+    $award_items = casting_normalize_award_items($data['award_items'] ?? ($data['awards'] ?? []));
     $education = sanitize_textarea_field((string) ($data['education'] ?? ''));
     $edu_items = casting_normalize_education_items($data['education_items'] ?? []);
 
@@ -2446,7 +2576,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
         casting_save_health_meta($user_id, $health);
     }
     update_user_meta($user_id, 'casting_work_history', $work);
-    update_user_meta($user_id, 'casting_awards', $awards);
+    casting_save_award_items_meta($user_id, $award_items);
     casting_save_user_work_meta($user_id, $data, $skip_talent_profile);
     update_user_meta($user_id, 'casting_education', $education);
     update_user_meta($user_id, 'casting_education_items', $edu_items);
@@ -2770,8 +2900,13 @@ function casting_save_profile(int $user_id, array $data): array
 
     update_user_meta($user_id, 'casting_bio', sanitize_textarea_field((string) ($data['bio'] ?? '')));
     update_user_meta($user_id, 'casting_work_history', sanitize_textarea_field((string) ($data['work_history'] ?? '')));
-    if (array_key_exists('awards', $data)) {
-        update_user_meta($user_id, 'casting_awards', sanitize_textarea_field((string) $data['awards']));
+    if (array_key_exists('award_items', $data) || array_key_exists('awards', $data)) {
+        casting_save_award_items_meta(
+            $user_id,
+            is_array($data['award_items'] ?? null)
+                ? $data['award_items']
+                : casting_normalize_award_items($data['awards'] ?? [])
+        );
     }
     $skip_talent_profile = false;
     if (array_key_exists('activities', $data)) {

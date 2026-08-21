@@ -413,8 +413,9 @@
       if (!btn) return;
       const rows = list.querySelectorAll(".work-credit-row");
       if (rows.length <= 1) {
-        const input = rows[0]?.querySelector('input[type="text"]');
-        if (input) input.value = "";
+        rows[0]?.querySelectorAll('input[type="text"], textarea').forEach((el) => {
+          el.value = "";
+        });
         return;
       }
       btn.closest(".work-credit-row")?.remove();
@@ -461,6 +462,20 @@
       const input = row.querySelector('input[type="text"]');
       if (select) select.name = `education_items[${i}][degree]`;
       if (input) input.name = `education_items[${i}][university]`;
+    }
+  );
+
+  bindRepeater(
+    "[data-award-items]",
+    "[data-award-list]",
+    "[data-award-template]",
+    "[data-add-award]",
+    "[data-remove-award]",
+    (row, i) => {
+      const title = row.querySelector('input[name*="[title]"]') || row.querySelector('input[type="text"]:not(.award-year)');
+      const year = row.querySelector("input.award-year") || row.querySelectorAll('input[type="text"]')[1];
+      if (title) title.name = `award_items[${i}][title]`;
+      if (year) year.name = `award_items[${i}][year]`;
     }
   );
 

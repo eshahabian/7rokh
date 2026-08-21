@@ -3055,6 +3055,15 @@ html[data-theme="day"] .filter-bar--sticky {
   grid-template-columns: 140px 1fr 44px;
 }
 
+.award-row {
+  grid-template-columns: 1fr 88px 44px;
+}
+
+.award-row .award-year {
+  max-width: 88px;
+  text-align: center;
+}
+
 .credit-list {
   list-style: none;
   margin: 0;
@@ -3697,6 +3706,10 @@ html[data-theme="day"] .filter-bar--sticky {
 
   .work-credit-row {
     grid-template-columns: 1fr 44px;
+  }
+
+  .work-credit-row.award-row {
+    grid-template-columns: 1fr 72px 44px;
   }
 
   .work-credit-row.skill-row {
