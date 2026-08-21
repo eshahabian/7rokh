@@ -472,7 +472,11 @@
       map = { cities: {} };
     }
     const provinceSel = box.querySelector("[data-location-province]");
-    const citySel = box.querySelector("[data-location-city]");
+    const citySel = box.querySelector("select[data-location-city]");
+    const cityInput = box.querySelector("[data-location-city-input]");
+    const cityList = box.querySelector("[data-location-city-list]");
+    const freeCity = box.hasAttribute("data-location-city-free");
+    const allowCityAll = box.hasAttribute("data-location-city-all");
 
     const fillSelect = (select, items, placeholder, selected, allowAll) => {
       if (!select) return;
@@ -496,13 +500,45 @@
         if (keep === name) opt.selected = true;
         select.appendChild(opt);
       });
+      if (keep && keep !== "همه" && !(items || []).includes(keep)) {
+        const custom = document.createElement("option");
+        custom.value = keep;
+        custom.textContent = keep;
+        custom.selected = true;
+        select.appendChild(custom);
+      }
     };
 
-    const allowCityAll = box.hasAttribute("data-location-city-all");
+    const fillDatalist = (list, items) => {
+      if (!list) return;
+      list.innerHTML = "";
+      (items || []).forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        list.appendChild(opt);
+      });
+    };
 
     const syncCities = (keepCity) => {
       const province = provinceSel?.value || "";
       const cities = province ? map.cities?.[province] || [] : [];
+      if (freeCity && cityInput) {
+        if (!province) {
+          cityInput.disabled = true;
+          cityInput.placeholder = "اول استان را انتخاب کنید";
+          if (!keepCity) cityInput.value = "";
+          fillDatalist(cityList, []);
+        } else {
+          cityInput.disabled = false;
+          cityInput.placeholder = "از پیشنهاد انتخاب کنید یا بنویسید";
+          fillDatalist(cityList, cities);
+          if (typeof keepCity === "string" && keepCity !== "") {
+            cityInput.value = keepCity;
+          }
+        }
+        return;
+      }
+      if (!citySel) return;
       if (!province) {
         citySel.disabled = true;
         fillSelect(citySel, [], "اول استان را انتخاب کنید", "", false);
@@ -513,7 +549,7 @@
     };
 
     provinceSel?.addEventListener("change", () => syncCities(""));
-    syncCities(citySel?.value || "");
+    syncCities(cityInput?.value || citySel?.value || "");
   });
 
   bindRepeater(
@@ -1529,6 +1565,172 @@
     if (focusId) {
       window.setTimeout(() => focusRegisterField(focusId), 80);
     }
+
+    const cfg = window.CASTING_REGISTER || {};
+    const draftKey = cfg.draftKey || "casting_register_draft_v1";
+    const skipDraftNames = new Set(["password", "password2", "otp_code", "_wpnonce", "casting_submit"]);
+
+    const collectDraft = () => {
+      const data = {};
+      const fd = new FormData(form);
+      fd.forEach((value, key) => {
+        if (skipDraftNames.has(key) || key.startsWith("photo_") || key === "video") return;
+        if (typeof value !== "string") return;
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+          const prev = data[key];
+          data[key] = Array.isArray(prev) ? prev.concat(value) : [prev, value];
+        } else {
+          data[key] = value;
+        }
+      });
+      form.querySelectorAll("input[type='checkbox']").forEach((el) => {
+        if (!el.name || skipDraftNames.has(el.name)) return;
+        if (el.checked) data[el.name] = el.value || "1";
+        else if (!(el.name in data)) data[el.name] = "";
+      });
+      return data;
+    };
+
+    const saveDraftLocal = () => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(collectDraft()));
+      } catch (_err) {}
+    };
+
+    const restoreDraftLocal = () => {
+      let raw = null;
+      try {
+        raw = localStorage.getItem(draftKey);
+      } catch (_err) {
+        return;
+      }
+      if (!raw) return;
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch (_err) {
+        return;
+      }
+      if (!data || typeof data !== "object") return;
+      Object.keys(data).forEach((key) => {
+        if (skipDraftNames.has(key)) return;
+        const val = data[key];
+        const fields = form.querySelectorAll(`[name="${CSS.escape(key)}"]`);
+        if (!fields.length) return;
+        fields.forEach((el) => {
+          if (el instanceof HTMLInputElement && (el.type === "password" || el.type === "file")) return;
+          if (el instanceof HTMLInputElement && (el.type === "radio" || el.type === "checkbox")) {
+            const checked = Array.isArray(val) ? val.includes(el.value) : String(val) === String(el.value);
+            if (el.type === "checkbox" && !Array.isArray(val) && (val === "1" || val === "on" || val === true)) {
+              el.checked = true;
+            } else {
+              el.checked = checked;
+            }
+            return;
+          }
+          if (el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+            if (el.value === "" || el.value == null) {
+              el.value = Array.isArray(val) ? String(val[0] ?? "") : String(val ?? "");
+            }
+          }
+        });
+      });
+      form.querySelector("[data-location-province]")?.dispatchEvent(new Event("change", { bubbles: true }));
+      const cityVal = typeof data.city === "string" ? data.city : "";
+      const cityEl = form.querySelector("[data-location-city-input], select[data-location-city]");
+      if (cityEl && cityVal && !cityEl.value) cityEl.value = cityVal;
+      form.querySelector("[data-rules-consent-checkbox]")?.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+
+    let draftTimer = 0;
+    form.addEventListener("input", () => {
+      window.clearTimeout(draftTimer);
+      draftTimer = window.setTimeout(saveDraftLocal, 400);
+    });
+    form.addEventListener("change", () => {
+      window.clearTimeout(draftTimer);
+      draftTimer = window.setTimeout(saveDraftLocal, 200);
+    });
+    restoreDraftLocal();
+
+    const applyPendingPreviews = (payload) => {
+      const portraits = payload?.portraits || {};
+      Object.keys(portraits).forEach((slot) => {
+        const url = portraits[slot]?.url || portraits[slot]?.full || "";
+        if (!url) return;
+        const input = form.querySelector(`#photo_${CSS.escape(slot)}, input[name="photo_${CSS.escape(slot)}"]`);
+        const card = input?.closest(".portrait-upload-card, [data-file-preview-card], .field") || null;
+        const img = card?.querySelector("[data-file-preview-img], img");
+        const empty = card?.querySelector("[data-file-preview-empty]");
+        const frame = card?.querySelector("[data-file-preview-frame]");
+        if (img) {
+          img.src = url;
+          img.hidden = false;
+        } else if (frame) {
+          const created = document.createElement("img");
+          created.src = url;
+          created.setAttribute("data-file-preview-img", "");
+          created.alt = "";
+          frame.prepend(created);
+        }
+        if (empty) empty.hidden = true;
+        if (frame) frame.hidden = false;
+      });
+      const videoUrl = payload?.video?.url || "";
+      if (videoUrl) {
+        const video = form.querySelector("[data-file-preview-video]");
+        const frame = form.querySelector(".field[data-file-preview-card] [data-file-preview-frame], [data-file-preview-frame]");
+        if (video) {
+          video.src = videoUrl;
+          video.hidden = false;
+        }
+        if (frame) frame.hidden = false;
+      }
+    };
+
+    const uploadPendingFile = async (input) => {
+      if (!(input instanceof HTMLInputElement) || !input.files?.length || !cfg.uploadUrl || !cfg.nonce) return;
+      const body = new FormData();
+      body.append("_wpnonce", cfg.nonce);
+      body.append(input.name, input.files[0]);
+      const statusHost =
+        input.closest(".field, fieldset, .portrait-upload-card")?.querySelector("[data-pending-upload-status]") || null;
+      let statusEl = statusHost;
+      if (!statusEl) {
+        statusEl = document.createElement("p");
+        statusEl.className = "field-hint";
+        statusEl.setAttribute("data-pending-upload-status", "1");
+        input.insertAdjacentElement("afterend", statusEl);
+      }
+      statusEl.textContent = "در حال ذخیره موقت فایل…";
+      try {
+        const res = await fetch(cfg.uploadUrl, { method: "POST", body, credentials: "same-origin" });
+        const data = await res.json().catch(() => null);
+        if (!data?.ok) {
+          statusEl.textContent = data?.error || "ذخیره موقت فایل ناموفق بود.";
+          return;
+        }
+        applyPendingPreviews(data);
+        statusEl.textContent = "فایل ذخیره شد و با رفرش هم می‌ماند.";
+        input.required = false;
+        input.removeAttribute("required");
+        saveDraftLocal();
+      } catch (_err) {
+        statusEl.textContent = "اتصال قطع شد؛ بعد از برگشت اینترنت دوباره همان فایل را انتخاب کنید.";
+      }
+    };
+
+    form.querySelectorAll('input[type="file"][name^="photo_"], input[type="file"][name="video"]').forEach((input) => {
+      input.addEventListener("change", () => {
+        uploadPendingFile(input);
+      });
+    });
+
+    form.addEventListener("submit", () => {
+      try {
+        localStorage.removeItem(draftKey);
+      } catch (_err) {}
+    });
   });
 
   const scrollTopBtn = document.querySelector("[data-scroll-top]");

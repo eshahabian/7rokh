@@ -3023,6 +3023,49 @@ function casting_media_handle_upload_as_user(string $field, int $user_id)
 }
 
 /**
+ * پیش‌نویس فیلدهای ثبت‌نام در نشست (بدون رمز عبور)
+ *
+ * @return array<string, mixed>
+ */
+function casting_register_draft_get(): array
+{
+    $raw = $_SESSION['casting_reg_draft'] ?? null;
+    return is_array($raw) ? $raw : [];
+}
+
+/**
+ * @param array<string, mixed> $post
+ */
+function casting_register_draft_save(array $post): void
+{
+    $skip = [
+        'password' => true,
+        'password2' => true,
+        '_wpnonce' => true,
+        '_wp_http_referer' => true,
+        'otp_code' => true,
+        'otp_action' => true,
+        'casting_submit' => true,
+    ];
+    $draft = [];
+    foreach ($post as $key => $value) {
+        $key = (string) $key;
+        if (isset($skip[$key]) || str_starts_with($key, 'photo_') || $key === 'video') {
+            continue;
+        }
+        if (is_array($value) || is_scalar($value)) {
+            $draft[$key] = $value;
+        }
+    }
+    $_SESSION['casting_reg_draft'] = $draft;
+}
+
+function casting_register_draft_clear(): void
+{
+    unset($_SESSION['casting_reg_draft']);
+}
+
+/**
  * گرفتن آپلودهای ثبت‌نام در نشست؛ در صورت حجم/خطای فایل، پیام برمی‌گردد
  *
  * @return string متن خطا یا رشته خالی

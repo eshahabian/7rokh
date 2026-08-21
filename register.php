@@ -73,6 +73,86 @@ $reg_invalid = static function (string $key) use (&$invalid_fields): string {
     return in_array($key, $invalid_fields, true) ? ' is-invalid' : '';
 };
 
+/** پر کردن فیلدها از پیش‌نویس نشست (رفرش / قطع اینترنت) */
+$apply_register_draft = static function () use (
+    &$name, &$username, &$email, &$gender, &$look, &$mobile, &$mobile2, &$phone,
+    &$province, &$city, &$residence, &$experience, &$height, &$weight,
+    &$health_well, &$health_status, &$artistic_has, &$artistic_orgs, &$artistic_other,
+    &$activity_license, &$birthdate, &$work_history, &$work_credits, &$artistic_works,
+    &$education, &$education_items, &$activities, &$skill_items, &$language_items,
+    &$availability, &$eye_color, &$hair_color, &$accent, &$accent_other,
+    &$apparent_age_range, &$referral_code
+): void {
+    $draft = casting_register_draft_get();
+    if ($draft === []) {
+        return;
+    }
+    $pick = static function (string $key, string $current) use ($draft): string {
+        if ($current !== '') {
+            return $current;
+        }
+        return isset($draft[$key]) ? (string) $draft[$key] : '';
+    };
+    $name = $pick('name', $name);
+    $username = $pick('username', $username);
+    $email = $pick('email', $email);
+    $gender = $pick('gender', $gender);
+    $look = $pick('look', $look);
+    $mobile = $pick('mobile', $mobile);
+    $mobile2 = $pick('mobile2', $mobile2);
+    $phone = $pick('phone', $phone);
+    $province = $pick('province', $province);
+    $city = $pick('city', $city);
+    $residence = $pick('residence', $residence);
+    $experience = $pick('experience', $experience);
+    $height = $pick('height', $height);
+    $weight = $pick('weight', $weight);
+    $health_well = $pick('health_well', $health_well);
+    $health_status = $pick('health_status', $health_status);
+    $artistic_has = $pick('artistic_membership', $artistic_has);
+    if ($artistic_orgs === [] && isset($draft['artistic_orgs']) && is_array($draft['artistic_orgs'])) {
+        $artistic_orgs = $draft['artistic_orgs'];
+    }
+    if ($artistic_other === [] && isset($draft['artistic_other_items']) && is_array($draft['artistic_other_items'])) {
+        $artistic_other = $draft['artistic_other_items'];
+    }
+    $activity_license = $pick('activity_license', $activity_license);
+    if ($birthdate === '') {
+        $birthdate = casting_birthdate_from_jalali_post($draft) ?? '';
+    }
+    $work_history = $pick('work_history', $work_history);
+    if ($work_credits === [] && function_exists('casting_parse_work_credits_post')) {
+        $work_credits = casting_parse_work_credits_post($draft);
+    }
+    if ($artistic_works === [] && function_exists('casting_parse_artistic_works_post')) {
+        $artistic_works = casting_parse_artistic_works_post($draft);
+    }
+    $education = $pick('education', $education);
+    if ($education_items === [] && function_exists('casting_parse_education_items_post')) {
+        $education_items = casting_parse_education_items_post($draft);
+    }
+    if ($activities === [] && function_exists('casting_parse_activities_post')) {
+        $activities = casting_parse_activities_post($draft, 0);
+    }
+    if ($skill_items === [] && function_exists('casting_parse_skill_items_post')) {
+        $skill_items = casting_parse_skill_items_post($draft);
+    }
+    if ($language_items === [] && function_exists('casting_parse_language_items_post')) {
+        $language_items = casting_parse_language_items_post($draft);
+    }
+    $availability = $pick('availability', $availability);
+    $eye_color = $pick('eye_color', $eye_color);
+    $hair_color = $pick('hair_color', $hair_color);
+    $accent = $pick('accent', $accent);
+    $accent_other = $pick('accent_other', $accent_other);
+    $apparent_age_range = $pick('apparent_age_range', $apparent_age_range);
+    $referral_code = $pick('referral_code', $referral_code);
+};
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $apply_register_draft();
+}
+
 $current = casting_current_user();
 if ($current) {
     $existing_role = casting_get_user_role((int) $current->ID);
@@ -141,6 +221,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $accent_other = (string) ($_POST['accent_other'] ?? '');
         $apparent_age_range = (string) ($_POST['apparent_age_range'] ?? '');
         $referral_code = (string) ($_POST['referral_code'] ?? '');
+        casting_register_draft_save($_POST);
         $age_calc = $birthdate !== '' ? casting_age_from_birthdate($birthdate) : null;
         $age_preview = $age_calc !== null ? (string) $age_calc : '';
         $skip_talent_profile = !casting_activities_need_talent_fields($activities);
@@ -339,6 +420,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
 
                             if ($error === '') {
+                                casting_register_draft_clear();
                                 casting_mark_mobile_verified($user_id, $mobile_norm);
                                 casting_otp_clear_session('register');
                                 casting_rate_limit_clear('register');
@@ -380,6 +462,7 @@ $otp_enabled = casting_mobile_otp_enabled();
 $mobile_verified = $otp_enabled && casting_otp_session_is_verified('register', casting_normalize_mobile($mobile));
 $hide_talent_profile = casting_profile_hides_talent_fields($activities);
 $show_artistic_works = casting_activities_show_artistic_works($activities);
+$rules_accepted = !empty($_POST['rules_accepted']) || !empty(casting_register_draft_get()['rules_accepted']);
 
 casting_render_head('ثبت‌نام', 'page-register');
 casting_render_header('register');
@@ -574,7 +657,7 @@ $pending_video = $pending_media['video'];
       <?php casting_render_health_fields($health_well, $health_status, true); ?>
       </div>
 
-      <?php casting_render_location_fields($province, $city, '', true); ?>
+      <?php casting_render_location_fields($province, $city, '', true, 'form-grid', false); ?>
 
       <?php casting_render_artistic_membership_fields($artistic_has, $artistic_orgs, $artistic_other); ?>
 
@@ -664,13 +747,13 @@ $pending_video = $pending_media['video'];
 
       <div class="field rules-consent-field<?= $reg_invalid('rules_accepted') ?>" data-rules-consent>
         <label class="checkbox-row">
-          <input type="checkbox" name="rules_accepted" value="1" id="rules_accepted" data-rules-consent-checkbox<?= !empty($_POST['rules_accepted']) ? ' checked' : '' ?>>
+          <input type="checkbox" name="rules_accepted" value="1" id="rules_accepted" data-rules-consent-checkbox<?= $rules_accepted ? ' checked' : '' ?>>
           <span>قوانین را مطالعه کرده‌ام و می‌پذیرم. <span class="req-mark">*</span> <button type="button" class="link-button" data-rules-lightbox-open>مطالعه قوانین</button></span>
         </label>
         <p class="field-req-hint" data-field-req-hint hidden>تأیید قوانین ستاره‌دار الزامی است.</p>
       </div>
 
-      <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= !empty($_POST['rules_accepted']) ? '' : ' disabled' ?>>ایجاد حساب</button>
+      <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= $rules_accepted ? '' : ' disabled' ?>>ایجاد حساب</button>
     </form>
 
     <p class="form-foot">
@@ -685,4 +768,11 @@ $pending_video = $pending_media['video'];
     <?php casting_render_rules_list(); ?>
   </div>
 </div>
+<script>
+window.CASTING_REGISTER = {
+  uploadUrl: <?= wp_json_encode(casting_url('register-pending-upload.php')) ?>,
+  nonce: <?= wp_json_encode(wp_create_nonce('casting_register')) ?>,
+  draftKey: "casting_register_draft_v1"
+};
+</script>
 <?php casting_render_footer(); ?>

@@ -901,7 +901,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     ); ?>
     </div>
 
-    <?php casting_render_location_fields((string) ($profile['province'] ?? ''), (string) ($profile['city'] ?? ''), '', true); ?>
+    <?php casting_render_location_fields((string) ($profile['province'] ?? ''), (string) ($profile['city'] ?? ''), '', true, 'form-grid', false); ?>
 
     <?php
     $artistic = $profile['artistic_membership'] ?? ['has' => '', 'orgs' => [], 'other_items' => []];

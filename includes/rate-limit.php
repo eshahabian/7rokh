@@ -17,6 +17,7 @@ function casting_rate_limit_config(string $action): array
         'contact_send'    => ['max' => 5, 'window' => 3600],
         'change_phone'    => ['max' => 3, 'window' => 3600, 'progressive' => true],
         'change_email'    => ['max' => 5, 'window' => 3600],
+        'register_upload' => ['max' => 40, 'window' => 3600],
     ];
 
     return $defaults[$action] ?? ['max' => 10, 'window' => 900];
