@@ -403,8 +403,6 @@ html[data-theme="day"] .brand-mark-rokh {
 }
 
 .nav a.nav-auth-link {
-  font-size: clamp(1.05rem, 1.45vw, 1.2rem);
-  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -3573,8 +3571,6 @@ html[data-theme="day"] .filter-bar--sticky {
   }
 
   body:not(.has-panel-drawer) .site-header-quick-link.nav-auth-link {
-    font-size: clamp(0.9rem, 3.2vw, 1.08rem);
-    font-weight: 700;
     letter-spacing: 0;
   }
 
@@ -3587,8 +3583,6 @@ html[data-theme="day"] .filter-bar--sticky {
   }
 
   body:not(.has-panel-drawer) .site-header .nav a.nav-auth-link {
-    font-size: 1.15rem;
-    font-weight: 700;
     white-space: nowrap;
   }
 
@@ -3771,10 +3765,6 @@ html[data-theme="day"] .filter-bar--sticky {
 @media (max-width: 420px) {
   body:not(.has-panel-drawer) .site-header-quick-link:not(.nav-auth-link) {
     display: none;
-  }
-
-  body:not(.has-panel-drawer) .site-header-quick-link.nav-auth-link {
-    font-size: clamp(0.86rem, 4.1vw, 1rem);
   }
 }
 
