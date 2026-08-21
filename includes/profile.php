@@ -1990,6 +1990,8 @@ function casting_get_profile(int $user_id): array
     $wp_user = get_user_by('id', $user_id);
 
     return [
+        'name'              => $wp_user instanceof WP_User ? (string) $wp_user->display_name : '',
+        'username'          => $wp_user instanceof WP_User ? (string) $wp_user->user_login : '',
         'email'             => $wp_user instanceof WP_User ? (string) $wp_user->user_email : '',
         'birthdate'         => (string) get_user_meta($user_id, 'casting_birthdate', true),
         'age'               => (string) get_user_meta($user_id, 'casting_age', true),
@@ -2484,36 +2486,123 @@ function casting_save_registration_profile(int $user_id, array $data): array
     return ['ok' => true, 'age' => $age];
 }
 
-function casting_save_profile(int $user_id, array $data): array
+/**
+ * اعتبارسنجی فیلدهای اجباری هنگام ویرایش پروفایل (مثل ثبت‌نام، بدون رمز/نام‌کاربری/عکس)
+ *
+ * @param array<string, mixed> $data
+ */
+function casting_profile_edit_required_error(int $user_id, array $data): ?string
 {
+    $name = trim(sanitize_text_field((string) ($data['name'] ?? '')));
+    if ($name === '' || casting_strlen($name) < 2) {
+        return 'نام و نام خانوادگی الزامی است.';
+    }
+
+    $email = trim((string) ($data['email'] ?? ''));
+    if ($email === '' || !is_email($email)) {
+        return 'ایمیل الزامی است.';
+    }
+
+    $mobile = casting_normalize_mobile((string) ($data['mobile'] ?? ''));
+    if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
+        return 'موبایل الزامی است و باید معتبر باشد.';
+    }
+
     $birthdate = sanitize_text_field((string) ($data['birthdate'] ?? ''));
-    if ($birthdate !== '') {
-        $age = casting_age_from_birthdate($birthdate);
-        if ($age === null || $age < 3 || $age > 120) {
-            return ['ok' => false, 'error' => 'تاریخ تولد معتبر نیست.'];
-        }
-        update_user_meta($user_id, 'casting_birthdate', $birthdate);
-        update_user_meta($user_id, 'casting_age', (string) $age);
-    } else {
-        $age = isset($data['age']) ? (int) $data['age'] : 0;
-        if (!casting_body_metric_is_valid('age', $age)) {
-            return ['ok' => false, 'error' => 'سن را از فهرست انتخاب کنید (۳ تا ۷۵ سال یا بالاتر).'];
-        }
-        update_user_meta($user_id, 'casting_age', (string) $age);
+    if ($birthdate === '' || casting_age_from_birthdate($birthdate) === null) {
+        return 'تاریخ تولد شمسی الزامی است.';
     }
 
     $gender = sanitize_key((string) ($data['gender'] ?? ''));
-    if ($gender !== '' && !array_key_exists($gender, casting_gender_labels())) {
-        return ['ok' => false, 'error' => 'جنسیت را انتخاب کنید.'];
-    }
-    if ($gender !== '') {
-        update_user_meta($user_id, 'casting_gender', $gender);
+    if (!array_key_exists($gender, casting_gender_labels())) {
+        return 'جنسیت را انتخاب کنید.';
     }
 
-    if (array_key_exists('email', $data)) {
-        if (!function_exists('casting_update_user_email')) {
-            require_once __DIR__ . '/auth.php';
+    $province = sanitize_key((string) ($data['province'] ?? ''));
+    if (!array_key_exists($province, casting_province_labels())) {
+        return 'استان را انتخاب کنید.';
+    }
+    $city = casting_normalize_city_name((string) ($data['city'] ?? ''));
+    if (!casting_is_valid_city_for_province($province, $city)) {
+        return 'شهر را انتخاب کنید.';
+    }
+
+    if (!array_key_exists('experience', $data) || $data['experience'] === '' || (int) $data['experience'] < 0 || (int) $data['experience'] > 60) {
+        return 'سابقه فعالیت الزامی است.';
+    }
+
+    $license = sanitize_key((string) ($data['activity_license'] ?? ''));
+    if (!isset(casting_yes_no_labels()[$license])) {
+        return 'پروانه فعالیت را مشخص کنید.';
+    }
+
+    $activities = casting_normalize_activities($data['activities'] ?? [], $user_id);
+    if ($activities === []) {
+        return 'حداقل یک نوع فعالیت انتخاب کنید.';
+    }
+
+    if (casting_activities_need_talent_fields($activities)) {
+        $look = sanitize_key((string) ($data['look'] ?? ''));
+        if (!array_key_exists($look, casting_look_labels())) {
+            return 'رنگ پوست الزامی است.';
         }
+        $health_err = casting_validate_health_fields([
+            'well'   => (string) ($data['health_well'] ?? ''),
+            'detail' => (string) ($data['health_status'] ?? ''),
+        ], true);
+        if ($health_err !== null) {
+            return $health_err;
+        }
+        $availability = sanitize_key((string) ($data['availability'] ?? ''));
+        if (!array_key_exists($availability, casting_availability_labels())) {
+            return 'وضعیت آمادگی همکاری را انتخاب کنید.';
+        }
+        if (casting_activities_need_body_metrics($activities)) {
+            if (trim((string) ($data['height'] ?? '')) === '') {
+                return 'قد الزامی است.';
+            }
+            if (trim((string) ($data['weight'] ?? '')) === '') {
+                return 'وزن الزامی است.';
+            }
+        }
+    }
+
+    return null;
+}
+
+function casting_save_profile(int $user_id, array $data): array
+{
+    if (!function_exists('casting_update_user_email')) {
+        require_once __DIR__ . '/auth.php';
+    }
+
+    $required_err = casting_profile_edit_required_error($user_id, $data);
+    if ($required_err !== null) {
+        return ['ok' => false, 'error' => $required_err];
+    }
+
+    if (array_key_exists('name', $data)) {
+        $name_result = casting_update_user_display_name($user_id, (string) $data['name']);
+        if (!$name_result['ok']) {
+            return $name_result;
+        }
+    }
+
+    $birthdate = sanitize_text_field((string) ($data['birthdate'] ?? ''));
+    $age = casting_age_from_birthdate($birthdate);
+    if ($age === null || $age < 3 || $age > 120) {
+        return ['ok' => false, 'error' => 'تاریخ تولد معتبر نیست.'];
+    }
+    update_user_meta($user_id, 'casting_birthdate', $birthdate);
+    update_user_meta($user_id, 'casting_age', (string) $age);
+
+    $gender = sanitize_key((string) ($data['gender'] ?? ''));
+    if (!array_key_exists($gender, casting_gender_labels())) {
+        return ['ok' => false, 'error' => 'جنسیت را انتخاب کنید.'];
+    }
+    update_user_meta($user_id, 'casting_gender', $gender);
+
+    if (array_key_exists('email', $data)) {
         $email_result = casting_update_user_email($user_id, (string) $data['email']);
         if (!$email_result['ok']) {
             return $email_result;
@@ -2522,12 +2611,10 @@ function casting_save_profile(int $user_id, array $data): array
 
     if (array_key_exists('mobile', $data)) {
         $mobile = casting_normalize_mobile((string) $data['mobile']);
-        if ($mobile !== '' && !preg_match('/^09\d{9}$/', $mobile)) {
+        if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
             return ['ok' => false, 'error' => 'شماره موبایل را درست وارد کنید.'];
         }
-        if ($mobile !== '') {
-            update_user_meta($user_id, 'casting_mobile', $mobile);
-        }
+        update_user_meta($user_id, 'casting_mobile', $mobile);
     }
     if (array_key_exists('mobile2', $data)) {
         $primary = casting_normalize_mobile((string) (

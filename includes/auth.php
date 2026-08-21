@@ -70,6 +70,29 @@ function casting_register_user(string $name, string $username, string $email, st
 }
 
 /**
+ * به‌روزرسانی نام نمایشی (نام و نام خانوادگی)
+ *
+ * @return array{ok:bool,error?:string}
+ */
+function casting_update_user_display_name(int $user_id, string $name): array
+{
+    $name = trim(sanitize_text_field($name));
+    if ($name === '' || casting_strlen($name) < 2) {
+        return ['ok' => false, 'error' => 'نام و نام خانوادگی الزامی است (حداقل ۲ کاراکتر).'];
+    }
+
+    $result = wp_update_user([
+        'ID'           => $user_id,
+        'display_name' => $name,
+    ]);
+    if ($result instanceof WP_Error) {
+        return ['ok' => false, 'error' => 'ذخیره نام ناموفق: ' . $result->get_error_message()];
+    }
+
+    return ['ok' => true];
+}
+
+/**
  * @return array{ok:bool,error?:string}
  */
 function casting_update_user_email(int $user_id, string $email): array

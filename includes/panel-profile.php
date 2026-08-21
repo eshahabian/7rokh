@@ -92,6 +92,7 @@ function casting_process_profile_post(int $user_id): array
     }
 
     $save = casting_save_profile($user_id, [
+        'name'                => $_POST['name'] ?? '',
         'birthdate'           => casting_birthdate_from_jalali_post($_POST) ?? '',
         'age'                 => $_POST['age'] ?? '',
         'gender'              => $_POST['gender'] ?? '',
@@ -795,22 +796,31 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
         <?php
     }
     ?>
-  <p class="lede">نوع فعالیت و اطلاعات پروفایل را می‌توانید تغییر دهید.<?php if (casting_profile_shows_portraits($profile['activities'] ?? [], $user_id)) : ?> برای <?= casting_user_uses_actor_portrait_set($user_id) ? 'عکس‌ها' : 'عکس پروفایل' ?> به <a href="profile-photo.php">ویرایش تصویر</a> بروید.<?php endif; ?></p>
+  <p class="lede">می‌توانید همهٔ اطلاعات پروفایل را دوباره تغییر دهید؛ فیلدهای ستاره‌دار همچنان الزامی‌اند.<?php if (casting_profile_shows_portraits($profile['activities'] ?? [], $user_id)) : ?> برای <?= casting_user_uses_actor_portrait_set($user_id) ? 'عکس‌ها' : 'عکس پروفایل' ?> به <a href="profile-photo.php">ویرایش تصویر</a> بروید.<?php endif; ?> رمز عبور را از <a href="change-password.php">تنظیمات</a> عوض کنید.</p>
 
   <form class="form" method="post" action="edit-profile.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
     <?php wp_nonce_field('casting_profile'); ?>
 
     <h3 class="panel-section-title" id="account-email">اطلاعات حساب</h3>
     <div class="field">
-      <label for="email">ایمیل</label>
+      <label for="name">نام و نام خانوادگی <span class="req-mark">*</span></label>
+      <input id="name" name="name" type="text" required autocomplete="name" value="<?= casting_e($profile['name'] ?? '') ?>">
+    </div>
+    <div class="field">
+      <label for="username_display">نام کاربری</label>
+      <input id="username_display" type="text" value="<?= casting_e($profile['username'] ?? '') ?>" readonly disabled>
+      <p class="field-hint">نام کاربری برای ورود ثابت است و قابل تغییر نیست.</p>
+    </div>
+    <div class="field">
+      <label for="email">ایمیل <span class="req-mark">*</span></label>
       <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($profile['email'] ?? '') ?>">
       <p class="field-hint">برای ورود، اعلان‌ها و بازیابی رمز. برای دیگر اعضا نمایش داده نمی‌شود. می‌توانید از <a href="change-email.php">تغییر ایمیل</a> هم استفاده کنید.</p>
     </div>
 
     <div class="form-grid">
       <div class="field">
-        <label for="mobile">موبایل</label>
-        <input id="mobile" name="mobile" type="tel" inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($profile['mobile'] ?? '') ?>" placeholder="09121234567">
+        <label for="mobile">موبایل <span class="req-mark">*</span></label>
+        <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($profile['mobile'] ?? '') ?>" placeholder="09121234567">
         <p class="field-hint">فقط خودتان و مدیران اصلی سایت این شماره را می‌بینند. برای تغییر با تأیید پیامک به <a href="change-phone.php">تغییر شماره تلفن</a> بروید.</p>
       </div>
       <div class="field">
@@ -823,7 +833,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 
     <?php casting_render_activity_fields($profile['activities'] ?? [], true, $user_id); ?>
 
-    <?php casting_render_jalali_birthday_fields($profile['birthdate'], false); ?>
+    <?php casting_render_jalali_birthday_fields($profile['birthdate'], true); ?>
     <div class="field">
       <label for="age_display">سن (خودکار از تاریخ تولد)</label>
       <select id="age_display" data-age-output data-age-plus="<?= (int) casting_body_metric_plus_value('age') ?>" disabled aria-live="polite">
@@ -836,11 +846,11 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     </div>
 
     <fieldset class="field">
-      <legend>جنسیت</legend>
+      <legend>جنسیت <span class="req-mark">*</span></legend>
       <div class="role-grid role-grid-2">
         <?php foreach (casting_gender_labels() as $key => $label) : ?>
           <label class="role-option">
-            <input type="radio" name="gender" value="<?= casting_e($key) ?>" <?= $profile['gender'] === $key ? 'checked' : '' ?>>
+            <input type="radio" name="gender" value="<?= casting_e($key) ?>" <?= $profile['gender'] === $key ? 'checked' : '' ?> required>
             <span><?= casting_e($label) ?></span>
           </label>
         <?php endforeach; ?>
@@ -848,11 +858,11 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     </fieldset>
 
     <fieldset class="field" data-talent-profile-field<?= $talent_hidden ?>>
-      <legend>رنگ پوست</legend>
+      <legend>رنگ پوست <span class="req-mark">*</span></legend>
       <div class="role-grid role-grid-3">
         <?php foreach (casting_look_labels() as $key => $label) : ?>
           <label class="role-option">
-            <input type="radio" name="look" value="<?= casting_e($key) ?>" <?= $profile['look'] === $key ? 'checked' : '' ?>>
+            <input type="radio" name="look" value="<?= casting_e($key) ?>" <?= $profile['look'] === $key ? 'checked' : '' ?><?= $hide_talent_profile ? '' : ' required' ?>>
             <span><?= casting_e($label) ?></span>
           </label>
         <?php endforeach; ?>
@@ -870,14 +880,15 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     </div>
 
     <div class="form-grid" data-talent-profile-field<?= $talent_hidden ?>>
+      <?php $need_body = casting_activities_need_body_metrics($profile['activities'] ?? []); ?>
       <div class="field">
-        <label for="height">قد (سانتی‌متر)</label>
-        <?php casting_render_body_metric_select('height', 'height', 'height', (string) ($profile['height'] ?? '')); ?>
+        <label for="height">قد (سانتی‌متر)<?= $need_body ? ' <span class="req-mark">*</span>' : '' ?></label>
+        <?php casting_render_body_metric_select('height', 'height', 'height', (string) ($profile['height'] ?? ''), 'انتخاب کنید', $need_body); ?>
         <p class="field-hint">برای بازیگری الزامی است</p>
       </div>
       <div class="field">
-        <label for="weight">وزن (کیلوگرم)</label>
-        <?php casting_render_body_metric_select('weight', 'weight', 'weight', (string) ($profile['weight'] ?? '')); ?>
+        <label for="weight">وزن (کیلوگرم)<?= $need_body ? ' <span class="req-mark">*</span>' : '' ?></label>
+        <?php casting_render_body_metric_select('weight', 'weight', 'weight', (string) ($profile['weight'] ?? ''), 'انتخاب کنید', $need_body); ?>
         <p class="field-hint">برای بازیگری الزامی است</p>
       </div>
     </div>
@@ -886,11 +897,11 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <?php casting_render_health_fields(
         (string) ($profile['health_well'] ?? 'healthy'),
         (string) ($profile['health_status'] ?? ''),
-        false
+        !$hide_talent_profile
     ); ?>
     </div>
 
-    <?php casting_render_location_fields((string) ($profile['province'] ?? ''), (string) ($profile['city'] ?? ''), '', false); ?>
+    <?php casting_render_location_fields((string) ($profile['province'] ?? ''), (string) ($profile['city'] ?? ''), '', true); ?>
 
     <?php
     $artistic = $profile['artistic_membership'] ?? ['has' => '', 'orgs' => [], 'other_items' => []];
@@ -903,8 +914,8 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 
     <div class="form-grid">
       <div class="field">
-        <label for="activity_license">دارای پروانه فعالیت</label>
-        <select id="activity_license" name="activity_license">
+        <label for="activity_license">دارای پروانه فعالیت <span class="req-mark">*</span></label>
+        <select id="activity_license" name="activity_license" required>
           <option value="">انتخاب کنید</option>
           <?php foreach (casting_yes_no_labels() as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= ($profile['activity_license'] ?? '') === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
@@ -912,12 +923,12 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
         </select>
       </div>
       <div class="field">
-        <label for="experience">سابقه فعالیت (سال)</label>
-        <input id="experience" name="experience" type="number" min="0" max="60" value="<?= casting_e($profile['experience'] !== '' ? $profile['experience'] : '0') ?>">
+        <label for="experience">سابقه فعالیت (سال) <span class="req-mark">*</span></label>
+        <input id="experience" name="experience" type="number" min="0" max="60" required value="<?= casting_e($profile['experience'] !== '' ? $profile['experience'] : '0') ?>">
       </div>
       <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
-        <label for="availability">وضعیت آمادگی برای همکاری</label>
-        <select id="availability" name="availability">
+        <label for="availability">وضعیت آمادگی برای همکاری <span class="req-mark">*</span></label>
+        <select id="availability" name="availability"<?= $hide_talent_profile ? '' : ' required' ?>>
           <option value="">انتخاب کنید</option>
           <?php foreach (casting_availability_labels() as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= ($profile['availability'] ?? '') === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
