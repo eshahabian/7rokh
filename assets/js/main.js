@@ -1820,6 +1820,9 @@
       const memberId = actionBtn.getAttribute("data-member-id");
       const action = actionBtn.getAttribute("data-member-preview-action");
       if (!memberId || !action || actionBtn.disabled) return;
+      if (action === "invite_sms" && !window.confirm("پیامک دعوت به همکاری با متن ازپیش‌تعریف‌شده به موبایل ثبت‌شده این کاربر ارسال شود؟")) {
+        return;
+      }
       actionBtn.disabled = true;
       try {
         const data = await postMemberPreviewAction(memberId, action);

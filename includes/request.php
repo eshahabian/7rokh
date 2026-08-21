@@ -90,6 +90,69 @@ function casting_user_can_invite_member(int $from_id, int $to_id): bool
     return casting_get_user_role($to_id) !== '';
 }
 
+function casting_user_can_send_invite_sms(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
+    if (!function_exists('casting_user_is_premium')) {
+        require_once __DIR__ . '/premium.php';
+    }
+
+    return casting_user_is_premium($user_id);
+}
+
+/**
+ * پیامک دعوت به همکاری به موبایل ثبت‌شده در پنل گیرنده
+ *
+ * @return array{ok:bool,error:string,message?:string}
+ */
+function casting_send_cooperation_invite_sms(int $from_id, int $to_id): array
+{
+    if (!casting_user_can_invite_member($from_id, $to_id)) {
+        return ['ok' => false, 'error' => 'اجازه ارسال دعوت ندارید.'];
+    }
+    if (!casting_user_can_send_invite_sms($from_id)) {
+        return ['ok' => false, 'error' => 'ارسال پیامک دعوت فقط برای اعضای ویژه فعال است.'];
+    }
+    if (!function_exists('casting_sms_send_text')) {
+        require_once __DIR__ . '/sms.php';
+    }
+    if (!casting_sms_is_configured()) {
+        return ['ok' => false, 'error' => 'ارسال پیامک در حال حاضر ممکن نیست.'];
+    }
+    if (!function_exists('casting_normalize_mobile')) {
+        require_once __DIR__ . '/profile.php';
+    }
+    $profile = function_exists('casting_get_profile') ? casting_get_profile($to_id) : [];
+    $mobile = casting_normalize_mobile((string) ($profile['mobile'] ?? ''));
+    if ($mobile === '') {
+        $mobile = casting_normalize_mobile((string) get_user_meta($to_id, 'casting_mobile', true));
+    }
+    if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
+        return ['ok' => false, 'error' => 'برای این کاربر موبایل معتبری در پنل ثبت نشده است.'];
+    }
+
+    $last = (int) get_user_meta($from_id, 'casting_sms_invite_last_' . $to_id, true);
+    if ($last > 0 && (time() - $last) < 12 * HOUR_IN_SECONDS) {
+        return ['ok' => false, 'error' => 'پیامک دعوت برای این کاربر اخیراً ارسال شده است. کمی بعد دوباره تلاش کنید.'];
+    }
+
+    $body = function_exists('casting_employer_invite_sms_text')
+        ? casting_employer_invite_sms_text($from_id)
+        : 'شما از سامانه ۷ رخ به همکاری دعوت شده‌اید.';
+    $sms = casting_sms_send_text($mobile, $body);
+    if (empty($sms['ok'])) {
+        return ['ok' => false, 'error' => (string) ($sms['error'] ?? 'ارسال پیامک ناموفق بود.')];
+    }
+    update_user_meta($from_id, 'casting_sms_invite_last_' . $to_id, time());
+
+    return ['ok' => true, 'error' => '', 'message' => 'پیامک دعوت به همکاری به موبایل ثبت‌شده ارسال شد.'];
+}
+
 /**
  * ارسال دعوت همکاری کارفرما به هنرمند (جدا از پیام عادی)
  *

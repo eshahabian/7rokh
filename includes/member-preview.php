@@ -179,6 +179,19 @@ function casting_member_preview_handle_action(int $viewer_id, int $member_id, st
         ];
     }
 
+    if ($action === 'invite_sms') {
+        $result = casting_send_cooperation_invite_sms($viewer_id, $member_id);
+        if (empty($result['ok'])) {
+            return ['ok' => false, 'error' => (string) ($result['error'] ?? 'ارسال پیامک ناموفق بود.')];
+        }
+
+        return [
+            'ok'      => true,
+            'error'   => '',
+            'message' => (string) ($result['message'] ?? 'پیامک دعوت به همکاری ارسال شد.'),
+        ];
+    }
+
     return ['ok' => false, 'error' => 'عملیات نامعتبر است.'];
 }
 
@@ -230,6 +243,9 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
     }
     $can_follow = casting_follow_can_target($viewer_id, $member_id);
     $viewer_premium = casting_user_is_premium($viewer_id);
+    $can_sms = function_exists('casting_user_can_send_invite_sms')
+        ? casting_user_can_send_invite_sms($viewer_id)
+        : $viewer_premium;
     $free_hint = casting_employer_free_messages_hint($viewer_id);
     $chat_ok = casting_can_user_send_dm($viewer_id, $member_id)['ok'];
     $chat_open = casting_can_user_open_dm($viewer_id, $member_id);
@@ -307,8 +323,10 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
           <button
             type="button"
             class="btn member-preview-btn member-preview-btn--sms"
-            <?= $viewer_premium ? '' : ' disabled title="فقط برای اعضای ویژه با اعتبار پیامک"' ?>
-          >پیامک دعوت به گفتگو</button>
+            data-member-preview-action="invite_sms"
+            data-member-id="<?= (int) $member_id ?>"
+            <?= $can_sms ? '' : ' disabled title="فقط برای اعضای ویژه"' ?>
+          >پیامک دعوت به همکاری</button>
         <?php endif; ?>
         <?php if ($can_favorite) : ?>
           <button
@@ -372,8 +390,8 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
       <?php if ($show_actions && $free_hint !== '') : ?>
         <p class="field-hint member-preview-hint"><?= casting_e($free_hint) ?></p>
       <?php endif; ?>
-      <?php if ($show_actions && !$viewer_premium) : ?>
-        <p class="field-hint member-preview-hint">دکمه پیامک دعوت فقط برای اعضای ویژه (با اعتبار پیامک) فعال می‌شود.</p>
+      <?php if ($show_actions && !$can_sms) : ?>
+        <p class="field-hint member-preview-hint">دکمه پیامک دعوت به همکاری فقط برای اعضای ویژه فعال است.</p>
       <?php endif; ?>
     <?php endif; ?>
 
