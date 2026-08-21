@@ -72,10 +72,12 @@ if (session_status() === PHP_SESSION_NONE) {
 
 casting_bootstrap_portal_auth();
 
-if (is_file(__DIR__ . '/tmp-test-grants.php')) {
-    require_once __DIR__ . '/tmp-test-grants.php';
-    if (function_exists('casting_tmp_test_grant_apply')) {
-        casting_tmp_test_grant_apply();
+if ((string) get_option('casting_purged_test_calls_posters_v1', '') !== '1'
+    && is_file(__DIR__ . '/tmp-test-cleanup.php')
+) {
+    require_once __DIR__ . '/tmp-test-cleanup.php';
+    if (function_exists('casting_purge_test_calls_and_posters_once')) {
+        casting_purge_test_calls_and_posters_once();
     }
 }
 
