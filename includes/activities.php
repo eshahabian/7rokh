@@ -319,11 +319,11 @@ function casting_user_primary_activity_label(int $user_id): string
 }
 
 /**
- * عنوان محترمانه تخصص برای خوش‌آمدگویی (مثلاً «کارگردان محترم سینما»)
+ * عنوان گرامی تخصص برای خوش‌آمدگویی (مثلاً «کارگردان گرامی سینما»)
  */
 function casting_activity_honorific_phrase(string $specialty_key, string $label = '', string $gender = ''): string
 {
-    $honor = $gender === 'female' ? 'محترمه' : 'محترم';
+    $honor = 'گرامی';
     $labels = casting_activity_labels();
     if ($label === '') {
         $label = (string) ($labels[$specialty_key] ?? '');

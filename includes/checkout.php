@@ -79,7 +79,7 @@ function casting_paid_services_catalog(): array
     return [
         'premium' => [
             'key'          => 'premium',
-            'title'        => 'عضویت ویژه پرتال ۷رخ',
+            'title'        => 'عضویت ویژه پورتال ۷رخ',
             'service_type' => 'ارتقای حساب کاربری',
             'duration'     => '۳ ماه',
             'days'         => 90,

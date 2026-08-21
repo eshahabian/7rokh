@@ -5,7 +5,7 @@ function casting_premium_plans(): array
 {
     return [
         'featured_90' => [
-            'label'        => 'عضویت ویژه پرتال ۷رخ',
+            'label'        => 'عضویت ویژه پورتال ۷رخ',
             'days'         => 90,
             'months'       => 3,
             'period_label' => '۳ ماه',
@@ -14,7 +14,7 @@ function casting_premium_plans(): array
             'description'  => 'بسته ۳ ماهه — ۲۱۰٬۰۰۰ تومان. دسترسی به جستجو، شروع گفتگو و اولویت در نتایج.',
         ],
         'featured_180' => [
-            'label'        => 'عضویت ویژه پرتال ۷رخ',
+            'label'        => 'عضویت ویژه پورتال ۷رخ',
             'days'         => 180,
             'months'       => 6,
             'period_label' => '۶ ماه',
@@ -23,7 +23,7 @@ function casting_premium_plans(): array
             'description'  => 'بسته ۶ ماهه — ۳۷۰٬۰۰۰ تومان.',
         ],
         'featured_365' => [
-            'label'        => 'عضویت ویژه پرتال ۷رخ',
+            'label'        => 'عضویت ویژه پورتال ۷رخ',
             'days'         => 365,
             'months'       => 12,
             'period_label' => '۱۲ ماه',
@@ -33,7 +33,7 @@ function casting_premium_plans(): array
         ],
         // سازگاری با فیش‌ها / لینک‌های قدیمی (حداقل ۳ ماه)
         'featured_30' => [
-            'label'        => 'عضویت ویژه پرتال ۷رخ',
+            'label'        => 'عضویت ویژه پورتال ۷رخ',
             'days'         => 90,
             'months'       => 3,
             'period_label' => '۳ ماه',

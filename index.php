@@ -34,7 +34,7 @@ casting_render_flash();
     casting_render_promo_banner($home_slides, 'hero-promo-banner');
     ?>
 
-    <p class="hero-lead"><?= casting_brand_html() ?> - پرتابل ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
+    <p class="hero-lead"><?= casting_brand_html() ?> - پورتال ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
 
     <?php if (CASTING_PUBLIC_HOME_STATS) : ?>
       <?php casting_render_member_count_tiles($counts); ?>
