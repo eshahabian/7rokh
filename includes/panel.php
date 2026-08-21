@@ -2128,6 +2128,15 @@ function casting_newest_members(int $limit = 30, int $exclude_id = 0): array
         return [];
     }
 
+    // تضمین ترتیب: آخرین ثبت‌نام اول (meta_query گاهی orderby وردپرس را بی‌اثر می‌کند)
+    usort($users, static function (WP_User $a, WP_User $b): int {
+        $by_date = strcmp((string) $b->user_registered, (string) $a->user_registered);
+        if ($by_date !== 0) {
+            return $by_date;
+        }
+        return (int) $b->ID <=> (int) $a->ID;
+    });
+
     $out = [];
     foreach ($users as $user) {
         if (casting_user_is_premium((int) $user->ID)) {
