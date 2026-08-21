@@ -290,11 +290,10 @@ function casting_employer_invite_sms_text(int $employer_id): string
     $user = get_user_by('id', $employer_id);
     $name = $user ? trim((string) $user->display_name) : '';
     if ($name === '') {
-        $name = 'کاربر ۷ رخ';
+        $name = 'یک کاربر';
     }
-    $url = function_exists('casting_url') ? casting_url('login.php') : 'https://7rokh.ir/casting-portal/';
 
-    return 'هنرمند گرامی، ' . $name . ' از سامانه ۷ رخ شما را به همکاری دعوت کرده است. برای مشاهده وارد پورتال شوید: ' . $url;
+    return 'هفت رخ: ' . $name . ' برای شما درخواست همکاری در پنل کاربری ثبت کرده است. لطفا وارد حساب خود شوید.';
 }
 
 function casting_employer_resolve_outbound_message(int $employer_id, string $message): string
