@@ -2013,6 +2013,7 @@ function casting_get_profile(int $user_id): array
         'artistic_membership' => casting_load_artistic_membership($user_id),
         'activity_license'  => (string) get_user_meta($user_id, 'casting_activity_license', true),
         'work_history'      => (string) get_user_meta($user_id, 'casting_work_history', true),
+        'awards'            => (string) get_user_meta($user_id, 'casting_awards', true),
         'work_credits'      => casting_normalize_work_credits(get_user_meta($user_id, 'casting_work_credits', true)),
         'artistic_works'    => casting_normalize_artistic_works(get_user_meta($user_id, 'casting_artistic_works', true)),
         'education'         => (string) get_user_meta($user_id, 'casting_education', true),
@@ -2382,6 +2383,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
     }
 
     $work = sanitize_textarea_field((string) ($data['work_history'] ?? ''));
+    $awards = sanitize_textarea_field((string) ($data['awards'] ?? ''));
     $education = sanitize_textarea_field((string) ($data['education'] ?? ''));
     $edu_items = casting_normalize_education_items($data['education_items'] ?? []);
 
@@ -2444,6 +2446,7 @@ function casting_save_registration_profile(int $user_id, array $data): array
         casting_save_health_meta($user_id, $health);
     }
     update_user_meta($user_id, 'casting_work_history', $work);
+    update_user_meta($user_id, 'casting_awards', $awards);
     casting_save_user_work_meta($user_id, $data, $skip_talent_profile);
     update_user_meta($user_id, 'casting_education', $education);
     update_user_meta($user_id, 'casting_education_items', $edu_items);
@@ -2767,6 +2770,9 @@ function casting_save_profile(int $user_id, array $data): array
 
     update_user_meta($user_id, 'casting_bio', sanitize_textarea_field((string) ($data['bio'] ?? '')));
     update_user_meta($user_id, 'casting_work_history', sanitize_textarea_field((string) ($data['work_history'] ?? '')));
+    if (array_key_exists('awards', $data)) {
+        update_user_meta($user_id, 'casting_awards', sanitize_textarea_field((string) $data['awards']));
+    }
     $skip_talent_profile = false;
     if (array_key_exists('activities', $data)) {
         $skip_talent_profile = !casting_activities_need_talent_fields(casting_normalize_activities($data['activities'], $user_id));
