@@ -324,89 +324,86 @@ casting_render_flash();
   <?php if (!$members) : ?>
     <p class="empty-state">کاربری پیدا نشد.</p>
   <?php else : ?>
-    <div class="admin-table-wrap">
-      <table class="admin-table admin-members-table">
-        <thead>
-          <tr>
-            <th>کاربر</th>
-            <th>نقش</th>
-            <th>وضعیت</th>
-            <th>مدت فعال</th>
-            <th>اشتراک ویژه</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($members as $row) : ?>
-            <tr<?= $target_id === (int) $row['id'] ? ' class="is-selected"' : '' ?>>
-              <td>
-                <div class="admin-member-namecell">
-                  <strong><?= casting_e($row['name']) ?></strong>
-                  <span class="meta"><?= casting_e($row['login']) ?></span>
-                  <?php if (($row['membership_number'] ?? '') !== '') : ?>
-                    <span class="meta membership-number"><?= casting_e((string) $row['membership_number']) ?></span>
-                  <?php endif; ?>
-                  <?php
-                  $row_ref = casting_get_referral_code((int) $row['id']);
-                  if ($row_ref !== '') :
-                      ?>
-                    <span class="meta">معرف: <span class="membership-number referral-code" dir="ltr"><?= casting_e($row_ref) ?></span></span>
-                  <?php endif; ?>
-                </div>
-              </td>
-              <td><?= casting_e(casting_user_profile_chip_label((int) $row['id'], $user_id)) ?></td>
-              <td>
-                <?php if ($row['suspended']) : ?>
-                  <span class="chip chip-danger">غیرفعال</span>
-                <?php else : ?>
-                  <span class="chip chip-active">فعال</span>
-                <?php endif; ?>
-              </td>
-              <td>
-                <span class="meta"><?= casting_e(casting_user_active_duration_label((int) $row['id'])) ?></span>
-              </td>
-              <td>
-                <?php if ($row['premium']) : ?>
-                  <?php if (($row['until_ts'] ?? null) !== null) : ?>
-                    <?php
-                    $until_parts = casting_premium_until_parts((string) ($row['until'] ?? ''));
-                    ?>
-                    <div class="admin-premium-until">
+    <div class="admin-members-list" role="list">
+      <?php foreach ($members as $row) :
+        $row_ref = casting_get_referral_code((int) $row['id']);
+        $row_role = casting_user_profile_chip_label((int) $row['id'], $user_id);
+        $row_active = casting_user_active_duration_label((int) $row['id']);
+        $until_parts = $row['premium'] && (($row['until_ts'] ?? null) !== null)
+          ? casting_premium_until_parts((string) ($row['until'] ?? ''))
+          : ['date' => '', 'time' => ''];
+        ?>
+        <article class="admin-member-row<?= $target_id === (int) $row['id'] ? ' is-selected' : '' ?>" role="listitem">
+          <div class="admin-member-row-body">
+            <div class="admin-member-row-head">
+              <strong class="admin-member-row-name"><?= casting_e($row['name']) ?></strong>
+              <?php if ($row_role !== '') : ?>
+                <span class="admin-member-row-role"><?= casting_e($row_role) ?></span>
+              <?php endif; ?>
+              <?php if ($row['suspended']) : ?>
+                <span class="chip chip-danger">غیرفعال</span>
+              <?php else : ?>
+                <span class="chip chip-active">فعال</span>
+              <?php endif; ?>
+              <?php if ($row['premium']) : ?>
+                <span class="chip chip-premium">ویژه</span>
+              <?php endif; ?>
+            </div>
+
+            <div class="admin-member-row-codes">
+              <span class="admin-member-code"><?= casting_e($row['login']) ?></span>
+              <?php if (($row['membership_number'] ?? '') !== '') : ?>
+                <span class="admin-member-code membership-number"><?= casting_e((string) $row['membership_number']) ?></span>
+              <?php endif; ?>
+              <?php if ($row_ref !== '') : ?>
+                <span class="admin-member-code">معرف <span class="membership-number referral-code" dir="ltr"><?= casting_e($row_ref) ?></span></span>
+              <?php endif; ?>
+            </div>
+
+            <div class="admin-member-row-stats">
+              <span class="admin-member-stat">
+                <span class="admin-member-stat-label">فعال</span>
+                <span class="admin-member-stat-value"><?= casting_e($row_active) ?></span>
+              </span>
+              <span class="admin-member-stat">
+                <span class="admin-member-stat-label">اشتراک</span>
+                <span class="admin-member-stat-value">
+                  <?php if ($row['premium']) : ?>
+                    <?php if (($row['until_ts'] ?? null) !== null) : ?>
                       <span class="nav-premium-countdown admin-table-countdown" data-premium-until-ts="<?= (int) $row['until_ts'] ?>">
                         <span data-premium-countdown><?= casting_e($row['remaining']) ?></span>
                       </span>
                       <?php if ($until_parts['date'] !== '') : ?>
-                        <span class="admin-premium-until-datetime">
-                          <span class="admin-premium-until-date"><?= casting_e($until_parts['date']) ?></span>
+                        <span class="admin-member-stat-sub">
+                          <?= casting_e($until_parts['date']) ?>
                           <?php if ($until_parts['time'] !== '') : ?>
-                            <span class="admin-premium-until-time"><?= casting_e($until_parts['time']) ?></span>
+                            · <?= casting_e($until_parts['time']) ?>
                           <?php endif; ?>
                         </span>
                       <?php endif; ?>
-                    </div>
+                    <?php else : ?>
+                      فعال
+                    <?php endif; ?>
                   <?php else : ?>
-                    <span class="chip chip-premium">ویژه</span>
+                    ندارد
                   <?php endif; ?>
-                <?php else : ?>
-                  —
-                <?php endif; ?>
-              </td>
-              <td>
-                <div class="admin-member-actions-inline">
-                  <a class="btn btn-primary btn-sm" href="<?= casting_e($member_query((int) $row['id'])) ?>">مدیریت</a>
-                  <a class="btn btn-ghost btn-sm" href="member.php?id=<?= (int) $row['id'] ?>">پروفایل</a>
-                  <form class="admin-grant-premium-form" method="post" action="<?= casting_e($list_url !== '' ? $list_url : 'admin-premium-users.php') ?>" onsubmit="return confirm('<?= $row['premium'] ? 'اشتراک ویژه این کاربر ۳۰ روز تمدید شود؟' : 'این کاربر به عضو ویژه تبدیل شود؟' ?>');">
-                    <?php wp_nonce_field('casting_admin_members'); ?>
-                    <input type="hidden" name="target_id" value="<?= (int) $row['id'] ?>">
-                    <input type="hidden" name="action" value="grant_premium">
-                    <button class="btn btn-ghost btn-sm" type="submit"><?= $row['premium'] ? 'تمدید ویژه' : 'تبدیل به عضو ویژه' ?></button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div class="admin-member-row-actions">
+            <a class="btn btn-primary btn-sm" href="<?= casting_e($member_query((int) $row['id'])) ?>">مدیریت</a>
+            <a class="btn btn-ghost btn-sm" href="member.php?id=<?= (int) $row['id'] ?>">پروفایل</a>
+            <form class="admin-grant-premium-form" method="post" action="<?= casting_e($list_url !== '' ? $list_url : 'admin-premium-users.php') ?>" onsubmit="return confirm('<?= $row['premium'] ? 'اشتراک ویژه این کاربر ۳۰ روز تمدید شود؟' : 'این کاربر به عضو ویژه تبدیل شود؟' ?>');">
+              <?php wp_nonce_field('casting_admin_members'); ?>
+              <input type="hidden" name="target_id" value="<?= (int) $row['id'] ?>">
+              <input type="hidden" name="action" value="grant_premium">
+              <button class="btn btn-ghost btn-sm" type="submit"><?= $row['premium'] ? 'تمدید ویژه' : 'ویژه کردن' ?></button>
+            </form>
+          </div>
+        </article>
+      <?php endforeach; ?>
     </div>
 
     <?php if ($total_pages > 1) : ?>
