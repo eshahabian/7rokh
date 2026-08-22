@@ -235,8 +235,6 @@ function casting_panel_missing_label(string $value, string $edit_href = '#edit-p
 
 function casting_render_panel_completion_card(array $profile, int $user_id = 0): void
 {
-    $hide_talent = casting_profile_hides_talent_fields($profile['activities'] ?? [], $user_id);
-    $show_portraits = casting_profile_shows_portraits($profile['activities'] ?? [], $user_id);
     $items = casting_profile_completion_items($profile, $user_id);
     $done_count = 0;
     $missing = [];
@@ -249,16 +247,17 @@ function casting_render_panel_completion_card(array $profile, int $user_id = 0):
     }
     $total = count($items);
     $percent = $total > 0 ? (int) round(($done_count / $total) * 100) : 0;
+
+    // وقتی کامل است کارت بزرگ لازم نیست
+    if ($missing === []) {
+        return;
+    }
     ?>
-<section class="dash-card panel-completion" id="completion">
+<section class="dash-card panel-completion panel-completion--compact" id="completion">
   <div class="panel-completion-head">
     <div>
       <h2 class="panel-section-title">تکمیل پروفایل</h2>
-      <?php if ($done_count === $total) : ?>
-      <p class="meta panel-completion-meta">همه موارد اصلی تکمیل شده است.</p>
-      <?php else : ?>
-      <p class="meta panel-completion-meta">برای بهتر دیده شدن پروفایل خودتون را تکمیل کنید<?= $total > $done_count ? ' — ' . ($total - $done_count) . ' مورد باقی مانده' : '' ?>.</p>
-      <?php endif; ?>
+      <p class="meta panel-completion-meta">برای بهتر دیده شدن پروفایل خودتون را تکمیل کنید — <?= count($missing) ?> مورد باقی مانده.</p>
     </div>
     <div class="panel-completion-meter" aria-label="پیشرفت تکمیل پروفایل">
       <span class="panel-completion-value"><?= $percent ?>٪</span>
@@ -266,55 +265,14 @@ function casting_render_panel_completion_card(array $profile, int $user_id = 0):
     </div>
   </div>
 
-  <?php if ($show_portraits) :
-      $actor_photos = casting_user_uses_actor_portrait_set($user_id);
-      $slot_map = $actor_photos
-          ? casting_all_portrait_slots()
-          : ['medium' => 'عکس پروفایل'];
-      ?>
-  <div class="panel-photo-slots<?= $actor_photos ? ' panel-photo-slots--actor' : ' panel-photo-slots--single' ?>">
-    <?php foreach ($slot_map as $slot => $label) :
-        $shot = casting_portrait_shot($profile['portraits'] ?? [], $slot);
-        if ($slot === 'medium' && empty($shot['id'])) {
-            $shot = casting_primary_portrait($profile['portraits'] ?? []);
-        }
-        $src = $shot['url'] !== '' ? $shot['url'] : $shot['full'];
-        $hint = $actor_photos
-            ? (casting_portrait_slot_hints()[$slot] ?? '')
-            : 'یک عکس واضح از خودتان';
-        ?>
-      <a class="panel-photo-slot<?= $src === '' ? ' is-empty' : '' ?><?= $slot === 'profile' ? ' panel-photo-slot--profile' : '' ?>" href="profile-photo.php">
-        <?php if ($src !== '') : ?>
-          <?php $dims = casting_portrait_display_dimensions(); ?>
-          <span class="portrait-frame panel-photo-slot-frame">
-            <img
-              src="<?= casting_e($src) ?>"
-              alt="<?= casting_e($label) ?>"
-              width="<?= (int) $dims['width'] ?>"
-              height="<?= (int) $dims['height'] ?>"
-              decoding="async"
-            >
-          </span>
-        <?php else : ?>
-          <span class="panel-photo-slot-empty">+</span>
-        <?php endif; ?>
-        <span class="panel-photo-slot-label"><?= casting_e($label) ?></span>
-        <span class="panel-photo-slot-hint"><?= $src === '' ? 'بارگذاری نشده' : casting_e($hint) ?></span>
-      </a>
+  <ul class="panel-missing-list">
+    <?php foreach ($missing as $item) : ?>
+      <li>
+        <span><?= casting_e((string) ($item['label'] ?? '')) ?></span>
+        <a href="<?= casting_e((string) ($item['href'] ?? 'edit-profile.php')) ?>">تکمیل</a>
+      </li>
     <?php endforeach; ?>
-  </div>
-  <?php endif; ?>
-
-  <?php if ($missing) : ?>
-    <ul class="panel-missing-list">
-      <?php foreach ($missing as $item) : ?>
-        <li>
-          <span><?= casting_e($item['label']) ?></span>
-          <a href="<?= casting_e($item['href']) ?>">تکمیل</a>
-        </li>
-      <?php endforeach; ?>
-    </ul>
-  <?php endif; ?>
+  </ul>
 </section>
     <?php
 }
