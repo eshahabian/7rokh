@@ -26,6 +26,11 @@ if ($terminal_mellat === '') {
 if ($username === '') {
     $username = 'IPG9647270';
 }
+if ($terminal_sep === '') {
+    $terminal_sep = '15724096';
+}
+
+$sep_report_user = defined('CASTING_SEP_REPORT_USERNAME') ? (string) CASTING_SEP_REPORT_USERNAME : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_gateway_save')) {
@@ -90,6 +95,10 @@ casting_render_flash();
     <dd><code><?= casting_e(casting_mellat_callback_url()) ?></code></dd>
     <dt>آدرس بازگشت سامان</dt>
     <dd><code><?= casting_e(casting_sep_callback_url()) ?></code></dd>
+    <?php if ($sep_report_user !== '') : ?>
+    <dt>گزارش‌گیری سامان</dt>
+    <dd><code><?= casting_e($sep_report_user) ?></code> — ورود از <a href="https://report.sep.ir/" target="_blank" rel="noopener">report.sep.ir</a> (رمز جدا از API پرداخت)</dd>
+    <?php endif; ?>
   </dl>
 
   <?php if ($error !== '') : ?>

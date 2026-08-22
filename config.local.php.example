@@ -33,7 +33,8 @@ define('CASTING_SMS_OTP_TEMPLATE', 'کد ورود شما {x}');
  */
 // define('CASTING_GATEWAY_MODE', 'live');
 // define('CASTING_GATEWAY_PROVIDER', 'sep');
-// define('CASTING_SEP_TERMINAL_ID', '');
+// define('CASTING_SEP_TERMINAL_ID', '15724096');
+// define('CASTING_SEP_REPORT_USERNAME', ''); // فقط report.sep.ir — در API پرداخت استفاده نمی‌شود
 // define('CASTING_BEHPARDAKHT_TERMINAL_ID', '');
 // define('CASTING_BEHPARDAKHT_USERNAME', '');
 // define('CASTING_BEHPARDAKHT_PASSWORD', '');
