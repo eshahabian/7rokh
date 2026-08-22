@@ -7447,6 +7447,29 @@ html.is-native-app .panel-stat-card span {
   margin: 1rem 0 1.5rem;
 }
 
+.register-step {
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 0.75rem;
+  padding: 1rem 1.1rem 1.15rem;
+  margin: 0 0 1.15rem;
+}
+
+.register-step-title {
+  padding: 0 0.35rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.register-step-account.is-locked {
+  opacity: 0.55;
+  filter: grayscale(0.15);
+  pointer-events: none;
+}
+
+.register-step-lock-hint {
+  margin-top: 0;
+}
+
 .panel-photo-slots {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 7.5rem));

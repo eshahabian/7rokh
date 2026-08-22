@@ -85,47 +85,53 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$otp_enabled) {
                 $error = 'تأیید موبایل موقتاً غیرفعال است؛ مستقیم ثبت‌نام را کامل کنید.';
             } else {
-                $captcha = casting_captcha_verify(
-                    (string) ($_POST['captcha_answer'] ?? ''),
-                    (string) ($_POST['captcha_token'] ?? '')
-                );
-                if (!$captcha['ok']) {
-                    $error = $captcha['error'];
-                    $focus_field = 'captcha_answer';
-                    $invalid_fields = ['captcha_answer'];
-                } else {
-                    $rate_error = casting_rate_limit_check('otp_send');
-                    if ($rate_error !== null) {
-                        $error = $rate_error;
-                    } elseif ($mobile_norm === '' || !preg_match('/^09\d{9}$/', $mobile_norm)) {
-                        $error = 'شماره موبایل را درست وارد کنید.';
-                        $focus_field = 'mobile';
-                        $invalid_fields = ['mobile'];
-                        casting_rate_limit_hit('otp_send');
-                    } elseif (casting_mobile_is_taken($mobile_norm)) {
-                        $error = 'این شماره موبایل قبلاً ثبت شده است.';
-                        $focus_field = 'mobile';
-                        $invalid_fields = ['mobile'];
-                        casting_rate_limit_hit('otp_send');
-                    } elseif ($otp_action === 'send') {
+                $rate_error = casting_rate_limit_check('otp_send');
+                if ($rate_error !== null) {
+                    $error = $rate_error;
+                } elseif ($mobile_norm === '' || !preg_match('/^09\d{9}$/', $mobile_norm)) {
+                    $error = 'شماره موبایل را درست وارد کنید.';
+                    $focus_field = 'mobile';
+                    $invalid_fields = ['mobile'];
+                    casting_rate_limit_hit('otp_send');
+                } elseif (casting_mobile_is_taken($mobile_norm)) {
+                    $error = 'این شماره موبایل قبلاً ثبت شده است.';
+                    $focus_field = 'mobile';
+                    $invalid_fields = ['mobile'];
+                    casting_rate_limit_hit('otp_send');
+                } elseif ($otp_action === 'send') {
+                    // کپچا فقط هنگام ارسال کد
+                    $captcha = casting_captcha_verify(
+                        (string) ($_POST['captcha_answer'] ?? ''),
+                        (string) ($_POST['captcha_token'] ?? '')
+                    );
+                    if (!$captcha['ok']) {
+                        $error = $captcha['error'];
+                        $focus_field = 'captcha_answer';
+                        $invalid_fields = ['captcha_answer'];
+                    } else {
                         $send = casting_otp_send('register', $mobile_norm);
                         if (!$send['ok']) {
                             $error = (string) ($send['error'] ?? 'ارسال کد ناموفق بود.');
                             casting_rate_limit_hit('otp_send');
                         } else {
+                            casting_captcha_mark_register_passed($mobile_norm);
                             $otp_notice = 'کد تأیید به موبایل ارسال شد.';
                         }
+                    }
+                } else {
+                    // تأیید کد — بدون کپچای دوباره
+                    $verify = casting_otp_verify('register', $mobile_norm, (string) ($_POST['otp_code'] ?? ''));
+                    if (!$verify['ok']) {
+                        $error = (string) ($verify['error'] ?? 'کد تأیید نادرست است.');
+                        $focus_field = 'otp_code';
+                        $invalid_fields = ['otp_code'];
+                        casting_rate_limit_hit('otp_send');
                     } else {
-                        $verify = casting_otp_verify('register', $mobile_norm, (string) ($_POST['otp_code'] ?? ''));
-                        if (!$verify['ok']) {
-                            $error = (string) ($verify['error'] ?? 'کد تأیید نادرست است.');
-                            $focus_field = 'otp_code';
-                            $invalid_fields = ['otp_code'];
-                            casting_rate_limit_hit('otp_send');
-                        } else {
-                            casting_otp_mark_session_verified('register', $mobile_norm);
-                            $otp_notice = 'موبایل تأیید شد. حالا ثبت‌نام را کامل کنید.';
+                        casting_otp_mark_session_verified('register', $mobile_norm);
+                        if (!casting_captcha_register_passed_for($mobile_norm)) {
+                            casting_captcha_mark_register_passed($mobile_norm);
                         }
+                        $otp_notice = 'موبایل تأیید شد. حالا نام کاربری و رمز را وارد کنید.';
                     }
                 }
             }
@@ -134,57 +140,57 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($rate_error !== null) {
                 $error = $rate_error;
             } else {
-                $captcha = casting_captcha_verify(
-                    (string) ($_POST['captcha_answer'] ?? ''),
-                    (string) ($_POST['captcha_token'] ?? '')
-                );
-                $issues = casting_register_collect_required_issues([
-                    'username'       => $username,
-                    'password'       => $password,
-                    'password2'      => $password2,
-                    'mobile'         => $mobile,
-                    'rules_accepted' => !empty($_POST['rules_accepted']),
-                    'captcha_ok'     => !empty($captcha['ok']),
-                ]);
-                if (!$captcha['ok'] && empty($issues['errors'])) {
-                    $issues['errors'][] = $captcha['error'];
-                    $issues['fields'][] = 'captcha_answer';
-                } elseif (!$captcha['ok']) {
-                    // captcha_ok already flagged; keep captcha message preferred
-                    $issues['errors'] = array_values(array_unique(array_merge(
-                        [$captcha['error']],
-                        array_filter($issues['errors'], static fn(string $m): bool => !str_contains($m, 'کد امنیتی'))
-                    )));
+                $otp_ok = !$otp_enabled || casting_otp_session_is_verified('register', $mobile_norm);
+                if ($otp_enabled && !$otp_ok) {
+                    $error = 'ابتدا موبایل را با کد پیامک تأیید کنید.';
+                    $focus_field = 'mobile';
+                    $invalid_fields = ['mobile', 'otp_code'];
                 }
 
-                if ($issues['errors'] !== []) {
-                    $invalid_fields = $issues['fields'];
-                    $password_mismatch = in_array('password2', $invalid_fields, true);
-                    $error = 'لطفاً فیلدهای ستاره‌دار را کامل کنید: ' . implode(' · ', $issues['errors']);
-                    $focus_field = $invalid_fields[0] ?? '';
-                } elseif ($otp_enabled && !casting_otp_session_is_verified('register', $mobile_norm)) {
-                    $otp_code = (string) ($_POST['otp_code'] ?? '');
-                    if ($otp_code !== '') {
-                        $verify = casting_otp_verify('register', $mobile_norm, $otp_code);
-                        if ($verify['ok']) {
-                            casting_otp_mark_session_verified('register', $mobile_norm);
-                        } else {
-                            $error = (string) ($verify['error'] ?? 'کد تأیید نادرست است.');
-                            $focus_field = 'otp_code';
-                            $invalid_fields = ['otp_code'];
+                // اگر موبایل تأیید شده، کپچا از قبل در مرحله پیامک پاس شده
+                $captcha_ok = false;
+                if ($error === '') {
+                    if ($otp_enabled && casting_captcha_register_passed_for($mobile_norm)) {
+                        $captcha_ok = true;
+                    } elseif (!$otp_enabled) {
+                        $captcha = casting_captcha_verify(
+                            (string) ($_POST['captcha_answer'] ?? ''),
+                            (string) ($_POST['captcha_token'] ?? '')
+                        );
+                        $captcha_ok = !empty($captcha['ok']);
+                        if (!$captcha_ok) {
+                            $error = (string) ($captcha['error'] ?? 'کد امنیتی را درست وارد کنید.');
+                            $focus_field = 'captcha_answer';
+                            $invalid_fields = ['captcha_answer'];
                         }
                     } else {
-                        $error = 'ابتدا موبایل را با کد پیامک تأیید کنید.';
-                        $focus_field = 'otp_code';
-                        $invalid_fields = ['otp_code'];
+                        $error = 'ابتدا موبایل را تأیید کنید (کپچا در همان مرحله ارسال کد لازم است).';
+                        $focus_field = 'mobile';
+                        $invalid_fields = ['mobile'];
                     }
-                } elseif (casting_mobile_is_taken($mobile_norm)) {
-                    $error = 'این شماره موبایل قبلاً ثبت شده است.';
-                    $focus_field = 'mobile';
-                    $invalid_fields = ['mobile'];
                 }
 
-                $otp_ok = !$otp_enabled || casting_otp_session_is_verified('register', $mobile_norm);
+                if ($error === '') {
+                    $issues = casting_register_collect_required_issues([
+                        'username'       => $username,
+                        'password'       => $password,
+                        'password2'      => $password2,
+                        'mobile'         => $mobile,
+                        'rules_accepted' => !empty($_POST['rules_accepted']),
+                        'captcha_ok'     => $captcha_ok,
+                    ]);
+                    if ($issues['errors'] !== []) {
+                        $invalid_fields = $issues['fields'];
+                        $password_mismatch = in_array('password2', $invalid_fields, true);
+                        $error = 'لطفاً فیلدهای ستاره‌دار را کامل کنید: ' . implode(' · ', $issues['errors']);
+                        $focus_field = $invalid_fields[0] ?? '';
+                    } elseif (casting_mobile_is_taken($mobile_norm)) {
+                        $error = 'این شماره موبایل قبلاً ثبت شده است.';
+                        $focus_field = 'mobile';
+                        $invalid_fields = ['mobile'];
+                    }
+                }
+
                 if ($error === '' && !$password_mismatch && $otp_ok) {
                     if (!function_exists('casting_validate_referral_code_for_register')) {
                         require_once __DIR__ . '/includes/referral.php';
@@ -217,6 +223,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                             casting_mark_mobile_verified($user_id, $mobile_norm);
                             casting_register_draft_clear();
                             casting_otp_clear_session('register');
+                            casting_captcha_clear_register_passed();
                             casting_rate_limit_clear('register');
                             casting_rate_limit_clear('otp_send');
                             if (function_exists('casting_notify_n8n_registration')) {
@@ -228,7 +235,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                             $login = casting_login($username, $password, '', true);
                             if (!empty($login['ok'])) {
                                 casting_rate_limit_clear('login');
-                                casting_set_flash('success', 'ثبت‌نام و ورود با موفقیت انجام شد. برای بهتر دیده شدن، پروفایل خودتان را تکمیل کنید.');
+                                casting_set_flash('success', 'ثبت‌نام و ورود با موفقیت انجام شد.');
                                 $after_intent = (string) ($_SESSION['casting_login_intent'] ?? '');
                                 unset($_SESSION['casting_login_intent']);
                                 if ($after_intent === 'cart') {
@@ -252,8 +259,13 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $otp_enabled = casting_mobile_otp_enabled();
-$mobile_verified = $otp_enabled && casting_otp_session_is_verified('register', casting_normalize_mobile($mobile));
+$mobile_norm_view = casting_normalize_mobile($mobile);
+$mobile_verified = $otp_enabled && casting_otp_session_is_verified('register', $mobile_norm_view);
+$account_unlocked = !$otp_enabled || $mobile_verified;
 $rules_accepted = !empty($_POST['rules_accepted']) || !empty(casting_register_draft_get()['rules_accepted']);
+$captcha_passed = $mobile_norm_view !== '' && casting_captcha_register_passed_for($mobile_norm_view);
+// کپچا فقط قبل از ارسال کد (یا وقتی OTP خاموش است)
+$show_captcha = !$otp_enabled || (!$mobile_verified && !$captcha_passed);
 
 casting_render_head('ثبت‌نام', 'page-register');
 casting_render_header('register');
@@ -273,8 +285,8 @@ if ($otp_notice !== '') {
     <h1><?= $register_path === 'hire' ? 'ثبت‌نام کارفرما' : ($register_path === 'talent' ? 'ثبت‌نام هنرمند' : 'ثبت‌نام') ?></h1>
     <p class="lede">
       <?= $otp_enabled
-          ? 'با نام کاربری، رمز عبور و تأیید موبایل حساب بسازید. تکمیل پروفایل را بعد از ورود انجام می‌دهید.'
-          : 'با نام کاربری، رمز عبور و شماره موبایل حساب بسازید. تکمیل پروفایل را بعد از ورود انجام می‌دهید.' ?>
+          ? 'اول شماره موبایل را تأیید کنید؛ بعد نام کاربری و رمز را می‌سازید.'
+          : 'با نام کاربری، رمز عبور و شماره موبایل حساب بسازید.' ?>
     </p>
     <p class="lede-req-note" role="note">موارد ستاره‌دار الزامی می‌باشد.</p>
 
@@ -284,75 +296,83 @@ if ($otp_notice !== '') {
         <input type="hidden" name="path" value="<?= casting_e($register_path) ?>">
       <?php endif; ?>
 
-      <div class="field<?= $reg_invalid('username') ?>">
-        <label for="username">نام کاربری <span class="req-mark">*</span></label>
-        <input id="username" name="username" type="text" required minlength="3" autocomplete="username" pattern="[A-Za-z0-9._\-]+" title="فقط حروف انگلیسی، عدد، نقطه، خط تیره" value="<?= casting_e($username) ?>">
-        <p class="field-hint">با همین نام کاربری بعداً وارد می‌شوید</p>
-        <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
-      </div>
+      <fieldset class="register-step register-step-mobile">
+        <legend class="register-step-title">۱) تأیید موبایل</legend>
 
-      <div class="form-grid">
-        <div class="field<?= $reg_invalid('password') ?>">
-          <label for="password">رمز عبور (حداقل ۸ کاراکتر) <span class="req-mark">*</span></label>
-          <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password" data-password-source>
-          <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
+        <div class="field<?= $reg_invalid('mobile') ?>">
+          <label for="mobile">موبایل <span class="req-mark">*</span></label>
+          <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($mobile) ?>" placeholder="09121234567" autocomplete="tel-national"<?= $mobile_verified ? ' readonly' : '' ?>>
+          <p class="field-hint">این شماره برای دیگر اعضا نمایش داده نمی‌شود.</p>
+          <?php if ($mobile_verified) : ?>
+            <p class="field-hint otp-verified-hint">موبایل تأیید شد ✓</p>
+          <?php endif; ?>
         </div>
-        <div class="field<?= $reg_invalid('password2') ?>" data-password-confirm-field<?= $password_mismatch ? ' is-invalid' : '' ?>>
-          <label for="password2">تکرار رمز عبور <span class="req-mark">*</span></label>
-          <div class="field-control field-control--password-confirm">
-            <input id="password2" name="password2" type="password" required minlength="8" autocomplete="new-password" data-password-confirm<?= $password_mismatch ? ' aria-invalid="true"' : '' ?>>
-            <span class="field-inline-error" data-password-mismatch-msg role="alert"<?= $password_mismatch ? '' : ' hidden' ?>>پسورد یکسان نیست</span>
-          </div>
-          <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
-        </div>
-      </div>
 
-      <div class="field<?= $reg_invalid('mobile') ?>">
-        <label for="mobile">موبایل <span class="req-mark">*</span></label>
-        <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($mobile) ?>" placeholder="09121234567" autocomplete="tel-national">
-        <p class="field-hint">این شماره برای دیگر اعضا نمایش داده نمی‌شود.</p>
-        <?php if ($mobile_verified) : ?>
-          <p class="field-hint otp-verified-hint">موبایل تأیید شد ✓</p>
-        <?php endif; ?>
-        <p class="field-req-hint" data-field-req-hint hidden>این گزینه ستاره‌دار الزامی است.</p>
-      </div>
+        <?php if ($otp_enabled && !$mobile_verified) : ?>
+          <?php if ($show_captcha) : ?>
+            <?php casting_render_captcha_field(trim($reg_invalid('captcha_answer'))); ?>
+          <?php endif; ?>
 
-      <?php if ($otp_enabled) : ?>
-      <div class="otp-verify-block<?= $reg_invalid('otp_code') ?>">
-        <h2 class="otp-verify-title">تأیید موبایل</h2>
-        <?php if (!$mobile_verified) : ?>
-          <div class="field">
-            <label for="otp_code">کد تأیید موبایل <span class="req-mark">*</span></label>
-            <input id="otp_code" name="otp_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="۶ رقم پیامک‌شده">
+          <div class="otp-verify-block<?= $reg_invalid('otp_code') ?>">
+            <div class="field">
+              <label for="otp_code">کد تأیید موبایل <span class="req-mark">*</span></label>
+              <input id="otp_code" name="otp_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="۶ رقم پیامک‌شده">
+            </div>
+            <div class="cta-row otp-actions">
+              <button class="btn btn-ghost" type="submit" name="otp_action" value="send" formnovalidate>ارسال کد پیامک</button>
+              <button class="btn btn-ghost" type="submit" name="otp_action" value="verify" formnovalidate>تأیید کد</button>
+            </div>
+            <p class="field-hint"><?= $captcha_passed
+                ? 'کد پیامک را وارد کنید و «تأیید کد» را بزنید. بقیه فیلدها بعد از تأیید فعال می‌شوند.'
+                : 'اول کپچا را پر کنید و «ارسال کد» را بزنید؛ بعد کد پیامک را تأیید کنید.' ?></p>
           </div>
-          <div class="cta-row otp-actions">
-            <button class="btn btn-ghost" type="submit" name="otp_action" value="send" formnovalidate>ارسال کد پیامک</button>
-            <button class="btn btn-ghost" type="submit" name="otp_action" value="verify" formnovalidate>تأیید کد</button>
-          </div>
-          <p class="field-hint">اول کپچا و موبایل را پر کنید، «ارسال کد» را بزنید، سپس کد را تأیید کنید.</p>
-        <?php else : ?>
+        <?php elseif ($otp_enabled) : ?>
           <input type="hidden" name="otp_code" value="verified">
-          <p class="field-hint otp-verified-hint">موبایل تأیید شده است.</p>
+        <?php elseif ($show_captcha) : ?>
+          <?php casting_render_captcha_field(trim($reg_invalid('captcha_answer'))); ?>
         <?php endif; ?>
-      </div>
-      <?php endif; ?>
+      </fieldset>
 
-      <?php casting_render_captcha_field(trim($reg_invalid('captcha_answer'))); ?>
+      <fieldset class="register-step register-step-account<?= $account_unlocked ? '' : ' is-locked' ?>"<?= $account_unlocked ? '' : ' disabled' ?>>
+        <legend class="register-step-title">۲) ساخت حساب</legend>
+        <?php if (!$account_unlocked) : ?>
+          <p class="field-hint register-step-lock-hint">بعد از تأیید موبایل این بخش فعال می‌شود.</p>
+        <?php endif; ?>
 
-      <div class="field<?= $reg_invalid('referral_code') ?>">
-        <label for="referral_code">کد معرفی (اختیاری)</label>
-        <input id="referral_code" name="referral_code" type="text" maxlength="32" autocomplete="off" dir="ltr" value="<?= casting_e($referral_code) ?>" placeholder="7ROKHAB12CD34">
-      </div>
+        <div class="field<?= $reg_invalid('username') ?>">
+          <label for="username">نام کاربری <span class="req-mark">*</span></label>
+          <input id="username" name="username" type="text"<?= $account_unlocked ? ' required' : '' ?> minlength="3" autocomplete="username" pattern="[A-Za-z0-9._\-]+" title="فقط حروف انگلیسی، عدد، نقطه، خط تیره" value="<?= casting_e($username) ?>">
+          <p class="field-hint">با همین نام کاربری بعداً وارد می‌شوید</p>
+        </div>
 
-      <div class="field rules-consent-field<?= $reg_invalid('rules_accepted') ?>" data-rules-consent>
-        <label class="checkbox-row">
-          <input type="checkbox" name="rules_accepted" value="1" id="rules_accepted" data-rules-consent-checkbox<?= $rules_accepted ? ' checked' : '' ?>>
-          <span>قوانین را مطالعه کرده‌ام و می‌پذیرم. <span class="req-mark">*</span> <button type="button" class="link-button" data-rules-lightbox-open>مطالعه قوانین</button></span>
-        </label>
-        <p class="field-req-hint" data-field-req-hint hidden>تأیید قوانین ستاره‌دار الزامی است.</p>
-      </div>
+        <div class="form-grid">
+          <div class="field<?= $reg_invalid('password') ?>">
+            <label for="password">رمز عبور (حداقل ۸ کاراکتر) <span class="req-mark">*</span></label>
+            <input id="password" name="password" type="password"<?= $account_unlocked ? ' required' : '' ?> minlength="8" autocomplete="new-password" data-password-source>
+          </div>
+          <div class="field<?= $reg_invalid('password2') ?>" data-password-confirm-field<?= $password_mismatch ? ' is-invalid' : '' ?>>
+            <label for="password2">تکرار رمز عبور <span class="req-mark">*</span></label>
+            <div class="field-control field-control--password-confirm">
+              <input id="password2" name="password2" type="password"<?= $account_unlocked ? ' required' : '' ?> minlength="8" autocomplete="new-password" data-password-confirm<?= $password_mismatch ? ' aria-invalid="true"' : '' ?>>
+              <span class="field-inline-error" data-password-mismatch-msg role="alert"<?= $password_mismatch ? '' : ' hidden' ?>>پسورد یکسان نیست</span>
+            </div>
+          </div>
+        </div>
 
-      <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= $rules_accepted ? '' : ' disabled' ?>>ایجاد حساب</button>
+        <div class="field<?= $reg_invalid('referral_code') ?>">
+          <label for="referral_code">کد معرفی (اختیاری)</label>
+          <input id="referral_code" name="referral_code" type="text" maxlength="32" autocomplete="off" dir="ltr" value="<?= casting_e($referral_code) ?>" placeholder="7ROKHAB12CD34">
+        </div>
+
+        <div class="field rules-consent-field<?= $reg_invalid('rules_accepted') ?>" data-rules-consent>
+          <label class="checkbox-row">
+            <input type="checkbox" name="rules_accepted" value="1" id="rules_accepted" data-rules-consent-checkbox<?= $rules_accepted ? ' checked' : '' ?>>
+            <span>قوانین را مطالعه کرده‌ام و می‌پذیرم. <span class="req-mark">*</span> <button type="button" class="link-button" data-rules-lightbox-open>مطالعه قوانین</button></span>
+          </label>
+        </div>
+
+        <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= ($account_unlocked && $rules_accepted) ? '' : ' disabled' ?>>ایجاد حساب</button>
+      </fieldset>
     </form>
 
     <p class="form-foot">

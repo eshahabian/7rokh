@@ -61,6 +61,37 @@ function casting_captcha_verify(string $answer_raw, string $token): array
     return ['ok' => true, 'error' => ''];
 }
 
+/**
+ * بعد از عبور موفق از کپچا در مرحله OTP، برای ادامه ثبت‌نام دوباره نخواهیم.
+ */
+function casting_captcha_mark_register_passed(string $mobile): void
+{
+    $_SESSION['casting_register_captcha_ok'] = [
+        'mobile' => $mobile,
+        'at'     => time(),
+    ];
+}
+
+function casting_captcha_register_passed_for(string $mobile): bool
+{
+    $row = $_SESSION['casting_register_captcha_ok'] ?? null;
+    if (!is_array($row)) {
+        return false;
+    }
+    if ((time() - (int) ($row['at'] ?? 0)) > 1800) {
+        unset($_SESSION['casting_register_captcha_ok']);
+
+        return false;
+    }
+
+    return hash_equals((string) ($row['mobile'] ?? ''), $mobile);
+}
+
+function casting_captcha_clear_register_passed(): void
+{
+    unset($_SESSION['casting_register_captcha_ok']);
+}
+
 function casting_fa_to_en_digits(string $value): string
 {
     $fa = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
