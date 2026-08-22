@@ -109,6 +109,20 @@ if (!defined('CASTING_MELLAT_CALLBACK_URL')) {
 }
 
 /**
+ * درگاه سامان (SEP) — شماره ترمینال در config.local.php
+ * provider = mellat | sep
+ */
+if (!defined('CASTING_GATEWAY_PROVIDER')) {
+    define('CASTING_GATEWAY_PROVIDER', 'mellat');
+}
+if (!defined('CASTING_SEP_TERMINAL_ID')) {
+    define('CASTING_SEP_TERMINAL_ID', '');
+}
+if (!defined('CASTING_SEP_CALLBACK_URL')) {
+    define('CASTING_SEP_CALLBACK_URL', 'https://7rokh.ir/casting-portal/cart.php');
+}
+
+/**
  * SMTP — برای ارسال ایمیل (تماس با ما، بازیابی رمز، …)
  * رمز را در config.local.php بگذارید (نمونه: config.local.php.example)
  */

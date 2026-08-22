@@ -19,6 +19,9 @@ casting_nocache();
 if (casting_request_is_mellat_callback()) {
     casting_gateway_finish_mellat_callback();
 }
+if (casting_request_is_sep_callback()) {
+    casting_gateway_finish_sep_callback();
+}
 
 $user = casting_current_user();
 $user_id = $user ? (int) $user->ID : 0;

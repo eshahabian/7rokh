@@ -166,8 +166,14 @@ function casting_session_is_payment_return(): bool
         $ref = (string) ($_POST['RefId'] ?? $_GET['RefId'] ?? $_POST['refId'] ?? $_GET['refId'] ?? '');
         $res = (string) ($_POST['ResCode'] ?? $_GET['ResCode'] ?? $_POST['resCode'] ?? $_GET['resCode'] ?? '');
         $sale = (string) ($_POST['SaleOrderId'] ?? $_GET['SaleOrderId'] ?? '');
+        if ($ref !== '' && ($res !== '' || $sale !== '')) {
+            return true;
+        }
+        $res_num = (string) ($_POST['ResNum'] ?? $_GET['ResNum'] ?? '');
+        $state = (string) ($_POST['State'] ?? $_GET['State'] ?? $_POST['state'] ?? $_GET['state'] ?? '');
+        $ref_num = (string) ($_POST['RefNum'] ?? $_GET['RefNum'] ?? '');
 
-        return $ref !== '' && ($res !== '' || $sale !== '');
+        return $res_num !== '' && ($state !== '' || $ref_num !== '');
     }
 
     return false;

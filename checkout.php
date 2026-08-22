@@ -128,7 +128,7 @@ casting_render_flash();
   <?php endif; ?>
 
   <?php if (!$gateway_ready) : ?>
-    <div class="flash flash-error" role="status">درگاه پرداخت در حال حاضر خاموش است. مدیر سایت می‌تواند آن را از بخش «درگاه ملت» فعال کند.</div>
+    <div class="flash flash-error" role="status">درگاه پرداخت در حال حاضر خاموش است. مدیر سایت می‌تواند آن را از بخش «درگاه پرداخت» فعال کند.</div>
   <?php endif; ?>
 
   <div class="checkout-summary">

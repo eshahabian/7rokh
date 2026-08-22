@@ -53,8 +53,11 @@ if (session_status() === PHP_SESSION_NONE) {
     $has_mellat = (isset($_POST['RefId']) || isset($_GET['RefId']) || isset($_POST['refId']) || isset($_GET['refId']))
         && (isset($_POST['ResCode']) || isset($_GET['ResCode']) || isset($_POST['resCode']) || isset($_GET['resCode'])
             || isset($_POST['SaleOrderId']) || isset($_GET['SaleOrderId']));
+    $has_sep = (isset($_POST['ResNum']) || isset($_GET['ResNum']))
+        && (isset($_POST['State']) || isset($_GET['State']) || isset($_POST['state']) || isset($_GET['state'])
+            || isset($_POST['RefNum']) || isset($_GET['RefNum']));
     $is_bank_callback = str_ends_with($script_name, '/checkout-callback.php')
-        || (str_ends_with($script_name, '/cart.php') && $has_mellat);
+        || (str_ends_with($script_name, '/cart.php') && ($has_mellat || $has_sep));
     $has_portal_session = !empty($_COOKIE['casting_portal_sid']);
     // POST بانک کراس‌سایت است و کوکی SameSite=Lax را نمی‌فرستد؛ نشست خالی جدید نباید لاگین را خراب کند.
     if (!($is_bank_callback && !$has_portal_session)) {

@@ -27,10 +27,13 @@ define('CASTING_SMS_OTP_TEMPLATE', 'کد ورود شما {x}');
 // define('CASTING_MOBILE_OTP_ENABLED', true);
 
 /**
- * درگاه به‌پرداخت ملت — فقط روی سرور در config.local.php (نه در git)
- * دامنه بازگشت باید 7rokh.ir باشد و IP خروجی هاست در به‌پرداخت ثبت شود.
+ * درگاه پرداخت — melat یا sep
+ * melat: CASTING_BEHPARDAKHT_* | sep: CASTING_SEP_TERMINAL_ID
+ * دامنه بازگشت باید 7rokh.ir باشد و IP خروجی هاست در پنل بانک ثبت شود.
  */
 // define('CASTING_GATEWAY_MODE', 'live');
+// define('CASTING_GATEWAY_PROVIDER', 'sep');
+// define('CASTING_SEP_TERMINAL_ID', '');
 // define('CASTING_BEHPARDAKHT_TERMINAL_ID', '');
 // define('CASTING_BEHPARDAKHT_USERNAME', '');
 // define('CASTING_BEHPARDAKHT_PASSWORD', '');

@@ -33,6 +33,47 @@ if ((string) ($order['status'] ?? '') === 'paid') {
 }
 
 if (casting_gateway_mode() === 'live') {
+    if (casting_gateway_provider() === 'sep') {
+        $token = (string) ($order['gateway_ref'] ?? '');
+        $meta = is_array($order['meta'] ?? null) ? $order['meta'] : [];
+        $sep_meta = is_array($meta['sep'] ?? null) ? $meta['sep'] : [];
+        $pay_url = (string) (($sep_meta['pay_url'] ?? '') ?: casting_sep_pay_url());
+        if ($token === '' || !in_array((string) ($order['status'] ?? ''), ['awaiting_payment', 'pending', 'failed'], true)) {
+            casting_set_flash('error', 'برای این سفارش درخواست درگاه معتبر نیست. از صفحه پرداخت دوباره اقدام کنید.');
+            casting_redirect('checkout.php?order=' . rawurlencode($order_code));
+        }
+
+        header('Content-Type: text/html; charset=utf-8');
+        ?>
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>انتقال به درگاه بانک سامان</title>
+  <style>
+    body { font-family: Tahoma, sans-serif; background: #111; color: #eee; text-align: center; padding: 3rem 1rem; }
+    button { font-size: 1rem; padding: .7rem 1.4rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <p>در حال انتقال به درگاه بانک سامان…</p>
+  <form id="sep-pay" method="post" action="<?= casting_e($pay_url) ?>">
+    <input type="hidden" name="Token" value="<?= casting_e($token) ?>">
+    <noscript>
+      <p>جاوااسکریپت غیرفعال است. برای ورود به درگاه دکمه زیر را بزنید.</p>
+      <button type="submit">ورود به درگاه بانک سامان</button>
+    </noscript>
+  </form>
+  <script>
+    document.getElementById('sep-pay').submit();
+  </script>
+</body>
+</html>
+        <?php
+        exit;
+    }
+
     $ref_id = (string) ($order['gateway_ref'] ?? '');
     if ($ref_id === '' || !in_array((string) ($order['status'] ?? ''), ['awaiting_payment', 'pending', 'failed'], true)) {
         casting_set_flash('error', 'برای این سفارش درخواست درگاه معتبر نیست. از صفحه پرداخت دوباره اقدام کنید.');
