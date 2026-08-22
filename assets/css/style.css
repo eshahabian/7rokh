@@ -8182,6 +8182,41 @@ html[data-theme="day"] .member-card-photo-score {
   flex-wrap: wrap;
 }
 
+.checkout-actions-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+  align-items: stretch;
+}
+
+.checkout-actions-tiles--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.checkout-actions-tiles .btn {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  min-height: 3rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+}
+
+.checkout-pay-form .checkout-rules-accept {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .checkout-actions-tiles,
+  .checkout-actions-tiles--two {
+    grid-template-columns: 1fr;
+  }
+}
+
 .checkout-gateway-options {
   border: 0;
   margin: 1.25rem 0;

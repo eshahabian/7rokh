@@ -262,13 +262,13 @@ casting_render_flash();
         <?php endforeach; ?>
       </fieldset>
 
-      <div class="cta-row checkout-actions">
+      <div class="checkout-actions checkout-actions-tiles checkout-actions-tiles--two">
         <button class="btn btn-primary" type="submit">ورود به درگاه و پرداخت</button>
         <a class="btn btn-ghost" href="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>">بازگشت</a>
       </div>
     </form>
   <?php elseif ($gateway_ready) : ?>
-    <form class="form checkout-pay-form" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>">
+    <form id="checkout-pay-form" class="form checkout-pay-form" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>">
       <?php wp_nonce_field('casting_checkout_pay_' . $order['order_code']); ?>
       <input type="hidden" name="order_code" value="<?= casting_e((string) $order['order_code']) ?>">
       <input type="hidden" name="checkout_pay" value="1">
@@ -281,26 +281,27 @@ casting_render_flash();
         <input type="checkbox" name="rules_accepted" value="1" required>
         <span>قوانین و شرایط استفاده از خدمات ۷رخ را مطالعه کرده و می‌پذیرم.</span>
       </label>
-
-      <div class="cta-row checkout-actions">
-        <button class="btn btn-primary" type="submit">ادامه — انتخاب درگاه پرداخت</button>
-        <a class="btn btn-ghost" href="<?= casting_e($back_url) ?>">بازگشت به خرید اشتراک</a>
-      </div>
     </form>
-    <form class="cta-row checkout-actions" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>" onsubmit="return confirm('از خرید انصراف می‌دهید؟ لیست خرید اشتراک خالی می‌شود.');">
+
+    <form id="checkout-cancel-form" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>" onsubmit="return confirm('از خرید انصراف می‌دهید؟ لیست خرید اشتراک خالی می‌شود.');" hidden>
       <?php wp_nonce_field('casting_checkout_cancel_' . $order['order_code']); ?>
       <input type="hidden" name="order_code" value="<?= casting_e((string) $order['order_code']) ?>">
-      <button class="btn btn-ghost" type="submit" name="checkout_cancel" value="1">انصراف</button>
     </form>
-  <?php else : ?>
-    <div class="cta-row checkout-actions">
-      <button class="btn btn-primary" type="button" disabled>پرداخت به‌زودی فعال می‌شود — <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></button>
+
+    <div class="checkout-actions checkout-actions-tiles">
+      <button class="btn btn-primary" type="submit" form="checkout-pay-form">ادامه — انتخاب درگاه پرداخت</button>
       <a class="btn btn-ghost" href="<?= casting_e($back_url) ?>">بازگشت به خرید اشتراک</a>
-      <form method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>" onsubmit="return confirm('از خرید انصراف می‌دهید؟ لیست خرید اشتراک خالی می‌شود.');">
-        <?php wp_nonce_field('casting_checkout_cancel_' . $order['order_code']); ?>
-        <input type="hidden" name="order_code" value="<?= casting_e((string) $order['order_code']) ?>">
-        <button class="btn btn-ghost" type="submit" name="checkout_cancel" value="1">انصراف</button>
-      </form>
+      <button class="btn btn-ghost" type="submit" form="checkout-cancel-form" name="checkout_cancel" value="1">انصراف</button>
+    </div>
+  <?php else : ?>
+    <form id="checkout-cancel-form" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>" onsubmit="return confirm('از خرید انصراف می‌دهید؟ لیست خرید اشتراک خالی می‌شود.');" hidden>
+      <?php wp_nonce_field('casting_checkout_cancel_' . $order['order_code']); ?>
+      <input type="hidden" name="order_code" value="<?= casting_e((string) $order['order_code']) ?>">
+    </form>
+    <div class="checkout-actions checkout-actions-tiles">
+      <button class="btn btn-primary" type="button" disabled>پرداخت به‌زودی فعال می‌شود</button>
+      <a class="btn btn-ghost" href="<?= casting_e($back_url) ?>">بازگشت به خرید اشتراک</a>
+      <button class="btn btn-ghost" type="submit" form="checkout-cancel-form" name="checkout_cancel" value="1">انصراف</button>
     </div>
   <?php endif; ?>
 </section>
