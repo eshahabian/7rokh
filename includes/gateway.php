@@ -32,27 +32,46 @@ function casting_gateway_mode(): string
 }
 
 /**
+ * @return array<string, array{key:string,label:string,short:string,ready:bool,missing:string}>
+ */
+function casting_gateway_provider_options(): array
+{
+    return [
+        'mellat' => [
+            'key'     => 'mellat',
+            'label'   => 'به‌پرداخت ملت',
+            'short'   => 'بانک ملت',
+            'ready'   => casting_behpardakht_has_credentials(),
+            'missing' => 'مشخصات ملت در بخش «درگاه پرداخت» ذخیره نشده است.',
+        ],
+        'sep' => [
+            'key'     => 'sep',
+            'label'   => 'پرداخت الکترونیک سامان (SEP)',
+            'short'   => 'بانک سامان',
+            'ready'   => casting_sep_has_credentials(),
+            'missing' => 'شماره ترمینال سامان در بخش «درگاه پرداخت» ذخیره نشده است.',
+        ],
+    ];
+}
+
+/**
  * @return array<string, array{key:string,label:string,short:string}>
  */
 function casting_gateway_available_providers(): array
 {
-    $providers = [];
-    if (casting_behpardakht_has_credentials()) {
-        $providers['mellat'] = [
-            'key'   => 'mellat',
-            'label' => 'به‌پرداخت ملت',
-            'short' => 'بانک ملت',
-        ];
-    }
-    if (casting_sep_has_credentials()) {
-        $providers['sep'] = [
-            'key'   => 'sep',
-            'label' => 'پرداخت الکترونیک سامان',
-            'short' => 'بانک سامان (SEP)',
-        ];
+    $options = casting_gateway_provider_options();
+    $ready = [];
+    foreach ($options as $key => $info) {
+        if (!empty($info['ready'])) {
+            $ready[$key] = [
+                'key'   => (string) $info['key'],
+                'label' => (string) $info['label'],
+                'short' => (string) $info['short'],
+            ];
+        }
     }
 
-    return $providers;
+    return $ready;
 }
 
 function casting_gateway_has_any_credentials(): bool
@@ -1014,7 +1033,7 @@ function casting_sep_token_url(): string
         return trim((string) CASTING_SEP_TOKEN_URL);
     }
 
-    return 'https://sep.shaparak.ir/OnlinePG/OnlinePG';
+    return 'https://sep.shaparak.ir/onlinepg/onlinepg';
 }
 
 function casting_sep_pay_url(): string
@@ -1023,16 +1042,19 @@ function casting_sep_pay_url(): string
         return trim((string) CASTING_SEP_PAY_URL);
     }
 
-    return 'https://sep.shaparak.ir/OnlinePG/OnlinePG';
+    return 'https://sep.shaparak.ir/onlinepg/onlinepg';
 }
 
-function casting_sep_verify_url(): string
+function casting_sep_verify_urls(): array
 {
+    $urls = [];
     if (defined('CASTING_SEP_VERIFY_URL') && trim((string) CASTING_SEP_VERIFY_URL) !== '') {
-        return trim((string) CASTING_SEP_VERIFY_URL);
+        $urls[] = trim((string) CASTING_SEP_VERIFY_URL);
     }
+    $urls[] = 'https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/VerifyTransaction';
+    $urls[] = 'https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/VerifyTranscation';
 
-    return 'https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/VerifyTransaction';
+    return array_values(array_unique($urls));
 }
 
 function casting_sep_callback_url(): string
@@ -1115,6 +1137,7 @@ function casting_gateway_handle_sep_callback(array $payload): array
     $ref_num = sanitize_text_field((string) ($payload['RefNum'] ?? ''));
     $res_num = sanitize_text_field((string) ($payload['ResNum'] ?? ''));
     $state = trim((string) ($payload['State'] ?? $payload['state'] ?? ''));
+    $status_num = (int) ($payload['Status'] ?? 0);
     $trace_no = sanitize_text_field((string) ($payload['TraceNo'] ?? ''));
     $terminal = sanitize_text_field((string) ($payload['TerminalId'] ?? $payload['MID'] ?? ''));
     $amount = (int) ($payload['Amount'] ?? 0);
@@ -1172,8 +1195,10 @@ function casting_gateway_handle_sep_callback(array $payload): array
         ];
     }
 
-    if (strcasecmp($state, 'OK') !== 0 || $ref_num === '') {
-        $message = casting_sep_state_message($state);
+    if ((strcasecmp($state, 'OK') !== 0 && $status_num !== 2) || $ref_num === '') {
+        $message = $ref_num === '' && strcasecmp($state, 'OK') === 0
+            ? 'رسید دیجیتالی از درگاه سامان دریافت نشد.'
+            : casting_sep_state_message($state);
         casting_order_update((int) $order['id'], [
             'status'        => 'failed',
             'gateway_trace' => $trace_no !== '' ? $trace_no : $ref_num,
@@ -1340,9 +1365,10 @@ function casting_sep_start_payment(array $order): array
     }
 
     $callback = casting_sep_callback_url();
+    $terminal_int = (int) $terminal;
     $payload = [
         'Action'      => 'Token',
-        'TerminalId'  => $terminal,
+        'TerminalId'  => $terminal_int > 0 ? $terminal_int : $terminal,
         'RedirectUrl' => $callback,
         'ResNum'      => $order_code,
         'Amount'      => $amount_rial,
@@ -1457,12 +1483,43 @@ function casting_sep_verify_transaction(string $ref_num, string $terminal): arra
         return ['ok' => false, 'error' => 'اطلاعات تأیید تراکنش ناقص است.', 'amount' => 0];
     }
 
-    $payload = [
-        'RefNum'           => $ref_num,
-        'TerminalNumber'   => (int) $terminal,
+    $payloads = [
+        [
+            'RefNum'             => $ref_num,
+            'TerminalNumber'     => (int) $terminal,
+        ],
+        [
+            'TerminalNumber'     => (string) $terminal,
+            'RefNum'             => $ref_num,
+            'CellNumber'         => '',
+            'NationalCode'       => '',
+            'IgnoreNationalcode' => true,
+        ],
     ];
 
-    $response = wp_remote_post(casting_sep_verify_url(), [
+    $last_error = 'خطا در تأیید تراکنش با بانک سامان.';
+    foreach (casting_sep_verify_urls() as $url) {
+        foreach ($payloads as $payload) {
+            $result = casting_sep_verify_request($url, $payload);
+            if ($result['ok']) {
+                return $result;
+            }
+            if ($result['error'] !== '') {
+                $last_error = $result['error'];
+            }
+        }
+    }
+
+    return ['ok' => false, 'error' => $last_error, 'amount' => 0];
+}
+
+/**
+ * @param array<string, mixed> $payload
+ * @return array{ok:bool,error:string,amount:int}
+ */
+function casting_sep_verify_request(string $url, array $payload): array
+{
+    $response = wp_remote_post($url, [
         'timeout' => 25,
         'headers' => [
             'Content-Type' => 'application/json; charset=utf-8',
@@ -1472,7 +1529,7 @@ function casting_sep_verify_transaction(string $ref_num, string $terminal): arra
     ]);
 
     if (is_wp_error($response)) {
-        error_log('[casting-sep] verify ' . $response->get_error_message());
+        error_log('[casting-sep] verify ' . $url . ' ' . $response->get_error_message());
 
         return ['ok' => false, 'error' => 'خطا در تأیید تراکنش با بانک سامان.', 'amount' => 0];
     }
@@ -1480,8 +1537,6 @@ function casting_sep_verify_transaction(string $ref_num, string $terminal): arra
     $body = (string) wp_remote_retrieve_body($response);
     $data = json_decode($body, true);
     if (!is_array($data)) {
-        error_log('[casting-sep] verify invalid json body=' . substr($body, 0, 300));
-
         return ['ok' => false, 'error' => 'پاسخ نامعتبر از سرویس تأیید سامان.', 'amount' => 0];
     }
 
@@ -1490,17 +1545,17 @@ function casting_sep_verify_transaction(string $ref_num, string $terminal): arra
     $detail = is_array($data['TransactionDetail'] ?? null) ? $data['TransactionDetail'] : [];
     $amount = (int) ($detail['AffectiveAmount'] ?? $detail['OrginalAmount'] ?? 0);
 
-    if (!$success || $result_code !== 0) {
-        $desc = trim((string) ($data['ResultDescription'] ?? ''));
-
-        return [
-            'ok'    => false,
-            'error' => $desc !== '' ? $desc : casting_sep_verify_message($result_code),
-            'amount' => $amount,
-        ];
+    if ($success && $result_code === 0) {
+        return ['ok' => true, 'error' => '', 'amount' => $amount];
     }
 
-    return ['ok' => true, 'error' => '', 'amount' => $amount];
+    $desc = trim((string) ($data['ResultDescription'] ?? ''));
+
+    return [
+        'ok'     => false,
+        'error'  => $desc !== '' ? $desc : casting_sep_verify_message($result_code),
+        'amount' => $amount,
+    ];
 }
 
 function casting_sep_state_message(string $state): string

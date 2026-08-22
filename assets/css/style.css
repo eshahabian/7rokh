@@ -8149,6 +8149,15 @@ html[data-theme="day"] .member-card-photo-score {
   gap: 0.2rem;
 }
 
+.checkout-gateway-option.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.checkout-gateway-option-warn {
+  color: #ffb4b4;
+}
+
 .checkout-gateway-pick-form .panel-section-title {
   margin-bottom: 0.75rem;
 }
