@@ -33,7 +33,8 @@ if ((string) ($order['status'] ?? '') === 'paid') {
 }
 
 if (casting_gateway_mode() === 'live') {
-    if (casting_gateway_provider() === 'sep') {
+    $provider = casting_order_payment_provider($order);
+    if ($provider === 'sep') {
         $token = (string) ($order['gateway_ref'] ?? '');
         $meta = is_array($order['meta'] ?? null) ? $order['meta'] : [];
         $sep_meta = is_array($meta['sep'] ?? null) ? $meta['sep'] : [];

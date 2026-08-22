@@ -24,11 +24,64 @@ function casting_gateway_mode(): string
     if ($mode === '') {
         $mode = 'live';
     }
-    if ($mode === 'off' && casting_gateway_has_credentials()) {
+    if ($mode === 'off' && casting_gateway_has_any_credentials()) {
         return 'live';
     }
 
     return $mode;
+}
+
+/**
+ * @return array<string, array{key:string,label:string,short:string}>
+ */
+function casting_gateway_available_providers(): array
+{
+    $providers = [];
+    if (casting_behpardakht_has_credentials()) {
+        $providers['mellat'] = [
+            'key'   => 'mellat',
+            'label' => 'به‌پرداخت ملت',
+            'short' => 'بانک ملت',
+        ];
+    }
+    if (casting_sep_has_credentials()) {
+        $providers['sep'] = [
+            'key'   => 'sep',
+            'label' => 'پرداخت الکترونیک سامان',
+            'short' => 'بانک سامان (SEP)',
+        ];
+    }
+
+    return $providers;
+}
+
+function casting_gateway_has_any_credentials(): bool
+{
+    return casting_behpardakht_has_credentials() || casting_sep_has_credentials();
+}
+
+function casting_gateway_provider_label(string $provider): string
+{
+    $map = [
+        'mellat' => 'بانک ملت',
+        'sep'    => 'بانک سامان (SEP)',
+    ];
+
+    return $map[strtolower(trim($provider))] ?? 'درگاه بانکی';
+}
+
+/**
+ * @param array<string, mixed> $order
+ */
+function casting_order_payment_provider(array $order): string
+{
+    $meta = is_array($order['meta'] ?? null) ? $order['meta'] : [];
+    $from_meta = strtolower(trim((string) ($meta['gateway_provider'] ?? '')));
+    if (in_array($from_meta, ['mellat', 'sep'], true)) {
+        return $from_meta;
+    }
+
+    return casting_gateway_provider();
 }
 
 function casting_gateway_provider(): string
@@ -61,11 +114,7 @@ function casting_gateway_provider(): string
 
 function casting_gateway_has_credentials(): bool
 {
-    if (casting_gateway_provider() === 'sep') {
-        return casting_sep_has_credentials();
-    }
-
-    return casting_behpardakht_has_credentials();
+    return casting_gateway_has_any_credentials();
 }
 
 function casting_gateway_label(): string
@@ -135,10 +184,10 @@ function casting_gateway_store_credentials(string $terminal, string $username, s
         : (dirname(__DIR__) . '/config.local.php');
     if (is_string($path) && $path !== '' && (is_writable($path) || (!file_exists($path) && is_writable(dirname($path))))) {
         $pairs = [
-            'CASTING_GATEWAY_MODE'           => 'live',
+            'CASTING_GATEWAY_MODE'            => 'live',
             'CASTING_BEHPARDAKHT_TERMINAL_ID' => $terminal,
-            'CASTING_BEHPARDAKHT_USERNAME'   => $username,
-            'CASTING_BEHPARDAKHT_PASSWORD'   => $password,
+            'CASTING_BEHPARDAKHT_USERNAME'    => $username,
+            'CASTING_BEHPARDAKHT_PASSWORD'    => $password,
         ];
         $src = is_readable($path) ? (string) file_get_contents($path) : "<?php\n";
         if (!str_contains($src, '<?php')) {
@@ -213,7 +262,6 @@ function casting_gateway_store_sep_credentials(string $terminal): array
     }
 
     update_option('casting_gateway_mode', 'live', false);
-    update_option('casting_gateway_provider', 'sep', false);
     update_option('casting_sep_terminal_id', $terminal, false);
 
     $path = function_exists('casting_local_config_path')
@@ -221,9 +269,8 @@ function casting_gateway_store_sep_credentials(string $terminal): array
         : (dirname(__DIR__) . '/config.local.php');
     if (is_string($path) && $path !== '' && (is_writable($path) || (!file_exists($path) && is_writable(dirname($path))))) {
         $pairs = [
-            'CASTING_GATEWAY_MODE'     => 'live',
-            'CASTING_GATEWAY_PROVIDER' => 'sep',
-            'CASTING_SEP_TERMINAL_ID'  => $terminal,
+            'CASTING_GATEWAY_MODE'    => 'live',
+            'CASTING_SEP_TERMINAL_ID' => $terminal,
         ];
         $src = is_readable($path) ? (string) file_get_contents($path) : "<?php\n";
         if (!str_contains($src, '<?php')) {
@@ -252,7 +299,7 @@ function casting_gateway_store_sep_credentials(string $terminal): array
  *
  * @return array{ok:bool,error:string,redirect?:string}
  */
-function casting_gateway_start_payment(array $order): array
+function casting_gateway_start_payment(array $order, ?string $provider = null): array
 {
     if ($order === []) {
         return ['ok' => false, 'error' => 'سفارش پیدا نشد.'];
@@ -266,7 +313,25 @@ function casting_gateway_start_payment(array $order): array
     $code = (string) ($order['order_code'] ?? '');
 
     if ($mode === 'live') {
-        return casting_gateway_provider() === 'sep'
+        $provider = strtolower(trim((string) ($provider ?? '')));
+        if ($provider === '' || !in_array($provider, ['mellat', 'sep'], true)) {
+            return ['ok' => false, 'error' => 'لطفاً یک درگاه پرداخت انتخاب کنید.'];
+        }
+        $available = casting_gateway_available_providers();
+        if (!isset($available[$provider])) {
+            return ['ok' => false, 'error' => 'درگاه «' . casting_gateway_provider_label($provider) . '» پیکربندی نشده است.'];
+        }
+
+        casting_order_merge_meta($order_id, ['gateway_provider' => $provider]);
+        if (!function_exists('casting_get_order_by_code')) {
+            require_once __DIR__ . '/checkout.php';
+        }
+        $order = casting_get_order_by_code($code);
+        if ($order === []) {
+            return ['ok' => false, 'error' => 'سفارش پیدا نشد.'];
+        }
+
+        return $provider === 'sep'
             ? casting_sep_start_payment($order)
             : casting_mellat_start_payment($order);
     }

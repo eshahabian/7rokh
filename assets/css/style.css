@@ -8121,6 +8121,38 @@ html[data-theme="day"] .member-card-photo-score {
   flex-wrap: wrap;
 }
 
+.checkout-gateway-options {
+  border: 0;
+  margin: 1.25rem 0;
+  padding: 0;
+}
+
+.checkout-gateway-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+
+.checkout-gateway-option input {
+  margin-top: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.checkout-gateway-option-body {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.checkout-gateway-pick-form .panel-section-title {
+  margin-bottom: 0.75rem;
+}
+
 .cart-list {
   display: grid;
   gap: 0.75rem;

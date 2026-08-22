@@ -159,7 +159,8 @@ function casting_session_is_payment_return(): bool
     $script = strtolower(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '')));
     if (str_ends_with($script, '/checkout-callback.php')
         || str_ends_with($script, '/checkout-result.php')
-        || str_ends_with($script, '/checkout-gateway.php')) {
+        || str_ends_with($script, '/checkout-gateway.php')
+        || str_ends_with($script, '/checkout-choose-gateway.php')) {
         return true;
     }
     if (str_ends_with($script, '/cart.php')) {

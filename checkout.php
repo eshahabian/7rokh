@@ -69,7 +69,7 @@ if ((string) ($order['service_key'] ?? '') === 'cart' || !empty($order['meta']['
 $cancel_url = 'cart.php';
 
 $gateway_mode = casting_gateway_mode();
-$gateway_ready = $gateway_mode === 'live' || $gateway_mode === 'sandbox';
+$gateway_ready = $gateway_mode === 'sandbox' || ($gateway_mode === 'live' && casting_gateway_has_any_credentials());
 
 // انصراف — سبد خالی می‌شود و به خرید اشتراک برمی‌گردد
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_cancel'])) {
@@ -99,12 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_pay'])) {
     } elseif (!in_array((string) $order['status'], ['pending', 'failed', 'awaiting_payment'], true)) {
         $error = 'این سفارش قابل پرداخت نیست.';
     } else {
-        $start = casting_gateway_start_payment($order);
-        if (!$start['ok']) {
-            $error = $start['error'];
-        } else {
-            casting_redirect((string) $start['redirect']);
-        }
+        casting_redirect('checkout-choose-gateway.php?order=' . rawurlencode((string) $order['order_code']));
     }
 }
 
@@ -180,7 +175,7 @@ casting_render_flash();
       </label>
 
       <div class="cta-row checkout-actions">
-        <button class="btn btn-primary" type="submit">پرداخت <?= casting_e(casting_format_toman((int) $order['amount_final'])) ?></button>
+        <button class="btn btn-primary" type="submit">ادامه — انتخاب درگاه پرداخت</button>
         <a class="btn btn-ghost" href="<?= casting_e($back_url) ?>">بازگشت به خرید اشتراک</a>
       </div>
     </form>
