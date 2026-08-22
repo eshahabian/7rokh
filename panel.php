@@ -72,6 +72,7 @@ if (isset($_GET['welcome'])) {
     echo '<div class="flash flash-success" role="alert">ثبت‌نام و ورود با موفقیت انجام شد.</div>';
 }
 casting_render_flash();
+casting_render_panel_completion_card($profile, $user_id);
 ?>
 <section class="ig-profile" aria-label="پروفایل من">
   <header class="ig-profile-header">

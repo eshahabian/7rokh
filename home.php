@@ -6,6 +6,7 @@ require_once __DIR__ . '/includes/profile.php';
 require_once __DIR__ . '/includes/request.php';
 require_once __DIR__ . '/includes/premium.php';
 require_once __DIR__ . '/includes/panel.php';
+require_once __DIR__ . '/includes/panel-profile.php';
 require_once __DIR__ . '/includes/panel-home.php';
 require_once __DIR__ . '/includes/visitors.php';
 require_once __DIR__ . '/includes/chat.php';
@@ -169,8 +170,18 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
     </section>
   <?php endif; ?>
 
-  <?php if (!$complete) : ?>
-    <p class="meta panel-home-hint">پروفایلتان کامل نیست. از «پنل کاربری» اطلاعات را تکمیل کنید.</p>
+  <?php
+  $completion_percent = function_exists('casting_profile_completion_percent')
+      ? casting_profile_completion_percent($profile, $user_id)
+      : ($complete ? 100 : 0);
+  if ($completion_percent < 100) :
+      if (!function_exists('casting_render_panel_completion_card')) {
+          require_once __DIR__ . '/includes/panel-profile.php';
+      }
+      ?>
+    <div class="panel-home-completion">
+      <?php casting_render_panel_completion_card($profile, $user_id); ?>
+    </div>
   <?php elseif ($premium) : ?>
     <div class="panel-home-premium"><?php casting_render_premium_countdown($user_id); ?></div>
   <?php endif; ?>

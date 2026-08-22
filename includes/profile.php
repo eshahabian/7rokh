@@ -2325,7 +2325,7 @@ function casting_register_focus_for_error(string $error): string
 }
 
 /**
- * بررسی فیلدهای ستاره‌دار ثبت‌نام — همه ایرادها را یکجا برمی‌گرداند
+ * بررسی فیلدهای ستاره‌دار ثبت‌نام سبک (حساب + موبایل)
  *
  * @param array<string, mixed> $ctx
  * @return array{errors: list<string>, fields: list<string>}
@@ -2343,24 +2343,9 @@ function casting_register_collect_required_issues(array $ctx): array
         }
     };
 
-    $activities = casting_normalize_activities($ctx['activities'] ?? []);
-    if ($activities === []) {
-        $add('activities', 'نوع فعالیت (ستاره‌دار) الزامی است.');
-    }
-    $skip_talent = !casting_activities_need_talent_fields($activities);
-    $pending = casting_register_pending_media_get();
-
-    $name = trim((string) ($ctx['name'] ?? ''));
-    if ($name === '' || casting_strlen($name) < 2) {
-        $add('name', 'نام و نام خانوادگی (ستاره‌دار) الزامی است.');
-    }
     $username = trim((string) ($ctx['username'] ?? ''));
-    if ($username === '' || strlen($username) < 3) {
-        $add('username', 'نام کاربری (ستاره‌دار) الزامی است.');
-    }
-    $email = trim((string) ($ctx['email'] ?? ''));
-    if ($email === '' || !is_email($email)) {
-        $add('email', 'ایمیل (ستاره‌دار) الزامی است.');
+    if ($username === '' || strlen($username) < 3 || !preg_match('/^[A-Za-z0-9._\-]+$/', $username)) {
+        $add('username', 'نام کاربری (ستاره‌دار) الزامی است (حداقل ۳ کاراکتر انگلیسی).');
     }
     $password = (string) ($ctx['password'] ?? '');
     $password2 = (string) ($ctx['password2'] ?? '');
@@ -2374,72 +2359,48 @@ function casting_register_collect_required_issues(array $ctx): array
     if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
         $add('mobile', 'موبایل (ستاره‌دار) را درست وارد کنید.');
     }
-    $birthdate = (string) ($ctx['birthdate'] ?? '');
-    if ($birthdate === '' || casting_age_from_birthdate($birthdate) === null) {
-        $add('birth_jd', 'تاریخ تولد شمسی (ستاره‌دار) الزامی است.');
-    }
-    $gender = sanitize_key((string) ($ctx['gender'] ?? ''));
-    if (!array_key_exists($gender, casting_gender_labels())) {
-        $add('gender', 'جنسیت (ستاره‌دار) را انتخاب کنید.');
-    }
-    $province = sanitize_key((string) ($ctx['province'] ?? ''));
-    if (!array_key_exists($province, casting_province_labels())) {
-        $add('province', 'استان (ستاره‌دار) را انتخاب کنید.');
-    }
-    $city = casting_normalize_city_name((string) ($ctx['city'] ?? ''));
-    if ($province !== '' && !casting_is_valid_city_for_province($province, $city)) {
-        $add('city', 'شهر (ستاره‌دار) را انتخاب کنید.');
-    }
-    $experience = (string) ($ctx['experience'] ?? '');
-    if ($experience === '' || (int) $experience < 0 || (int) $experience > 60) {
-        $add('experience', 'سابقه فعالیت (ستاره‌دار) الزامی است.');
-    }
-    $license = sanitize_key((string) ($ctx['activity_license'] ?? ''));
-    if (!isset(casting_yes_no_labels()[$license])) {
-        $add('activity_license', 'پروانه فعالیت (ستاره‌دار) را مشخص کنید.');
-    }
     if (empty($ctx['rules_accepted'])) {
         $add('rules_accepted', 'تأیید قوانین (ستاره‌دار) الزامی است.');
     }
-
-    if (!$skip_talent) {
-        $look = sanitize_key((string) ($ctx['look'] ?? ''));
-        if (!array_key_exists($look, casting_look_labels())) {
-            $add('look', 'رنگ پوست (ستاره‌دار) الزامی است.');
-        }
-        $health_err = casting_validate_health_fields([
-            'well'   => (string) ($ctx['health_well'] ?? ''),
-            'detail' => (string) ($ctx['health_status'] ?? ''),
-        ], true);
-        if ($health_err !== null) {
-            $add('health_well', $health_err);
-        }
-        $availability = sanitize_key((string) ($ctx['availability'] ?? ''));
-        if (!array_key_exists($availability, casting_availability_labels())) {
-            $add('availability', 'وضعیت آمادگی همکاری (ستاره‌دار) را انتخاب کنید.');
-        }
-        if (casting_activities_need_body_metrics($activities)) {
-            if (trim((string) ($ctx['height'] ?? '')) === '') {
-                $add('height', 'قد (ستاره‌دار) الزامی است.');
-            }
-            if (trim((string) ($ctx['weight'] ?? '')) === '') {
-                $add('weight', 'وزن (ستاره‌دار) الزامی است.');
-            }
-        }
-        foreach (casting_portrait_slots() as $slot => $label) {
-            $has = !empty($_FILES['photo_' . $slot]['name']) || !empty($pending['portraits'][$slot]);
-            if (!$has) {
-                $add('photo_' . $slot, 'عکس «' . $label . '» (ستاره‌دار) الزامی است.');
-            }
-        }
-    } else {
-        $has = !empty($_FILES['photo_medium']['name']) || !empty($pending['portraits']['medium']);
-        if (!$has) {
-            $add('photo_medium_single', 'عکس پروفایل (ستاره‌دار) الزامی است.');
-        }
+    if (empty($ctx['captcha_ok'])) {
+        $add('captcha_answer', 'کد امنیتی (ستاره‌دار) را درست وارد کنید.');
     }
 
     return ['errors' => $errors, 'fields' => $fields];
+}
+
+/**
+ * ایمیل موقت داخلی برای ثبت‌نام بدون ایمیل واقعی
+ */
+function casting_register_placeholder_email(string $username): string
+{
+    $base = strtolower(preg_replace('/[^a-z0-9._\-]/i', '', $username) ?: 'user');
+    $email = $base . '@users.7rokh.ir';
+    if (!email_exists($email)) {
+        return $email;
+    }
+    for ($i = 0; $i < 20; $i++) {
+        $candidate = $base . '+' . wp_generate_password(6, false, false) . '@users.7rokh.ir';
+        if (!email_exists($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return $base . '+' . (string) time() . '@users.7rokh.ir';
+}
+
+function casting_is_placeholder_email(string $email): bool
+{
+    $email = strtolower(trim($email));
+    return $email !== '' && str_ends_with($email, '@users.7rokh.ir');
+}
+
+/**
+ * نقش اولیه از مسیر ثبت‌نام (talent|hire)
+ */
+function casting_register_role_from_path(string $path): string
+{
+    return $path === 'hire' ? 'director' : 'talent';
 }
 
 function casting_save_registration_profile(int $user_id, array $data): array

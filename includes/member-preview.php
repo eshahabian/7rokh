@@ -34,6 +34,9 @@ function casting_member_preview_visit_count(int $member_id): int
 
 function casting_member_preview_completion_percent(array $profile, int $user_id = 0): int
 {
+    if (function_exists('casting_profile_completion_percent')) {
+        return casting_profile_completion_percent($profile, $user_id);
+    }
     $items = casting_profile_completion_items($profile, $user_id);
     if ($items === []) {
         return 0;

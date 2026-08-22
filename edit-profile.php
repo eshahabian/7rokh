@@ -32,6 +32,12 @@ if ($profile_success !== '') {
 }
 casting_render_flash();
 
+if (isset($_GET['welcome'])) {
+    echo '<div class="flash flash-success" role="status">برای بهتر دیده شدن پروفایل خودتون را تکمیل کنید.</div>';
+}
+
+casting_render_panel_completion_card($profile, $user_id);
+
 casting_panel_render_section($user_id, static function () use ($user_id, $profile): void {
     casting_render_profile_edit_form($user_id, $profile, true);
 }, 'ویرایش پروفایل');

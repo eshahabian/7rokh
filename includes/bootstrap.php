@@ -88,6 +88,7 @@ require_once __DIR__ . '/mail.php';
 require_once __DIR__ . '/rate-limit.php';
 require_once __DIR__ . '/sms.php';
 require_once __DIR__ . '/otp.php';
+require_once __DIR__ . '/captcha.php';
 
 function casting_strlen(string $value): int
 {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/profile.php';
+require_once __DIR__ . '/includes/panel-profile.php';
 require_once __DIR__ . '/includes/layout.php';
 
 casting_nocache();
@@ -12,6 +13,14 @@ $user = casting_current_user();
 if ($user) {
     $role = casting_get_user_role((int) $user->ID);
     if ($role !== '') {
+        $uid = (int) $user->ID;
+        if (function_exists('casting_profile_needs_completion')) {
+            require_once __DIR__ . '/includes/panel-profile.php';
+            $profile = casting_get_profile($uid);
+            if (casting_profile_needs_completion($profile, $uid)) {
+                casting_redirect('edit-profile.php');
+            }
+        }
         casting_redirect(casting_dashboard_for_role($role));
     }
 }
@@ -35,11 +44,17 @@ if ($login_intent === 'cart' && $error === '' && $_SERVER['REQUEST_METHOD'] !== 
     $intent_notice = 'برای خرید ابتدا وارد شوید.';
 }
 
-$login_redirect_after = static function (string $role): void {
+$login_redirect_after = static function (string $role, int $user_id = 0): void {
     $intent = (string) ($_SESSION['casting_login_intent'] ?? '');
     unset($_SESSION['casting_login_intent']);
     if ($intent === 'cart') {
         casting_redirect('cart.php');
+    }
+    if ($user_id > 0 && function_exists('casting_profile_needs_completion')) {
+        $profile = casting_get_profile($user_id);
+        if (casting_profile_needs_completion($profile, $user_id)) {
+            casting_redirect('edit-profile.php');
+        }
     }
     casting_redirect(casting_dashboard_for_role($role));
 };
@@ -87,7 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     casting_rate_limit_clear('login_otp');
                     casting_rate_limit_clear('login');
                     casting_rate_limit_clear('otp_send');
-                    $login_redirect_after((string) $result['role']);
+                    $uid = (int) ($result['user']->ID ?? $result['user_id'] ?? 0);
+                    $login_redirect_after((string) $result['role'], $uid);
                 }
             }
         }
@@ -111,7 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 casting_rate_limit_clear('login');
                 casting_rate_limit_clear('login_otp');
                 casting_rate_limit_clear('otp_send');
-                $login_redirect_after((string) $result['role']);
+                $uid = (int) ($result['user']->ID ?? $result['user_id'] ?? 0);
+                $login_redirect_after((string) $result['role'], $uid);
             }
         }
     }

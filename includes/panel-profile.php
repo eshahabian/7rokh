@@ -179,20 +179,49 @@ function casting_profile_completion_items(array $profile, int $user_id = 0): arr
         ];
     }
 
+    $email = (string) ($profile['email'] ?? '');
+    $email_done = is_email($email) && !(function_exists('casting_is_placeholder_email') && casting_is_placeholder_email($email));
+    $name = trim((string) ($profile['name'] ?? ''));
+    $login = $user_id > 0 ? (string) (get_userdata($user_id)->user_login ?? '') : '';
+    $name_done = $name !== '' && casting_strlen($name) >= 2 && strcasecmp($name, $login) !== 0;
+
+    $edit = 'edit-profile.php';
     $checks = [
-        ['label' => 'تاریخ تولد', 'done' => (bool) (($profile['birthdate'] ?? '') !== '' || ($profile['age'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'جنسیت', 'done' => (bool) (($profile['gender'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'ایمیل', 'done' => (bool) is_email((string) ($profile['email'] ?? '')), 'href' => 'change-email.php', 'hint' => ''],
-        ['label' => 'موبایل', 'done' => (bool) (($profile['mobile'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
-        ['label' => 'استان و شهر', 'done' => (bool) (($profile['province'] ?? '') !== '' && ($profile['city'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''],
+        ['label' => 'نام و نام خانوادگی', 'done' => $name_done, 'href' => $edit, 'hint' => ''],
+        ['label' => 'تاریخ تولد', 'done' => (bool) (($profile['birthdate'] ?? '') !== '' || ($profile['age'] ?? '') !== ''), 'href' => $edit, 'hint' => ''],
+        ['label' => 'جنسیت', 'done' => (bool) (($profile['gender'] ?? '') !== ''), 'href' => $edit, 'hint' => ''],
+        ['label' => 'ایمیل', 'done' => $email_done, 'href' => 'change-email.php', 'hint' => ''],
+        ['label' => 'موبایل', 'done' => (bool) (($profile['mobile'] ?? '') !== ''), 'href' => $edit, 'hint' => ''],
+        ['label' => 'استان و شهر', 'done' => (bool) (($profile['province'] ?? '') !== '' && ($profile['city'] ?? '') !== ''), 'href' => $edit, 'hint' => ''],
     ];
     if (!$hide_talent) {
-        $checks[] = ['label' => 'قد و وزن', 'done' => (bool) (($profile['height'] ?? '') !== '' && ($profile['weight'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''];
+        $checks[] = ['label' => 'قد و وزن', 'done' => (bool) (($profile['height'] ?? '') !== '' && ($profile['weight'] ?? '') !== ''), 'href' => $edit, 'hint' => ''];
     }
-    $checks[] = ['label' => 'نوع فعالیت', 'done' => (bool) !empty($profile['activities']), 'href' => '#edit-profile', 'hint' => ''];
-    $checks[] = ['label' => 'درباره من', 'done' => (bool) (($profile['bio'] ?? '') !== ''), 'href' => '#edit-profile', 'hint' => ''];
+    $checks[] = ['label' => 'نوع فعالیت', 'done' => (bool) !empty($profile['activities']), 'href' => $edit, 'hint' => ''];
+    $checks[] = ['label' => 'درباره من', 'done' => (bool) (($profile['bio'] ?? '') !== ''), 'href' => $edit, 'hint' => ''];
 
     return array_merge($items, $checks);
+}
+
+function casting_profile_completion_percent(array $profile, int $user_id = 0): int
+{
+    $items = casting_profile_completion_items($profile, $user_id);
+    if ($items === []) {
+        return 0;
+    }
+    $done = 0;
+    foreach ($items as $item) {
+        if (!empty($item['done'])) {
+            $done++;
+        }
+    }
+
+    return (int) round(($done / count($items)) * 100);
+}
+
+function casting_profile_needs_completion(array $profile, int $user_id = 0): bool
+{
+    return casting_profile_completion_percent($profile, $user_id) < 100;
 }
 
 function casting_panel_missing_label(string $value, string $edit_href = '#edit-profile'): string
@@ -227,8 +256,8 @@ function casting_render_panel_completion_card(array $profile, int $user_id = 0):
       <h2 class="panel-section-title">تکمیل پروفایل</h2>
       <?php if ($done_count === $total) : ?>
       <p class="meta panel-completion-meta">همه موارد اصلی تکمیل شده است.</p>
-      <?php elseif (!$hide_talent) : ?>
-      <p class="meta panel-completion-meta"><?= ($total - $done_count) ?> مورد هنوز تکمیل نشده — موارد خالی را پر کنید تا پروفایل بهتر دیده شود.</p>
+      <?php else : ?>
+      <p class="meta panel-completion-meta">برای بهتر دیده شدن پروفایل خودتون را تکمیل کنید<?= $total > $done_count ? ' — ' . ($total - $done_count) . ' مورد باقی مانده' : '' ?>.</p>
       <?php endif; ?>
     </div>
     <div class="panel-completion-meter" aria-label="پیشرفت تکمیل پروفایل">
