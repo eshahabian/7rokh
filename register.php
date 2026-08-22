@@ -371,7 +371,8 @@ if ($otp_notice !== '') {
           </label>
         </div>
 
-        <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= ($account_unlocked && $rules_accepted) ? '' : ' disabled' ?>>ایجاد حساب</button>
+        <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= $account_unlocked ? '' : ' disabled' ?>>ایجاد حساب</button>
+        <p class="field-hint">برای فعال شدن دکمه، تیک «پذیرش قوانین» را بزنید.</p>
       </fieldset>
     </form>
 

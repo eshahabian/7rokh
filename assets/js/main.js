@@ -1479,6 +1479,26 @@
   });
 
   document.querySelectorAll("form[data-register-form]").forEach((form) => {
+    const syncRegisterSubmit = () => {
+      const submitBtn = form.querySelector("[data-register-submit]");
+      if (!(submitBtn instanceof HTMLButtonElement)) return;
+      const accountStep = form.querySelector(".register-step-account");
+      const accountLocked =
+        accountStep instanceof HTMLFieldSetElement
+          ? accountStep.disabled || accountStep.classList.contains("is-locked")
+          : false;
+      const rulesCheckbox = form.querySelector("[data-rules-consent-checkbox]");
+      const rulesOk =
+        !(rulesCheckbox instanceof HTMLInputElement) || rulesCheckbox.checked;
+      submitBtn.disabled = accountLocked || !rulesOk;
+    };
+
+    const rulesCheckbox = form.querySelector("[data-rules-consent-checkbox]");
+    if (rulesCheckbox instanceof HTMLInputElement) {
+      rulesCheckbox.addEventListener("change", syncRegisterSubmit);
+    }
+    syncRegisterSubmit();
+
     const focusRegisterField = (target) => {
       if (!target) return;
       const el =
