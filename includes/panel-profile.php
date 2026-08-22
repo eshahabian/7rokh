@@ -219,9 +219,30 @@ function casting_profile_completion_percent(array $profile, int $user_id = 0): i
     return (int) round(($done / count($items)) * 100);
 }
 
+/**
+ * موارد ناقص پروفایل (برای نمایش در خانه و کارت تکمیل).
+ *
+ * @return list<array{label:string,done:bool,href:string,hint:string}>
+ */
+function casting_profile_completion_missing(array $profile, int $user_id = 0): array
+{
+    $missing = [];
+    foreach (casting_profile_completion_items($profile, $user_id) as $item) {
+        if (empty($item['done'])) {
+            $missing[] = $item;
+        }
+    }
+
+    return $missing;
+}
+
+/**
+ * آیا بعد از ورود باید به ویرایش پروفایل هدایت شود؟
+ * فقط وقتی تکمیل زیر ۸۰٪ باشد؛ از ۸۰٪ به بالا کاربر به خانه می‌رود.
+ */
 function casting_profile_needs_completion(array $profile, int $user_id = 0): bool
 {
-    return casting_profile_completion_percent($profile, $user_id) < 100;
+    return casting_profile_completion_percent($profile, $user_id) < 80;
 }
 
 function casting_panel_missing_label(string $value, string $edit_href = '#edit-profile'): string
@@ -231,6 +252,34 @@ function casting_panel_missing_label(string $value, string $edit_href = '#edit-p
     }
 
     return casting_e($value);
+}
+
+/**
+ * خلاصهٔ تکمیل پروفایل داخل بنر خوش‌آمد صفحهٔ اصلی.
+ */
+function casting_render_home_greeting_completion(array $profile, int $user_id = 0): void
+{
+    $percent = casting_profile_completion_percent($profile, $user_id);
+    $missing = casting_profile_completion_missing($profile, $user_id);
+    if ($missing === [] || $percent >= 100) {
+        return;
+    }
+    ?>
+  <div class="panel-home-greeting-completion" aria-label="وضعیت تکمیل پروفایل">
+    <div class="panel-home-greeting-completion-meter">
+      <span class="panel-home-greeting-completion-value"><?= $percent ?>٪</span>
+      <span class="panel-home-greeting-completion-bar" style="--progress: <?= $percent ?>"></span>
+      <span class="panel-home-greeting-completion-label"><?= count($missing) ?> مورد مانده</span>
+    </div>
+    <ul class="panel-home-greeting-missing">
+      <?php foreach ($missing as $item) : ?>
+        <li>
+          <a href="<?= casting_e((string) ($item['href'] ?? 'edit-profile.php')) ?>"><?= casting_e((string) ($item['label'] ?? '')) ?></a>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  </div>
+    <?php
 }
 
 function casting_render_panel_completion_card(array $profile, int $user_id = 0): void

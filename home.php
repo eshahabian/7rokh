@@ -47,10 +47,13 @@ casting_render_flash();
 $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (string) ($profile['gender'] ?? ''));
 ?>
 <section class="panel-home" aria-label="خانه">
-  <header class="panel-home-greeting flash flash-success" role="status">
-    <p class="panel-home-greeting-eyebrow"><?= casting_brand_html() ?></p>
-    <h2 class="panel-home-greeting-title"><?= casting_e($welcome['headline']) ?></h2>
-    <p class="panel-home-greeting-sub"><?= casting_brandify($welcome['subline']) ?></p>
+  <header class="panel-home-greeting flash flash-success<?= casting_profile_completion_percent($profile, $user_id) < 100 ? ' has-completion' : '' ?>" role="status">
+    <div class="panel-home-greeting-copy">
+      <p class="panel-home-greeting-eyebrow"><?= casting_brand_html() ?></p>
+      <h2 class="panel-home-greeting-title"><?= casting_e($welcome['headline']) ?></h2>
+      <p class="panel-home-greeting-sub"><?= casting_brandify($welcome['subline']) ?></p>
+    </div>
+    <?php casting_render_home_greeting_completion($profile, $user_id); ?>
   </header>
 
   <?php
@@ -170,19 +173,7 @@ $welcome = casting_panel_home_welcome($user_id, (string) $user->display_name, (s
     </section>
   <?php endif; ?>
 
-  <?php
-  $completion_percent = function_exists('casting_profile_completion_percent')
-      ? casting_profile_completion_percent($profile, $user_id)
-      : ($complete ? 100 : 0);
-  if ($completion_percent < 100) :
-      if (!function_exists('casting_render_panel_completion_card')) {
-          require_once __DIR__ . '/includes/panel-profile.php';
-      }
-      ?>
-    <div class="panel-home-completion">
-      <?php casting_render_panel_completion_card($profile, $user_id); ?>
-    </div>
-  <?php elseif ($premium) : ?>
+  <?php if ($premium) : ?>
     <div class="panel-home-premium"><?php casting_render_premium_countdown($user_id); ?></div>
   <?php endif; ?>
 </section>
