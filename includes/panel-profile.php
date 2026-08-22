@@ -266,6 +266,7 @@ function casting_render_home_greeting_completion(array $profile, int $user_id = 
     }
     ?>
   <div class="panel-home-greeting-completion" aria-label="وضعیت تکمیل پروفایل">
+    <p class="panel-home-greeting-completion-title">درصد تکمیل پروفایل</p>
     <div class="panel-home-greeting-completion-meter">
       <span class="panel-home-greeting-completion-value"><?= $percent ?>٪</span>
       <span class="panel-home-greeting-completion-bar" style="--progress: <?= $percent ?>"></span>
