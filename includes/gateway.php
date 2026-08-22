@@ -32,24 +32,45 @@ function casting_gateway_mode(): string
 }
 
 /**
- * @return array<string, array{key:string,label:string,short:string,ready:bool,missing:string}>
+ * درگاه‌هایی که موقتاً از انتخاب کاربر خارج شده‌اند (کد و تنظیمات حذف نمی‌شود).
+ *
+ * @return list<string>
+ */
+function casting_gateway_temporarily_disabled_providers(): array
+{
+    // موقت: ملت تا رفع مشکل انتخاب نشود؛ سامان فعال است
+    return ['mellat'];
+}
+
+function casting_gateway_provider_is_temporarily_disabled(string $provider): bool
+{
+    $provider = strtolower(trim($provider));
+
+    return in_array($provider, casting_gateway_temporarily_disabled_providers(), true);
+}
+
+/**
+ * @return array<string, array{key:string,label:string,short:string,ready:bool,missing:string,selectable:bool}>
  */
 function casting_gateway_provider_options(): array
 {
+    // سامان اول نمایش داده می‌شود
     return [
-        'mellat' => [
-            'key'     => 'mellat',
-            'label'   => 'به‌پرداخت ملت',
-            'short'   => 'بانک ملت',
-            'ready'   => casting_behpardakht_has_credentials(),
-            'missing' => 'مشخصات ملت در بخش «درگاه پرداخت» ذخیره نشده است.',
-        ],
         'sep' => [
-            'key'     => 'sep',
-            'label'   => 'پرداخت الکترونیک سامان (SEP)',
-            'short'   => 'بانک سامان',
-            'ready'   => casting_sep_has_credentials(),
-            'missing' => 'شماره ترمینال سامان در بخش «درگاه پرداخت» ذخیره نشده است.',
+            'key'         => 'sep',
+            'label'       => 'پرداخت الکترونیک سامان (SEP)',
+            'short'       => 'بانک سامان',
+            'ready'       => casting_sep_has_credentials(),
+            'missing'     => 'شماره ترمینال سامان در بخش «درگاه پرداخت» ذخیره نشده است.',
+            'selectable'  => !casting_gateway_provider_is_temporarily_disabled('sep'),
+        ],
+        'mellat' => [
+            'key'         => 'mellat',
+            'label'       => 'به‌پرداخت ملت',
+            'short'       => 'بانک ملت',
+            'ready'       => casting_behpardakht_has_credentials(),
+            'missing'     => 'مشخصات ملت در بخش «درگاه پرداخت» ذخیره نشده است.',
+            'selectable'  => !casting_gateway_provider_is_temporarily_disabled('mellat'),
         ],
     ];
 }
@@ -62,7 +83,7 @@ function casting_gateway_available_providers(): array
     $options = casting_gateway_provider_options();
     $ready = [];
     foreach ($options as $key => $info) {
-        if (!empty($info['ready'])) {
+        if (!empty($info['ready']) && !empty($info['selectable'])) {
             $ready[$key] = [
                 'key'   => (string) $info['key'],
                 'label' => (string) $info['label'],
@@ -119,9 +140,13 @@ function casting_gateway_provider(): string
         }
     }
     if ($provider === '') {
-        $provider = 'mellat';
+        $provider = 'sep';
     }
-    if ($provider === 'sep' && !casting_sep_has_credentials() && casting_behpardakht_has_credentials()) {
+    if ($provider === 'mellat' && casting_gateway_provider_is_temporarily_disabled('mellat')) {
+        $provider = casting_sep_has_credentials() ? 'sep' : 'mellat';
+    }
+    if ($provider === 'sep' && !casting_sep_has_credentials() && casting_behpardakht_has_credentials()
+        && !casting_gateway_provider_is_temporarily_disabled('mellat')) {
         return 'mellat';
     }
     if ($provider === 'mellat' && !casting_behpardakht_has_credentials() && casting_sep_has_credentials()) {

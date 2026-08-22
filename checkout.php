@@ -128,6 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_gateway'])) 
         if ($picked === null) {
             $error = 'درگاه انتخاب‌شده معتبر نیست.';
             $show_gateway_step = true;
+        } elseif (empty($picked['selectable'])) {
+            $error = 'این درگاه موقتاً غیرفعال است. لطفاً درگاه دیگری را انتخاب کنید.';
+            $show_gateway_step = true;
         } elseif (empty($picked['ready'])) {
             $error = (string) ($picked['missing'] ?? 'این درگاه هنوز پیکربندی نشده است.');
             $show_gateway_step = true;
@@ -153,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_gateway'])) 
 
 $default_provider = '';
 foreach (['sep', 'mellat'] as $candidate) {
-    if (!empty($gateway_options[$candidate]['ready'])) {
+    if (!empty($gateway_options[$candidate]['ready']) && !empty($gateway_options[$candidate]['selectable'])) {
         $default_provider = $candidate;
         break;
     }
@@ -234,20 +237,24 @@ casting_render_flash();
 
       <fieldset class="checkout-gateway-options">
         <legend class="panel-section-title">درگاه بانکی</legend>
-        <?php foreach ($gateway_options as $key => $info) : ?>
-          <label class="checkout-gateway-option<?= empty($info['ready']) ? ' is-disabled' : '' ?>">
+        <?php foreach ($gateway_options as $key => $info) :
+          $option_disabled = empty($info['ready']) || empty($info['selectable']);
+          ?>
+          <label class="checkout-gateway-option<?= $option_disabled ? ' is-disabled' : '' ?>">
             <input
               type="radio"
               name="gateway_provider"
               value="<?= casting_e($key) ?>"
-              <?= empty($info['ready']) ? 'disabled' : '' ?>
+              <?= $option_disabled ? 'disabled' : '' ?>
               <?= ($default_provider === $key) ? 'checked' : '' ?>
-              required
+              <?= !$option_disabled ? 'required' : '' ?>
             >
             <span class="checkout-gateway-option-body">
               <strong><?= casting_e((string) $info['short']) ?></strong>
               <span class="meta"><?= casting_e((string) $info['label']) ?></span>
-              <?php if (empty($info['ready'])) : ?>
+              <?php if (empty($info['selectable'])) : ?>
+                <span class="meta checkout-gateway-option-warn">موقتاً غیرفعال — به‌زودی فعال می‌شود</span>
+              <?php elseif (empty($info['ready'])) : ?>
                 <span class="meta checkout-gateway-option-warn"><?= casting_e((string) $info['missing']) ?></span>
               <?php endif; ?>
             </span>
