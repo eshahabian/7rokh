@@ -3839,6 +3839,62 @@
     }
   });
 
+  /**
+   * Poll با backoff: وقتی پیام جدید نیست فاصله زیاد می‌شود؛ تب مخفی = خیلی کمتر درخواست.
+   * @param {() => Promise<boolean>|boolean} run — true اگر فعالیت جدید بود
+   * @param {{minMs?:number,maxMs?:number,hiddenMs?:number,factor?:number}} [opts]
+   */
+  const castingAdaptivePoll = (run, opts = {}) => {
+    const minMs = Number(opts.minMs) > 0 ? Number(opts.minMs) : 5000;
+    const maxMs = Number(opts.maxMs) > 0 ? Number(opts.maxMs) : 25000;
+    const hiddenMs = Number(opts.hiddenMs) > 0 ? Number(opts.hiddenMs) : 45000;
+    const factor = Number(opts.factor) > 1 ? Number(opts.factor) : 1.6;
+    let delay = minMs;
+    let timer = 0;
+    let stopped = false;
+
+    const schedule = () => {
+      if (stopped) return;
+      window.clearTimeout(timer);
+      const wait = document.hidden ? Math.max(delay, hiddenMs) : delay;
+      timer = window.setTimeout(async () => {
+        if (stopped) return;
+        if (document.hidden) {
+          schedule();
+          return;
+        }
+        let hadNew = false;
+        try {
+          hadNew = !!(await run());
+        } catch (_err) {
+          hadNew = false;
+        }
+        delay = hadNew ? minMs : Math.min(maxMs, Math.round(delay * factor));
+        schedule();
+      }, wait);
+    };
+
+    document.addEventListener("visibilitychange", () => {
+      if (stopped) return;
+      if (!document.hidden) {
+        delay = minMs;
+        schedule();
+      }
+    });
+
+    schedule();
+    return {
+      bump() {
+        delay = minMs;
+        schedule();
+      },
+      stop() {
+        stopped = true;
+        window.clearTimeout(timer);
+      },
+    };
+  };
+
   // ویجت شناور پیام‌ها + چت داخل همان پنل (در اپ موبایل مخفی است؛ JS را هم اجرا نکن)
   const messagesDock = document.querySelector("[data-messages-dock]");
   if (messagesDock && !castingIsNativeAppShell()) {
@@ -4037,10 +4093,16 @@
         if (threadEl && data.message) {
           const bubble = document.createElement("div");
           bubble.className = "messages-dock-bubble is-mine";
+          if (data.message.id) {
+            bubble.setAttribute("data-msg-id", String(data.message.id));
+            const newId = Number(data.message.id || 0);
+            if (newId > dockLastId) dockLastId = newId;
+          }
           bubble.textContent = data.message.message || message;
           threadEl.appendChild(bubble);
           threadEl.scrollTop = threadEl.scrollHeight;
         }
+        dockPoll.bump();
       } catch (e) {
         if (errEl) {
           errEl.hidden = false;
@@ -4060,40 +4122,48 @@
       if (event.key === "Escape") setOpen(false);
     });
 
-    const pollDockThread = async () => {
-      if (!(threadView instanceof HTMLElement) || threadView.hidden || document.hidden) return;
-      const peerId = Number(peerIdInput instanceof HTMLInputElement ? peerIdInput.value : 0);
-      if (!peerId || !cfg.url || !cfg.nonce) return;
-      try {
-        const url = new URL(cfg.url, window.location.origin);
-        url.searchParams.set("action", "thread");
-        url.searchParams.set("peer_id", String(peerId));
-        url.searchParams.set("after_id", String(dockLastId));
-        url.searchParams.set("_wpnonce", cfg.nonce);
-        const res = await fetch(url.toString(), { credentials: "same-origin", headers: { Accept: "application/json" } });
-        const data = await res.json();
-        if (!data || !data.ok || data.locked) return;
-        const incoming = Array.isArray(data.messages) ? data.messages : [];
-        incoming.forEach((msg) => {
-          if (!(threadEl instanceof HTMLElement)) return;
-          if (threadEl.querySelector('[data-msg-id="' + String(msg.id || "") + '"]')) return;
-          const bubble = document.createElement("div");
-          bubble.className = "messages-dock-bubble " + (msg.is_mine ? "is-mine" : "is-theirs");
-          bubble.setAttribute("data-msg-id", String(msg.id || ""));
-          bubble.textContent = msg.message || "";
-          threadEl.appendChild(bubble);
-        });
-        if (typeof data.last_id === "number" && data.last_id > dockLastId) {
-          dockLastId = data.last_id;
+    const dockPoll = castingAdaptivePoll(
+      async () => {
+        if (!(threadView instanceof HTMLElement) || threadView.hidden) return false;
+        const peerId = Number(peerIdInput instanceof HTMLInputElement ? peerIdInput.value : 0);
+        if (!peerId || !cfg.url || !cfg.nonce) return false;
+        try {
+          const url = new URL(cfg.url, window.location.origin);
+          url.searchParams.set("action", "thread");
+          url.searchParams.set("peer_id", String(peerId));
+          url.searchParams.set("after_id", String(dockLastId));
+          url.searchParams.set("poll", "1");
+          url.searchParams.set("_wpnonce", cfg.nonce);
+          const res = await fetch(url.toString(), {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" },
+          });
+          const data = await res.json();
+          if (!data || !data.ok || data.locked) return false;
+          const incoming = Array.isArray(data.messages) ? data.messages : [];
+          incoming.forEach((msg) => {
+            if (!(threadEl instanceof HTMLElement)) return;
+            if (threadEl.querySelector('[data-msg-id="' + String(msg.id || "") + '"]')) return;
+            const bubble = document.createElement("div");
+            bubble.className = "messages-dock-bubble " + (msg.is_mine ? "is-mine" : "is-theirs");
+            bubble.setAttribute("data-msg-id", String(msg.id || ""));
+            bubble.textContent = msg.message || "";
+            threadEl.appendChild(bubble);
+          });
+          if (typeof data.last_id === "number" && data.last_id > dockLastId) {
+            dockLastId = data.last_id;
+          }
+          if (incoming.length && threadEl instanceof HTMLElement) {
+            threadEl.scrollTop = threadEl.scrollHeight;
+          }
+          return incoming.length > 0;
+        } catch (_err) {
+          return false;
         }
-        if (incoming.length && threadEl instanceof HTMLElement) {
-          threadEl.scrollTop = threadEl.scrollHeight;
-        }
-      } catch (_err) {
-        /* silent */
-      }
-    };
-    window.setInterval(pollDockThread, 3500);
+      },
+      { minMs: 5000, maxMs: 25000, hiddenMs: 45000 }
+    );
+    messagesDock.addEventListener("click", () => dockPoll.bump());
   }
 
   // چت زنده: پیام جدید بدون رفرش
@@ -4132,34 +4202,39 @@
     const peerId = Number(liveThread.getAttribute("data-peer-id") || "0");
     const peerName = liveThread.getAttribute("data-peer-name") || "";
     const locked = liveThread.getAttribute("data-locked") === "1";
-    const pollLive = async () => {
-      if (document.hidden || !peerId || locked) return;
-      try {
-        const url = new URL(chatDockCfg.url, window.location.origin);
-        url.searchParams.set("action", "thread");
-        url.searchParams.set("peer_id", String(peerId));
-        url.searchParams.set("after_id", String(lastId));
-        url.searchParams.set("_wpnonce", chatDockCfg.nonce);
-        const res = await fetch(url.toString(), {
-          credentials: "same-origin",
-          headers: { Accept: "application/json" },
-        });
-        const data = await res.json();
-        if (!data || !data.ok) return;
-        if (data.locked) {
-          window.location.reload();
-          return;
+    const livePoll = castingAdaptivePoll(
+      async () => {
+        if (!peerId || locked) return false;
+        try {
+          const url = new URL(chatDockCfg.url, window.location.origin);
+          url.searchParams.set("action", "thread");
+          url.searchParams.set("peer_id", String(peerId));
+          url.searchParams.set("after_id", String(lastId));
+          url.searchParams.set("poll", "1");
+          url.searchParams.set("_wpnonce", chatDockCfg.nonce);
+          const res = await fetch(url.toString(), {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" },
+          });
+          const data = await res.json();
+          if (!data || !data.ok) return false;
+          if (data.locked) {
+            window.location.reload();
+            return false;
+          }
+          const incoming = Array.isArray(data.messages) ? data.messages : [];
+          incoming.forEach((msg) => appendLiveBubble(liveThread, msg, peerName));
+          if (typeof data.last_id === "number" && data.last_id > lastId) {
+            lastId = data.last_id;
+            liveThread.setAttribute("data-last-id", String(lastId));
+          }
+          return incoming.length > 0;
+        } catch (_err) {
+          return false;
         }
-        (data.messages || []).forEach((msg) => appendLiveBubble(liveThread, msg, peerName));
-        if (typeof data.last_id === "number" && data.last_id > lastId) {
-          lastId = data.last_id;
-          liveThread.setAttribute("data-last-id", String(lastId));
-        }
-      } catch (_err) {
-        /* silent */
-      }
-    };
-    window.setInterval(pollLive, 3000);
+      },
+      { minMs: 4000, maxMs: 20000, hiddenMs: 40000 }
+    );
 
     const liveForm = document.querySelector("[data-chat-live-send]");
     if (liveForm instanceof HTMLFormElement) {
@@ -4203,6 +4278,7 @@
               liveThread.setAttribute("data-last-id", String(lastId));
             }
           }
+          livePoll.bump();
         } catch (_err) {
           window.alert("خطا در ارسال پیام.");
         } finally {
@@ -4215,24 +4291,29 @@
   const inboxRoot = document.querySelector("[data-chat-inbox]");
   if (inboxRoot instanceof HTMLElement && chatDockCfg.url && chatDockCfg.nonce && !liveThread) {
     let fingerprint = inboxRoot.getAttribute("data-chat-inbox") || "";
-    window.setInterval(async () => {
-      if (document.hidden) return;
-      try {
-        const url = new URL(chatDockCfg.url, window.location.origin);
-        url.searchParams.set("action", "inbox");
-        url.searchParams.set("_wpnonce", chatDockCfg.nonce);
-        const res = await fetch(url.toString(), {
-          credentials: "same-origin",
-          headers: { Accept: "application/json" },
-        });
-        const data = await res.json();
-        if (data && data.ok && data.fingerprint && data.fingerprint !== fingerprint) {
-          window.location.reload();
+    castingAdaptivePoll(
+      async () => {
+        try {
+          const url = new URL(chatDockCfg.url, window.location.origin);
+          url.searchParams.set("action", "inbox");
+          url.searchParams.set("fp_only", "1");
+          url.searchParams.set("_wpnonce", chatDockCfg.nonce);
+          const res = await fetch(url.toString(), {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" },
+          });
+          const data = await res.json();
+          if (data && data.ok && data.fingerprint && data.fingerprint !== fingerprint) {
+            window.location.reload();
+            return true;
+          }
+          return false;
+        } catch (_err) {
+          return false;
         }
-      } catch (_err) {
-        /* silent */
-      }
-    }, 5000);
+      },
+      { minMs: 8000, maxMs: 30000, hiddenMs: 60000 }
+    );
   }
 
   // فیلتر مخاطبین در صفحه چت کامل (ادمین)

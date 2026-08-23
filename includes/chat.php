@@ -1126,6 +1126,112 @@ function casting_dm_thread(int $user_id, int $peer_id, int $limit = 200): array
 }
 
 /**
+ * آخرین id پیام در یک گفتگو (برای poll سبک).
+ */
+function casting_dm_thread_max_id(int $user_id, int $peer_id): int
+{
+    if ($user_id <= 0 || $peer_id <= 0) {
+        return 0;
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    return (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT MAX(id) FROM {$table}
+         WHERE (sender_id = %d AND recipient_id = %d)
+            OR (sender_id = %d AND recipient_id = %d)",
+        $user_id,
+        $peer_id,
+        $peer_id,
+        $user_id
+    ));
+}
+
+/**
+ * فقط پیام‌های بعد از after_id (مسیر poll).
+ *
+ * @return list<array{id:int,sender_id:int,recipient_id:int,message:string,created_at:string,is_mine:bool}>
+ */
+function casting_dm_thread_after(int $user_id, int $peer_id, int $after_id, int $limit = 50): array
+{
+    if ($user_id <= 0 || $peer_id <= 0 || $after_id < 0) {
+        return [];
+    }
+    if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($user_id, $peer_id)) {
+        return [];
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    $limit = max(1, min(100, $limit));
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $rows = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT id, sender_id, recipient_id, message, created_at
+             FROM {$table}
+             WHERE id > %d
+               AND (
+                    (sender_id = %d AND recipient_id = %d)
+                 OR (sender_id = %d AND recipient_id = %d)
+               )
+             ORDER BY id ASC
+             LIMIT %d",
+            $after_id,
+            $user_id,
+            $peer_id,
+            $peer_id,
+            $user_id,
+            $limit
+        ),
+        ARRAY_A
+    );
+
+    if (!is_array($rows)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $row) {
+        $out[] = [
+            'id'           => (int) $row['id'],
+            'sender_id'    => (int) $row['sender_id'],
+            'recipient_id' => (int) $row['recipient_id'],
+            'message'      => (string) $row['message'],
+            'created_at'   => (string) $row['created_at'],
+            'is_mine'      => (int) $row['sender_id'] === $user_id,
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * اثرانگشت سبک inbox برای تشخیص تغییر بدون بارگذاری لیست کامل.
+ */
+function casting_dm_inbox_fingerprint(int $user_id): string
+{
+    if ($user_id <= 0) {
+        return '';
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $max_id = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT MAX(id) FROM {$table} WHERE sender_id = %d OR recipient_id = %d",
+        $user_id,
+        $user_id
+    ));
+    $unread = casting_dm_unread_peer_count($user_id);
+
+    return md5($max_id . ':' . $unread);
+}
+
+/**
  * @return array<int, array{peer_id:int,name:string,role:string,last_message:string,last_at:string,unread:int,avatar:string}>
  */
 function casting_dm_conversations(int $user_id): array

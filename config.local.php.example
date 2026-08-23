@@ -38,3 +38,9 @@ define('CASTING_SMS_OTP_TEMPLATE', 'کد ورود شما {x}');
 // define('CASTING_BEHPARDAKHT_TERMINAL_ID', '');
 // define('CASTING_BEHPARDAKHT_USERNAME', '');
 // define('CASTING_BEHPARDAKHT_PASSWORD', '');
+
+/**
+ * آف‌لود استریم مدیا به LiteSpeed (آزاد کردن PHP).
+ * اگر پخش ویدیو خالی شد، این را false کنید تا استریم PHP فعال شود.
+ */
+// define('CASTING_MEDIA_OFFLOAD', true);

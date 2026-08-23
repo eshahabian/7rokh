@@ -136,11 +136,7 @@ $thread_last_id = 0;
 foreach ($thread as $msg) {
     $thread_last_id = max($thread_last_id, (int) ($msg['id'] ?? 0));
 }
-$inbox_fp_parts = [];
-foreach ($conversations as $conv) {
-    $inbox_fp_parts[] = ((int) ($conv['peer_id'] ?? 0)) . '-' . ((int) ($conv['unread'] ?? 0)) . '-' . (string) ($conv['last_at'] ?? '');
-}
-$inbox_fp = md5(implode('|', $inbox_fp_parts));
+$inbox_fp = casting_dm_inbox_fingerprint($my_id);
 
 casting_render_panel_start('پیام‌های من', 'messages');
 if ($error !== '') {

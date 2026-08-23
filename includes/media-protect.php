@@ -413,3 +413,89 @@ function casting_media_saved_count(int $director_id): int
         $director_id
     ));
 }
+
+/**
+ * آیا آف‌لود استریم به وب‌سرور فعال است؟ (قابل خاموش‌کردن با ثابت)
+ */
+function casting_media_offload_enabled(): bool
+{
+    if (defined('CASTING_MEDIA_OFFLOAD') && !CASTING_MEDIA_OFFLOAD) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * مسیر فایل نسبت به document root برای X-LiteSpeed-Location / X-Accel-Redirect.
+ */
+function casting_media_path_to_docroot_uri(string $path): string
+{
+    $real = realpath($path);
+    if ($real === false) {
+        return '';
+    }
+
+    $docroot = realpath((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+    if (!is_string($docroot) || $docroot === '') {
+        return '';
+    }
+
+    $real_n = str_replace('\\', '/', $real);
+    $root_n = str_replace('\\', '/', $docroot);
+    if (!str_starts_with($real_n, $root_n)) {
+        return '';
+    }
+
+    $uri = substr($real_n, strlen($root_n));
+    if ($uri === '' || $uri[0] !== '/') {
+        $uri = '/' . ltrim($uri, '/');
+    }
+
+    return $uri;
+}
+
+/**
+ * بعد از احراز هویت، فایل را به LiteSpeed/nginx بسپار تا PHP worker آزاد شود.
+ * اگر آف‌لود ممکن نباشد false برمی‌گرداند تا استریم PHP انجام شود.
+ */
+function casting_media_try_offload_stream(string $path, string $mime): bool
+{
+    if (!casting_media_offload_enabled() || headers_sent()) {
+        return false;
+    }
+
+    $real = realpath($path);
+    if ($real === false || !is_file($real) || !is_readable($real)) {
+        return false;
+    }
+
+    $software = strtolower((string) ($_SERVER['SERVER_SOFTWARE'] ?? ''));
+    $is_litespeed = str_contains($software, 'litespeed');
+    $is_nginx = str_contains($software, 'nginx');
+    $uri = casting_media_path_to_docroot_uri($real);
+
+    if ($uri === '') {
+        return false;
+    }
+
+    header('Content-Type: ' . $mime);
+    header('Accept-Ranges: bytes');
+    header('Cache-Control: private, no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    header('X-Content-Type-Options: nosniff');
+    header('Content-Disposition: inline; filename="media"');
+
+    if ($is_litespeed) {
+        // LiteSpeed فایل را خودش سرو می‌کند (Range هم سمت سرور).
+        header('X-LiteSpeed-Location: ' . $uri);
+        return true;
+    }
+
+    if ($is_nginx) {
+        header('X-Accel-Redirect: ' . $uri);
+        return true;
+    }
+
+    return false;
+}

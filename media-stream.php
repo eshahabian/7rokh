@@ -4,6 +4,7 @@ declare(strict_types=1);
 /**
  * استریم فایل پیوست فقط برای کاربر مجاز پورتال.
  * URL مستقیم wp-content در پلیر محافظت‌شده استفاده نمی‌شود.
+ * روی LiteSpeed بعد از چک دسترسی، فایل به وب‌سرور سپرده می‌شود تا PHP اشغال نماند.
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';
@@ -42,6 +43,11 @@ $mime = get_post_mime_type($aid);
 if (!is_string($mime) || $mime === '') {
     $ftype = wp_check_filetype($path);
     $mime = is_array($ftype) && !empty($ftype['type']) ? (string) $ftype['type'] : 'application/octet-stream';
+}
+
+// آزاد کردن PHP worker: LiteSpeed/nginx فایل را مستقیم سرو می‌کنند.
+if (casting_media_try_offload_stream($path, $mime)) {
+    exit;
 }
 
 $size = (int) filesize($path);
@@ -90,7 +96,7 @@ if ($start > 0) {
     fseek($fp, $start);
 }
 $remaining = $length;
-$chunk = 8192;
+$chunk = 65536;
 while ($remaining > 0 && !feof($fp)) {
     $read = ($remaining > $chunk) ? $chunk : $remaining;
     $data = fread($fp, $read);
