@@ -6972,12 +6972,25 @@ a.panel-home-filter-chip:focus-visible {
   top: 0.45rem;
   inset-inline-end: 0.45rem;
   z-index: 3;
-  padding: 0.15rem 0.4rem;
+  padding: 0.18rem 0.48rem;
   border-radius: 999px;
-  background: rgba(8, 10, 14, 0.72);
-  color: var(--accent-strong);
-  font-size: 0.68rem;
-  font-weight: 700;
+  background: rgba(8, 10, 14, 0.78);
+  color: #f0d4a8;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  border: 1px solid rgba(240, 212, 168, 0.45);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="day"] .panel-ad-badge {
+  background: rgba(26, 32, 48, 0.88);
+  color: #ffe7bc;
+  border-color: rgba(255, 231, 188, 0.55);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.28);
+  text-shadow: none;
 }
 
 .panel-ad-card-media .chip-official {
@@ -7942,7 +7955,10 @@ html.is-native-app .panel-stat-card span {
 .member-card-photo-chip {
   top: 0.4rem;
   inset-inline-start: 0.4rem;
-  color: var(--accent-strong);
+  color: #f0d4a8;
+  border: 1px solid rgba(240, 212, 168, 0.45);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
 }
 
 .member-card-photo-score {
@@ -7952,8 +7968,11 @@ html.is-native-app .panel-stat-card span {
 
 html[data-theme="day"] .member-card-photo-chip,
 html[data-theme="day"] .member-card-photo-score {
-  background: rgba(26, 32, 48, 0.78);
-  color: #fffdf9;
+  background: rgba(26, 32, 48, 0.88);
+  color: #ffe7bc;
+  border-color: rgba(255, 231, 188, 0.55);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.28);
+  text-shadow: none;
 }
 
 .member-card-photo .presence-dot {

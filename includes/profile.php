@@ -4060,32 +4060,55 @@ function casting_render_member_count_tiles(?array $counts = null, string $extra_
     <?php
 }
 
+/**
+ * تبدیل datetime محلی وردپرس به timestamp یونیکس (بدون باگ timezone).
+ * strtotime() روی هاست UTC رشته‌ی تهران را اشتباه می‌خواند و چراغ آنلاین غلط روشن می‌ماند.
+ */
+function casting_mysql_local_to_timestamp(string $mysql): int
+{
+    $mysql = trim($mysql);
+    if ($mysql === '' || $mysql === '0000-00-00 00:00:00') {
+        return 0;
+    }
+    try {
+        $dt = date_create($mysql, wp_timezone());
+        if ($dt instanceof DateTimeInterface) {
+            return $dt->getTimestamp();
+        }
+    } catch (Exception $e) {
+        // fall through
+    }
+    $ts = strtotime($mysql);
+
+    return $ts !== false ? $ts : 0;
+}
+
 function casting_touch_last_active(int $user_id): void
 {
     if ($user_id <= 0) {
         return;
     }
     $prev = (string) get_user_meta($user_id, 'casting_last_active', true);
-    $now = time();
-    if ($prev !== '' && ($now - (int) strtotime($prev)) < 300) {
+    $prev_ts = casting_mysql_local_to_timestamp($prev);
+    if ($prev_ts > 0 && (time() - $prev_ts) < 300) {
         return;
     }
     update_user_meta($user_id, 'casting_last_active', current_time('mysql'));
 }
 
-/** آنلاین اگر در ۱۵ دقیقه اخیر فعالیت داشته باشد. */
+/** آنلاین اگر در ۵ دقیقه اخیر فعالیت واقعی داشته باشد. */
 function casting_member_is_online(int $user_id): bool
 {
     if ($user_id <= 0) {
         return false;
     }
     $last = (string) get_user_meta($user_id, 'casting_last_active', true);
-    if ($last === '') {
+    $ts = casting_mysql_local_to_timestamp($last);
+    if ($ts <= 0) {
         return false;
     }
-    $ts = strtotime($last);
 
-    return $ts !== false && (time() - $ts) <= 15 * MINUTE_IN_SECONDS;
+    return (time() - $ts) <= 5 * MINUTE_IN_SECONDS;
 }
 
 /**
