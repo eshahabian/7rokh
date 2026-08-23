@@ -38,8 +38,7 @@ function casting_gateway_mode(): string
  */
 function casting_gateway_temporarily_disabled_providers(): array
 {
-    // موقت: ملت تا رفع مشکل انتخاب نشود؛ سامان فعال است
-    return ['mellat'];
+    return [];
 }
 
 function casting_gateway_provider_is_temporarily_disabled(string $provider): bool
