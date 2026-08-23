@@ -5,6 +5,13 @@
   "server": {
     "url": "https://7rokh.ir/casting-portal/",
     "cleartext": false,
-    "allowNavigation": ["7rokh.ir", "*.7rokh.ir"]
+    "allowNavigation": [
+      "7rokh.ir",
+      "*.7rokh.ir",
+      "shaparak.ir",
+      "*.shaparak.ir",
+      "behpardakht.com",
+      "*.behpardakht.com"
+    ]
   }
 }

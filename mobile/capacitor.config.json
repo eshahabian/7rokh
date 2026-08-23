@@ -7,7 +7,11 @@
     "cleartext": false,
     "allowNavigation": [
       "7rokh.ir",
-      "*.7rokh.ir"
+      "*.7rokh.ir",
+      "shaparak.ir",
+      "*.shaparak.ir",
+      "behpardakht.com",
+      "*.behpardakht.com"
     ]
   },
   "android": {
