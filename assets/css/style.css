@@ -1691,13 +1691,17 @@ fieldset.field legend {
   border-radius: 12px;
   overflow: hidden;
   background: #0b0d12;
+  max-width: 100%;
 }
 
 .video-preview-frame video,
 .profile-video-player video {
   display: block;
   width: 100%;
-  max-height: 360px;
+  height: auto;
+  max-height: min(72vh, 720px);
+  object-fit: contain;
+  object-position: center;
   background: #0b0d12;
 }
 
@@ -5828,7 +5832,9 @@ html[data-theme="day"] .ig-profile-cell--thumb .ig-profile-pending-delete .btn {
 .ig-profile-cell video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  background: #111;
   display: block;
 }
 
@@ -6540,7 +6546,11 @@ a.panel-home-filter-chip:focus-visible {
 .home-feed-post-media video {
   display: block;
   width: 100%;
-  object-fit: cover;
+  height: auto;
+  max-height: min(72vh, 720px);
+  object-fit: contain;
+  object-position: center;
+  background: #111;
 }
 
 .home-feed-post-media .media-protect-play,
@@ -7174,7 +7184,8 @@ a.panel-home-filter-chip:focus-visible {
   display: block;
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   background: #111;
   flex: 0 0 auto;
 }
@@ -7229,7 +7240,8 @@ a.panel-home-filter-chip:focus-visible {
   width: 100%;
   border-radius: 8px;
   max-height: 220px;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   background: #111;
 }
 
@@ -10708,18 +10720,22 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
   width: 100%;
   height: auto;
   max-height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   -webkit-user-drag: none;
   user-select: none;
 }
 
 .media-protect--video {
-  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-height: min(72vh, 720px);
+  aspect-ratio: var(--media-ar, 16 / 9);
 }
 
 .media-protect--intro.media-protect--video,
 .profile-video-player .media-protect--video {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--media-ar, auto);
+  max-height: min(72vh, 720px);
 }
 
 .media-protect-source {
@@ -10730,7 +10746,8 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
   opacity: 0;
   pointer-events: none;
   z-index: 0;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .media-protect--video.is-video-fallback .media-protect-source {
@@ -10867,36 +10884,40 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
   background: #111;
 }
 
-.home-feed-post-media .media-protect img,
+.home-feed-post-media .media-protect img {
+  aspect-ratio: var(--media-ar, auto);
+  object-fit: contain;
+  object-position: center;
+  max-height: min(72vh, 720px);
+  height: auto;
+}
+
 .profile-media-item .media-protect img {
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
+  aspect-ratio: 1;
+  object-fit: contain;
+  object-position: center;
   max-height: none;
 }
 
-/* خانه: عرض ۲ برابر، طول ۱٫۵ برابر → نسبت ۴:۳ */
-.home-feed-post-media .media-protect img {
-  aspect-ratio: 4 / 3;
-}
-
-.home-feed-post-media .media-protect--video,
 .profile-media-item .media-protect--video {
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 1;
+  max-height: none;
 }
 
 .home-feed-post-media .media-protect--video {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: var(--media-ar, auto);
 }
 
 .profile-video-player .media-protect video,
 .profile-video-player .media-protect-canvas {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: auto;
   object-fit: contain;
+  object-position: center;
   background: #000;
 }
 
 .post-lightbox-media .media-protect--video {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--media-ar, auto);
   max-height: min(70vh, 720px);
 }
 

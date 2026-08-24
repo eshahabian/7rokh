@@ -3193,8 +3193,24 @@
     document.documentElement.classList.remove("media-protect-obscured");
   });
 
+  const mediaUsesNativeAspect = (root) => {
+    if (!root) return false;
+    if (root.closest(".ig-profile-cell--thumb")) return false;
+    if (root.closest(".profile-media-grid") && !root.closest(".post-lightbox-media")) return false;
+    return true;
+  };
+
+  const applyNativeMediaAspect = (root, w, h) => {
+    if (!root || !(w > 0) || !(h > 0) || !mediaUsesNativeAspect(root)) return;
+    root.style.setProperty("--media-ar", `${w} / ${h}`);
+    root.style.aspectRatio = `${w} / ${h}`;
+  };
+
   const paintProtectedFrame = (root, video, canvas, ctx) => {
     try {
+      const vw = video.videoWidth || 0;
+      const vh = video.videoHeight || 0;
+      applyNativeMediaAspect(root, vw, vh);
       const rect = root.getBoundingClientRect();
       const cssW = Math.max(1, Math.round(rect.width * (window.devicePixelRatio || 1)));
       const cssH = Math.max(1, Math.round(rect.height * (window.devicePixelRatio || 1)));
@@ -3204,10 +3220,8 @@
       }
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      const vw = video.videoWidth || 0;
-      const vh = video.videoHeight || 0;
       if (vw > 0 && vh > 0) {
-        const scale = Math.max(canvas.width / vw, canvas.height / vh);
+        const scale = Math.min(canvas.width / vw, canvas.height / vh);
         const dw = vw * scale;
         const dh = vh * scale;
         const dx = (canvas.width - dw) / 2;
@@ -3334,6 +3348,10 @@
       video.currentTime = (Number(seek.value) / 1000) * video.duration;
       paintProtectedFrame(root, video, canvas, ctx);
     });
+    video.addEventListener("loadedmetadata", () => {
+      applyNativeMediaAspect(root, video.videoWidth, video.videoHeight);
+      requestAnimationFrame(() => paintProtectedFrame(root, video, canvas, ctx));
+    });
     video.addEventListener("loadeddata", () => paintProtectedFrame(root, video, canvas, ctx));
     video.addEventListener("seeked", () => paintProtectedFrame(root, video, canvas, ctx));
     video.addEventListener("pause", syncUi);
@@ -3358,8 +3376,18 @@
     if (controls) controls.hidden = false;
   };
 
+  const initProtectedImage = (root) => {
+    if (!root || root.classList.contains("media-protect--video")) return;
+    const img = root.querySelector("img");
+    if (!img) return;
+    const apply = () => applyNativeMediaAspect(root, img.naturalWidth, img.naturalHeight);
+    if (img.complete && img.naturalWidth > 0) apply();
+    else img.addEventListener("load", apply, { once: true });
+  };
+
   const bootProtectedVideos = (scope) => {
     (scope || document).querySelectorAll("[data-video-protect]").forEach(initProtectedVideo);
+    (scope || document).querySelectorAll("[data-media-protect]:not(.media-protect--video)").forEach(initProtectedImage);
   };
   bootProtectedVideos(document);
 
