@@ -91,6 +91,30 @@ function casting_process_profile_post(int $user_id): array
         return $out;
     }
 
+    if (casting_user_can_upload_portraits($user_id)) {
+        $actor_photos = casting_user_uses_actor_portrait_set($user_id);
+        $has_photo = false;
+        if ($actor_photos) {
+            foreach (array_keys(casting_all_portrait_slots()) as $slot) {
+                if (!empty($_FILES['photo_' . $slot]['name'])) {
+                    $has_photo = true;
+                    break;
+                }
+            }
+        } else {
+            $has_photo = !empty($_FILES['photo_medium']['name']);
+        }
+        if ($has_photo) {
+            $photo_res = $actor_photos
+                ? casting_handle_portrait_uploads($user_id, false)
+                : casting_handle_portrait_upload($user_id, 'medium');
+            if (!$photo_res['ok']) {
+                $out['error'] = (string) ($photo_res['error'] ?? 'آپلود عکس ناموفق بود.');
+                return $out;
+            }
+        }
+    }
+
     $save = casting_save_profile($user_id, [
         'name'                => $_POST['name'] ?? '',
         'birthdate'           => casting_birthdate_from_jalali_post($_POST) ?? '',
@@ -858,10 +882,20 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
         <?php
     }
     ?>
-  <p class="lede">می‌توانید همهٔ اطلاعات پروفایل را دوباره تغییر دهید؛ فیلدهای ستاره‌دار همچنان الزامی‌اند.<?php if (casting_profile_shows_portraits($profile['activities'] ?? [], $user_id)) : ?> برای <?= casting_user_uses_actor_portrait_set($user_id) ? 'عکس‌ها' : 'عکس پروفایل' ?> به <a href="profile-photo.php">ویرایش تصویر</a> بروید.<?php endif; ?> رمز عبور را از <a href="change-password.php">تنظیمات</a> عوض کنید.</p>
+  <p class="lede">می‌توانید همهٔ اطلاعات پروفایل را دوباره تغییر دهید؛ فیلدهای ستاره‌دار همچنان الزامی‌اند. رمز عبور را از <a href="change-password.php">تنظیمات</a> عوض کنید.</p>
 
   <form class="form" method="post" action="edit-profile.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
     <?php wp_nonce_field('casting_profile'); ?>
+
+    <?php if (casting_user_can_upload_portraits($user_id)) : ?>
+    <h3 class="panel-section-title" id="profile-photos">عکس پروفایل</h3>
+    <?php if (casting_user_uses_actor_portrait_set($user_id)) : ?>
+      <?php casting_render_portrait_upload_fields($profile['portraits'] ?? [], false); ?>
+    <?php else : ?>
+      <?php casting_render_single_profile_photo_field($profile['portraits'] ?? [], false); ?>
+    <?php endif; ?>
+    <p class="field-hint">عکس‌ها را همین‌جا انتخاب کنید؛ با ذخیرهٔ پروفایل آپلود می‌شوند. مدیریت جدا: <a href="profile-photo.php">ویرایش تصویر</a>.</p>
+    <?php endif; ?>
 
     <h3 class="panel-section-title" id="account-email">اطلاعات حساب</h3>
     <div class="field">

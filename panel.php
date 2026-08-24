@@ -77,10 +77,17 @@ casting_render_panel_completion_card($profile, $user_id);
 <section class="ig-profile" aria-label="پروفایل من">
   <header class="ig-profile-header">
     <div class="ig-profile-avatar<?= $photo !== '' ? ' has-photo' : '' ?>">
+      <?php if ($can_photos) : ?>
+        <a href="<?= casting_e(casting_url('profile-photo.php')) ?>" class="ig-profile-avatar-edit" title="تغییر عکس پروفایل" aria-label="تغییر عکس پروفایل">
+      <?php endif; ?>
       <?php if ($photo !== '') : ?>
         <img src="<?= casting_e($photo) ?>" alt="<?= casting_e((string) $user->display_name) ?>">
       <?php else : ?>
         <span class="ig-profile-avatar-fallback" aria-hidden="true"><?= casting_e(function_exists('mb_substr') ? mb_substr((string) $user->display_name, 0, 1, 'UTF-8') : substr((string) $user->display_name, 0, 1)) ?></span>
+      <?php endif; ?>
+      <?php if ($can_photos) : ?>
+          <span class="ig-profile-avatar-edit-hint"><?= $photo !== '' ? 'تغییر عکس' : 'افزودن عکس' ?></span>
+        </a>
       <?php endif; ?>
       <?php casting_render_presence_dot($user_id, 'lg'); ?>
     </div>
@@ -205,17 +212,36 @@ casting_render_panel_completion_card($profile, $user_id);
   <?php endif; ?>
 
   <?php if ($gallery_items === []) : ?>
-    <div class="ig-profile-empty">
-      <p><?= $pending_items !== [] ? 'هنوز پست تأییدشده‌ای ندارید.' : 'هنوز پستی منتشر نشده است.' ?></p>
+    <div class="ig-profile-grid">
       <?php if ($can_gallery) : ?>
-        <a class="btn btn-primary" href="<?= casting_e(casting_url('my-gallery.php')) ?>">اولین پست را اضافه کنید</a>
-        <?php if (!casting_user_can_auto_publish_media($user_id)) : ?>
-          <p class="meta">پس از تأیید مدیر، پست در پروفایل دیده می‌شود.</p>
-        <?php endif; ?>
+        <a class="ig-profile-cell ig-profile-cell--thumb ig-profile-cell--add" href="<?= casting_e(casting_url('my-gallery.php')) ?>">
+          <span class="ig-profile-add-icon" aria-hidden="true">+</span>
+          <span class="ig-profile-add-label">افزودن عکس یا ویدیو</span>
+        </a>
+      <?php endif; ?>
+      <?php if ($can_photos && $photo === '') : ?>
+        <a class="ig-profile-cell ig-profile-cell--thumb ig-profile-cell--add" href="<?= casting_e(casting_url('profile-photo.php')) ?>">
+          <span class="ig-profile-add-icon" aria-hidden="true">+</span>
+          <span class="ig-profile-add-label">عکس پروفایل</span>
+        </a>
+      <?php endif; ?>
+      <?php if (!$can_gallery && !($can_photos && $photo === '')) : ?>
+        <div class="ig-profile-empty ig-profile-empty--in-grid">
+          <p>هنوز پستی منتشر نشده است.</p>
+        </div>
       <?php endif; ?>
     </div>
+    <?php if ($can_gallery && !casting_user_can_auto_publish_media($user_id)) : ?>
+      <p class="meta ig-profile-empty-hint">پس از تأیید مدیر، پست در پروفایل دیده می‌شود.</p>
+    <?php endif; ?>
   <?php else : ?>
     <div class="ig-profile-grid">
+      <?php if ($can_gallery) : ?>
+        <a class="ig-profile-cell ig-profile-cell--thumb ig-profile-cell--add" href="<?= casting_e(casting_url('my-gallery.php')) ?>">
+          <span class="ig-profile-add-icon" aria-hidden="true">+</span>
+          <span class="ig-profile-add-label">افزودن پست</span>
+        </a>
+      <?php endif; ?>
       <?php foreach ($gallery_items as $item) :
           $url = casting_user_media_url($item);
           $thumb = casting_user_media_thumb_url($item);

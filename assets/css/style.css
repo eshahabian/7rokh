@@ -1692,14 +1692,16 @@ fieldset.field legend {
   overflow: hidden;
   background: #0b0d12;
   max-width: 100%;
+  width: 100%;
+  aspect-ratio: 16 / 9;
 }
 
 .video-preview-frame video,
 .profile-video-player video {
   display: block;
   width: 100%;
-  height: auto;
-  max-height: min(72vh, 720px);
+  height: 100%;
+  max-height: none;
   object-fit: contain;
   object-position: center;
   background: #0b0d12;
@@ -5545,6 +5547,65 @@ html[data-theme="day"] .ad-spec-box {
 
 .ig-profile-avatar img {
   display: block;
+}
+
+.ig-profile-avatar-edit {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ig-profile-avatar-edit-hint {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 0.35rem 0.4rem 0.45rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 0 0 999px 999px;
+}
+
+.ig-profile-cell--add {
+  display: grid;
+  place-items: center;
+  gap: 0.35rem;
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--bg-panel);
+  border: 1px dashed var(--line);
+}
+
+.ig-profile-cell--add:hover,
+.ig-profile-cell--add:focus-visible {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+}
+
+.ig-profile-add-icon {
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.ig-profile-add-label {
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 0 0.4rem;
+}
+
+.ig-profile-empty-hint {
+  margin: 0.65rem 0 0;
+  text-align: center;
+}
+
+.ig-profile-empty--in-grid {
+  grid-column: 1 / -1;
 }
 
 .ig-profile-main {
@@ -10734,8 +10795,20 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
 
 .media-protect--intro.media-protect--video,
 .profile-video-player .media-protect--video {
-  aspect-ratio: var(--media-ar, auto);
-  max-height: min(72vh, 720px);
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  max-height: none;
+}
+
+.profile-video-player .media-protect video,
+.profile-video-player .media-protect-canvas {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: contain;
+  object-position: center;
+  background: #000;
 }
 
 .media-protect-source {
@@ -10884,6 +10957,11 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
   background: #111;
 }
 
+.profile-video-player .media-protect {
+  width: 100%;
+  height: 100%;
+}
+
 .home-feed-post-media .media-protect img {
   aspect-ratio: var(--media-ar, auto);
   object-fit: contain;
@@ -10910,6 +10988,8 @@ html[data-theme="day"] .nav a .brand-mark-rokh {
 
 .profile-video-player .media-protect video,
 .profile-video-player .media-protect-canvas {
+  width: 100%;
+  height: 100%;
   aspect-ratio: auto;
   object-fit: contain;
   object-position: center;

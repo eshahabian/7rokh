@@ -3196,6 +3196,7 @@
   const mediaUsesNativeAspect = (root) => {
     if (!root) return false;
     if (root.closest(".ig-profile-cell--thumb")) return false;
+    if (root.closest(".profile-video-player, .media-protect--intro")) return false;
     if (root.closest(".profile-media-grid") && !root.closest(".post-lightbox-media")) return false;
     return true;
   };
