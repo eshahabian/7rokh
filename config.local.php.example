@@ -29,7 +29,7 @@ define('CASTING_SMS_OTP_TEMPLATE', 'کد ورود شما {x}');
 /**
  * درگاه پرداخت — melat یا sep
  * melat: CASTING_BEHPARDAKHT_* | sep: CASTING_SEP_TERMINAL_ID
- * دامنه بازگشت باید 7rokh.ir باشد و IP خروجی هاست در پنل بانک ثبت شود.
+ * دامنه بازگشت باید 7rokh.com باشد و IP خروجی هاست در پنل بانک ثبت شود.
  */
 // define('CASTING_GATEWAY_MODE', 'live');
 // define('CASTING_GATEWAY_PROVIDER', 'sep');

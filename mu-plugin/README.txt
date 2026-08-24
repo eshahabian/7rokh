@@ -48,7 +48,7 @@ casting-portal/mu-plugin/casting-main-menu-sticky.php
 - شمارنده زنده از `/casting-portal/cart-count.php` (session پورتال) — با logout صفر می‌شود
 - اگر سوشال‌ها پیدا نشوند، لینک شناور پایین صفحه به‌عنوان پشتیبان می‌آید
 - آدرس سفارشی (اختیاری): در `wp-config.php` تعریف کنید  
-  `define('CASTING_PORTAL_CART_URL', 'https://7rokh.ir/casting-portal/cart.php');`
+  `define('CASTING_PORTAL_CART_URL', 'https://7rokh.com/casting-portal/cart.php');`
 
 ## نتیجه
 

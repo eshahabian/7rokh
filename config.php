@@ -8,8 +8,8 @@
  * اگر پورتال داخل زیرپوشه وردپرس است:
  *   __DIR__ . '/../wp-load.php'
  *
- * مسیر مطلق هاست (7rokh.ir — وردپرس در public_html، پورتال در casting-portal):
- *   '/home/rokhir/public_html/wp-load.php'
+ * مسیر مطلق هاست (7rokh.com — وردپرس در public_html، پورتال در casting-portal):
+ *   '/home/rokhcom/public_html/wp-load.php'
  */
 define('CASTING_WP_LOAD', __DIR__ . '/../wp-load.php');
 
@@ -17,7 +17,7 @@ define('CASTING_WP_LOAD', __DIR__ . '/../wp-load.php');
 define('CASTING_BRAND', '۷ رخ');
 
 /** آدرس سایت اصلی */
-define('CASTING_MAIN_SITE_URL', 'https://7rokh.ir');
+define('CASTING_MAIN_SITE_URL', 'https://7rokh.com');
 
 /** نقش‌های مجاز */
 define('CASTING_ROLES', [
@@ -72,7 +72,7 @@ define('CASTING_CONTACT_BRAND_ADMIN', 'Ardavan');
 
 /** @deprecated دیگر برای تماس با ما استفاده نمی‌شود */
 define('CASTING_CONTACT_NOTIFY_EMAILS', [
-    'info@7rokh.ir',
+    'info@7rokh.com',
     'eshahabian@gmail.com',
 ]);
 
@@ -105,7 +105,7 @@ if (!defined('CASTING_MELLAT_PAY_URL')) {
 }
 /** آدرس ثبت‌شده در به‌پرداخت (درخواست ۸۶۹۰) */
 if (!defined('CASTING_MELLAT_CALLBACK_URL')) {
-    define('CASTING_MELLAT_CALLBACK_URL', 'https://7rokh.ir/casting-portal/cart.php');
+    define('CASTING_MELLAT_CALLBACK_URL', 'https://7rokh.com/casting-portal/cart.php');
 }
 
 /**
@@ -119,7 +119,7 @@ if (!defined('CASTING_SEP_TERMINAL_ID')) {
     define('CASTING_SEP_TERMINAL_ID', '');
 }
 if (!defined('CASTING_SEP_CALLBACK_URL')) {
-    define('CASTING_SEP_CALLBACK_URL', 'https://7rokh.ir/casting-portal/cart.php');
+    define('CASTING_SEP_CALLBACK_URL', 'https://7rokh.com/casting-portal/cart.php');
 }
 
 /**
@@ -127,13 +127,13 @@ if (!defined('CASTING_SEP_CALLBACK_URL')) {
  * رمز را در config.local.php بگذارید (نمونه: config.local.php.example)
  */
 if (!defined('CASTING_SMTP_HOST')) {
-    define('CASTING_SMTP_HOST', 'mail.7rokh.ir');
+    define('CASTING_SMTP_HOST', 'mail.7rokh.com');
 }
 if (!defined('CASTING_SMTP_PORT')) {
     define('CASTING_SMTP_PORT', 465);
 }
 if (!defined('CASTING_SMTP_USER')) {
-    define('CASTING_SMTP_USER', 'noreply@7rokh.ir');
+    define('CASTING_SMTP_USER', 'noreply@7rokh.com');
 }
 if (!defined('CASTING_SMTP_PASS')) {
     define('CASTING_SMTP_PASS', '');
@@ -142,7 +142,7 @@ if (!defined('CASTING_SMTP_SECURE')) {
     define('CASTING_SMTP_SECURE', 'ssl');
 }
 if (!defined('CASTING_MAIL_FROM')) {
-    define('CASTING_MAIL_FROM', 'noreply@7rokh.ir');
+    define('CASTING_MAIL_FROM', 'noreply@7rokh.com');
 }
 if (!defined('CASTING_MAIL_FROM_NAME')) {
     define('CASTING_MAIL_FROM_NAME', '۷ رخ');
