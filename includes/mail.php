@@ -124,10 +124,10 @@ function casting_mail_setup_hint(): string
     if (!casting_mail_is_smtp_ready()) {
         $local = is_readable(casting_local_config_path());
         if ($local) {
-            return ' رمز SMTP ذخیره نشده. در پنل «تست ایمیل SMTP» رمز noreply@7rokh.ir را وارد و ذخیره کنید.';
+            return ' رمز SMTP ذخیره نشده. در پنل «تست ایمیل SMTP» رمز noreply@7rokh.com را وارد و ذخیره کنید.';
         }
 
-        return ' فایل public_html/casting-portal/config.local.php روی سرور نیست — از config.local.php.example کپی کنید و CASTING_SMTP_PASS را با رمز noreply@7rokh.ir پر کنید.';
+        return ' فایل public_html/casting-portal/config.local.php روی سرور نیست — از config.local.php.example کپی کنید و CASTING_SMTP_PASS را با رمز noreply@7rokh.com پر کنید.';
     }
     return '';
 }

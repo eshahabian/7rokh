@@ -92,9 +92,9 @@ casting_render_flash();
     <dt>PHP SOAP (ملت)</dt>
     <dd><?= $soap ? '✓ فعال' : '✗ غیرفعال — از هاست php-soap بخواهید' ?></dd>
     <dt>آدرس بازگشت ملت</dt>
-    <dd><code><?= casting_e(casting_mellat_callback_url()) ?></code></dd>
+    <dd><code><?= casting_e(casting_mellat_callback_url()) ?></code> — همین را در پنل به‌پرداخت ثبت کنید</dd>
     <dt>آدرس بازگشت سامان</dt>
-    <dd><code><?= casting_e(casting_sep_callback_url()) ?></code></dd>
+    <dd><code><?= casting_e(casting_sep_callback_url()) ?></code> — همین را در پنل SEP ثبت کنید</dd>
     <?php if ($sep_report_user !== '') : ?>
     <dt>گزارش‌گیری سامان</dt>
     <dd><code><?= casting_e($sep_report_user) ?></code> — ورود از <a href="https://report.sep.ir/" target="_blank" rel="noopener">report.sep.ir</a> (رمز جدا از API پرداخت)</dd>

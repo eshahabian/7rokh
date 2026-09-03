@@ -103,7 +103,7 @@ if (!defined('CASTING_MELLAT_WSDL')) {
 if (!defined('CASTING_MELLAT_PAY_URL')) {
     define('CASTING_MELLAT_PAY_URL', 'https://bpm.shaparak.ir/pgwchannel/startpay.mellat');
 }
-/** آدرس ثبت‌شده در به‌پرداخت (درخواست ۸۶۹۰) */
+/** آدرس بازگشت — روی سایت زنده باید 7rokh.com باشد؛ در پنل بانک هم همین را ثبت کنید */
 if (!defined('CASTING_MELLAT_CALLBACK_URL')) {
     define('CASTING_MELLAT_CALLBACK_URL', 'https://7rokh.com/casting-portal/cart.php');
 }
@@ -207,4 +207,38 @@ if (!defined('CASTING_SMS_HTTP_SEND_URL')) {
 /** اختیاری: override آدرس API — پیش‌فرض api.payamakapi.ir */
 if (!defined('CASTING_SMS_API_BASE')) {
     define('CASTING_SMS_API_BASE', 'https://api.payamakapi.ir/api/v1/');
+}
+
+/**
+ * یادآوری پیامکی تکمیل پروفایل (زیر ۸۰٪)
+ * کلید کرون را فقط در config.local.php بگذارید.
+ */
+if (!defined('CASTING_PROFILE_SMS_REMINDER_ENABLED')) {
+    define('CASTING_PROFILE_SMS_REMINDER_ENABLED', true);
+}
+if (!defined('CASTING_PROFILE_SMS_REMINDER_COOLDOWN_DAYS')) {
+    define('CASTING_PROFILE_SMS_REMINDER_COOLDOWN_DAYS', 7);
+}
+/** حداقل درصد پروفایل برای دریافت پیامک یادآوری — زیر این مقدار پیامک می‌رود */
+if (!defined('CASTING_PROFILE_SMS_REMINDER_THRESHOLD')) {
+    define('CASTING_PROFILE_SMS_REMINDER_THRESHOLD', 75);
+}
+/** لینک داخل پیامک — بدون https، مثلاً 7rokh.com/casting-portal */
+if (!defined('CASTING_PROFILE_SMS_REMINDER_LINK')) {
+    define('CASTING_PROFILE_SMS_REMINDER_LINK', '7rokh.com/casting-portal');
+}
+if (!defined('CASTING_PROFILE_SMS_CRON_KEY')) {
+    define('CASTING_PROFILE_SMS_CRON_KEY', '');
+}
+/** الگوی تأییدشده در پنل WebOne برای متن کامل یادآوری (اختیاری) */
+if (!defined('CASTING_PROFILE_SMS_REMINDER_PATTERN_ID')) {
+    define('CASTING_PROFILE_SMS_REMINDER_PATTERN_ID', '');
+}
+/** اگر false باشد لینک از متن پیامک حذف می‌شود (برای عبور از فیلتر اپراتور) */
+if (!defined('CASTING_PROFILE_SMS_REMINDER_INCLUDE_LINK')) {
+    define('CASTING_PROFILE_SMS_REMINDER_INCLUDE_LINK', false);
+}
+/** همیشه پیامک بگیرند (بدون شرط درصد) — login: ardvan, eshahabian */
+if (!defined('CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS')) {
+    define('CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS', ['ardvan', 'eshahabian']);
 }

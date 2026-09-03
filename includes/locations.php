@@ -81,9 +81,9 @@ function casting_is_valid_city_for_province(string $province, string $city): boo
 }
 
 /**
- * فیلدهای استان و شهر وابسته به هم
+ * فیلدهای استان و شهر وابسته به هم — هر دو با select یک‌شکل (مثل استان).
  *
- * @param bool|null $city_allow_all برای فیلتر جستجو: گزینه «همه». برای ثبت‌نام/پروفایل false تا شهر آزاد تایپ شود.
+ * @param bool|null $city_allow_all برای فیلتر جستجو: گزینه «همه». برای پروفایل false.
  */
 function casting_render_location_fields(
     string $province = '',
@@ -104,9 +104,11 @@ function casting_render_location_fields(
     $json = wp_json_encode($map, JSON_UNESCAPED_UNICODE);
     $req = $required ? ' required' : '';
     $province_empty = $required ? 'انتخاب استان…' : 'همه';
-    $free_city = !$city_allow_all;
+    $city_empty = $required
+        ? ($province === '' ? 'اول استان را انتخاب کنید' : 'انتخاب شهر…')
+        : ($province === '' ? 'اول استان' : 'همه');
     ?>
-  <div class="<?= casting_e($wrapper_class) ?>" data-location-fields data-location-map="<?= casting_e((string) $json) ?>"<?= $city_allow_all ? ' data-location-city-all="1"' : '' ?><?= $free_city ? ' data-location-city-free="1"' : '' ?>>
+  <div class="<?= casting_e($wrapper_class) ?>" data-location-fields data-location-map="<?= casting_e((string) $json) ?>"<?= $city_allow_all ? ' data-location-city-all="1"' : '' ?>>
     <div class="field">
       <label for="province">استان<?= $required ? ' <span class="req-mark">*</span>' : '' ?></label>
       <select id="province" name="province" data-location-province<?= $req ?>>
@@ -118,50 +120,22 @@ function casting_render_location_fields(
     </div>
     <div class="field">
       <label for="city">شهر<?= $required ? ' <span class="req-mark">*</span>' : '' ?></label>
-      <?php if ($free_city) : ?>
-        <?php
-        $list_id = 'casting-city-suggest';
-        $city_placeholder = $province === '' ? 'اول استان را انتخاب کنید' : 'از پیشنهاد انتخاب کنید یا بنویسید';
-        ?>
-        <input
-          id="city"
-          name="city"
-          type="text"
-          list="<?= casting_e($list_id) ?>"
-          value="<?= casting_e($city) ?>"
-          placeholder="<?= casting_e($city_placeholder) ?>"
-          autocomplete="address-level2"
-          data-location-city
-          data-location-city-input
-          <?= $req ?>
-          <?= $province === '' ? 'disabled' : '' ?>
-        >
-        <datalist id="<?= casting_e($list_id) ?>" data-location-city-list>
-          <?php foreach ($cities as $name) : ?>
-            <option value="<?= casting_e($name) ?>"></option>
-          <?php endforeach; ?>
-        </datalist>
-        <p class="field-hint">اگر شهرتان در لیست نیست، همان را بنویسید؛ ذخیره می‌شود.</p>
-      <?php else : ?>
-        <?php
-        $city_empty = $required
-            ? ($province === '' ? 'اول استان را انتخاب کنید' : 'انتخاب شهر…')
-            : ($province === '' ? 'اول استان' : 'همه');
-        ?>
-        <select id="city" name="city" data-location-city<?= $req ?> <?= $province === '' ? 'disabled' : '' ?>>
-          <option value=""><?= casting_e($city_empty) ?></option>
-          <?php if ($city_allow_all && $province !== '') : ?>
-            <option value="<?= casting_e($all_label) ?>" <?= $city === $all_label ? 'selected' : '' ?>><?= casting_e($all_label) ?></option>
-          <?php elseif ($city === $all_label && $province !== '') : ?>
-            <option value="<?= casting_e($all_label) ?>" selected><?= casting_e($all_label) ?></option>
-          <?php endif; ?>
-          <?php foreach ($cities as $name) : ?>
-            <option value="<?= casting_e($name) ?>" <?= $city === $name ? 'selected' : '' ?>><?= casting_e($name) ?></option>
-          <?php endforeach; ?>
-          <?php if ($city !== '' && $city !== $all_label && !in_array($city, $cities, true)) : ?>
-            <option value="<?= casting_e($city) ?>" selected><?= casting_e($city) ?></option>
-          <?php endif; ?>
-        </select>
+      <select id="city" name="city" data-location-city<?= $req ?> <?= $province === '' ? 'disabled' : '' ?>>
+        <option value=""><?= casting_e($city_empty) ?></option>
+        <?php if ($city_allow_all && $province !== '') : ?>
+          <option value="<?= casting_e($all_label) ?>" <?= $city === $all_label ? 'selected' : '' ?>><?= casting_e($all_label) ?></option>
+        <?php elseif ($city === $all_label && $province !== '') : ?>
+          <option value="<?= casting_e($all_label) ?>" selected><?= casting_e($all_label) ?></option>
+        <?php endif; ?>
+        <?php foreach ($cities as $name) : ?>
+          <option value="<?= casting_e($name) ?>" <?= $city === $name ? 'selected' : '' ?>><?= casting_e($name) ?></option>
+        <?php endforeach; ?>
+        <?php if ($city !== '' && $city !== $all_label && !in_array($city, $cities, true)) : ?>
+          <option value="<?= casting_e($city) ?>" selected><?= casting_e($city) ?></option>
+        <?php endif; ?>
+      </select>
+      <?php if (!$city_allow_all) : ?>
+        <p class="field-hint">اول استان را انتخاب کنید؛ سپس شهر را از فهرست همان استان برگزینید.</p>
       <?php endif; ?>
     </div>
   </div>

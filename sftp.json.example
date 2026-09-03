@@ -1,0 +1,22 @@
+{
+  "name": "7rokh-casting-portal",
+  "host": "server.example.com",
+  "protocol": "sftp",
+  "port": 22,
+  "username": "rokhcom",
+  "password": "YOUR_CPANEL_PASSWORD",
+  "remotePath": "/home/rokhcom/public_html/casting-portal",
+  "uploadOnSave": true,
+  "ignore": [
+    ".vscode",
+    ".git",
+    "node_modules",
+    "config.local.php",
+    ".env"
+  ],
+  "watcher": {
+    "files": "**/*",
+    "autoUpload": true,
+    "autoDelete": false
+  }
+}

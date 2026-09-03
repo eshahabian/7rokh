@@ -92,7 +92,8 @@ function casting_process_profile_post(int $user_id): array
     }
 
     if (casting_user_can_upload_portraits($user_id)) {
-        $actor_photos = casting_user_uses_actor_portrait_set($user_id);
+        $activities_for_photos = casting_parse_activities_post($_POST, $user_id);
+        $actor_photos = casting_activities_need_talent_fields($activities_for_photos);
         $has_photo = false;
         if ($actor_photos) {
             foreach (array_keys(casting_all_portrait_slots()) as $slot) {
@@ -889,12 +890,15 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 
     <?php if (casting_user_can_upload_portraits($user_id)) : ?>
     <h3 class="panel-section-title" id="profile-photos">عکس پروفایل</h3>
-    <?php if (casting_user_uses_actor_portrait_set($user_id)) : ?>
+    <div data-talent-profile-field<?= $talent_hidden ?>>
+      <p class="field-hint">برای بازیگر: عکس پروفایل + کلوزاپ + مدیوم + لانگ.</p>
       <?php casting_render_portrait_upload_fields($profile['portraits'] ?? [], false); ?>
-    <?php else : ?>
+    </div>
+    <div data-non-talent-profile-photo<?= $hide_talent_profile ? '' : ' hidden' ?>>
+      <p class="field-hint">یک عکس واضح برای پروفایل.</p>
       <?php casting_render_single_profile_photo_field($profile['portraits'] ?? [], false); ?>
-    <?php endif; ?>
-    <p class="field-hint">عکس‌ها را همین‌جا انتخاب کنید؛ با ذخیرهٔ پروفایل آپلود می‌شوند. مدیریت جدا: <a href="profile-photo.php">ویرایش تصویر</a>.</p>
+    </div>
+    <p class="field-hint">با تغییر نوع فعالیت، فیلدهای عکس عوض می‌شوند. مدیریت جدا: <a href="profile-photo.php">ویرایش تصویر</a>.</p>
     <?php endif; ?>
 
     <h3 class="panel-section-title" id="account-email">اطلاعات حساب</h3>

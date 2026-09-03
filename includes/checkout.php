@@ -114,7 +114,7 @@ function casting_paid_services_catalog(): array
                 ],
             ],
             'cancel_url'   => 'cart.php',
-            'success_note' => 'پس از تأیید پرداخت، عضویت ویژه روی حساب شما فعال می‌شود.',
+            'success_note' => 'پس از پرداخت موفق در درگاه، عضویت ویژه همان پلن انتخابی بلافاصله و خودکار روی حساب شما فعال می‌شود.',
         ],
         'casting_call' => [
             'key'          => 'casting_call',
@@ -663,11 +663,19 @@ function casting_checkout_fulfill_order(array $order): array
                 if (!function_exists('casting_premium_activate_for_user')) {
                     require_once __DIR__ . '/premium.php';
                 }
-                $days = (int) (($it['meta']['days'] ?? 0) ?: 90);
+                $plan_key = sanitize_key((string) ($it['plan_key'] ?? 'featured_90'));
+                if (!function_exists('casting_premium_plans')) {
+                    require_once __DIR__ . '/premium.php';
+                }
+                $plans = casting_premium_plans();
+                $days = (int) ($plans[$plan_key]['days'] ?? 0);
+                if ($days <= 0) {
+                    $days = (int) (($it['meta']['days'] ?? 0) ?: (($it['days'] ?? 0) ?: 90));
+                }
                 casting_premium_activate_for_user(
                     $user_id,
                     $days,
-                    (string) ($it['plan_key'] ?? 'featured_90'),
+                    $plan_key !== '' ? $plan_key : 'featured_90',
                     (int) ($it['amount_final'] ?? 0),
                     (string) $order['order_code']
                 );
@@ -697,9 +705,13 @@ function casting_checkout_fulfill_order(array $order): array
         if (!function_exists('casting_premium_activate_for_user')) {
             require_once __DIR__ . '/premium.php';
         }
-        $days = (int) (($meta['days'] ?? 0) ?: 90);
-        $plan_key = (string) ($order['plan_key'] ?? 'featured_90');
-        $result = casting_premium_activate_for_user($user_id, $days, $plan_key, (int) $order['amount_final'], (string) $order['order_code']);
+        $plan_key = sanitize_key((string) ($order['plan_key'] ?? 'featured_90'));
+        $plans = casting_premium_plans();
+        $days = (int) ($plans[$plan_key]['days'] ?? 0);
+        if ($days <= 0) {
+            $days = (int) (($meta['days'] ?? 0) ?: 90);
+        }
+        $result = casting_premium_activate_for_user($user_id, $days, $plan_key !== '' ? $plan_key : 'featured_90', (int) $order['amount_final'], (string) $order['order_code']);
         if (!$result['ok']) {
             return $result;
         }

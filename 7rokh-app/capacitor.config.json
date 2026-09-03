@@ -3,9 +3,11 @@
   "appName": "7rokh",
   "webDir": "www",
   "server": {
-    "url": "https://7rokh.ir/casting-portal/",
+    "url": "https://7rokh.com/casting-portal/home.php",
     "cleartext": false,
     "allowNavigation": [
+      "7rokh.com",
+      "*.7rokh.com",
       "7rokh.ir",
       "*.7rokh.ir",
       "shaparak.ir",

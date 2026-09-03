@@ -12,6 +12,15 @@ $user_id = (int) $user->ID;
 casting_require_admin_permission('view_premium_users');
 casting_referral_maybe_backfill();
 
+$repair = casting_premium_repair_orphan_once($user_id);
+if ($repair['ran'] && $repair['revoked'] !== []) {
+    $names = array_values($repair['revoked']);
+    casting_set_flash(
+        'success',
+        'ویژهٔ بدون مدرک پرداخت لغو شد: ' . implode('، ', $names)
+    );
+}
+
 $error = '';
 $search = trim((string) ($_GET['q'] ?? ''));
 $page = max(1, (int) ($_GET['page'] ?? 1));
@@ -53,19 +62,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (string) ($_POST['confirm_password'] ?? '')
             );
             casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'رمز عبور کاربر تغییر کرد.' : $result['error']);
+        } elseif ($action === 'grant_premium_intent') {
+            $mode = casting_user_is_premium($target_id) ? 'renew' : 'grant';
+            $result = casting_admin_grant_premium_begin($user_id, $target_id, $mode);
+            casting_set_flash(
+                $result['ok'] ? 'success' : 'error',
+                $result['ok']
+                    ? 'مرحلهٔ تأیید شروع شد. تیک اطمینان را بزنید و پس از شمارش معکوس ۱۰ ثانیه، تأیید نهایی را بزنید.'
+                    : $result['error']
+            );
+        } elseif ($action === 'grant_premium_cancel') {
+            casting_admin_grant_premium_clear();
+            casting_set_flash('success', 'ویژه کردن دستی لغو شد.');
         } elseif ($action === 'grant_premium') {
-            $was_premium = casting_user_is_premium($target_id);
-            $result = casting_admin_grant_premium($target_id, $user_id);
-            if ($result['ok']) {
-                casting_set_flash(
-                    'success',
-                    $was_premium
-                        ? 'اشتراک ویژه کاربر ۳۰ روز تمدید شد.'
-                        : 'کاربر به عضو ویژه تبدیل شد (۳۰ روز).'
-                );
+            $confirmed = !empty($_POST['grant_confirm']);
+            $check = casting_admin_grant_premium_can_finalize($user_id, $target_id, $confirmed);
+            if (!$check['ok']) {
+                casting_set_flash('error', $check['error']);
             } else {
-                casting_set_flash('error', $result['error']);
+                $was_premium = casting_user_is_premium($target_id);
+                $result = casting_admin_grant_premium($target_id, $user_id);
+                casting_admin_grant_premium_clear();
+                if ($result['ok']) {
+                    casting_set_flash(
+                        'success',
+                        $was_premium
+                            ? 'اشتراک ویژه کاربر ۳ ماه تمدید شد.'
+                            : 'کاربر به عضو ویژه تبدیل شد (۳ ماه).'
+                    );
+                } else {
+                    casting_set_flash('error', $result['error']);
+                }
             }
+        } elseif ($action === 'revoke_premium') {
+            $result = casting_admin_revoke_premium($target_id, $user_id, (string) ($_POST['revoke_note'] ?? ''));
+            casting_set_flash(
+                $result['ok'] ? 'success' : 'error',
+                $result['ok'] ? 'عضویت ویژه لغو شد.' : $result['error']
+            );
         } elseif ($action === 'delete_user' && $can_delete_user) {
             $confirm_login = trim((string) ($_POST['confirm_login'] ?? ''));
             $target_user = get_user_by('id', $target_id);
@@ -136,7 +170,7 @@ casting_render_flash();
 ?>
 <section class="dash-card">
   <h1>مشترکین</h1>
-  <p class="meta"><?= (int) $total ?> عضو — مدیریت حساب، رمز عبور و اشتراک ویژه</p>
+  <p class="meta"><?= (int) $total ?> عضو — مدیریت حساب و رمز. پرداخت آنلاین خودش ویژه می‌کند؛ ویژه کردن دستی تأیید دومرحله‌ای دارد.</p>
 
   <form class="form admin-search-form" method="get" action="admin-premium-users.php">
     <div class="field">
@@ -234,12 +268,74 @@ casting_render_flash();
         <div class="admin-member-actions">
           <div class="admin-member-action-box">
             <h3 class="panel-section-title">اشتراک ویژه</h3>
-            <p class="meta"><?= $target_premium ? 'می‌توانید اشتراک ویژه را ۳۰ روز تمدید کنید.' : 'می‌توانید این کاربر را به عضو ویژه تبدیل کنید (۳۰ روز).' ?></p>
-            <form method="post" action="<?= casting_e($member_query($target_id)) ?>" onsubmit="return confirm('<?= $target_premium ? 'اشتراک ویژه ۳۰ روز تمدید شود؟' : 'کاربر به عضو ویژه تبدیل شود؟' ?>');">
-              <?php wp_nonce_field('casting_admin_members'); ?>
-              <input type="hidden" name="target_id" value="<?= $target_id ?>">
-              <button class="btn btn-primary" type="submit" name="action" value="grant_premium"><?= $target_premium ? 'تمدید ویژه (+۳۰ روز)' : 'تبدیل به عضو ویژه' ?></button>
-            </form>
+            <p class="meta">پرداخت آنلاین کاربر خودش ویژه را فعال می‌کند. ویژه کردن دستی فقط برای موارد استثناست و تأیید دومرحله‌ای دارد.</p>
+            <?php
+            $grant_pending = casting_admin_grant_premium_pending($target_id);
+            $grant_wait = casting_admin_grant_premium_wait_seconds();
+            $grant_remaining = 0;
+            if ($grant_pending !== null) {
+                $grant_remaining = max(0, $grant_wait - (time() - (int) $grant_pending['started_at']));
+            }
+            ?>
+            <?php if ($grant_pending !== null) : ?>
+              <div
+                class="admin-grant-confirm"
+                data-grant-premium-confirm
+                data-grant-wait="<?= (int) $grant_wait ?>"
+                data-grant-remaining="<?= (int) $grant_remaining ?>"
+              >
+                <p class="admin-grant-confirm-q"><strong>از انجام این کار مطمئن هستید؟</strong></p>
+                <p class="meta">
+                  <?= ($grant_pending['mode'] ?? '') === 'renew'
+                    ? 'اشتراک ویژه این کاربر ۳ ماه تمدید می‌شود.'
+                    : 'این کاربر ۳ ماه عضو ویژه می‌شود.' ?>
+                </p>
+                <label class="admin-grant-confirm-check">
+                  <input type="checkbox" name="grant_confirm_ui" value="1" data-grant-confirm-check>
+                  از انجام این کار مطمئن هستم
+                </label>
+                <p class="admin-grant-confirm-timer meta" data-grant-confirm-timer aria-live="polite">
+                  <?php if ($grant_remaining > 0) : ?>
+                    لطفاً <strong data-grant-seconds><?= (int) $grant_remaining ?></strong> ثانیه صبر کنید…
+                  <?php else : ?>
+                    می‌توانید تأیید نهایی را بزنید.
+                  <?php endif; ?>
+                </p>
+                <div class="cta-row">
+                  <form method="post" action="<?= casting_e($member_query($target_id)) ?>" data-grant-finalize-form>
+                    <?php wp_nonce_field('casting_admin_members'); ?>
+                    <input type="hidden" name="target_id" value="<?= $target_id ?>">
+                    <input type="hidden" name="grant_confirm" value="0" data-grant-confirm-hidden>
+                    <button class="btn btn-primary" type="submit" name="action" value="grant_premium" data-grant-finalize-btn disabled>
+                      تأیید نهایی و ویژه کردن
+                    </button>
+                  </form>
+                  <form method="post" action="<?= casting_e($member_query($target_id)) ?>">
+                    <?php wp_nonce_field('casting_admin_members'); ?>
+                    <input type="hidden" name="target_id" value="<?= $target_id ?>">
+                    <button class="btn btn-ghost" type="submit" name="action" value="grant_premium_cancel">انصراف</button>
+                  </form>
+                </div>
+              </div>
+            <?php else : ?>
+              <div class="cta-row">
+                <form method="post" action="<?= casting_e($member_query($target_id)) ?>">
+                  <?php wp_nonce_field('casting_admin_members'); ?>
+                  <input type="hidden" name="target_id" value="<?= $target_id ?>">
+                  <button class="btn btn-primary" type="submit" name="action" value="grant_premium_intent">
+                    <?= $target_premium ? 'شروع تمدید ویژه (+۳ ماه)' : 'شروع تبدیل به عضو ویژه' ?>
+                  </button>
+                </form>
+                <?php if ($target_premium) : ?>
+                  <form method="post" action="<?= casting_e($member_query($target_id)) ?>" onsubmit="return confirm('عضویت ویژه این کاربر کاملاً لغو شود؟');">
+                    <?php wp_nonce_field('casting_admin_members'); ?>
+                    <input type="hidden" name="target_id" value="<?= $target_id ?>">
+                    <input type="hidden" name="revoke_note" value="لغو دستی از پنل مشترکین">
+                    <button class="btn btn-reject" type="submit" name="action" value="revoke_premium">لغو ویژه</button>
+                  </form>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
           </div>
 
           <?php if ($can_suspend) : ?>
@@ -395,12 +491,6 @@ casting_render_flash();
           <div class="admin-member-row-actions">
             <a class="btn btn-primary btn-sm" href="<?= casting_e($member_query((int) $row['id'])) ?>">مدیریت</a>
             <a class="btn btn-ghost btn-sm" href="member.php?id=<?= (int) $row['id'] ?>">پروفایل</a>
-            <form class="admin-grant-premium-form" method="post" action="<?= casting_e($list_url !== '' ? $list_url : 'admin-premium-users.php') ?>" onsubmit="return confirm('<?= $row['premium'] ? 'اشتراک ویژه این کاربر ۳۰ روز تمدید شود؟' : 'این کاربر به عضو ویژه تبدیل شود؟' ?>');">
-              <?php wp_nonce_field('casting_admin_members'); ?>
-              <input type="hidden" name="target_id" value="<?= (int) $row['id'] ?>">
-              <input type="hidden" name="action" value="grant_premium">
-              <button class="btn btn-ghost btn-sm" type="submit"><?= $row['premium'] ? 'تمدید ویژه' : 'ویژه کردن' ?></button>
-            </form>
           </div>
         </article>
       <?php endforeach; ?>

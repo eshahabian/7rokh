@@ -84,6 +84,8 @@ function casting_update_user_display_name(int $user_id, string $name): array
     $result = wp_update_user([
         'ID'           => $user_id,
         'display_name' => $name,
+        'nickname'     => $name,
+        'first_name'   => $name,
     ]);
     if ($result instanceof WP_Error) {
         return ['ok' => false, 'error' => 'ذخیره نام ناموفق: ' . $result->get_error_message()];
@@ -231,6 +233,11 @@ function casting_login(string $login, string $password, string $portal = '', boo
     }
     casting_portal_login_user($user, true);
 
+    if (!function_exists('casting_profile_completion_sms_maybe_send_on_login')) {
+        require_once __DIR__ . '/profile-completion-sms.php';
+    }
+    casting_profile_completion_sms_maybe_send_on_login((int) $user->ID);
+
     return ['ok' => true, 'user' => $user, 'role' => $role];
 }
 
@@ -337,7 +344,7 @@ function casting_request_password_reset(string $login, string $channel = 'email'
     if (!$mail['ok']) {
         $error = $mail['error'];
         if (stripos($error, 'authenticate') !== false || stripos($error, 'احراز') !== false) {
-            $error = 'رمز SMTP اکانت noreply@7rokh.ir اشتباه است. در cPanel رمز ایمیل را چک کنید و همان را در config.local.php بگذارید.';
+            $error = 'رمز SMTP اکانت noreply@7rokh.com اشتباه است. در cPanel رمز ایمیل را چک کنید و همان را در config.local.php بگذارید.';
         } elseif (!casting_mail_is_smtp_ready()) {
             $hint = casting_mail_setup_hint();
             if ($hint !== '') {
@@ -606,6 +613,11 @@ function casting_login_with_otp(string $mobile_raw, string $otp_code, bool $forc
         require_once __DIR__ . '/portal-auth.php';
     }
     casting_portal_login_user($user, true);
+
+    if (!function_exists('casting_profile_completion_sms_maybe_send_on_login')) {
+        require_once __DIR__ . '/profile-completion-sms.php';
+    }
+    casting_profile_completion_sms_maybe_send_on_login((int) $user->ID);
 
     return ['ok' => true, 'user' => $user, 'role' => $role];
 }

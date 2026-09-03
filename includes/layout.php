@@ -5,7 +5,22 @@ require_once __DIR__ . '/pwa.php';
 
 function casting_main_site_url(): string
 {
-    return defined('CASTING_MAIN_SITE_URL') ? (string) CASTING_MAIN_SITE_URL : 'https://7rokh.ir';
+    return defined('CASTING_MAIN_SITE_URL') ? (string) CASTING_MAIN_SITE_URL : 'https://7rokh.com';
+}
+
+function casting_is_native_app_request(): bool
+{
+    $xrw = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    if ($xrw === 'ir.rokh7.app') {
+        return true;
+    }
+
+    $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    if ($ua === '') {
+        return false;
+    }
+
+    return stripos($ua, 'Capacitor') !== false || stripos($ua, 'ir.rokh7') !== false;
 }
 
 function casting_render_head(string $title, string $body_class = ''): void
@@ -13,19 +28,111 @@ function casting_render_head(string $title, string $body_class = ''): void
     $brand = casting_e(casting_brand());
     $full_title = casting_e($title) . ' | ' . $brand;
     $css = casting_e(casting_asset('css/style.css'));
+    $css_file = dirname(__DIR__) . '/assets/css/style.css';
+    $css_v = is_file($css_file) ? (string) filemtime($css_file) : '214';
     ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title><?= $full_title ?></title>
   <?php casting_render_pwa_head(); ?>
   <link rel="preload" href="<?= casting_e(casting_asset('fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="<?= casting_e(casting_asset('fonts/Shoor-SemiBold.woff2')) ?>" as="font" type="font/woff2" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=211">
+  <link rel="stylesheet" href="<?= $css ?>?v=<?= casting_e($css_v) ?>">
+  <style id="casting-live-overrides">
+    @font-face {
+      font-family: "Shoor_Bold";
+      src: url("<?= casting_e(casting_asset('fonts/Shoor-SemiBold.woff2')) ?>") format("woff2");
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Shoor_Bold";
+      src: url("<?= casting_e(casting_asset('fonts/Shoor-SemiBold.woff2')) ?>") format("woff2");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    .nav a,
+    .site-header-quick-link,
+    .site-header-app-link,
+    .panel-nav-link,
+    .nav-cart {
+      font-family: "Shoor_Bold", "Vazirmatn", Tahoma, sans-serif !important;
+    }
+    .nav a:hover,
+    .nav a.is-active,
+    .site-header .nav a:hover,
+    .site-header .nav a.is-active,
+    .site-header-quick-link:hover,
+    .site-header-quick-link.is-active,
+    .site-header-app-link:hover,
+    .panel-nav-link:hover,
+    .nav-cart:hover {
+      color: #f99d1b !important;
+    }
+    body.page-login .panel h1,
+    body.page-register .panel h1 {
+      font-family: "Vazirmatn", Tahoma, sans-serif !important;
+      font-size: 1.2rem !important;
+      font-weight: 600 !important;
+    }
+    html.is-native-app .nav a.nav-auth-link {
+      font-size: calc(1.125rem * 2) !important;
+    }
+    html.is-native-app body:not(.has-panel-drawer) .site-header-quick-link.nav-auth-link {
+      font-size: calc(0.72rem * 2) !important;
+    }
+    html.is-native-app body.page-login .panel h1,
+    html.is-native-app body.page-register .panel h1 {
+      font-family: "Vazirmatn", Tahoma, sans-serif !important;
+      font-size: 1.2rem !important;
+      font-weight: 600 !important;
+    }
+    html.is-native-app body.page-login .panel .lede,
+    html.is-native-app body.page-register .panel .lede,
+    html.is-native-app body.page-register .lede-req-note {
+      font-size: 0.95rem !important;
+      font-weight: 400 !important;
+    }
+    html.is-native-app body.page-register .lede-req-note {
+      font-weight: 700 !important;
+    }
+    html.is-native-app body.page-login .field label,
+    html.is-native-app body.page-register .field label {
+      font-size: 0.9rem !important;
+      font-weight: 500 !important;
+    }
+    html.is-native-app body.page-login .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    html.is-native-app body.page-register .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+      font-size: 1rem !important;
+      font-weight: 400 !important;
+    }
+    html.is-native-app body.page-login .form .btn,
+    html.is-native-app body.page-register .form .btn {
+      font-size: 0.98rem !important;
+      font-weight: 600 !important;
+    }
+    html.is-native-app body.page-login .admin-tab {
+      font-size: 0.88rem !important;
+    }
+    html.is-native-app body.page-login .form-foot,
+    html.is-native-app body.page-register .form-foot,
+    html.is-native-app body.page-login .form-inline-link,
+    html.is-native-app body.page-register .field-hint {
+      font-size: 0.92rem !important;
+      font-weight: 400 !important;
+    }
+    html:not(.is-native-app) {
+      font-size: 16px !important;
+    }
+  </style>
   <script>
     (function () {
       try {
@@ -39,9 +146,51 @@ function casting_render_head(string $title, string $body_class = ''): void
         document.documentElement.setAttribute('data-theme', 'day');
       }
       try {
-        if (window.Capacitor || /Capacitor/i.test(navigator.userAgent || '')) {
-          document.documentElement.classList.add('is-native-app');
+        var detectNative = function () {
+          var cap = window.Capacitor;
+          if (cap) {
+            if (typeof cap.isNativePlatform === 'function') {
+              return !!cap.isNativePlatform();
+            }
+            if (typeof cap.getPlatform === 'function') {
+              var platform = String(cap.getPlatform() || 'web').toLowerCase();
+              if (platform === 'android' || platform === 'ios') {
+                return true;
+              }
+            }
+          }
+          var ua = navigator.userAgent || '';
+          return /Capacitor/i.test(ua) || /ir\.rokh7/i.test(ua);
+        };
+        var applyNative = function () {
+          var root = document.documentElement;
+          if (!detectNative()) {
+            root.classList.remove('is-native-app');
+            root.style.removeProperty('--app-scale');
+            root.style.removeProperty('--app-vh');
+            root.style.removeProperty('--app-vw');
+            root.style.removeProperty('font-size');
+            return;
+          }
+          root.classList.add('is-native-app');
+          var vv = window.visualViewport;
+          var w = Math.round((vv && vv.width) || window.innerWidth || 390);
+          var h = Math.round((vv && vv.height) || window.innerHeight || 800);
+          if (w < 280) w = 280;
+          if (w > 1400) w = 1400;
+          var scale = w / 390;
+          if (scale < 0.88) scale = 0.88;
+          if (scale > 1.15) scale = 1.15;
+          root.style.setProperty('--app-scale', String(Math.round(scale * 1000) / 1000));
+          root.style.setProperty('--app-vw', w + 'px');
+          root.style.setProperty('--app-vh', h + 'px');
+        };
+        applyNative();
+        window.addEventListener('resize', applyNative);
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', applyNative);
         }
+        document.addEventListener('DOMContentLoaded', applyNative);
       } catch (e2) {}
     })();
   </script>
@@ -187,7 +336,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
         <nav class="site-header-quick" aria-label="دسترسی سریع">
           <a href="<?= casting_e(casting_main_site_url()) ?>" class="site-header-quick-link"><?= casting_brand_html() ?></a>
           <a href="register.php" class="site-header-quick-link nav-auth-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
-          <a href="login.php" class="site-header-quick-link nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود به پنل کاربری</a>
+          <a href="login.php" class="site-header-quick-link nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود</a>
           <a href="<?= casting_e(casting_url('app.php')) ?>" class="site-header-quick-link<?= $active === 'app' ? ' is-active' : '' ?>" data-app-download>اپلیکیشن</a>
         </nav>
       <?php endif; ?>
@@ -207,7 +356,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <?php else : ?>
         <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <a href="register.php" class="nav-auth-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
-        <a href="login.php" class="nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود به پنل کاربری</a>
+        <a href="login.php" class="nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود</a>
         <a href="<?= casting_e(casting_url('app.php')) ?>" class="<?= $active === 'app' ? 'is-active' : '' ?>" data-app-download>اپلیکیشن موبایل</a>
         <a href="contact.php" class="<?= $active === 'contact' ? 'is-active' : '' ?>">تماس با ما</a>
         <a href="faq.php" class="<?= $active === 'faq' ? 'is-active' : '' ?>">سوالات متداول</a>
@@ -235,7 +384,7 @@ function casting_render_flash(): void
 }
 
 /**
- * نشان اعتماد اینماد — کد رسمی اینماد (بدون دستکاری URL)
+ * نشان اعتماد اینماد — فقط کد رسمی اینماد (بدون عکس محلی و بدون دستکاری URL)
  */
 function casting_render_enamad_seal(string $extra_class = ''): void
 {
@@ -245,10 +394,10 @@ function casting_render_enamad_seal(string $extra_class = ''): void
     class="<?= casting_e($class) ?>"
     referrerpolicy="origin"
     target="_blank"
-    href="https://trustseal.enamad.ir/?id=4302477&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+    href="https://trustseal.enamad.ir/?id=768314&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
   ><img
       referrerpolicy="origin"
-      src="https://trustseal.enamad.ir/logo.aspx?id=4302477&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+      src="https://trustseal.enamad.ir/logo.aspx?id=768314&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
       alt=""
       style="cursor:pointer"
       code="s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
@@ -256,13 +405,34 @@ function casting_render_enamad_seal(string $extra_class = ''): void
     <?php
 }
 
-function casting_render_footer(): void
+function casting_render_footer(bool $show_home_verse = false): void
 {
+    $verse_src = '';
+    if ($show_home_verse && !casting_is_native_app_request()) {
+        $hafez = __DIR__ . '/hafez.php';
+        if (!function_exists('casting_hafez_random_image') && is_file($hafez)) {
+            require_once $hafez;
+        }
+        if (function_exists('casting_hafez_random_image')) {
+            $verse_src = casting_hafez_random_image();
+        }
+    }
     ?>
   <footer class="site-footer">
     <div class="site-footer-inner">
       <p><?= casting_brand_html() ?> — پورتال استعداد و بازیگری</p>
+      <?php if ($verse_src !== '') : ?>
+        <img
+          class="site-footer-verse-art"
+          src="<?= casting_e($verse_src) ?>"
+          alt=""
+          width="560"
+          height="160"
+        >
+      <?php endif; ?>
+      <?php if (!$show_home_verse) : ?>
       <?php casting_render_enamad_seal(); ?>
+      <?php endif; ?>
     </div>
   </footer>
   <button type="button" class="scroll-top" data-scroll-top aria-label="بازگشت به بالای صفحه">
@@ -280,11 +450,17 @@ function casting_render_footer(): void
     };
     <?php
     if (!function_exists('casting_media_protect_viewer_label')) {
-        require_once __DIR__ . '/media-protect.php';
+        $media_protect = __DIR__ . '/media-protect.php';
+        if (is_file($media_protect)) {
+            require_once $media_protect;
+        }
     }
+    $protect_label = function_exists('casting_media_protect_viewer_label')
+        ? casting_media_protect_viewer_label()
+        : '';
     ?>
     window.CASTING_MEDIA_PROTECT = {
-      watermark: <?= wp_json_encode(casting_media_protect_viewer_label()) ?>,
+      watermark: <?= wp_json_encode($protect_label) ?>,
       isMobile: <?= wp_json_encode(wp_is_mobile()) ?>
     };
     window.CASTING_SESSION = {
@@ -299,7 +475,7 @@ function casting_render_footer(): void
       fullUrl: <?= wp_json_encode(casting_url('chat.php')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=122" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=139" defer></script>
 </body>
 </html>
 <?php

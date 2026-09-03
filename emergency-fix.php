@@ -3,9 +3,9 @@
  * اضطراری — wp-load را load نمی‌کند.
  * بعد از موفقیت این فایل را حذف کنید.
  *
- * https://7rokh.ir/emergency-fix.php?key=7rokh-fix-now
+ * https://7rokh.com/emergency-fix.php?key=7rokh-fix-now
  * یا
- * https://7rokh.ir/casting-portal/emergency-fix.php?key=7rokh-fix-now
+ * https://7rokh.com/casting-portal/emergency-fix.php?key=7rokh-fix-now
  */
 declare(strict_types=1);
 
@@ -58,4 +58,4 @@ foreach ($roots as $root) {
 }
 
 echo "Done. Delete emergency-fix.php from server.\n";
-echo "Test: https://7rokh.ir/ and https://7rokh.ir/casting-portal/\n";
+echo "Test: https://7rokh.com/ and https://7rokh.com/casting-portal/\n";

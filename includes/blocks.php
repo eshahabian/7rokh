@@ -388,7 +388,8 @@ function casting_render_block_user_form(
     int $target_id,
     string $nonce_action = 'casting_block',
     string $mode = 'member',
-    string $message_href = ''
+    string $message_href = '',
+    string $extra_buttons_html = ''
 ): void {
     ?>
     <form class="form block-user-form" method="post" action="<?= casting_e($action_url) ?>">
@@ -406,6 +407,9 @@ function casting_render_block_user_form(
           <textarea id="block_reason_<?= $target_id ?>" name="block_reason" class="block-user-form-reason" rows="1" required minlength="3" maxlength="500" placeholder="چرا این کاربر را بلاک می‌کنید؟"></textarea>
           <div class="block-user-form-actions">
             <button class="btn btn-reject btn-sm block-user-form-btn" type="submit">بلاک</button>
+            <?php if ($extra_buttons_html !== '') : ?>
+              <?= $extra_buttons_html ?>
+            <?php endif; ?>
             <?php if ($message_href !== '') : ?>
               <a class="btn btn-primary btn-sm block-user-form-btn" href="<?= casting_e($message_href) ?>">پیام به این کاربر</a>
             <?php endif; ?>

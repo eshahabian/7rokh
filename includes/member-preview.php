@@ -7,6 +7,12 @@ require_once __DIR__ . '/panel-profile.php';
 require_once __DIR__ . '/chat.php';
 require_once __DIR__ . '/request.php';
 
+if (defined('CASTING_MEMBER_PREVIEW_LIB')) {
+    return;
+}
+define('CASTING_MEMBER_PREVIEW_LIB', true);
+
+if (!function_exists('casting_format_jalali_datetime_compact')) {
 function casting_format_jalali_datetime_compact(string $mysql): string
 {
     $mysql = trim($mysql);
@@ -23,6 +29,7 @@ function casting_format_jalali_datetime_compact(string $mysql): string
     return $time !== ''
         ? sprintf('%d/%02d/%02d %s', $jy, $jm, $jd, $time)
         : sprintf('%d/%02d/%02d', $jy, $jm, $jd);
+}
 }
 
 function casting_member_preview_visit_count(int $member_id): int
@@ -314,8 +321,10 @@ function casting_render_member_preview_panel(int $member_id, int $viewer_id): vo
           <?php casting_render_follow_button($viewer_id, $member_id, 'member-preview-btn member-preview-btn--follow'); ?>
         <?php endif; ?>
         <?php if ($viewer_id !== $member_id) : ?>
-          <?php if (!empty($chat_open['ok'])) : ?>
+          <?php if (!empty($chat_open['ok']) && !empty($chat_ok)) : ?>
             <a class="btn member-preview-btn member-preview-btn--interest" href="chat.php?with=<?= (int) $member_id ?>">پیام به این کاربر</a>
+          <?php elseif (!empty($chat_open['ok']) && function_exists('casting_user_requires_premium_for_dm') && casting_user_requires_premium_for_dm($viewer_id)) : ?>
+            <?php casting_render_dm_premium_send_notice('member-preview-premium-note'); ?>
           <?php else : ?>
             <button
               type="button"

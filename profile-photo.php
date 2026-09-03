@@ -60,7 +60,7 @@ casting_render_panel_start('ویرایش تصویر', 'photo');
   <?php if ($is_actor_photos) : ?>
     <p class="lede">عکس پروفایل (آواتار) و سه شات بازیگری را بارگذاری کنید: کلوزاپ، مدیوم، لانگ.</p>
   <?php else : ?>
-    <p class="lede">عکس پروفایل خود را بارگذاری یا به‌روز کنید.</p>
+    <p class="lede">عکس پروفایل خود را بارگذاری یا به‌روز کنید. اگر بازیگر هستید، اول در <a href="edit-profile.php">ویرایش پروفایل</a> نوع فعالیت «بازیگری» را ذخیره کنید تا شات‌های کلوزاپ/مدیوم/لانگ هم باز شوند.</p>
   <?php endif; ?>
 
   <form class="form" method="post" action="profile-photo.php" enctype="multipart/form-data">

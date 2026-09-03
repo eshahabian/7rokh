@@ -36,9 +36,13 @@ casting_render_flash();
 
     <p class="hero-lead"><?= casting_brand_html() ?> - پورتال ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
 
+    <div class="home-enamad" aria-label="نماد اعتماد الکترونیکی">
+<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=768314&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=768314&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS' alt='' style='cursor:pointer' code='s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS'></a>
+    </div>
+
     <?php if (CASTING_PUBLIC_HOME_STATS) : ?>
       <?php casting_render_member_count_tiles($counts); ?>
     <?php endif; ?>
   </div>
 </main>
-<?php casting_render_footer(); ?>
+<?php casting_render_footer(true); ?>

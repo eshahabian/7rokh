@@ -2,7 +2,7 @@
 
 شل اندروید که پورتال را از این آدرس لود می‌کند:
 
-`https://7rokh.ir/casting-portal/`
+`https://7rokh.com/casting-portal/home.php`
 
 ## پیش‌نیاز
 

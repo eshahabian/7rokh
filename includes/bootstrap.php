@@ -16,6 +16,15 @@ if (!file_exists(CASTING_WP_LOAD)) {
 
 require_once CASTING_WP_LOAD;
 
+add_filter('wp_fatal_error_handler_enabled', static function ($enabled) {
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+    if ($uri !== '' && strpos($uri, '/casting-portal/') !== false) {
+        return false;
+    }
+
+    return $enabled;
+});
+
 add_action('init', static function (): void {
     add_image_size('casting_portrait', 360, 480, true);
 });
@@ -458,7 +467,15 @@ function casting_url(string $path): string
 
 function casting_redirect(string $path): void
 {
-    wp_safe_redirect(casting_url($path));
+    $url = casting_url($path);
+    if (!headers_sent()) {
+        // مستقیم — وابسته به siteurl وردپرس / wp_safe_redirect نباشد
+        header('Location: ' . $url, true, 302);
+        exit;
+    }
+    echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url='
+        . htmlspecialchars($url, ENT_QUOTES, 'UTF-8')
+        . '"></head><body></body></html>';
     exit;
 }
 

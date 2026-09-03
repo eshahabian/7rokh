@@ -377,7 +377,7 @@ if ($otp_notice !== '') {
     </form>
 
     <p class="form-foot">
-      قبلاً ثبت‌نام کرده‌اید؟ <a href="login.php">ورود به پنل کاربری</a>
+      قبلاً ثبت‌نام کرده‌اید؟ <a href="login.php">ورود</a>
     </p>
   </section>
 </main>

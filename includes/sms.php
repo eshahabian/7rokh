@@ -843,13 +843,30 @@ function casting_sms_send_http_get(string $mobile, string $message): array
         return $out;
     }
 
-    if (is_numeric($raw_body) && (float) $raw_body > 0) {
-        $ref_id = (string) $raw_body;
-        $debug['ok'] = true;
-        $debug['ref_id'] = $ref_id;
-        casting_sms_remember_last($debug);
+    if (is_numeric($raw_body)) {
+        $num = (int) $raw_body;
+        // کدهای ۱ تا ۲۳ خطای WebOne هستند، نه refId
+        if ($num >= 1 && $num <= 23) {
+            $out = [
+                'ok'    => false,
+                'error' => casting_sms_error_message($num),
+                'code'  => $num,
+                'http'  => $http,
+            ];
+            $debug['ok'] = false;
+            $debug['parsed_error'] = $out['error'];
+            casting_sms_remember_last($debug);
 
-        return ['ok' => true, 'error' => '', 'ref_id' => $ref_id, 'http' => $http, 'code' => 0];
+            return $out;
+        }
+        if ($num > 23) {
+            $ref_id = (string) $raw_body;
+            $debug['ok'] = true;
+            $debug['ref_id'] = $ref_id;
+            casting_sms_remember_last($debug);
+
+            return ['ok' => true, 'error' => '', 'ref_id' => $ref_id, 'http' => $http, 'code' => 0];
+        }
     }
 
     $as_int = is_numeric($raw_body) ? (int) $raw_body : -1;
@@ -952,6 +969,36 @@ function casting_sms_send_otp_matched_text(string $mobile, string $content, stri
         'error'  => $result['error'],
         'ref_id' => (string) ($result['ref_id'] ?? ''),
         'code'   => $code,
+    ];
+}
+
+/**
+ * ارسال الگوی ثابت (بدون متغیر) — متن کامل باید در پنل WebOne تأیید شده باشد.
+ *
+ * @return array{ok:bool,error:string,ref_id?:string,code?:int}
+ */
+function casting_sms_send_pattern_fixed(string $mobile, string $pattern_id): array
+{
+    $pattern_id = trim($pattern_id);
+    if ($pattern_id === '') {
+        return ['ok' => false, 'error' => 'شناسه الگو خالی است.', 'code' => -1];
+    }
+    $from = casting_sms_line_number();
+    if ($from === '') {
+        return ['ok' => false, 'error' => 'شماره فرستنده (CASTING_SMS_FROM) تنظیم نشده است.', 'code' => -1];
+    }
+
+    $result = casting_sms_request('SMS/Send', [
+        'From'      => $from,
+        'ToNumber'  => $mobile,
+        'PatternId' => $pattern_id,
+    ]);
+
+    return [
+        'ok'     => !empty($result['ok']),
+        'error'  => (string) ($result['error'] ?? ''),
+        'ref_id' => (string) ($result['ref_id'] ?? ''),
+        'code'   => (int) ($result['code'] ?? 0),
     ];
 }
 

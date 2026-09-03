@@ -2,10 +2,9 @@
 /**
  * Plugin Name: Casting Portal — خرید اشتراک در هدر سایت
  * Description: آیکون خرید اشتراک کنار شبکه‌های اجتماعی هدر + شمارنده زنده
- * Version: 1.11
+ * Version: 2.2
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-cart-nav.php
- * (خودکار با deploy — .cpanel.yml)
  *
  * سازگار با PHP 7.4 — بدون str_contains.
  */
@@ -64,16 +63,117 @@ function casting_main_cart_should_render(): bool
     return true;
 }
 
+function casting_main_cart_link_html(): string
+{
+    $url = esc_url(casting_main_cart_url());
+    $label = esc_attr('خرید اشتراک');
+    $count = casting_main_cart_count_from_cookie();
+    $badge_class = 'casting-main-cart-badge' . ($count > 0 ? '' : ' is-empty');
+    $badge_text = $count > 0 ? (string) (int) $count : '';
+
+    return '<a class="casting-main-cart-social" href="' . $url . '" title="' . $label . '" aria-label="' . $label . '"><i class="fa fa-shopping-cart" aria-hidden="true"></i><span class="' . esc_attr($badge_class) . '">' . $badge_text . '</span></a>';
+}
+
+/**
+ * آیکون سبد را در HTML هدر می‌گذارد تا برای مهمان (صفحهٔ کش‌شده) هم دیده شود.
+ *
+ * @param mixed $html
+ * @return mixed
+ */
+function casting_main_cart_inject_html($html)
+{
+    if (!is_string($html) || $html === '' || !casting_main_cart_should_render()) {
+        return $html;
+    }
+
+    if (strpos($html, 'casting-main-cart-social') !== false) {
+        return $html;
+    }
+
+    $link = casting_main_cart_link_html();
+    $replaced = preg_replace(
+        '/(<a\b[^>]*\bclass="[^"]*\bjeg_twitter\b[^"]*"[^>]*>.*?<\/a>)/is',
+        '$1' . $link,
+        $html,
+        1
+    );
+
+    return is_string($replaced) ? $replaced : $html;
+}
+
+function casting_main_cart_maybe_purge_cache(): void
+{
+    if (!function_exists('get_option') || !function_exists('update_option')) {
+        return;
+    }
+    $ver = '2.2';
+    if ((string) get_option('casting_main_cart_nav_ver', '') === $ver) {
+        return;
+    }
+    update_option('casting_main_cart_nav_ver', $ver, false);
+    do_action('litespeed_purge_all');
+    do_action('litespeed_purge_url', home_url('/'));
+}
+
+function casting_main_cart_maybe_buffer(): void
+{
+    if (!casting_main_cart_should_render()) {
+        return;
+    }
+    if (defined('LSCWP_V') || defined('LSCWP_DIR') || class_exists('LiteSpeed\\Core', false)) {
+        return;
+    }
+    ob_start('casting_main_cart_inject_html');
+}
+
+function casting_main_cart_litespeed_js_excludes($excludes)
+{
+    if (!is_array($excludes)) {
+        $excludes = [];
+    }
+    $excludes[] = 'CASTING_MAIN_CART';
+    $excludes[] = 'casting-main-cart-nav';
+    $excludes[] = 'casting-main-cart-social';
+
+    return $excludes;
+}
+
+function casting_main_cart_script_tag($tag, $handle, $src)
+{
+    if ($handle !== 'casting-main-cart-nav' || !is_string($tag)) {
+        return $tag;
+    }
+    if (strpos($tag, 'data-no-defer') === false) {
+        $tag = str_replace('<script ', '<script data-no-optimize="1" data-no-defer="1" ', $tag);
+    }
+
+    return $tag;
+}
+
 function casting_main_cart_enqueue_assets(): void
 {
     if (!casting_main_cart_should_render()) {
         return;
     }
 
-    // فقط badge — اندازه/فاصله/رنگ را از خود تم و Font Awesome می‌گیرد
     $css = '
 .casting-main-cart-social{
   position:relative !important;
+}
+.jeg_header .socials_widget,
+.jeg_navbar .socials_widget,
+.jeg_topbar .socials_widget{
+  overflow:visible !important;
+  width:auto !important;
+  max-width:none !important;
+}
+.jeg_social_icon_block .casting-main-cart-social,
+.socials_widget .casting-main-cart-social{
+  display:inline-block !important;
+  vertical-align:middle;
+}
+.socials_widget .casting-main-cart-social i{
+  font-size:inherit;
 }
 .casting-main-cart-social .casting-main-cart-badge{
   position:absolute;
@@ -127,7 +227,7 @@ function casting_main_cart_enqueue_assets(): void
 }
 ';
 
-    wp_register_style('casting-main-cart-nav', false, [], '1.9');
+    wp_register_style('casting-main-cart-nav', false, [], '2.2');
     wp_enqueue_style('casting-main-cart-nav');
     wp_add_inline_style('casting-main-cart-nav', trim($css));
 
@@ -150,7 +250,6 @@ function casting_main_cart_enqueue_assets(): void
       h.indexOf("facebook.com") !== -1 ||
       h.indexOf("fb.com") !== -1 ||
       h.indexOf("twitter.com") !== -1 ||
-      h.indexOf("x.com") !== -1 ||
       h.indexOf("instagram.com") !== -1 ||
       h.indexOf("t.me") !== -1 ||
       h.indexOf("telegram") !== -1 ||
@@ -159,51 +258,39 @@ function casting_main_cart_enqueue_assets(): void
       h.indexOf("aparat.com") !== -1
     );
   }
-  function isTwitter(h) {
-    h = (h || "").toLowerCase();
-    return h.indexOf("twitter.com") !== -1 || h.indexOf("x.com") !== -1;
+  function isHeaderSocialLink(el) {
+    if (!el || el.classList.contains("casting-main-cart-social")) return false;
+    var cls = " " + (el.className || "") + " ";
+    if (
+      cls.indexOf(" jeg_facebook ") !== -1 ||
+      cls.indexOf(" jeg_twitter ") !== -1 ||
+      cls.indexOf(" jeg_instagram ") !== -1 ||
+      cls.indexOf(" jeg_linkedin ") !== -1 ||
+      cls.indexOf(" jeg_youtube ") !== -1
+    ) {
+      return true;
+    }
+    return isSocialHref(el.getAttribute("href"));
   }
-  function getSocials(parent) {
-    return qsAll("a[href]", parent || document).filter(function (el) {
-      return (
-        isSocialHref(el.getAttribute("href")) &&
-        !el.classList.contains("casting-main-cart-social")
-      );
+  function widgetLinks(widget) {
+    return qsAll("a[href]", widget).filter(isHeaderSocialLink);
+  }
+  function headerWidgets() {
+    var sel = [
+      ".jeg_header .socials_widget",
+      ".jeg_navbar .socials_widget",
+      ".jeg_header_sticky .socials_widget",
+      ".jeg_sticky_nav .socials_widget",
+      ".jeg_stickybar .socials_widget",
+      "header .socials_widget",
+      ".jeg_topbar .socials_widget",
+      ".jeg_header .jeg_social_icon_block",
+    ].join(",");
+    var found = qsAll(sel);
+    if (found.length) return found;
+    return qsAll(".socials_widget, .jeg_social_icon_block").filter(function (el) {
+      return widgetLinks(el).length > 0;
     });
-  }
-  function findSocialCluster() {
-    var scopes = [
-      "header",
-      ".jeg_header",
-      ".td-header-wrap",
-      ".tdb-header-template",
-      ".site-header",
-      ".main-header",
-      "#header",
-      ".top-bar",
-      ".topbar",
-      ".header-top",
-    ];
-    var i, scope, socials;
-    for (i = 0; i < scopes.length; i++) {
-      scope = document.querySelector(scopes[i]);
-      if (!scope) continue;
-      socials = getSocials(scope);
-      if (socials.length) {
-        return { root: scope, socials: socials };
-      }
-    }
-    socials = getSocials(document);
-    if (!socials.length) return null;
-    return { root: socials[0].parentElement, socials: socials };
-  }
-  function pickTemplate(socials) {
-    var i, href;
-    for (i = 0; i < socials.length; i++) {
-      href = socials[i].getAttribute("href") || "";
-      if (isTwitter(href)) return socials[i];
-    }
-    return socials[socials.length - 1];
   }
   function cleanBrandClasses(className) {
     return (className || "")
@@ -251,12 +338,10 @@ function casting_main_cart_enqueue_assets(): void
         ic.push("fa-shopping-cart");
       }
       iEl.className = ic.join(" ");
-      iEl.removeAttribute("aria-hidden");
       iEl.setAttribute("aria-hidden", "true");
       a.appendChild(iEl);
     } else {
-      a.innerHTML =
-        '<i class="fa fa-shopping-cart" aria-hidden="true"></i>';
+      a.innerHTML = '<i class="fa fa-shopping-cart" aria-hidden="true"></i>';
     }
     a.insertAdjacentHTML("beforeend", badgeHtml());
     return a;
@@ -273,24 +358,33 @@ function casting_main_cart_enqueue_assets(): void
       }
     });
   }
-  function place() {
-    if (document.querySelector(".casting-main-cart-social")) return true;
-    var cluster = findSocialCluster();
-    if (!cluster || !cluster.socials.length) return false;
-    var socials = cluster.socials;
-    var template = pickTemplate(socials);
-    var parent = template.parentElement;
-    if (!parent) return false;
-    var link = buildCartLink(template);
+  function injectWidget(widget) {
+    if (!widget || widget.querySelector(".casting-main-cart-social")) return true;
+    var socials = widgetLinks(widget);
+    if (!socials.length) return false;
     var last = socials[socials.length - 1];
+    var parent = last.parentElement;
+    if (!parent) return false;
+    var link = buildCartLink(last);
     if (last.nextSibling) {
       parent.insertBefore(link, last.nextSibling);
     } else {
       parent.appendChild(link);
     }
-    var fb = document.querySelector(".casting-main-cart-fallback");
-    if (fb) fb.classList.remove("is-visible");
     return true;
+  }
+  function place() {
+    var widgets = headerWidgets();
+    var i;
+    var placed = false;
+    for (i = 0; i < widgets.length; i++) {
+      if (injectWidget(widgets[i])) placed = true;
+    }
+    if (placed) {
+      var fb = document.querySelector(".casting-main-cart-fallback");
+      if (fb) fb.classList.remove("is-visible");
+    }
+    return placed;
   }
   function showFallback() {
     var fb = document.querySelector(".casting-main-cart-fallback");
@@ -311,25 +405,31 @@ function casting_main_cart_enqueue_assets(): void
           setCount(0);
           return;
         }
-        // مهمان هم می‌تواند سبد داشته باشد
         setCount(data.count || 0);
       })
       .catch(function () {});
   }
   function boot() {
-    if (!place()) {
-      var n = 0;
-      var t = setInterval(function () {
-        n++;
-        if (place() || n > 20) {
-          clearInterval(t);
-          if (!document.querySelector(".casting-main-cart-social")) showFallback();
-          refreshCount();
-        }
-      }, 250);
-      return;
-    }
-    refreshCount();
+    try {
+      var placed = place();
+      if (!placed) {
+        var n = 0;
+        var t = setInterval(function () {
+          n++;
+          try {
+            if (place() || n > 24) {
+              clearInterval(t);
+              if (!document.querySelector(".casting-main-cart-social")) showFallback();
+              refreshCount();
+            }
+          } catch (e) {
+            clearInterval(t);
+          }
+        }, 250);
+      } else {
+        refreshCount();
+      }
+    } catch (e) {}
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
@@ -339,7 +439,7 @@ function casting_main_cart_enqueue_assets(): void
 })();
 JS;
 
-    wp_register_script('casting-main-cart-nav', false, [], '1.9', true);
+    wp_register_script('casting-main-cart-nav', false, [], '2.2', true);
     wp_enqueue_script('casting-main-cart-nav');
     wp_add_inline_script(
         'casting-main-cart-nav',
@@ -359,5 +459,13 @@ function casting_main_cart_footer_markup(): void
     echo '<a class="casting-main-cart-fallback" href="' . $url . '" aria-label="خرید اشتراک">خرید اشتراک' . $badge . '</a>';
 }
 
+add_action('init', 'casting_main_cart_maybe_purge_cache', 20);
 add_action('wp_enqueue_scripts', 'casting_main_cart_enqueue_assets', 30);
 add_action('wp_footer', 'casting_main_cart_footer_markup', 40);
+add_action('template_redirect', 'casting_main_cart_maybe_buffer', 0);
+add_filter('litespeed_buffer_before', 'casting_main_cart_inject_html', 5);
+add_filter('litespeed_buffer_after', 'casting_main_cart_inject_html', 5);
+add_filter('script_loader_tag', 'casting_main_cart_script_tag', 10, 3);
+add_filter('litespeed_optimize_js_excludes', 'casting_main_cart_litespeed_js_excludes');
+add_filter('litespeed_optm_js_defer_exc', 'casting_main_cart_litespeed_js_excludes');
+add_filter('litespeed_optm_gm_js_exc', 'casting_main_cart_litespeed_js_excludes');

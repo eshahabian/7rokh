@@ -29,7 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $res = casting_approve_user_media($media_id, $admin_id);
         casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'تأیید و منتشر شد.' : $res['error']);
     } elseif ($action === 'reject') {
-        $res = casting_reject_user_media($media_id, $admin_id, (string) ($_POST['reject_reason'] ?? ''));
+        $resolved = casting_user_media_resolve_reject_reason(
+            (string) ($_POST['reject_reason_key'] ?? ''),
+            (string) ($_POST['reject_reason_other'] ?? '')
+        );
+        if (!$resolved['ok']) {
+            casting_set_flash('error', $resolved['error']);
+            casting_redirect($redirect);
+        }
+        $res = casting_reject_user_media($media_id, $admin_id, $resolved['reason']);
         casting_set_flash(
             $res['ok'] ? 'success' : 'error',
             $res['ok'] ? 'رد شد و پیام برای کاربر ارسال شد.' : $res['error']
@@ -129,12 +137,27 @@ casting_render_flash();
                   <input type="hidden" name="media_action" value="approve">
                   <button class="btn btn-primary" type="submit">تأیید و انتشار</button>
                 </form>
-                <form method="post" action="admin-media.php" class="admin-media-reject">
+                <form method="post" action="admin-media.php" class="admin-media-reject" data-reject-reason-form>
                   <?php wp_nonce_field('casting_admin_media'); ?>
                   <input type="hidden" name="return_status" value="<?= casting_e($status) ?>">
                   <input type="hidden" name="media_id" value="<?= (int) $item['id'] ?>">
                   <input type="hidden" name="media_action" value="reject">
-                  <input type="text" name="reject_reason" placeholder="دلیل رد (اختیاری)">
+                  <select name="reject_reason_key" required data-reject-reason-select aria-label="دلیل رد">
+                    <option value="">دلیل رد را انتخاب کنید</option>
+                    <?php foreach (casting_user_media_reject_reason_presets() as $reason_key => $reason_label) : ?>
+                      <option value="<?= casting_e($reason_key) ?>"><?= casting_e($reason_label) ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <input
+                    type="text"
+                    name="reject_reason_other"
+                    placeholder="توضیح دلیل رد"
+                    data-reject-reason-other
+                    disabled
+                    hidden
+                    maxlength="300"
+                    aria-label="توضیح سایر"
+                  >
                   <button class="btn btn-ghost" type="submit">رد</button>
                 </form>
               </div>

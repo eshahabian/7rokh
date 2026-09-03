@@ -82,12 +82,12 @@ casting_render_flash();
   <?php endif; ?>
 
   <h2 class="panel-section-title">رمز SMTP</h2>
-  <p class="meta">رمز اکانت <code>noreply@7rokh.ir</code> در cPanel را اینجا بگذارید (همان رمزی که برای ورود به وب‌میل عوض کردید). لازم نیست فایل سرور را دستی ویرایش کنید.</p>
+  <p class="meta">رمز اکانت <code>noreply@7rokh.com</code> در cPanel را اینجا بگذارید (همان رمزی که برای ورود به وب‌میل عوض کردید). لازم نیست فایل سرور را دستی ویرایش کنید.</p>
   <form class="form" method="post" action="admin-mail-test.php" autocomplete="off">
     <?php wp_nonce_field('casting_mail_test'); ?>
     <input type="hidden" name="save_smtp_pass" value="1">
     <div class="field">
-      <label for="smtp_pass">رمز noreply@7rokh.ir</label>
+      <label for="smtp_pass">رمز noreply@7rokh.com</label>
       <input id="smtp_pass" name="smtp_pass" type="password" required autocomplete="new-password" placeholder="<?= !empty($status['pass_loaded']) ? 'رمز ذخیره‌شده — برای تغییر، رمز جدید را بنویسید' : 'رمز ایمیل را وارد کنید' ?>">
     </div>
     <button class="btn btn-primary" type="submit">ذخیره رمز SMTP</button>

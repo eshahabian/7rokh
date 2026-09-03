@@ -462,7 +462,7 @@ function casting_gateway_finish_mellat_callback(): void
 
     $redirect = (string) ($result['redirect'] ?? 'membership.php');
     if (!empty($result['ok'])) {
-        casting_set_flash('success', 'پرداخت شما با موفقیت انجام شد.');
+        casting_set_flash('success', 'پرداخت شما با موفقیت انجام شد. در صورت خرید عضویت ویژه، همان پلن انتخابی همین حالا فعال شد.');
     } elseif (!empty($result['cancelled'])) {
         casting_set_flash('error', 'پرداخت لغو شد.');
     } else {
@@ -735,14 +735,32 @@ function casting_mellat_start_payment(array $order): array
     ];
 }
 
+/** مبدأ پورتال روی همین هاست — 7rokh.com (قدیمی: 7rokh.ir) */
+function casting_portal_public_origin(): string
+{
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    $host = preg_replace('/:\d+$/', '', $host) ?? '';
+    if ($host === 'www.7rokh.com' || $host === '7rokh.com') {
+        return 'https://7rokh.com';
+    }
+    if ($host === 'www.7rokh.ir' || $host === '7rokh.ir') {
+        return 'https://7rokh.ir';
+    }
+    if (defined('CASTING_MAIN_SITE_URL') && trim((string) CASTING_MAIN_SITE_URL) !== '') {
+        return rtrim((string) CASTING_MAIN_SITE_URL, '/');
+    }
+
+    return 'https://7rokh.com';
+}
+
+function casting_portal_payment_callback_url(): string
+{
+    return casting_portal_public_origin() . '/casting-portal/cart.php';
+}
+
 function casting_mellat_callback_url(): string
 {
-    if (defined('CASTING_MELLAT_CALLBACK_URL') && trim((string) CASTING_MELLAT_CALLBACK_URL) !== '') {
-        return trim((string) CASTING_MELLAT_CALLBACK_URL);
-    }
-    $origin = rtrim((string) CASTING_MAIN_SITE_URL, '/');
-
-    return $origin . '/casting-portal/cart.php';
+    return casting_portal_payment_callback_url();
 }
 
 function casting_mellat_pay_url(): string
@@ -1083,12 +1101,7 @@ function casting_sep_verify_urls(): array
 
 function casting_sep_callback_url(): string
 {
-    if (defined('CASTING_SEP_CALLBACK_URL') && trim((string) CASTING_SEP_CALLBACK_URL) !== '') {
-        return trim((string) CASTING_SEP_CALLBACK_URL);
-    }
-    $origin = rtrim((string) CASTING_MAIN_SITE_URL, '/');
-
-    return $origin . '/casting-portal/cart.php';
+    return casting_portal_payment_callback_url();
 }
 
 /**
@@ -1142,7 +1155,7 @@ function casting_gateway_finish_sep_callback(): void
 
     $redirect = (string) ($result['redirect'] ?? 'membership.php');
     if (!empty($result['ok'])) {
-        casting_set_flash('success', 'پرداخت شما با موفقیت انجام شد.');
+        casting_set_flash('success', 'پرداخت شما با موفقیت انجام شد. در صورت خرید عضویت ویژه، همان پلن انتخابی همین حالا فعال شد.');
     } elseif (!empty($result['cancelled'])) {
         casting_set_flash('error', 'پرداخت لغو شد.');
     } else {

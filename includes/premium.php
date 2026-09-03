@@ -418,6 +418,8 @@ function casting_admin_grant_premium(int $target_id, int $admin_id, string $plan
     }
     $until = wp_date('Y-m-d H:i:s', $base_ts + ($days * DAY_IN_SECONDS));
     update_user_meta($target_id, 'casting_premium_until', $until);
+    update_user_meta($target_id, 'casting_premium_last_plan', sanitize_key($plan_key));
+    update_user_meta($target_id, 'casting_premium_last_ref', 'admin:' . $admin_id);
 
     casting_add_transaction($target_id, [
         'type'   => 'activation',
@@ -428,6 +430,323 @@ function casting_admin_grant_premium(int $target_id, int $admin_id, string $plan
     ]);
 
     return ['ok' => true, 'error' => '', 'until' => $until];
+}
+
+/**
+ * مدت انتظار تأیید دومرحله‌ای ویژه کردن دستی (ثانیه)
+ */
+function casting_admin_grant_premium_wait_seconds(): int
+{
+    return 10;
+}
+
+/**
+ * شروع مرحلهٔ تأیید ویژه کردن دستی
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_admin_grant_premium_begin(int $admin_id, int $target_id, string $mode = 'grant'): array
+{
+    if (!function_exists('casting_user_has_admin_permission')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if ($admin_id <= 0 || (!casting_user_has_admin_permission($admin_id, 'view_premium_users') && !casting_user_is_super_admin($admin_id))) {
+        return ['ok' => false, 'error' => 'اجازه فعال‌سازی اشتراک ویژه را ندارید.'];
+    }
+    if ($target_id <= 0 || casting_get_user_role($target_id) === '') {
+        return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
+    }
+    $mode = $mode === 'renew' ? 'renew' : 'grant';
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return ['ok' => false, 'error' => 'نشست منقضی شده. دوباره تلاش کنید.'];
+    }
+    $_SESSION['casting_grant_premium'] = [
+        'admin_id'   => $admin_id,
+        'target_id'  => $target_id,
+        'mode'       => $mode,
+        'started_at' => time(),
+    ];
+
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * @return array{admin_id:int,target_id:int,mode:string,started_at:int}|null
+ */
+function casting_admin_grant_premium_pending(?int $target_id = null): ?array
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return null;
+    }
+    $pending = $_SESSION['casting_grant_premium'] ?? null;
+    if (!is_array($pending)) {
+        return null;
+    }
+    $row = [
+        'admin_id'   => (int) ($pending['admin_id'] ?? 0),
+        'target_id'  => (int) ($pending['target_id'] ?? 0),
+        'mode'       => ((string) ($pending['mode'] ?? 'grant')) === 'renew' ? 'renew' : 'grant',
+        'started_at' => (int) ($pending['started_at'] ?? 0),
+    ];
+    if ($row['admin_id'] <= 0 || $row['target_id'] <= 0 || $row['started_at'] <= 0) {
+        return null;
+    }
+    // منقضی بعد از ۲ دقیقه بدون تأیید
+    if (time() - $row['started_at'] > 120) {
+        casting_admin_grant_premium_clear();
+
+        return null;
+    }
+    if ($target_id !== null && $row['target_id'] !== $target_id) {
+        return null;
+    }
+
+    return $row;
+}
+
+function casting_admin_grant_premium_clear(): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        unset($_SESSION['casting_grant_premium']);
+    }
+}
+
+/**
+ * آیا می‌توان ویژه کردن دستی را نهایی کرد؟ (تیک + حداقل ۱۰ ثانیه)
+ *
+ * @return array{ok:bool,error:string,remaining:int}
+ */
+function casting_admin_grant_premium_can_finalize(int $admin_id, int $target_id, bool $confirmed): array
+{
+    $pending = casting_admin_grant_premium_pending($target_id);
+    if ($pending === null || (int) $pending['admin_id'] !== $admin_id) {
+        return ['ok' => false, 'error' => 'ابتدا دکمهٔ ویژه کردن را بزنید و مرحلهٔ تأیید را کامل کنید.', 'remaining' => 0];
+    }
+    if (!$confirmed) {
+        return ['ok' => false, 'error' => 'برای ادامه، تیک «از انجام این کار مطمئن هستم» را بزنید.', 'remaining' => 0];
+    }
+    $wait = casting_admin_grant_premium_wait_seconds();
+    $elapsed = time() - (int) $pending['started_at'];
+    $remaining = max(0, $wait - $elapsed);
+    if ($remaining > 0) {
+        return [
+            'ok'        => false,
+            'error'     => 'لطفاً ' . $remaining . ' ثانیه دیگر صبر کنید و دوباره تأیید کنید.',
+            'remaining' => $remaining,
+        ];
+    }
+
+    return ['ok' => true, 'error' => '', 'remaining' => 0];
+}
+
+/**
+ * آیا برای این کاربر مدرک پرداخت واقعی (پول/فیش تأییدشده) وجود دارد؟
+ */
+function casting_premium_has_paid_money_evidence(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+
+    $last_ref = trim((string) get_user_meta($user_id, 'casting_premium_last_ref', true));
+    if ($last_ref !== '' && !str_starts_with($last_ref, 'admin:') && !str_starts_with($last_ref, 'admin-revoke:')) {
+        return true;
+    }
+
+    foreach (casting_user_transactions($user_id) as $tx) {
+        if (!is_array($tx)) {
+            continue;
+        }
+        $status = (string) ($tx['status'] ?? '');
+        if ($status !== 'approved') {
+            continue;
+        }
+        $type = (string) ($tx['type'] ?? '');
+        $amount = (int) ($tx['amount'] ?? 0);
+        if ($type === 'gateway_payment' || $amount > 0) {
+            return true;
+        }
+    }
+
+    foreach (casting_user_receipts($user_id) as $row) {
+        if ((string) ($row['status'] ?? '') === 'approved') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * آیا برای این کاربر مدرک پرداخت/فیش/فعال‌سازی دستی وجود دارد؟
+ */
+function casting_premium_has_activation_evidence(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (casting_premium_has_paid_money_evidence($user_id)) {
+        return true;
+    }
+
+    $last_ref = trim((string) get_user_meta($user_id, 'casting_premium_last_ref', true));
+    if (str_starts_with($last_ref, 'admin:')) {
+        return true;
+    }
+
+    foreach (casting_user_transactions($user_id) as $tx) {
+        if (!is_array($tx)) {
+            continue;
+        }
+        $status = (string) ($tx['status'] ?? '');
+        if ($status !== 'approved') {
+            continue;
+        }
+        $type = (string) ($tx['type'] ?? '');
+        $ref = (string) ($tx['ref'] ?? '');
+        if ($type === 'activation' || str_starts_with($ref, 'admin:')) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * پاک کردن متای ویژه و ثبت لاگ (بدون چک دسترسی — فقط از مسیرهای ادمین صدا زده شود).
+ */
+function casting_premium_clear_for_user(int $user_id, string $title, string $ref): void
+{
+    delete_user_meta($user_id, 'casting_premium_until');
+    delete_user_meta($user_id, 'casting_premium_last_plan');
+    delete_user_meta($user_id, 'casting_premium_last_ref');
+
+    casting_add_transaction($user_id, [
+        'type'   => 'revocation',
+        'title'  => $title,
+        'amount' => 0,
+        'status' => 'approved',
+        'ref'    => $ref,
+    ]);
+}
+
+/**
+ * لغو عضویت ویژه توسط مدیر
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_admin_revoke_premium(int $target_id, int $admin_id, string $note = ''): array
+{
+    if (!function_exists('casting_user_has_admin_permission')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if ($admin_id <= 0 || (!casting_user_has_admin_permission($admin_id, 'view_premium_users') && !casting_user_is_super_admin($admin_id))) {
+        return ['ok' => false, 'error' => 'اجازه لغو اشتراک ویژه را ندارید.'];
+    }
+    if ($target_id <= 0 || casting_get_user_role($target_id) === '') {
+        return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
+    }
+    if (!casting_user_is_premium($target_id)) {
+        return ['ok' => true, 'error' => ''];
+    }
+
+    $note = trim(sanitize_text_field($note));
+    $title = 'لغو عضویت ویژه توسط مدیر';
+    if ($note !== '') {
+        $title .= ' — ' . $note;
+    }
+
+    casting_premium_clear_for_user($target_id, $title, 'admin-revoke:' . $admin_id);
+
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * یک‌بار: ویژه‌های بدون مدرک پرداخت را برمی‌دارد؛ زهرا محمدی اگر پول نداده باشد حتماً لغو می‌شود.
+ *
+ * @return array{ran:bool,revoked:array<int,string>}
+ */
+function casting_premium_repair_orphan_once(int $admin_id): array
+{
+    $flag = 'casting_premium_orphan_repair_v1';
+    if ((string) get_option($flag, '') === '1') {
+        return ['ran' => false, 'revoked' => []];
+    }
+    if ($admin_id <= 0) {
+        return ['ran' => false, 'revoked' => []];
+    }
+    if (!function_exists('casting_user_has_admin_permission')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if (!casting_user_has_admin_permission($admin_id, 'view_premium_users') && !casting_user_is_super_admin($admin_id)) {
+        return ['ran' => false, 'revoked' => []];
+    }
+
+    $revoked = [];
+    $mark = static function (int $uid, string $label) use (&$revoked, $admin_id): void {
+        if (!casting_user_is_premium($uid)) {
+            return;
+        }
+        casting_premium_clear_for_user(
+            $uid,
+            'لغو خودکار ویژه بدون مدرک پرداخت — ' . $label,
+            'orphan-repair:' . $admin_id
+        );
+        $revoked[$uid] = $label;
+    };
+
+    $users = get_users([
+        'meta_key'     => 'casting_premium_until',
+        'meta_compare' => 'EXISTS',
+        'number'       => 500,
+        'fields'       => ['ID', 'display_name', 'user_login'],
+    ]);
+
+    foreach ($users as $user) {
+        $uid = (int) $user->ID;
+        if (!casting_user_is_premium($uid)) {
+            continue;
+        }
+        $name = trim((string) $user->display_name);
+        $login = (string) $user->user_login;
+        $is_zahra = ($name === 'زهرا محمدی')
+            || (function_exists('mb_strpos') ? mb_strpos($name, 'زهرا محمدی') !== false : strpos($name, 'زهرا محمدی') !== false);
+
+        if ($is_zahra) {
+            if (!casting_premium_has_paid_money_evidence($uid)) {
+                $mark($uid, $name !== '' ? $name : $login);
+            }
+            continue;
+        }
+
+        if (!casting_premium_has_activation_evidence($uid)) {
+            $mark($uid, $name !== '' ? $name : $login);
+        }
+    }
+
+    // جستجوی صریح نام در صورت تفاوت جزئی
+    $named = get_users([
+        'search'         => '*زهرا*',
+        'search_columns' => ['display_name'],
+        'number'         => 50,
+        'fields'         => ['ID', 'display_name', 'user_login'],
+    ]);
+    foreach ($named as $user) {
+        $uid = (int) $user->ID;
+        $name = trim((string) $user->display_name);
+        $is_zahra = ($name === 'زهرا محمدی')
+            || (function_exists('mb_strpos') ? mb_strpos($name, 'زهرا محمدی') !== false : strpos($name, 'زهرا محمدی') !== false);
+        if (!$is_zahra || isset($revoked[$uid])) {
+            continue;
+        }
+        if (casting_user_is_premium($uid) && !casting_premium_has_paid_money_evidence($uid)) {
+            $mark($uid, $name);
+        }
+    }
+
+    update_option($flag, '1', false);
+
+    return ['ran' => true, 'revoked' => $revoked];
 }
 
 /**

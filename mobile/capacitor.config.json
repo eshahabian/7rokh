@@ -1,11 +1,13 @@
 {
   "appId": "ir.rokh7.app",
-  "appName": "هفت رخ",
+  "appName": "7rokh",
   "webDir": "www",
   "server": {
-    "url": "https://7rokh.ir/casting-portal/",
+    "url": "https://7rokh.com/casting-portal/home.php",
     "cleartext": false,
     "allowNavigation": [
+      "7rokh.com",
+      "*.7rokh.com",
       "7rokh.ir",
       "*.7rokh.ir",
       "shaparak.ir",
@@ -13,8 +15,5 @@
       "behpardakht.com",
       "*.behpardakht.com"
     ]
-  },
-  "android": {
-    "allowMixedContent": false
   }
 }

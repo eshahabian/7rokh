@@ -21,7 +21,7 @@
       /* ignore */
     }
     const ua = String(navigator.userAgent || "");
-    return /Capacitor/i.test(ua) || /; wv\)/i.test(ua);
+    return /Capacitor/i.test(ua) || /ir\.rokh7/i.test(ua);
   };
 
   const castingIsAppShell = () => castingIsPwaShell() || castingIsNativeAppShell();
@@ -32,17 +32,328 @@
       if (u.protocol !== "http:" && u.protocol !== "https:") return false;
       if (u.origin === window.location.origin) return true;
       const host = u.hostname.replace(/^www\./i, "").toLowerCase();
-      return host === "7rokh.ir" || host.endsWith(".7rokh.ir");
+      return host === "7rokh.com"
+        || host.endsWith(".7rokh.com")
+        || host === "7rokh.ir"
+        || host.endsWith(".7rokh.ir");
     } catch (err) {
       return false;
     }
   };
 
+  const castingApplyNativeScreenFit = () => {
+    const root = document.documentElement;
+    if (!castingIsNativeAppShell()) {
+      root.classList.remove("is-native-app");
+      root.style.removeProperty("font-size");
+      root.style.removeProperty("--app-scale");
+      root.style.removeProperty("--app-vh");
+      root.style.removeProperty("--app-vw");
+      return;
+    }
+    root.classList.add("is-native-app");
+    const vv = window.visualViewport;
+    let w = Math.round((vv && vv.width) || window.innerWidth || 390);
+    let h = Math.round((vv && vv.height) || window.innerHeight || 800);
+    if (w < 280) w = 280;
+    if (w > 1400) w = 1400;
+    let scale = w / 390;
+    if (scale < 0.88) scale = 0.88;
+    if (scale > 1.15) scale = 1.15;
+    root.style.setProperty("--app-scale", String(Math.round(scale * 1000) / 1000));
+    root.style.setProperty("--app-vw", `${w}px`);
+    root.style.setProperty("--app-vh", `${h}px`);
+  };
+
+  castingApplyNativeScreenFit();
+  window.addEventListener("resize", castingApplyNativeScreenFit);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", castingApplyNativeScreenFit);
+  }
+
+  const castingIsEditableField = (el) => {
+    if (!(el instanceof HTMLElement)) return false;
+    const tag = el.tagName;
+    if (tag === "TEXTAREA") return true;
+    if (tag === "INPUT") {
+      const type = String(el.type || "text").toLowerCase();
+      return !["button", "submit", "checkbox", "radio", "file", "hidden", "reset", "range", "color", "image"].includes(type);
+    }
+    return el.isContentEditable;
+  };
+
+  const castingSetNativeCaptureSecure = (secure) => {
+    try {
+      if (window.CastingApp && typeof window.CastingApp.setSecureCapture === "function") {
+        window.CastingApp.setSecureCapture(!!secure);
+      }
+    } catch (_err) {
+      /* ignore */
+    }
+  };
+
+  if (castingIsNativeAppShell()) {
+    castingSetNativeCaptureSecure(false);
+    document.addEventListener("focusin", (event) => {
+      if (castingIsEditableField(event.target)) {
+        castingSetNativeCaptureSecure(false);
+      }
+    });
+    document.addEventListener("touchstart", (event) => {
+      const t = event.target;
+      if (!(t instanceof HTMLElement)) return;
+      if (castingIsEditableField(t) || t.closest("textarea, input:not([type='hidden']):not([type='button']):not([type='submit'])")) {
+        castingSetNativeCaptureSecure(false);
+      }
+    }, { capture: true, passive: true });
+  }
+
+  let castingLastCopiedText = "";
+  const rememberCopiedText = (text) => {
+    const value = String(text || "");
+    if (value) castingLastCopiedText = value;
+  };
+
+  const hideCastingPasteMenu = () => {
+    const menu = document.getElementById("casting-paste-menu");
+    const host = menu && menu.parentElement;
+    menu?.remove();
+    if (host instanceof HTMLElement && !host.querySelector("#casting-paste-menu")) {
+      host.classList.remove("has-casting-paste");
+    }
+  };
+
+  const readCastingClipboard = async () => {
+    try {
+      if (window.CastingApp && typeof window.CastingApp.getClipboardText === "function") {
+        const nativeText = String(window.CastingApp.getClipboardText() || "");
+        if (nativeText) {
+          rememberCopiedText(nativeText);
+          return nativeText;
+        }
+      }
+    } catch (_err) {
+      /* fall through */
+    }
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.readText === "function") {
+        const webText = await navigator.clipboard.readText();
+        if (webText) {
+          rememberCopiedText(String(webText));
+          return String(webText);
+        }
+      }
+    } catch (_err2) {
+      /* fall through */
+    }
+    return castingLastCopiedText || "";
+  };
+
+  const insertCastingClipboard = (field, text) => {
+    if (!(field instanceof HTMLTextAreaElement || field instanceof HTMLInputElement)) return false;
+    const value = String(text || "");
+    if (!value) return false;
+    const start = Number.isInteger(field.selectionStart) ? field.selectionStart : field.value.length;
+    const end = Number.isInteger(field.selectionEnd) ? field.selectionEnd : start;
+    field.value = field.value.slice(0, start) + value + field.value.slice(end);
+    const pos = start + value.length;
+    try {
+      field.setSelectionRange(pos, pos);
+    } catch (_err) {
+      /* ignore */
+    }
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    field.focus();
+    return true;
+  };
+
+  let castingPasteBusy = false;
+  const pasteIntoCastingField = async (field) => {
+    if (castingPasteBusy) return false;
+    if (!(field instanceof HTMLTextAreaElement || field instanceof HTMLInputElement) || field.readOnly || field.disabled) {
+      return false;
+    }
+    castingPasteBusy = true;
+    try {
+      const before = field.value;
+      try {
+        field.focus();
+        document.execCommand("paste");
+      } catch (_err) {
+        /* fall through */
+      }
+      if (field.value !== before) {
+        rememberCopiedText(field.value.slice(before.length) || castingLastCopiedText);
+        return true;
+      }
+      const text = await readCastingClipboard();
+      if (!text) {
+        window.alert("متنی در حافظه نیست. اول متن را کپی کنید.");
+        return false;
+      }
+      rememberCopiedText(text);
+      return insertCastingClipboard(field, text);
+    } finally {
+      window.setTimeout(() => {
+        castingPasteBusy = false;
+      }, 400);
+    }
+  };
+
+  const showCastingPasteMenu = (field, x, y) => {
+    if (!(field instanceof HTMLElement)) return;
+    hideCastingPasteMenu();
+    const menu = document.createElement("div");
+    menu.id = "casting-paste-menu";
+    menu.className = "casting-paste-menu";
+    menu.setAttribute("role", "menu");
+    menu.dataset.openedAt = String(Date.now());
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "casting-paste-menu-btn";
+    btn.textContent = "جاگذاری";
+    const runPaste = async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (Date.now() - Number(menu.dataset.openedAt || 0) < 50) return;
+      if (menu.dataset.done === "1") return;
+      menu.dataset.done = "1";
+      hideCastingPasteMenu();
+      await pasteIntoCastingField(field);
+    };
+    btn.addEventListener("click", runPaste);
+    btn.addEventListener("pointerup", runPaste);
+    menu.appendChild(btn);
+
+    const host = field.closest(".field") || field.parentElement;
+    if (host instanceof HTMLElement) {
+      host.classList.add("has-casting-paste");
+      host.appendChild(menu);
+    } else {
+      document.body.appendChild(menu);
+    }
+
+    const box = menu.getBoundingClientRect();
+    const fieldRect = field.getBoundingClientRect();
+    const hostRect = host instanceof HTMLElement ? host.getBoundingClientRect() : fieldRect;
+    const vv = window.visualViewport;
+    const viewH = vv && vv.height ? vv.height : window.innerHeight;
+    const viewW = vv && vv.width ? vv.width : window.innerWidth;
+    const hasPoint = Number.isFinite(x) && Number.isFinite(y);
+    const fieldInView = fieldRect.top >= 0 && fieldRect.top < viewH - 12;
+    const anchorY = fieldInView ? fieldRect.top : (hasPoint ? y : 24);
+    const anchorX = hasPoint ? x : (document.documentElement.getAttribute("dir") === "ltr" ? fieldRect.left + 16 : fieldRect.right - 16);
+
+    if (host instanceof HTMLElement && menu.parentElement === host) {
+      let top = (fieldInView ? fieldRect.top : anchorY) - hostRect.top - box.height - 6;
+      let left = anchorX - hostRect.left - box.width / 2;
+      if (top < -hostRect.top + 8) top = fieldRect.top - hostRect.top + 4;
+      left = Math.max(0, Math.min(Math.max(0, hostRect.width - box.width), left));
+      menu.style.position = "absolute";
+      menu.style.top = top + "px";
+      menu.style.left = left + "px";
+      menu.style.right = "auto";
+      menu.style.bottom = "auto";
+      return;
+    }
+
+    let top = anchorY - box.height - 6;
+    let left = anchorX - box.width / 2;
+    if (top < 8) top = 8;
+    top = Math.max(8, Math.min(viewH - box.height - 8, top));
+    left = Math.max(8, Math.min(viewW - box.width - 8, left));
+    menu.style.position = "fixed";
+    menu.style.left = left + "px";
+    menu.style.top = top + "px";
+  };
+
+  if (castingIsNativeAppShell()) {
+    const PASTE_HOLD_MS = 350;
+    const PASTE_MOVE_SLOP = 16;
+    let pasteHoldTimer = 0;
+    let pasteHoldField = null;
+    let pasteHoldX = 0;
+    let pasteHoldY = 0;
+    let pasteHoldStartX = 0;
+    let pasteHoldStartY = 0;
+
+    const clearPasteHold = () => {
+      if (pasteHoldTimer) {
+        window.clearTimeout(pasteHoldTimer);
+        pasteHoldTimer = 0;
+      }
+      pasteHoldField = null;
+    };
+
+    const eventPoint = (event) => {
+      if (event.touches && event.touches[0]) return event.touches[0];
+      if (event.changedTouches && event.changedTouches[0]) return event.changedTouches[0];
+      return event;
+    };
+
+    document.addEventListener("pointerdown", (event) => {
+      const t = event.target;
+      if (!(t instanceof HTMLElement) || !castingIsEditableField(t) || t.readOnly || t.disabled) return;
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      const point = eventPoint(event);
+      pasteHoldField = t;
+      pasteHoldStartX = pasteHoldX = Number(point.clientX);
+      pasteHoldStartY = pasteHoldY = Number(point.clientY);
+      if (pasteHoldTimer) window.clearTimeout(pasteHoldTimer);
+      pasteHoldTimer = window.setTimeout(() => {
+        pasteHoldTimer = 0;
+        const field = pasteHoldField;
+        if (!(field instanceof HTMLElement)) return;
+        showCastingPasteMenu(field, pasteHoldX, pasteHoldY);
+      }, PASTE_HOLD_MS);
+    }, { capture: true, passive: true });
+
+    document.addEventListener("pointermove", (event) => {
+      if (!pasteHoldField) return;
+      const point = eventPoint(event);
+      pasteHoldX = Number(point.clientX);
+      pasteHoldY = Number(point.clientY);
+      if (Math.hypot(pasteHoldX - pasteHoldStartX, pasteHoldY - pasteHoldStartY) > PASTE_MOVE_SLOP) {
+        clearPasteHold();
+      }
+    }, { capture: true, passive: true });
+
+    document.addEventListener("pointerup", clearPasteHold, { capture: true, passive: true });
+    document.addEventListener("pointercancel", clearPasteHold, { capture: true, passive: true });
+
+    document.addEventListener("contextmenu", (event) => {
+      const t = event.target;
+      if (!(t instanceof HTMLElement) || !castingIsEditableField(t)) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+    document.addEventListener("selectstart", (event) => {
+      if (event.target instanceof HTMLElement && castingIsEditableField(event.target)) {
+        event.preventDefault();
+      }
+    }, true);
+    document.addEventListener("click", (event) => {
+      const menu = document.getElementById("casting-paste-menu");
+      if (!menu || !(event.target instanceof Node) || menu.contains(event.target)) return;
+      const openedAt = Number(menu.dataset.openedAt || 0);
+      if (Date.now() - openedAt < 400) return;
+      hideCastingPasteMenu();
+    });
+  }
+
+  document.addEventListener("click", async (event) => {
+    const btn = event.target && event.target.closest ? event.target.closest("[data-chat-paste]") : null;
+    if (!(btn instanceof HTMLElement)) return;
+    event.preventDefault();
+    const form = btn.closest("form") || document.querySelector("[data-chat-live-send]");
+    const field = form instanceof HTMLElement
+      ? form.querySelector("#message, textarea[name='message'], textarea:not([readonly])")
+      : document.querySelector("#message");
+    await pasteIntoCastingField(field);
+  });
+
   if (castingIsAppShell()) {
     document.documentElement.classList.add("is-pwa");
-    if (castingIsNativeAppShell()) {
-      document.documentElement.classList.add("is-native-app");
-    }
   }
 
   // وب‌ویو موبایل: اولین لمس نباید فقط :hover بماند — کلیک همان لحظه اعمال شود
@@ -385,9 +696,39 @@
   document.querySelectorAll("[data-jalali-birth]").forEach((box) => bindJalaliBox(box, true));
   document.querySelectorAll("[data-jalali-date]").forEach((box) => bindJalaliBox(box, false));
 
+  const growChatCompose = (el) => {
+    if (!(el instanceof HTMLTextAreaElement) || !el.closest(".chat-compose")) return;
+    if (!String(el.value || "").trim()) {
+      el.style.height = "";
+      return;
+    }
+    el.style.height = "auto";
+    el.style.height = Math.min(Math.max(el.scrollHeight, 40), 96) + "px";
+  };
+
+  const scrollChatToComposer = () => {
+    const threadEl = document.getElementById("chat-thread");
+    if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
+    const compose = document.querySelector(".chat-compose");
+    if (compose && typeof compose.scrollIntoView === "function") {
+      compose.scrollIntoView({ block: "end", inline: "nearest" });
+    }
+  };
+
   const thread = document.getElementById("chat-thread");
   if (thread) {
     thread.scrollTop = thread.scrollHeight;
+  }
+  document.querySelectorAll(".chat-compose textarea").forEach((el) => {
+    growChatCompose(el);
+    el.addEventListener("input", () => growChatCompose(el));
+    el.addEventListener("focus", () => growChatCompose(el));
+  });
+  if (document.body.classList.contains("page-messages")) {
+    scrollChatToComposer();
+    window.requestAnimationFrame(scrollChatToComposer);
+    window.setTimeout(scrollChatToComposer, 150);
+    window.setTimeout(scrollChatToComposer, 450);
   }
 
   const bindRepeater = (rootSel, listSel, templateSel, addSel, removeSel, renameFn) => {
@@ -537,6 +878,7 @@
     const syncCities = (keepCity) => {
       const province = provinceSel?.value || "";
       const cities = province ? map.cities?.[province] || [] : [];
+      // حالت قدیمی input+datalist (اگر جایی مانده باشد)
       if (freeCity && cityInput) {
         if (!province) {
           cityInput.disabled = true;
@@ -545,7 +887,7 @@
           fillDatalist(cityList, []);
         } else {
           cityInput.disabled = false;
-          cityInput.placeholder = "از پیشنهاد انتخاب کنید یا بنویسید";
+          cityInput.placeholder = "انتخاب شهر…";
           fillDatalist(cityList, cities);
           if (typeof keepCity === "string" && keepCity !== "") {
             cityInput.value = keepCity;
@@ -556,10 +898,22 @@
       if (!citySel) return;
       if (!province) {
         citySel.disabled = true;
-        fillSelect(citySel, [], "اول استان را انتخاب کنید", "", false);
+        fillSelect(
+          citySel,
+          [],
+          allowCityAll ? "اول استان" : "اول استان را انتخاب کنید",
+          "",
+          false
+        );
       } else {
         citySel.disabled = false;
-        fillSelect(citySel, cities, "انتخاب شهر…", keepCity, allowCityAll);
+        fillSelect(
+          citySel,
+          cities,
+          allowCityAll ? "همه" : "انتخاب شهر…",
+          keepCity,
+          allowCityAll
+        );
       }
     };
 
@@ -1101,6 +1455,45 @@
       chip.addEventListener("click", () => applySearchChip(chip));
     });
 
+    const nameSearchSuggest = document.querySelector("[data-name-search-suggest]");
+
+    const hideNameSuggest = () => {
+      if (!(nameSearchSuggest instanceof HTMLElement)) return;
+      nameSearchSuggest.hidden = true;
+      nameSearchSuggest.innerHTML = "";
+    };
+
+    const renderNameSuggest = (items, query) => {
+      if (!(nameSearchSuggest instanceof HTMLElement)) return;
+      const q = String(query || "").trim();
+      if (!q || !items.length) {
+        hideNameSuggest();
+        return;
+      }
+      nameSearchSuggest.innerHTML = "";
+      items.forEach((item) => {
+        const id = Number(item.id || 0);
+        if (!id) return;
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "name-search-suggest-item";
+        btn.setAttribute("data-member-preview", String(id));
+        const nameEl = document.createElement("strong");
+        nameEl.textContent = String(item.name || "کاربر");
+        btn.appendChild(nameEl);
+        const login = String(item.login || "").trim();
+        if (login && login !== String(item.name || "")) {
+          const loginEl = document.createElement("span");
+          loginEl.textContent = login;
+          btn.appendChild(loginEl);
+        }
+        li.appendChild(btn);
+        nameSearchSuggest.appendChild(li);
+      });
+      nameSearchSuggest.hidden = nameSearchSuggest.childElementCount === 0;
+    };
+
     const pickPrediction = (items, query) => {
       const q = query.trim().toLocaleLowerCase("fa");
       if (!q) return "";
@@ -1120,6 +1513,7 @@
       const query = (nameSearchInput.value || "").trim();
       if (query.length < 2) {
         clearPrediction();
+        hideNameSuggest();
         return;
       }
       suggestTimer = window.setTimeout(async () => {
@@ -1129,14 +1523,21 @@
           const params = new URLSearchParams({ q: query });
           const res = await fetch(`search-members-suggest.php?${params.toString()}`, {
             signal: controller.signal,
-            headers: { "X-Requested-With": "XMLHttpRequest" },
+            headers: { "X-Requested-With": "XMLHttpRequest", Accept: "application/json" },
           });
-          if (!res.ok) return;
+          if (!res.ok) {
+            hideNameSuggest();
+            return;
+          }
           const data = await res.json();
           const items = Array.isArray(data.items) ? data.items : [];
           predictedFull = pickPrediction(items, query);
+          renderNameSuggest(items, query);
         } catch (err) {
-          if (err?.name !== "AbortError") clearPrediction();
+          if (err?.name !== "AbortError") {
+            clearPrediction();
+            hideNameSuggest();
+          }
         }
       }, 200);
     };
@@ -1145,6 +1546,7 @@
       if (!nameSearchInput || !predictedFull) return false;
       nameSearchInput.value = predictedFull;
       clearPrediction();
+      hideNameSuggest();
       syncClearButton();
       refreshResults();
       return true;
@@ -1152,8 +1554,19 @@
 
     if (nameSearchInput) {
       nameSearchField?.addEventListener("click", (e) => {
-        if (e.target.closest("[data-name-search-clear]")) return;
+        if (e.target.closest("[data-name-search-clear], [data-name-search-suggest]")) return;
         nameSearchInput.focus();
+      });
+
+      nameSearchSuggest?.addEventListener("click", (e) => {
+        const btn = e.target.closest(".name-search-suggest-item");
+        if (!(btn instanceof HTMLElement)) return;
+        const picked = btn.querySelector("strong")?.textContent || "";
+        if (picked) nameSearchInput.value = picked;
+        clearPrediction();
+        hideNameSuggest();
+        syncClearButton();
+        refreshResults();
       });
 
       nameSearchClear?.addEventListener("click", (e) => {
@@ -1161,6 +1574,7 @@
         e.stopPropagation();
         nameSearchInput.value = "";
         clearPrediction();
+        hideNameSuggest();
         syncClearButton();
         refreshResults();
         nameSearchInput.focus();
@@ -1173,14 +1587,24 @@
       });
 
       nameSearchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          hideNameSuggest();
+          return;
+        }
         if (!predictedFull) return;
-        if (e.key === "Tab" || e.key === "ArrowRight") {
+        if (e.key === "Tab" || e.key === "ArrowRight" || e.key === "Enter") {
           const atEnd = nameSearchInput.selectionStart === nameSearchInput.value.length
             && nameSearchInput.selectionEnd === nameSearchInput.value.length;
-          if (e.key === "Tab" || atEnd) {
-            e.preventDefault();
+          if (e.key === "Enter" || e.key === "Tab" || atEnd) {
+            if (e.key !== "Enter") e.preventDefault();
             acceptPrediction();
           }
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!(e.target instanceof Node) || !nameSearchField?.contains(e.target)) {
+          hideNameSuggest();
         }
       });
 
@@ -3163,7 +3587,10 @@
   });
 
   document.addEventListener("contextmenu", (event) => {
-    if (event.target.closest("[data-media-protect], .media-protect, .portrait-lightbox, .post-lightbox-media")) {
+    const t = event.target;
+    if (!(t instanceof Element)) return;
+    if (t.closest("textarea, input, [contenteditable='true']")) return;
+    if (t.closest("[data-media-protect], .media-protect, .portrait-lightbox, .post-lightbox-media")) {
       event.preventDefault();
     }
   });
@@ -3179,12 +3606,22 @@
     }
   });
   document.addEventListener("visibilitychange", () => {
+    if (document.documentElement.classList.contains("is-native-app")) {
+      document.documentElement.classList.remove("media-protect-obscured");
+      return;
+    }
+    if (castingIsEditableField(document.activeElement)) {
+      document.documentElement.classList.remove("media-protect-obscured");
+      return;
+    }
     document.documentElement.classList.toggle(
       "media-protect-obscured",
       document.hidden || document.visibilityState === "hidden"
     );
   });
   window.addEventListener("blur", () => {
+    if (document.documentElement.classList.contains("is-native-app")) return;
+    if (castingIsEditableField(document.activeElement)) return;
     if (window.CASTING_MEDIA_PROTECT?.isMobile) {
       document.documentElement.classList.add("media-protect-obscured");
     }
@@ -4024,7 +4461,7 @@
           if (errEl) {
             errEl.hidden = false;
             errEl.innerHTML = "";
-            errEl.textContent = data.error || "برای مشاهده و پاسخ، عضویت ویژه لازم است.";
+            errEl.textContent = data.error || "ارسال پیام برای اعضای ویژه فعال است (عضویت ویژه)";
             const cartUrl = data.cart_url || "cart.php";
             const cartLink = document.createElement("a");
             cartLink.href = cartUrl;
@@ -4198,15 +4635,427 @@
   // چت زنده: پیام جدید بدون رفرش
   const liveThread = document.querySelector("[data-chat-live]");
   const chatDockCfg = window.CASTING_CHAT_DOCK || {};
-  const appendLiveBubble = (root, msg, peerName) => {
-    if (!(root instanceof HTMLElement) || !msg) return;
-    const id = String(msg.id || "");
-    if (id && root.querySelector('[data-msg-id="' + id + '"]')) return;
-    root.querySelector("[data-chat-empty]")?.remove();
-    let latest = root.querySelector("#latest");
+
+  const copyChatText = async (text) => {
+    const value = String(text || "").trim();
+    if (!value) return false;
+    rememberCopiedText(value);
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch (_err) {
+      /* fallback */
+    }
+    const ta = document.createElement("textarea");
+    ta.value = value;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch (_err2) {
+      ok = false;
+    }
+    ta.remove();
+    return ok;
+  };
+
+  const chatShareCartUrl = (href) => {
+    if (href) return href;
+    try {
+      return new URL("cart.php", window.location.href).toString();
+    } catch (_err) {
+      return "cart.php";
+    }
+  };
+
+  const closeChatShareSheet = () => {
+    document.getElementById("chat-share-overlay")?.remove();
+  };
+
+  const chatShareTargetsFromPage = () => {
+    const items = document.querySelectorAll(".chat-conv-item[href]");
+    const out = [];
+    const seen = {};
+    items.forEach((a) => {
+      if (!(a instanceof HTMLAnchorElement)) return;
+      let id = 0;
+      try {
+        id = Number(new URL(a.href, window.location.href).searchParams.get("with") || 0);
+      } catch (_err) {
+        id = 0;
+      }
+      if (!id || seen[id]) return;
+      seen[id] = true;
+      const name = String(a.querySelector(".chat-conv-name")?.textContent || "").trim();
+      if (!name) return;
+      out.push({ id, name, role: "" });
+    });
+    return out;
+  };
+
+  const chatShareFoldFa = (value) =>
+    String(value || "")
+      .toLocaleLowerCase("fa")
+      .replace(/ي/g, "ی")
+      .replace(/ى/g, "ی")
+      .replace(/ك/g, "ک");
+
+  const chatShareParseJson = async (res) => {
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (_err) {
+      return null;
+    }
+  };
+
+  const openChatShareSheet = async (rawMessage) => {
+    const message = String(rawMessage || "").trim();
+    if (!message) {
+      window.alert("متنی برای اشتراک نیست.");
+      return;
+    }
+    if (!chatDockCfg.url || !chatDockCfg.nonce) {
+      window.alert("امکان اشتراک در این صفحه نیست.");
+      return;
+    }
+    closeChatShareSheet();
+    const overlay = document.createElement("div");
+    overlay.id = "chat-share-overlay";
+    overlay.className = "chat-share-overlay";
+    overlay.setAttribute("role", "presentation");
+    const sheet = document.createElement("div");
+    sheet.className = "chat-share-sheet";
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-modal", "true");
+    sheet.setAttribute("aria-labelledby", "chat-share-title");
+    const title = document.createElement("h2");
+    title.id = "chat-share-title";
+    title.textContent = "ارسال به چند نفر";
+    const preview = document.createElement("p");
+    preview.className = "chat-share-preview";
+    preview.textContent = message.length > 180 ? message.slice(0, 180) + "…" : message;
+    const bodyBox = document.createElement("div");
+    bodyBox.className = "chat-share-body";
+    const status = document.createElement("p");
+    status.className = "chat-share-status";
+    status.textContent = "در حال بارگذاری مخاطبان…";
+    const actions = document.createElement("div");
+    actions.className = "chat-share-actions";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "btn btn-ghost";
+    cancelBtn.textContent = "بستن";
+    cancelBtn.addEventListener("click", closeChatShareSheet);
+    actions.appendChild(cancelBtn);
+    sheet.appendChild(title);
+    sheet.appendChild(preview);
+    sheet.appendChild(bodyBox);
+    sheet.appendChild(status);
+    sheet.appendChild(actions);
+    overlay.appendChild(sheet);
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) closeChatShareSheet();
+    });
+    document.body.appendChild(overlay);
+
+    const onKey = (event) => {
+      if (event.key === "Escape") {
+        closeChatShareSheet();
+        document.removeEventListener("keydown", onKey);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+
+    const showPremium = (cartUrl) => {
+      bodyBox.innerHTML = "";
+      status.textContent = "";
+      const note = document.createElement("p");
+      note.className = "chat-premium-send-note";
+      note.append("ارسال پیام برای اعضای ویژه فعال است (");
+      const link = document.createElement("a");
+      link.href = chatShareCartUrl(cartUrl);
+      link.textContent = "عضویت ویژه";
+      note.appendChild(link);
+      note.append("). مدیران پورتال مستثنی‌اند.");
+      bodyBox.appendChild(note);
+    };
+
+    try {
+      let data = null;
+      try {
+        const url = new URL(chatDockCfg.url, window.location.origin);
+        url.searchParams.set("action", "share_targets");
+        url.searchParams.set("_wpnonce", chatDockCfg.nonce);
+        const ctrl = new AbortController();
+        const timer = window.setTimeout(() => ctrl.abort(), 8000);
+        const res = await fetch(url.toString(), {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+          signal: ctrl.signal,
+        });
+        window.clearTimeout(timer);
+        data = await chatShareParseJson(res);
+      } catch (_err) {
+        data = null;
+      }
+      if (data && (data.needs_premium || data.can_share === false)) {
+        showPremium(data.cart_url);
+        return;
+      }
+      const pageTargets = chatShareTargetsFromPage();
+      const targets = (data && data.ok && Array.isArray(data.targets) && data.targets.length)
+        ? data.targets
+        : pageTargets;
+      const extraTargets = [];
+      const search = document.createElement("input");
+      search.type = "search";
+      search.className = "chat-share-search";
+      search.placeholder = "نام فارسی یا نام کاربری…";
+      const list = document.createElement("ul");
+      list.className = "chat-share-list";
+      const maxPeers = Math.max(1, Number((data && data.max_peers) || 12));
+      const mergedTargets = () => {
+        const seen = {};
+        const out = [];
+        [...targets, ...extraTargets].forEach((target) => {
+          const id = Number(target.id || 0);
+          if (!id || seen[id]) return;
+          seen[id] = true;
+          out.push(target);
+        });
+        return out;
+      };
+      const renderList = (filter) => {
+        const q = chatShareFoldFa(filter);
+        list.innerHTML = "";
+        const rows = mergedTargets().filter((target) => {
+          if (!q) return true;
+          return chatShareFoldFa(target.name).includes(q)
+            || chatShareFoldFa(target.login).includes(q)
+            || chatShareFoldFa(target.role).includes(q);
+        });
+        if (!rows.length) {
+          const empty = document.createElement("li");
+          empty.className = "chat-share-empty";
+          empty.textContent = q.length >= 2
+            ? "کسی با این نام پیدا نشد."
+            : "نام فارسی یا نام کاربری را بنویسید.";
+          list.appendChild(empty);
+          return;
+        }
+        rows.forEach((target) => {
+          const name = String(target.name || "");
+          const role = String(target.role || target.login || "");
+          const li = document.createElement("li");
+          const label = document.createElement("label");
+          label.className = "chat-share-item";
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.value = String(target.id || "");
+          const meta = document.createElement("span");
+          meta.className = "chat-share-item-name";
+          const strong = document.createElement("strong");
+          strong.textContent = name || "کاربر";
+          meta.appendChild(strong);
+          if (role) {
+            const roleEl = document.createElement("span");
+            roleEl.textContent = role;
+            meta.appendChild(roleEl);
+          }
+          label.appendChild(cb);
+          label.appendChild(meta);
+          li.appendChild(label);
+          list.appendChild(li);
+        });
+      };
+      let shareSuggestTimer = 0;
+      let shareSuggestAbort = null;
+      const fetchShareNameTargets = (query) => {
+        window.clearTimeout(shareSuggestTimer);
+        shareSuggestAbort?.abort();
+        extraTargets.length = 0;
+        const q = String(query || "").trim();
+        if (q.length < 2) {
+          renderList(query);
+          return;
+        }
+        shareSuggestTimer = window.setTimeout(async () => {
+          const controller = new AbortController();
+          shareSuggestAbort = controller;
+          try {
+            const params = new URLSearchParams({ q });
+            const res = await fetch(`search-members-suggest.php?${params.toString()}`, {
+              signal: controller.signal,
+              credentials: "same-origin",
+              headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
+            });
+            const suggest = await chatShareParseJson(res);
+            const items = Array.isArray(suggest && suggest.items) ? suggest.items : [];
+            extraTargets.length = 0;
+            items.forEach((item) => {
+              extraTargets.push({
+                id: Number(item.id || 0),
+                name: String(item.name || ""),
+                login: String(item.login || ""),
+                role: String(item.role || item.login || ""),
+              });
+            });
+          } catch (_err) {
+            extraTargets.length = 0;
+          }
+          renderList(query);
+        }, 220);
+      };
+      search.addEventListener("input", () => fetchShareNameTargets(search.value));
+      renderList("");
+      bodyBox.appendChild(search);
+      bodyBox.appendChild(list);
+      status.textContent = (data && data.quota_hint)
+        ? data.quota_hint
+        : "نام فارسی را بنویسید و مخاطب را انتخاب کنید. ارسال برای اعضای ویژه است.";
+      const sendBtn = document.createElement("button");
+      sendBtn.type = "button";
+      sendBtn.className = "btn btn-primary";
+      sendBtn.textContent = "ارسال";
+      sendBtn.addEventListener("click", async () => {
+        const ids = Array.from(list.querySelectorAll("input[type='checkbox']:checked"))
+          .map((el) => Number(el.value || 0))
+          .filter((id) => id > 0);
+        if (!ids.length) {
+          window.alert("حداقل یک مخاطب را انتخاب کنید.");
+          return;
+        }
+        if (ids.length > maxPeers) {
+          window.alert("حداکثر " + maxPeers + " مخاطب در هر اشتراک.");
+          return;
+        }
+        sendBtn.disabled = true;
+        try {
+          const body = new FormData();
+          body.set("action", "share");
+          body.set("message", message);
+          body.set("peer_ids", JSON.stringify(ids));
+          body.set("_wpnonce", chatDockCfg.nonce);
+          const shareRes = await fetch(chatDockCfg.url, {
+            method: "POST",
+            credentials: "same-origin",
+            body,
+            headers: { Accept: "application/json" },
+          });
+          const shareData = await chatShareParseJson(shareRes);
+          if (shareData && shareData.needs_premium) {
+            showPremium(shareData.cart_url);
+            search.remove();
+            list.remove();
+            sendBtn.remove();
+            return;
+          }
+          if (!shareData || !shareData.ok) {
+            window.alert((shareData && shareData.error) || "ارسال ناموفق بود.");
+            return;
+          }
+          const sentCount = Number(shareData.sent_count || 0);
+          closeChatShareSheet();
+          window.alert(
+            shareData.error
+              ? shareData.error
+              : (sentCount + " پیام ارسال شد.")
+          );
+        } catch (_err) {
+          window.alert("خطا در ارسال پیام.");
+        } finally {
+          sendBtn.disabled = false;
+        }
+      });
+      actions.insertBefore(sendBtn, cancelBtn);
+    } catch (_err) {
+      status.textContent = "خطا در ارتباط با سرور.";
+    }
+  };
+
+  const setChatBubbleEdited = (bubble, edited) => {
+    if (!(bubble instanceof HTMLElement)) return;
+    bubble.setAttribute("data-edited", edited ? "1" : "0");
+    let badge = bubble.querySelector(".chat-bubble-edited");
+    if (edited) {
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "chat-bubble-edited";
+        badge.textContent = "ویرایش‌شده";
+        const textEl = bubble.querySelector(".chat-bubble-text");
+        if (textEl) textEl.insertAdjacentElement("afterend", badge);
+        else bubble.appendChild(badge);
+      }
+    } else if (badge) {
+      badge.remove();
+    }
+  };
+
+  const buildChatBubbleActions = (msg) => {
+    const wrap = document.createElement("div");
+    wrap.className = "chat-bubble-actions";
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "chat-bubble-action";
+    copyBtn.setAttribute("data-chat-copy", String(msg.id || ""));
+    copyBtn.textContent = "کپی";
+    wrap.appendChild(copyBtn);
+    const shareBtn = document.createElement("button");
+    shareBtn.type = "button";
+    shareBtn.className = "chat-bubble-action";
+    shareBtn.setAttribute("data-chat-share", String(msg.id || ""));
+    shareBtn.textContent = "اشتراک";
+    wrap.appendChild(shareBtn);
+    if (msg.can_edit) {
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "chat-bubble-action";
+      editBtn.setAttribute("data-chat-edit", String(msg.id || ""));
+      editBtn.textContent = "ویرایش";
+      wrap.appendChild(editBtn);
+    }
+    return wrap;
+  };
+
+    const fillChatBubbleBody = (article, msg) => {
+      const photoUrl = String(msg.photo_url || "");
+      if (photoUrl || msg.is_photo) {
+        const p = document.createElement("p");
+        p.className = "chat-bubble-text is-photo";
+        const link = document.createElement("a");
+        link.href = photoUrl;
+        link.target = "_blank";
+        link.rel = "noopener";
+        const img = document.createElement("img");
+        img.src = photoUrl;
+        img.alt = "عکس";
+        link.appendChild(img);
+        p.appendChild(link);
+        article.appendChild(p);
+        article.setAttribute("data-photo-url", photoUrl);
+        return;
+      }
+      const p = document.createElement("p");
+      p.className = "chat-bubble-text";
+      p.textContent = msg.message || "";
+      article.appendChild(p);
+    };
+
+    const buildChatBubble = (msg, peerName) => {
     const article = document.createElement("article");
     article.className = "chat-bubble " + (msg.is_mine ? "is-mine" : "");
+    const id = String(msg.id || "");
     if (id) article.setAttribute("data-msg-id", id);
+    article.setAttribute("data-can-edit", msg.can_edit ? "1" : "0");
+    article.setAttribute("data-edited", msg.is_edited ? "1" : "0");
+
     const header = document.createElement("header");
     const strong = document.createElement("strong");
     strong.textContent = msg.is_mine ? "شما" : (peerName || "کاربر");
@@ -4214,16 +5063,128 @@
     time.textContent = msg.created_at || "";
     header.appendChild(strong);
     header.appendChild(time);
-    const p = document.createElement("p");
-    p.textContent = msg.message || "";
+
     article.appendChild(header);
-    article.appendChild(p);
-    if (latest) {
-      root.insertBefore(article, latest);
-    } else {
-      root.appendChild(article);
+    fillChatBubbleBody(article, msg);
+    if (msg.is_edited) setChatBubbleEdited(article, true);
+    article.appendChild(buildChatBubbleActions(msg));
+    return article;
+  };
+
+  const applyChatMessageUpdate = (bubble, msg) => {
+    if (!(bubble instanceof HTMLElement) || !msg) return;
+    const textEl = bubble.querySelector(".chat-bubble-text");
+    if (textEl) textEl.textContent = msg.message || "";
+    setChatBubbleEdited(bubble, !!msg.is_edited);
+    bubble.setAttribute("data-can-edit", msg.can_edit ? "1" : "0");
+    const actions = bubble.querySelector(".chat-bubble-actions");
+    if (actions) {
+      const hasEdit = actions.querySelector("[data-chat-edit]");
+      if (msg.can_edit && !hasEdit) {
+        actions.appendChild(buildChatBubbleActions(msg).querySelector("[data-chat-edit]"));
+      } else if (!msg.can_edit && hasEdit) {
+        hasEdit.remove();
+      }
     }
+  };
+
+  const appendLiveBubble = (root, msg, peerName) => {
+    if (!(root instanceof HTMLElement) || !msg) return;
+    const id = String(msg.id || "");
+    const existing = id ? root.querySelector('[data-msg-id="' + id + '"]') : null;
+    if (existing instanceof HTMLElement) {
+      applyChatMessageUpdate(existing, msg);
+      return;
+    }
+    root.querySelector("[data-chat-empty]")?.remove();
+    const latest = root.querySelector("#latest");
+    const article = buildChatBubble(msg, peerName);
+    if (latest) root.insertBefore(article, latest);
+    else root.appendChild(article);
     root.scrollTop = root.scrollHeight;
+  };
+
+  const startChatBubbleEdit = (bubble, peerId, onSaved) => {
+    if (!(bubble instanceof HTMLElement) || bubble.classList.contains("is-editing")) return;
+    const textEl = bubble.querySelector(".chat-bubble-text");
+    if (!(textEl instanceof HTMLElement)) return;
+    const original = textEl.textContent || "";
+    const keepWidth = Math.max(bubble.offsetWidth, 280);
+    bubble.classList.add("is-editing");
+    bubble.style.minWidth = keepWidth + "px";
+    bubble.style.width = keepWidth + "px";
+    const form = document.createElement("form");
+    form.className = "chat-bubble-edit-form";
+    const textarea = document.createElement("textarea");
+    textarea.maxLength = 2000;
+    textarea.required = true;
+    textarea.value = original;
+    textarea.rows = Math.max(4, Math.min(12, (original.match(/\n/g) || []).length + 3));
+    const actions = document.createElement("div");
+    actions.className = "chat-bubble-edit-actions";
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "submit";
+    saveBtn.className = "btn btn-primary btn-sm";
+    saveBtn.textContent = "ذخیره";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "btn btn-ghost btn-sm";
+    cancelBtn.textContent = "انصراف";
+    actions.appendChild(saveBtn);
+    actions.appendChild(cancelBtn);
+    form.appendChild(textarea);
+    form.appendChild(actions);
+    textEl.replaceWith(form);
+    textarea.style.height = "auto";
+    textarea.style.height = Math.max(120, textarea.scrollHeight) + "px";
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    const finish = (savedMsg) => {
+      bubble.classList.remove("is-editing");
+      bubble.style.minWidth = "";
+      bubble.style.width = "";
+      const p = document.createElement("p");
+      p.className = "chat-bubble-text";
+      p.textContent = savedMsg ? (savedMsg.message || original) : original;
+      form.replaceWith(p);
+      if (savedMsg) {
+        applyChatMessageUpdate(bubble, savedMsg);
+        if (typeof onSaved === "function") onSaved(savedMsg);
+      }
+    };
+
+    cancelBtn.addEventListener("click", () => finish(null));
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = String(textarea.value || "").trim();
+      if (!message || !chatDockCfg.url || !chatDockCfg.nonce) return;
+      saveBtn.disabled = true;
+      try {
+        const body = new FormData();
+        body.set("action", "edit");
+        body.set("message_id", String(bubble.getAttribute("data-msg-id") || ""));
+        body.set("peer_id", String(peerId || ""));
+        body.set("message", message);
+        body.set("_wpnonce", chatDockCfg.nonce);
+        const res = await fetch(chatDockCfg.url, {
+          method: "POST",
+          credentials: "same-origin",
+          body,
+          headers: { Accept: "application/json" },
+        });
+        const data = await res.json();
+        if (!data || !data.ok) {
+          window.alert((data && data.error) || "ویرایش ناموفق بود.");
+          return;
+        }
+        finish(data.message || { message, is_edited: true, can_edit: true });
+      } catch (_err) {
+        window.alert("خطا در ویرایش پیام.");
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
   };
 
   if (liveThread instanceof HTMLElement && chatDockCfg.url && chatDockCfg.nonce) {
@@ -4231,6 +5192,46 @@
     const peerId = Number(liveThread.getAttribute("data-peer-id") || "0");
     const peerName = liveThread.getAttribute("data-peer-name") || "";
     const locked = liveThread.getAttribute("data-locked") === "1";
+    let editSince = new Date(Date.now() - 60000).toISOString().slice(0, 19).replace("T", " ");
+
+    liveThread.addEventListener("click", async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const copyBtn = target.closest("[data-chat-copy]");
+      if (copyBtn instanceof HTMLElement) {
+        event.preventDefault();
+        const bubble = copyBtn.closest("[data-msg-id]");
+        const photoUrl = bubble instanceof HTMLElement ? (bubble.getAttribute("data-photo-url") || bubble.querySelector(".chat-bubble-text.is-photo img")?.getAttribute("src") || "") : "";
+        const textEl = bubble instanceof HTMLElement ? bubble.querySelector(".chat-bubble-text:not(.is-photo)") : null;
+        const ok = await copyChatText(photoUrl || (textEl ? textEl.textContent : ""));
+        if (ok) {
+          copyBtn.textContent = "کپی شد";
+          window.setTimeout(() => { copyBtn.textContent = "کپی"; }, 1200);
+        }
+        return;
+      }
+      const shareBtn = target.closest("[data-chat-share]");
+      if (shareBtn instanceof HTMLElement) {
+        event.preventDefault();
+        const bubble = shareBtn.closest("[data-msg-id]");
+        const photoUrl = bubble instanceof HTMLElement ? (bubble.getAttribute("data-photo-url") || bubble.querySelector(".chat-bubble-text.is-photo img")?.getAttribute("src") || "") : "";
+        const textEl = bubble instanceof HTMLElement ? bubble.querySelector(".chat-bubble-text:not(.is-photo)") : null;
+        openChatShareSheet(photoUrl || (textEl ? textEl.textContent : ""));
+        return;
+      }
+      const editBtn = target.closest("[data-chat-edit]");
+      if (editBtn instanceof HTMLElement) {
+        event.preventDefault();
+        const bubble = editBtn.closest("[data-msg-id]");
+        if (bubble instanceof HTMLElement) {
+          startChatBubbleEdit(bubble, peerId, (savedMsg) => {
+            editSince = new Date(Date.now() - 5000).toISOString().slice(0, 19).replace("T", " ");
+            if (savedMsg && savedMsg.edited_at) editSince = savedMsg.edited_at;
+          });
+        }
+      }
+    });
+
     const livePoll = castingAdaptivePoll(
       async () => {
         if (!peerId || locked) return false;
@@ -4239,6 +5240,7 @@
           url.searchParams.set("action", "thread");
           url.searchParams.set("peer_id", String(peerId));
           url.searchParams.set("after_id", String(lastId));
+          url.searchParams.set("edit_since", editSince);
           url.searchParams.set("poll", "1");
           url.searchParams.set("_wpnonce", chatDockCfg.nonce);
           const res = await fetch(url.toString(), {
@@ -4253,11 +5255,17 @@
           }
           const incoming = Array.isArray(data.messages) ? data.messages : [];
           incoming.forEach((msg) => appendLiveBubble(liveThread, msg, peerName));
+          const updates = Array.isArray(data.updates) ? data.updates : [];
+          updates.forEach((msg) => {
+            const bubble = liveThread.querySelector('[data-msg-id="' + String(msg.id || "") + '"]');
+            if (bubble instanceof HTMLElement) applyChatMessageUpdate(bubble, msg);
+            if (msg.edited_at) editSince = msg.edited_at;
+          });
           if (typeof data.last_id === "number" && data.last_id > lastId) {
             lastId = data.last_id;
             liveThread.setAttribute("data-last-id", String(lastId));
           }
-          return incoming.length > 0;
+          return incoming.length > 0 || updates.length > 0;
         } catch (_err) {
           return false;
         }
@@ -4298,6 +5306,7 @@
           }
           if (textarea instanceof HTMLTextAreaElement && !(hiddenMsg instanceof HTMLInputElement)) {
             textarea.value = "";
+            growChatCompose(textarea);
           }
           if (data.message) {
             appendLiveBubble(liveThread, data.message, peerName);
@@ -4314,6 +5323,61 @@
           if (submitBtn) submitBtn.disabled = false;
         }
       });
+      const photoInput = liveForm.querySelector("[data-chat-photo]");
+      if (photoInput instanceof HTMLInputElement) {
+        photoInput.addEventListener("change", async () => {
+          const file = photoInput.files && photoInput.files[0];
+          if (!file || !peerId || !chatDockCfg.url || !chatDockCfg.nonce) return;
+          const attach = photoInput.closest(".chat-compose-attach");
+          if (attach instanceof HTMLElement) attach.classList.add("is-busy");
+          try {
+            const body = new FormData();
+            body.set("action", "send_photo");
+            body.set("peer_id", String(peerId));
+            body.set("photo", file);
+            body.set("_wpnonce", chatDockCfg.nonce);
+            const res = await fetch(chatDockCfg.url, {
+              method: "POST",
+              credentials: "same-origin",
+              body,
+              headers: { Accept: "application/json" },
+            });
+            const data = await res.json();
+            if (!data || !data.ok) {
+              window.alert((data && data.error) || "ارسال عکس ناموفق بود.");
+              return;
+            }
+            if (data.message) {
+              appendLiveBubble(liveThread, data.message, peerName);
+              const newId = Number(data.message.id || 0);
+              if (newId > lastId) {
+                lastId = newId;
+                liveThread.setAttribute("data-last-id", String(lastId));
+              }
+            }
+            livePoll.bump();
+          } catch (_err) {
+            window.alert("خطا در ارسال عکس.");
+          } finally {
+            photoInput.value = "";
+            if (attach instanceof HTMLElement) attach.classList.remove("is-busy");
+          }
+        });
+      }
+      const shareComposeBtn = liveForm.querySelector("[data-chat-share-compose]");
+      if (shareComposeBtn instanceof HTMLElement) {
+        shareComposeBtn.addEventListener("click", (event) => {
+          event.preventDefault();
+          const textarea = liveForm.querySelector("#message, textarea[name='message']");
+          const hiddenMsg = liveForm.querySelector("input[name='message']");
+          const shareMessage = String(
+            (hiddenMsg instanceof HTMLInputElement && hiddenMsg.value) ||
+            (textarea instanceof HTMLTextAreaElement ? textarea.value : "") ||
+            ""
+          ).trim();
+          openChatShareSheet(shareMessage);
+        });
+      }
     }
   }
 
@@ -4493,6 +5557,67 @@
     const nameEl = wrap?.querySelector("[data-file-pick-name]");
     if (nameEl) {
       nameEl.textContent = input.files && input.files[0] ? input.files[0].name : "فایلی انتخاب نشده";
+    }
+  });
+
+  document.querySelectorAll("[data-reject-reason-form]").forEach((form) => {
+    const select = form.querySelector("[data-reject-reason-select]");
+    const other = form.querySelector("[data-reject-reason-other]");
+    if (!select || !other) return;
+
+    const syncOther = () => {
+      const isOther = select.value === "other";
+      other.hidden = !isOther;
+      other.disabled = !isOther;
+      other.required = isOther;
+      if (!isOther) other.value = "";
+    };
+
+    select.addEventListener("change", syncOther);
+    syncOther();
+  });
+
+  document.querySelectorAll("[data-grant-premium-confirm]").forEach((box) => {
+    const check = box.querySelector("[data-grant-confirm-check]");
+    const hidden = box.querySelector("[data-grant-confirm-hidden]");
+    const btn = box.querySelector("[data-grant-finalize-btn]");
+    const form = box.querySelector("[data-grant-finalize-form]");
+    const timer = box.querySelector("[data-grant-confirm-timer]");
+    let remaining = Number.parseInt(box.getAttribute("data-grant-remaining") || "0", 10);
+    if (!Number.isFinite(remaining) || remaining < 0) remaining = 0;
+
+    const sync = () => {
+      const ready = remaining <= 0 && !!(check && check.checked);
+      if (hidden) hidden.value = check && check.checked ? "1" : "0";
+      if (btn) btn.disabled = !ready;
+      if (timer) {
+        if (remaining > 0) {
+          timer.innerHTML =
+            'لطفاً <strong data-grant-seconds>' + remaining + "</strong> ثانیه صبر کنید…";
+        } else if (check && !check.checked) {
+          timer.textContent = "تیک اطمینان را بزنید، سپس تأیید نهایی را بزنید.";
+        } else {
+          timer.textContent = "می‌توانید تأیید نهایی را بزنید.";
+        }
+      }
+    };
+
+    check?.addEventListener("change", sync);
+    form?.addEventListener("submit", (event) => {
+      sync();
+      if (remaining > 0 || !(check && check.checked)) {
+        event.preventDefault();
+      }
+    });
+    sync();
+
+    if (remaining > 0) {
+      const tick = window.setInterval(() => {
+        remaining = Math.max(0, remaining - 1);
+        box.setAttribute("data-grant-remaining", String(remaining));
+        sync();
+        if (remaining <= 0) window.clearInterval(tick);
+      }, 1000);
     }
   });
 

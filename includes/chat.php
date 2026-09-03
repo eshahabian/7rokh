@@ -5,6 +5,9 @@ require_once __DIR__ . '/chat-rules.php';
 
 function casting_chat_preview(string $message, int $max = 48): string
 {
+    if (casting_dm_parse_photo_id($message) > 0) {
+        return 'عکس';
+    }
     $message = trim(preg_replace('/\s+/u', ' ', $message) ?? $message);
     if (casting_strlen($message) <= $max) {
         return $message;
@@ -15,14 +18,42 @@ function casting_chat_preview(string $message, int $max = 48): string
     return rtrim(substr($message, 0, $max)) . '…';
 }
 
+function casting_dm_photo_marker(int $attachment_id): string
+{
+    return '[casting-dm-photo:' . max(0, $attachment_id) . ']';
+}
+
+function casting_dm_parse_photo_id(string $message): int
+{
+    if (preg_match('/^\s*\[casting-dm-photo:(\d+)\]\s*$/', $message, $m)) {
+        return (int) $m[1];
+    }
+    return 0;
+}
+
+function casting_dm_photo_url(int $attachment_id): string
+{
+    if ($attachment_id <= 0) {
+        return '';
+    }
+    $url = wp_get_attachment_image_url($attachment_id, 'large');
+    if (!is_string($url) || $url === '') {
+        $fallback = wp_get_attachment_url($attachment_id);
+        $url = is_string($fallback) ? $fallback : '';
+    }
+    return $url;
+}
+
 function casting_dm_read_meta_key(): string
 {
     return 'casting_dm_read';
 }
 
-function casting_dm_premium_required_notice_message(): string
-{
-    return 'برای پاسخ به این پیام باید اشتراک ویژه خریداری کنید';
+if (!function_exists('casting_dm_premium_required_notice_message')) {
+    function casting_dm_premium_required_notice_message(): string
+    {
+        return 'ارسال پیام برای اعضای ویژه فعال است (عضویت ویژه)';
+    }
 }
 
 function casting_dm_support_sender_id(): int
@@ -70,6 +101,7 @@ function casting_user_requires_premium_for_dm(int $user_id): bool
     }
     if (casting_user_is_portal_owner($user_id)
         || casting_user_is_super_admin($user_id)
+        || (function_exists('casting_user_is_listed_portal_admin') && casting_user_is_listed_portal_admin($user_id))
         || casting_dm_is_support_peer($user_id)) {
         return false;
     }
@@ -251,7 +283,7 @@ function casting_employer_must_use_fixed_outreach(int $user_id): bool
 
 function casting_employer_premium_send_error(): string
 {
-    return 'سه پیام رایگان امروز تمام شده است. برای ارسال پیام بیشتر یا ویرایش متن، عضویت ویژه فعال کنید.';
+    return casting_dm_premium_required_notice_message();
 }
 
 function casting_employer_free_messages_hint(int $user_id): string
@@ -753,6 +785,56 @@ function casting_chat_peer_avatar_url(int $user_id): string
     return (string) ($primary['url'] ?? '');
 }
 
+/**
+ * @param array<string, mixed> $msg
+ */
+function casting_render_dm_bubble_body(array $msg): void
+{
+    $photo_url = (string) ($msg['photo_url'] ?? '');
+    if ($photo_url === '') {
+        $photo_url = casting_dm_photo_url(casting_dm_parse_photo_id((string) ($msg['message'] ?? '')));
+    }
+    if ($photo_url !== '') {
+        ?>
+    <p class="chat-bubble-text is-photo">
+      <a href="<?= casting_e($photo_url) ?>" target="_blank" rel="noopener">
+        <img src="<?= casting_e($photo_url) ?>" alt="عکس">
+      </a>
+    </p>
+        <?php
+        if (!empty($msg['is_edited'])) {
+            echo '<span class="chat-bubble-edited">ویرایش‌شده</span>';
+        }
+        return;
+    }
+    ?>
+    <p class="chat-bubble-text"><?= nl2br(casting_e((string) ($msg['message'] ?? ''))) ?></p>
+    <?php if (!empty($msg['is_edited'])) : ?>
+      <span class="chat-bubble-edited">ویرایش‌شده</span>
+    <?php endif; ?>
+    <?php
+}
+
+/**
+ * @param array<string, mixed> $msg
+ */
+function casting_render_dm_bubble_actions(array $msg): void
+{
+    $id = (int) ($msg['id'] ?? 0);
+    if ($id <= 0) {
+        return;
+    }
+    ?>
+    <div class="chat-bubble-actions">
+      <button type="button" class="chat-bubble-action" data-chat-copy="<?= (int) $id ?>">کپی</button>
+      <button type="button" class="chat-bubble-action" data-chat-share="<?= (int) $id ?>">اشتراک</button>
+      <?php if (!empty($msg['can_edit'])) : ?>
+        <button type="button" class="chat-bubble-action" data-chat-edit="<?= (int) $id ?>">ویرایش</button>
+      <?php endif; ?>
+    </div>
+    <?php
+}
+
 function casting_render_chat_avatar(int $user_id, string $name, bool $has_unread = false): void
 {
     $avatar = casting_chat_peer_avatar_url($user_id);
@@ -785,6 +867,12 @@ function casting_dm_table(): string
 {
     global $wpdb;
     return $wpdb->prefix . 'casting_dm';
+}
+
+function casting_dm_archive_table(): string
+{
+    global $wpdb;
+    return $wpdb->prefix . 'casting_dm_archive';
 }
 
 function casting_chat_install(): void
@@ -826,7 +914,8 @@ function casting_chat_install(): void
     );
 
     casting_dm_migrate_receipt_columns();
-    update_option('casting_chat_db_version', '3');
+    casting_dm_migrate_edit_columns();
+    update_option('casting_chat_db_version', '4');
 }
 
 function casting_chat_ensure_table(): void
@@ -842,10 +931,11 @@ function casting_chat_ensure_table(): void
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery
     $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $dm));
 
-    if ($exists !== $dm || $ver !== '3') {
+    if ($exists !== $dm || $ver !== '4') {
         casting_chat_install();
     } else {
         casting_dm_migrate_receipt_columns();
+        casting_dm_migrate_edit_columns();
     }
 
     $ready = true;
@@ -881,6 +971,324 @@ function casting_dm_migrate_receipt_columns(): void
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN read_at DATETIME NULL DEFAULT NULL");
     }
+}
+
+function casting_dm_migrate_edit_columns(): void
+{
+    global $wpdb;
+    $charset = $wpdb->get_charset_collate();
+    $table = casting_dm_table();
+    $archive = casting_dm_archive_table();
+
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists === $table) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $rows = $wpdb->get_results("SHOW COLUMNS FROM `{$table}`", ARRAY_A);
+        $cols = [];
+        if (is_array($rows)) {
+            foreach ($rows as $row) {
+                $field = (string) ($row['Field'] ?? '');
+                if ($field !== '') {
+                    $cols[$field] = true;
+                }
+            }
+        }
+        if (empty($cols['edited_at'])) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $wpdb->query("ALTER TABLE `{$table}` ADD COLUMN edited_at DATETIME NULL DEFAULT NULL");
+        }
+    }
+
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $wpdb->query(
+        "CREATE TABLE IF NOT EXISTS {$archive} (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            message_id BIGINT UNSIGNED NOT NULL,
+            sender_id BIGINT UNSIGNED NOT NULL,
+            recipient_id BIGINT UNSIGNED NOT NULL,
+            body TEXT NOT NULL,
+            archived_at DATETIME NOT NULL,
+            PRIMARY KEY (id),
+            KEY message_id (message_id),
+            KEY sender_id (sender_id),
+            KEY archived_at (archived_at)
+        ) {$charset}"
+    );
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function casting_dm_get_message_by_id(int $message_id): ?array
+{
+    if ($message_id <= 0) {
+        return null;
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $row = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT id, sender_id, recipient_id, message, created_at, delivered_at, read_at, edited_at
+             FROM {$table} WHERE id = %d LIMIT 1",
+            $message_id
+        ),
+        ARRAY_A
+    );
+
+    return is_array($row) ? $row : null;
+}
+
+/**
+ * @param array<string, mixed> $message
+ */
+function casting_dm_can_user_edit_message(int $user_id, array $message): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if ((int) ($message['sender_id'] ?? 0) !== $user_id) {
+        return false;
+    }
+    if (casting_employer_must_use_fixed_outreach($user_id)) {
+        return false;
+    }
+
+    if (casting_dm_parse_photo_id((string) ($message['message'] ?? '')) > 0) {
+        return false;
+    }
+    return trim((string) ($message['message'] ?? '')) !== '';
+}
+
+/**
+ * @param array<string, mixed> $row
+ * @return array<string, mixed>
+ */
+function casting_dm_enrich_message_row(array $row, int $viewer_id): array
+{
+    $msg = [
+        'id'           => (int) ($row['id'] ?? 0),
+        'sender_id'    => (int) ($row['sender_id'] ?? 0),
+        'recipient_id' => (int) ($row['recipient_id'] ?? 0),
+        'message'      => (string) ($row['message'] ?? ''),
+        'created_at'   => (string) ($row['created_at'] ?? ''),
+        'delivered_at' => (string) ($row['delivered_at'] ?? ''),
+        'read_at'      => (string) ($row['read_at'] ?? ''),
+        'edited_at'    => (string) ($row['edited_at'] ?? ''),
+        'is_mine'      => (int) ($row['sender_id'] ?? 0) === $viewer_id,
+    ];
+    $msg['is_edited'] = $msg['edited_at'] !== '';
+    $msg['photo_id'] = casting_dm_parse_photo_id($msg['message']);
+    $msg['photo_url'] = $msg['photo_id'] > 0 ? casting_dm_photo_url($msg['photo_id']) : '';
+    $msg['is_photo'] = $msg['photo_id'] > 0 && $msg['photo_url'] !== '';
+    $msg['can_edit'] = casting_dm_can_user_edit_message($viewer_id, $msg);
+    $msg['receipt'] = casting_dm_message_receipt_status($msg);
+
+    return $msg;
+}
+
+/**
+ * @return array{ok:bool,error:string,message?:array<string,mixed>}
+ */
+function casting_dm_edit_message(int $user_id, int $message_id, string $new_message): array
+{
+    $row = casting_dm_get_message_by_id($message_id);
+    if ($row === null) {
+        return ['ok' => false, 'error' => 'پیام پیدا نشد.'];
+    }
+    if (!casting_dm_can_user_edit_message($user_id, $row)) {
+        return ['ok' => false, 'error' => 'امکان ویرایش این پیام وجود ندارد.'];
+    }
+
+    $peer_id = (int) ($row['recipient_id'] ?? 0) === $user_id
+        ? (int) ($row['sender_id'] ?? 0)
+        : (int) ($row['recipient_id'] ?? 0);
+    if ($peer_id <= 0) {
+        return ['ok' => false, 'error' => 'گفتگو نامعتبر است.'];
+    }
+    if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($user_id, $peer_id)) {
+        return ['ok' => false, 'error' => 'به‌دلیل بلاک امکان ویرایش نیست.'];
+    }
+
+    $new_message = trim(sanitize_textarea_field($new_message));
+    if ($new_message === '') {
+        return ['ok' => false, 'error' => 'پیام خالی است.'];
+    }
+    if (casting_strlen($new_message) > 2000) {
+        return ['ok' => false, 'error' => 'پیام حداکثر ۲۰۰۰ کاراکتر باشد.'];
+    }
+
+    $old_message = (string) ($row['message'] ?? '');
+    if ($old_message === $new_message) {
+        return ['ok' => true, 'message' => casting_dm_enrich_message_row($row, $user_id)];
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $archive_ok = $wpdb->insert(
+        casting_dm_archive_table(),
+        [
+            'message_id'   => $message_id,
+            'sender_id'    => (int) $row['sender_id'],
+            'recipient_id' => (int) $row['recipient_id'],
+            'body'         => $old_message,
+            'archived_at'  => current_time('mysql'),
+        ],
+        ['%d', '%d', '%d', '%s', '%s']
+    );
+    if (!$archive_ok) {
+        return ['ok' => false, 'error' => 'ذخیره نسخه اصلی در آرشیو ناموفق بود.'];
+    }
+
+    $edited_at = current_time('mysql');
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    $updated = $wpdb->update(
+        casting_dm_table(),
+        [
+            'message'   => $new_message,
+            'edited_at' => $edited_at,
+        ],
+        ['id' => $message_id],
+        ['%s', '%s'],
+        ['%d']
+    );
+    if ($updated === false) {
+        return ['ok' => false, 'error' => 'ویرایش پیام ناموفق بود.'];
+    }
+
+    $row['message'] = $new_message;
+    $row['edited_at'] = $edited_at;
+
+    return ['ok' => true, 'message' => casting_dm_enrich_message_row($row, $user_id)];
+}
+
+/**
+ * پیام‌های ویرایش‌شده در یک گفتگو (برای poll زنده).
+ *
+ * @return list<array{id:int,message:string,edited_at:string,is_mine:bool}>
+ */
+function casting_dm_thread_updates_since(int $user_id, int $peer_id, string $since): array
+{
+    if ($user_id <= 0 || $peer_id <= 0 || trim($since) === '') {
+        return [];
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $table = casting_dm_table();
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $rows = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT id, sender_id, message, edited_at
+             FROM {$table}
+             WHERE edited_at IS NOT NULL
+               AND edited_at > %s
+               AND (
+                    (sender_id = %d AND recipient_id = %d)
+                 OR (sender_id = %d AND recipient_id = %d)
+               )
+             ORDER BY edited_at ASC
+             LIMIT 50",
+            $since,
+            $user_id,
+            $peer_id,
+            $peer_id,
+            $user_id
+        ),
+        ARRAY_A
+    );
+
+    if (!is_array($rows)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $row) {
+        $out[] = [
+            'id'         => (int) ($row['id'] ?? 0),
+            'message'    => (string) ($row['message'] ?? ''),
+            'edited_at'  => (string) ($row['edited_at'] ?? ''),
+            'is_mine'    => (int) ($row['sender_id'] ?? 0) === $user_id,
+            'is_edited'  => true,
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * @return array<int, array{id:int,message_id:int,sender_id:int,recipient_id:int,body:string,archived_at:string,sender_name:string,recipient_name:string,current_message:string}>
+ */
+function casting_dm_admin_list_archives(int $limit = 100, int $offset = 0): array
+{
+    casting_chat_ensure_table();
+    global $wpdb;
+    $archive = casting_dm_archive_table();
+    $dm = casting_dm_table();
+    $limit = max(1, min(200, $limit));
+    $offset = max(0, $offset);
+
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $rows = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT a.id, a.message_id, a.sender_id, a.recipient_id, a.body, a.archived_at,
+                    d.message AS current_message
+             FROM {$archive} a
+             LEFT JOIN {$dm} d ON d.id = a.message_id
+             ORDER BY a.id DESC
+             LIMIT %d OFFSET %d",
+            $limit,
+            $offset
+        ),
+        ARRAY_A
+    );
+
+    if (!is_array($rows)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $row) {
+        $sender_id = (int) ($row['sender_id'] ?? 0);
+        $recipient_id = (int) ($row['recipient_id'] ?? 0);
+        $out[] = [
+            'id'              => (int) ($row['id'] ?? 0),
+            'message_id'      => (int) ($row['message_id'] ?? 0),
+            'sender_id'       => $sender_id,
+            'recipient_id'    => $recipient_id,
+            'body'            => (string) ($row['body'] ?? ''),
+            'archived_at'     => (string) ($row['archived_at'] ?? ''),
+            'current_message' => (string) ($row['current_message'] ?? ''),
+            'sender_name'     => casting_dm_peer_display_name($sender_id),
+            'recipient_name'  => casting_dm_peer_display_name($recipient_id),
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * @param array<string, mixed> $msg
+ * @return array{id:int,is_mine:bool,message:string,created_at:string,edited_at:string,is_edited:bool,can_edit:bool}
+ */
+function casting_dm_message_for_api(array $msg, int $viewer_id): array
+{
+    $enriched = casting_dm_enrich_message_row($msg, $viewer_id);
+
+    return [
+        'id'         => (int) ($enriched['id'] ?? 0),
+        'is_mine'    => !empty($enriched['is_mine']),
+        'message'    => (string) ($enriched['message'] ?? ''),
+        'created_at' => (string) ($enriched['created_at'] ?? ''),
+        'edited_at'  => (string) ($enriched['edited_at'] ?? ''),
+        'is_edited'  => !empty($enriched['is_edited']),
+        'can_edit'   => !empty($enriched['can_edit']),
+        'is_photo'   => !empty($enriched['is_photo']),
+        'photo_url'  => (string) ($enriched['photo_url'] ?? ''),
+    ];
 }
 
 function casting_chat_post(int $user_id, string $message): array
@@ -994,6 +1402,81 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
     return ['ok' => true, 'id' => $id];
 }
 
+function casting_dm_send_photo(int $sender_id, int $recipient_id, string $field = 'photo'): array
+{
+    $allow = casting_can_user_send_dm($sender_id, $recipient_id);
+    if (!$allow['ok']) {
+        return $allow;
+    }
+    if (function_exists('casting_employer_must_use_fixed_outreach') && casting_employer_must_use_fixed_outreach($sender_id)) {
+        return ['ok' => false, 'error' => 'در این حالت فقط پیام آماده ارسال می‌شود.'];
+    }
+
+    $file = $_FILES[$field] ?? null;
+    if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => false, 'error' => 'عکسی انتخاب نشده است.'];
+    }
+    if ((int) ($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'error' => 'آپلود عکس ناموفق بود.'];
+    }
+    $size = (int) ($file['size'] ?? 0);
+    if ($size <= 0 || $size > 5 * 1024 * 1024) {
+        return ['ok' => false, 'error' => 'حجم عکس حداکثر ۵ مگابایت باشد.'];
+    }
+    $tmp = (string) ($file['tmp_name'] ?? '');
+    $info = $tmp !== '' ? @getimagesize($tmp) : false;
+    if (!is_array($info)) {
+        return ['ok' => false, 'error' => 'فقط فایل تصویر بفرستید.'];
+    }
+    $mime = strtolower((string) ($info['mime'] ?? ''));
+    if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
+        return ['ok' => false, 'error' => 'فرمت عکس باید JPG، PNG، WEBP یا GIF باشد.'];
+    }
+
+    if (!function_exists('casting_media_handle_upload_as_user')) {
+        require_once __DIR__ . '/profile.php';
+    }
+    $attachment_id = casting_media_handle_upload_as_user($field, $sender_id);
+    if (is_wp_error($attachment_id) || (int) $attachment_id <= 0) {
+        $err = is_wp_error($attachment_id) ? $attachment_id->get_error_message() : '';
+        return ['ok' => false, 'error' => $err !== '' ? ('آپلود ناموفق بود: ' . $err) : 'آپلود عکس ناموفق بود.'];
+    }
+
+    $attachment_id = (int) $attachment_id;
+    if (casting_dm_thread_is_closed($sender_id, $recipient_id)
+        && casting_dm_can_reopen_thread($sender_id, $recipient_id)) {
+        casting_dm_reopen_thread($sender_id, $recipient_id);
+    }
+
+    casting_chat_ensure_table();
+    global $wpdb;
+    $ok = $wpdb->insert(
+        casting_dm_table(),
+        [
+            'sender_id'    => $sender_id,
+            'recipient_id' => $recipient_id,
+            'message'      => casting_dm_photo_marker($attachment_id),
+            'created_at'   => current_time('mysql'),
+        ],
+        ['%d', '%d', '%s', '%s']
+    );
+    if (!$ok) {
+        wp_delete_attachment($attachment_id, true);
+        return ['ok' => false, 'error' => 'ارسال عکس ناموفق بود.'];
+    }
+
+    $id = (int) $wpdb->insert_id;
+    casting_employer_maybe_consume_free_message($sender_id);
+    casting_dm_maybe_send_premium_required_notice($recipient_id, $sender_id);
+
+    return [
+        'ok'        => true,
+        'id'        => $id,
+        'photo_id'  => $attachment_id,
+        'photo_url' => casting_dm_photo_url($attachment_id),
+    ];
+}
+
 function casting_dm_insert_raw(
     int $sender_id,
     int $recipient_id,
@@ -1067,7 +1550,7 @@ function casting_dm_thread(int $user_id, int $peer_id, int $limit = 200): array
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $rows = $wpdb->get_results(
         $wpdb->prepare(
-            "SELECT id, sender_id, recipient_id, message, created_at, delivered_at, read_at
+            "SELECT id, sender_id, recipient_id, message, created_at, delivered_at, read_at, edited_at
              FROM {$table}
              WHERE (sender_id = %d AND recipient_id = %d)
                 OR (sender_id = %d AND recipient_id = %d)
@@ -1109,18 +1592,7 @@ function casting_dm_thread(int $user_id, int $peer_id, int $limit = 200): array
 
     $out = [];
     foreach (array_reverse($rows) as $row) {
-        $msg = [
-            'id'           => (int) $row['id'],
-            'sender_id'    => (int) $row['sender_id'],
-            'recipient_id' => (int) $row['recipient_id'],
-            'message'      => (string) $row['message'],
-            'created_at'   => (string) $row['created_at'],
-            'delivered_at' => (string) ($row['delivered_at'] ?? ''),
-            'read_at'      => (string) ($row['read_at'] ?? ''),
-            'is_mine'      => (int) $row['sender_id'] === $user_id,
-        ];
-        $msg['receipt'] = casting_dm_message_receipt_status($msg);
-        $out[] = $msg;
+        $out[] = casting_dm_enrich_message_row($row, $user_id);
     }
     return $out;
 }
@@ -1170,7 +1642,7 @@ function casting_dm_thread_after(int $user_id, int $peer_id, int $after_id, int 
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     $rows = $wpdb->get_results(
         $wpdb->prepare(
-            "SELECT id, sender_id, recipient_id, message, created_at
+            "SELECT id, sender_id, recipient_id, message, created_at, edited_at
              FROM {$table}
              WHERE id > %d
                AND (
@@ -1195,14 +1667,7 @@ function casting_dm_thread_after(int $user_id, int $peer_id, int $after_id, int 
 
     $out = [];
     foreach ($rows as $row) {
-        $out[] = [
-            'id'           => (int) $row['id'],
-            'sender_id'    => (int) $row['sender_id'],
-            'recipient_id' => (int) $row['recipient_id'],
-            'message'      => (string) $row['message'],
-            'created_at'   => (string) $row['created_at'],
-            'is_mine'      => (int) $row['sender_id'] === $user_id,
-        ];
+        $out[] = casting_dm_enrich_message_row($row, $user_id);
     }
 
     return $out;
@@ -1226,9 +1691,15 @@ function casting_dm_inbox_fingerprint(int $user_id): string
         $user_id,
         $user_id
     ));
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $max_edit = (string) $wpdb->get_var($wpdb->prepare(
+        "SELECT MAX(edited_at) FROM {$table} WHERE (sender_id = %d OR recipient_id = %d) AND edited_at IS NOT NULL",
+        $user_id,
+        $user_id
+    ));
     $unread = casting_dm_unread_peer_count($user_id);
 
-    return md5($max_id . ':' . $unread);
+    return md5($max_id . ':' . $unread . ':' . $max_edit);
 }
 
 /**
@@ -1340,4 +1811,164 @@ function casting_dm_allowed_contacts(int $user_id): array
         ];
     }
     return $out;
+}
+
+function casting_dm_parse_peer_ids($raw): array
+{
+    if (is_string($raw)) {
+        $trim = trim($raw);
+        if ($trim !== '' && ($trim[0] === '[' || $trim[0] === '{')) {
+            $decoded = json_decode($trim, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        } else {
+            $raw = preg_split('/[\s,]+/', $trim) ?: [];
+        }
+    }
+    if (!is_array($raw)) {
+        $raw = [];
+    }
+    $ids = [];
+    foreach ($raw as $item) {
+        if (is_array($item)) {
+            $item = $item['id'] ?? $item['peer_id'] ?? 0;
+        }
+        $id = (int) $item;
+        if ($id > 0) {
+            $ids[$id] = $id;
+        }
+    }
+
+    return array_values($ids);
+}
+
+function casting_dm_share_max_peers(): int
+{
+    return 12;
+}
+
+/**
+ * آیا فرستنده می‌تواند اشتراک پیام را شروع کند؟ ادمین پورتال مستثنی است.
+ */
+function casting_dm_user_can_share(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (!function_exists('casting_user_is_super_admin')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if (casting_user_is_portal_owner($user_id)
+        || casting_user_is_super_admin($user_id)
+        || (function_exists('casting_user_is_listed_portal_admin') && casting_user_is_listed_portal_admin($user_id))) {
+        return true;
+    }
+    if (!casting_user_requires_premium_for_dm($user_id)) {
+        return true;
+    }
+
+    return casting_employer_has_free_message_quota($user_id);
+}
+
+/**
+ * مخاطبان قابل انتخاب برای ارسال یک پیام به چند نفر
+ *
+ * @return array<int, array{id:int,name:string,role:string}>
+ */
+function casting_dm_share_targets(int $user_id): array
+{
+    $out = [];
+    foreach (casting_dm_conversations($user_id) as $conv) {
+        $id = (int) ($conv['peer_id'] ?? 0);
+        $name = trim((string) ($conv['name'] ?? ''));
+        if ($id <= 0 || $name === '') {
+            continue;
+        }
+        $out[] = [
+            'id'   => $id,
+            'name' => $name,
+            'role' => (string) ($conv['role'] ?? ''),
+        ];
+        if (count($out) >= 80) {
+            break;
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * ارسال یک متن به چند مخاطب — هر نفر جداگانه با همان قوانین پیام (ویژه / سهمیه)
+ *
+ * @param mixed $peer_ids
+ * @return array{ok:bool,error:string,needs_premium:bool,cart_url:string,sent:array<int,int>,failed:array<int,array{peer_id:int,error:string}>,sent_count:int,failed_count:int}
+ */
+function casting_dm_share_to_many(int $sender_id, $peer_ids, string $message): array
+{
+    $empty = [
+        'ok'            => false,
+        'error'         => '',
+        'needs_premium' => false,
+        'cart_url'      => function_exists('casting_dm_premium_cart_url') ? casting_dm_premium_cart_url() : 'cart.php',
+        'sent'          => [],
+        'failed'        => [],
+        'sent_count'    => 0,
+        'failed_count'  => 0,
+    ];
+    $peer_ids = casting_dm_parse_peer_ids($peer_ids);
+    $peer_ids = array_values(array_filter($peer_ids, static fn (int $id): bool => $id !== $sender_id));
+    if ($peer_ids === []) {
+        $empty['error'] = 'مخاطبی انتخاب نشده است.';
+
+        return $empty;
+    }
+    if (count($peer_ids) > casting_dm_share_max_peers()) {
+        $empty['error'] = 'حداکثر ' . casting_dm_share_max_peers() . ' مخاطب در هر اشتراک.';
+
+        return $empty;
+    }
+
+    $premium_notice = casting_dm_premium_required_notice_message();
+    $sent = [];
+    $failed = [];
+    $premium_hit = false;
+    foreach ($peer_ids as $peer_id) {
+        $result = casting_dm_send($sender_id, $peer_id, $message);
+        if (!empty($result['ok'])) {
+            $sent[] = $peer_id;
+            continue;
+        }
+        $err = trim((string) ($result['error'] ?? 'ارسال ناموفق بود.'));
+        if ($err === $premium_notice || $err === casting_employer_premium_send_error()) {
+            $premium_hit = true;
+        }
+        $failed[] = [
+            'peer_id' => $peer_id,
+            'error'   => $err,
+        ];
+    }
+
+    $sent_count = count($sent);
+    $failed_count = count($failed);
+    $ok = $sent_count > 0;
+    $error = '';
+    if ($sent_count === 0 && $premium_hit) {
+        $error = $premium_notice;
+    } elseif ($sent_count === 0 && $failed !== []) {
+        $error = (string) ($failed[0]['error'] ?? 'ارسال ناموفق بود.');
+    } elseif ($sent_count > 0 && $failed_count > 0 && $premium_hit) {
+        $error = $sent_count . ' پیام ارسال شد. برای بقیه مخاطبان عضویت ویژه لازم است.';
+    } elseif ($sent_count > 0 && $failed_count > 0) {
+        $error = $sent_count . ' پیام ارسال شد؛ ' . $failed_count . ' مخاطب ناموفق بود.';
+    }
+
+    return [
+        'ok'            => $ok,
+        'error'         => $error,
+        'needs_premium' => $premium_hit && $sent_count === 0,
+        'cart_url'      => function_exists('casting_dm_premium_cart_url') ? casting_dm_premium_cart_url() : 'cart.php',
+        'sent'          => $sent,
+        'failed'        => $failed,
+        'sent_count'    => $sent_count,
+        'failed_count'  => $failed_count,
+    ];
 }

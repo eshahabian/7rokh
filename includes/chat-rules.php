@@ -235,6 +235,29 @@ function casting_user_is_public_support_contact(int $user_id): bool
     return false;
 }
 
+if (!function_exists('casting_dm_premium_required_notice_message')) {
+    function casting_dm_premium_required_notice_message(): string
+    {
+        return 'ارسال پیام برای اعضای ویژه فعال است (عضویت ویژه)';
+    }
+}
+
+function casting_dm_premium_cart_url(): string
+{
+    return function_exists('casting_url') ? casting_url('cart.php') : 'cart.php';
+}
+
+function casting_render_dm_premium_send_notice(string $extra_class = ''): void
+{
+    $class = trim('chat-premium-send-note ' . $extra_class);
+    ?>
+    <p class="<?= casting_e($class) ?>">
+      ارسال پیام برای اعضای ویژه فعال است
+      (<a href="<?= casting_e(casting_dm_premium_cart_url()) ?>">عضویت ویژه</a>)
+    </p>
+    <?php
+}
+
 /**
  * دکمه پیام روی کارت — اگر دسترسی نباشد غیرفعال نشان داده می‌شود (مخفی نمی‌شود)
  */
@@ -274,18 +297,33 @@ function casting_render_profile_message_cta(int $viewer_id, int $target_id, stri
     if ($allow === []) {
         $allow = casting_can_user_open_dm($viewer_id, $target_id);
     }
+    if (!function_exists('casting_can_user_send_dm')) {
+        $chat_lib = __DIR__ . '/chat.php';
+        if (is_file($chat_lib)) {
+            require_once $chat_lib;
+        }
+    }
     $ok = !empty($allow['ok']);
     $reason = trim((string) ($allow['error'] ?? ''));
     if ($reason === '') {
         $reason = 'طبق جدول دسترسی پیام‌رسان، امکان ارسال پیام نیست.';
     }
+    $send = $allow;
+    if (function_exists('casting_can_user_send_dm')) {
+        $send = casting_can_user_send_dm($viewer_id, $target_id);
+    }
+    $needs_premium = function_exists('casting_user_requires_premium_for_dm')
+        && casting_user_requires_premium_for_dm($viewer_id)
+        && empty($send['ok']);
     $aria = $display_name !== '' ? ('پیام به ' . $display_name) : 'پیام به این کاربر';
     ?>
 <section class="profile-message-section" aria-labelledby="profile-message-heading">
   <h3 id="profile-message-heading" class="profile-message-title">پیام به این کاربر</h3>
   <p class="meta">اگر بعد از دیدن پروفایل خواستید گفتگو کنید، از اینجا پیام بدهید.</p>
-  <?php if ($ok) : ?>
+  <?php if (!empty($send['ok'])) : ?>
     <a class="btn btn-primary" href="chat.php?with=<?= (int) $target_id ?>" aria-label="<?= casting_e($aria) ?>">ارسال پیام</a>
+  <?php elseif ($ok && $needs_premium) : ?>
+    <?php casting_render_dm_premium_send_notice('field-hint'); ?>
   <?php else : ?>
     <button type="button" class="btn btn-primary is-disabled" disabled title="<?= casting_e($reason) ?>" aria-label="<?= casting_e($reason) ?>">ارسال پیام</button>
     <p class="field-hint"><?= casting_e($reason) ?></p>

@@ -21,9 +21,12 @@ function casting_panel_nav_groups(): array
             'id'    => 'main',
             'label' => 'اصلی',
             'items' => [
-                ['key' => 'home',     'label' => 'صفحه اصلی',    'href' => 'home.php'],
-                ['key' => 'panel',    'label' => 'پروفایل من',    'href' => 'panel.php'],
-                ['key' => 'messages', 'label' => 'پیام‌ها', 'href' => 'chat.php'],
+                ['key' => 'home',     'label' => 'صفحه اصلی',                'href' => 'home.php'],
+                ['key' => 'panel',    'label' => 'پروفایل من',                'href' => 'panel.php'],
+                ['key' => 'messages', 'label' => 'پیام‌ها',                   'href' => 'chat.php'],
+                ['key' => 'search',   'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
+                ['key' => 'newest',   'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
+                ['key' => 'visitors', 'label' => 'بازدیدکنندگان پروفایل من', 'href' => 'profile-visitors.php'],
             ],
         ],
         [
@@ -42,9 +45,6 @@ function casting_panel_nav_groups(): array
             'id'    => 'network',
             'label' => 'شبکه',
             'items' => [
-                ['key' => 'search',   'label' => 'جستجوی کاربران',           'href' => 'search-users.php'],
-                ['key' => 'newest',   'label' => 'جدیدترین کاربران',         'href' => 'newest-users.php'],
-                ['key' => 'visitors', 'label' => 'بازدیدکنندگان پروفایل من', 'href' => 'profile-visitors.php'],
                 [
                     'key'      => 'news',
                     'label'    => 'اخبار ۷ رخ',
@@ -791,17 +791,36 @@ function casting_render_panel_section_back(string $active): void
 
 function casting_render_panel_end(): void
 {
-    if (!function_exists('casting_render_member_preview_lightbox_shell')) {
-        require_once __DIR__ . '/member-preview.php';
+    try {
+        if (!function_exists('casting_render_member_preview_lightbox_shell')) {
+            $preview = __DIR__ . '/member-preview.php';
+            if (is_file($preview)) {
+                require_once $preview;
+            }
+        }
+        if (function_exists('casting_render_member_preview_lightbox_shell')) {
+            casting_render_member_preview_lightbox_shell();
+        }
+        if (!function_exists('casting_render_post_lightbox_shell')) {
+            $engage = __DIR__ . '/media-engagement.php';
+            if (is_file($engage)) {
+                require_once $engage;
+            }
+        }
+        if (function_exists('casting_render_post_lightbox_shell')) {
+            casting_render_post_lightbox_shell();
+        }
+        casting_render_panel_bottom_nav((string) ($GLOBALS['casting_panel_active'] ?? ''));
+    } catch (Throwable $e) {
+        error_log('[casting-portal] panel_end: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
     }
-    casting_render_member_preview_lightbox_shell();
-    if (!function_exists('casting_render_post_lightbox_shell')) {
-        require_once __DIR__ . '/media-engagement.php';
-    }
-    casting_render_post_lightbox_shell();
-    casting_render_panel_bottom_nav((string) ($GLOBALS['casting_panel_active'] ?? ''));
     echo '</div></main>';
-    casting_render_footer();
+    try {
+        casting_render_footer();
+    } catch (Throwable $e) {
+        error_log('[casting-portal] footer: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+        echo '</body></html>';
+    }
 }
 
 /**
@@ -2071,8 +2090,14 @@ function casting_query_members(int $exclude_id, array $filters = [], int $page =
 
     $name_q = trim(sanitize_text_field((string) ($filters['q'] ?? '')));
     if ($name_q !== '') {
-        $args['search'] = '*' . esc_attr($name_q) . '*';
-        $args['search_columns'] = ['display_name', 'user_login'];
+        $match_ids = casting_member_ids_matching_name($name_q, $exclude_id, 200);
+        if ($match_ids === []) {
+            return [
+                'users' => [],
+                'total' => 0,
+            ];
+        }
+        $args['include'] = $match_ids;
     }
     if (!$skip_visible) {
         $args = casting_user_query_exclude_hidden_profiles($args);
@@ -2603,12 +2628,106 @@ function casting_render_member_card(WP_User $member, int $viewer_id, ?array $dir
 }
 
 /**
+ * شکل‌های رایج ی/ک عربی و فارسی برای جستجوی نام
+ *
+ * @return list<string>
+ */
+function casting_fa_search_variants(string $q): array
+{
+    $q = trim($q);
+    if ($q === '') {
+        return [];
+    }
+    $variants = [
+        $q,
+        strtr($q, ['ی' => 'ي', 'ک' => 'ك', 'ى' => 'ي']),
+        strtr($q, ['ي' => 'ی', 'ى' => 'ی', 'ك' => 'ک']),
+    ];
+    $out = [];
+    foreach ($variants as $variant) {
+        $variant = trim($variant);
+        if ($variant !== '') {
+            $out[$variant] = $variant;
+        }
+    }
+
+    return array_values($out);
+}
+
+/**
+ * شناسه اعضا با تطبیق نام نمایشی فارسی، نام کاربری، نام کوچک و لقب
+ *
+ * @return list<int>
+ */
+function casting_member_ids_matching_name(string $q, int $exclude_id = 0, int $limit = 40): array
+{
+    $q = trim(sanitize_text_field($q));
+    if ($q === '' || casting_strlen($q) < 2) {
+        return [];
+    }
+
+    global $wpdb;
+    $limit = max(1, min(80, $limit));
+    $likes = [];
+    foreach (casting_fa_search_variants($q) as $variant) {
+        $likes[] = '%' . $wpdb->esc_like($variant) . '%';
+    }
+    $likes = array_values(array_unique($likes));
+    if ($likes === []) {
+        return [];
+    }
+
+    $clauses = [];
+    $params = [];
+    foreach ($likes as $like) {
+        $clauses[] = 'u.display_name LIKE %s';
+        $params[] = $like;
+        $clauses[] = 'u.user_login LIKE %s';
+        $params[] = $like;
+        $clauses[] = 'fn.meta_value LIKE %s';
+        $params[] = $like;
+        $clauses[] = 'nn.meta_value LIKE %s';
+        $params[] = $like;
+    }
+
+    $sql = "SELECT DISTINCT u.ID
+        FROM {$wpdb->users} u
+        INNER JOIN {$wpdb->usermeta} rolemeta
+            ON rolemeta.user_id = u.ID AND rolemeta.meta_key = 'casting_role' AND rolemeta.meta_value <> ''
+        LEFT JOIN {$wpdb->usermeta} fn
+            ON fn.user_id = u.ID AND fn.meta_key = 'first_name'
+        LEFT JOIN {$wpdb->usermeta} nn
+            ON nn.user_id = u.ID AND nn.meta_key = 'nickname'
+        WHERE (" . implode(' OR ', $clauses) . ')';
+    if ($exclude_id > 0) {
+        $sql .= ' AND u.ID <> %d';
+        $params[] = $exclude_id;
+    }
+    $sql .= ' ORDER BY u.display_name ASC LIMIT %d';
+    $params[] = $limit;
+
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+    $ids = $wpdb->get_col($wpdb->prepare($sql, ...$params));
+    if (!is_array($ids)) {
+        return [];
+    }
+
+    return array_values(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0));
+}
+
+/**
  * @return array<int, array{id:int,name:string,login:string,role:string,photo_url:string,href:string}>
  */
 function casting_search_members_by_name(string $q, int $exclude_id, int $limit = 12, int $viewer_id = 0): array
 {
     $q = trim(sanitize_text_field($q));
     if ($q === '' || casting_strlen($q) < 2) {
+        return [];
+    }
+
+    $limit = max(1, min(20, $limit));
+    $match_ids = casting_member_ids_matching_name($q, $exclude_id, max(20, $limit * 2));
+    if ($match_ids === []) {
         return [];
     }
 
@@ -2625,16 +2744,12 @@ function casting_search_members_by_name(string $q, int $exclude_id, int $limit =
     }
 
     $args = [
-        'number'         => max(1, min(20, $limit)),
-        'search'         => '*' . esc_attr($q) . '*',
-        'search_columns' => ['display_name', 'user_login'],
-        'orderby'        => 'display_name',
-        'order'          => 'ASC',
-        'meta_query'     => $meta_query,
+        'include'    => $match_ids,
+        'number'     => $limit,
+        'orderby'    => 'display_name',
+        'order'      => 'ASC',
+        'meta_query' => $meta_query,
     ];
-    if ($exclude_id > 0) {
-        $args['exclude'] = [$exclude_id];
-    }
     if (!$skip_visible) {
         $args = casting_user_query_exclude_hidden_profiles($args);
     }

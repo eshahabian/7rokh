@@ -27,6 +27,15 @@ define('CASTING_SMS_OTP_TEMPLATE', 'کد ورود شما {x}');
 // define('CASTING_MOBILE_OTP_ENABLED', true);
 
 /**
+ * یادآوری پیامک تکمیل پروفایل (زیر ۸۰٪)
+ * define('CASTING_PROFILE_SMS_REMINDER_ENABLED', true);
+ * define('CASTING_PROFILE_SMS_REMINDER_THRESHOLD', 75);
+ * define('CASTING_PROFILE_SMS_REMINDER_COOLDOWN_DAYS', 7);
+ * define('CASTING_PROFILE_SMS_REMINDER_INCLUDE_LINK', false);
+ * define('CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS', ['ardvan', 'eshahabian']);
+ */
+
+/**
  * درگاه پرداخت — melat یا sep
  * melat: CASTING_BEHPARDAKHT_* | sep: CASTING_SEP_TERMINAL_ID
  * دامنه بازگشت باید 7rokh.com باشد و IP خروجی هاست در پنل بانک ثبت شود.

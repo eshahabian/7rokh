@@ -750,6 +750,50 @@ function casting_approve_user_media(int $media_id, int $admin_id): array
 }
 
 /**
+ * دلایل پیش‌فرض رد پست گالری (صفحه اصلی).
+ *
+ * @return array<string, string>
+ */
+function casting_user_media_reject_reason_presets(): array
+{
+    return [
+        'incomplete_profile'   => 'عدم تکمیل پروفایل',
+        'no_premium'           => 'عدم عضویت ویژه',
+        'profession_mismatch'  => 'عدم تناسب اثر با حرفه کاربر',
+        'other'                => 'سایر...',
+    ];
+}
+
+/**
+ * تبدیل کلید انتخاب‌شده + متن «سایر» به متن نهایی دلیل رد.
+ *
+ * @return array{ok:bool,reason:string,error:string}
+ */
+function casting_user_media_resolve_reject_reason(string $key, string $other = ''): array
+{
+    $presets = casting_user_media_reject_reason_presets();
+    $key = sanitize_key($key);
+    if ($key === '' || !isset($presets[$key])) {
+        return ['ok' => false, 'reason' => '', 'error' => 'دلیل رد را انتخاب کنید.'];
+    }
+    if ($key === 'other') {
+        $other = trim(sanitize_textarea_field($other));
+        if ($other === '') {
+            return ['ok' => false, 'reason' => '', 'error' => 'برای گزینه «سایر» دلیل را بنویسید.'];
+        }
+        if (function_exists('mb_substr')) {
+            $other = (string) mb_substr($other, 0, 300);
+        } else {
+            $other = substr($other, 0, 300);
+        }
+
+        return ['ok' => true, 'reason' => $other, 'error' => ''];
+    }
+
+    return ['ok' => true, 'reason' => $presets[$key], 'error' => ''];
+}
+
+/**
  * @return array{ok:bool,error:string}
  */
 function casting_reject_user_media(int $media_id, int $admin_id, string $reason = ''): array
