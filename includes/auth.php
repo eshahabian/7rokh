@@ -81,12 +81,53 @@ function casting_update_user_display_name(int $user_id, string $name): array
         return ['ok' => false, 'error' => 'نام و نام خانوادگی الزامی است (حداقل ۲ کاراکتر).'];
     }
 
+    $parts = function_exists('casting_split_person_name')
+        ? casting_split_person_name($name)
+        : ['first' => $name, 'last' => ''];
+
+    return casting_update_user_person_name($user_id, $parts['first'], $parts['last']);
+}
+
+/**
+ * ذخیره نام و نام خانوادگی جدا + نام نمایشی
+ *
+ * @return array{ok:bool,error?:string,fields?:list<string>}
+ */
+function casting_update_user_person_name(int $user_id, string $first_name, string $last_name): array
+{
+    $first_name = trim(sanitize_text_field($first_name));
+    $last_name = trim(sanitize_text_field($last_name));
+    if ($first_name === '' && $last_name !== '') {
+        $first_name = $last_name;
+        $last_name = '';
+    }
+    if ($first_name === '' || casting_strlen($first_name) < 2) {
+        return [
+            'ok'     => false,
+            'error'  => 'قسمت «نام» را پر کنید (حداقل ۲ کاراکتر).',
+            'fields' => ['first_name'],
+        ];
+    }
+
+    $full = trim($first_name . ' ' . $last_name);
+    $current = get_userdata($user_id);
+    if (
+        $current
+        && trim((string) $current->first_name) === $first_name
+        && trim((string) $current->last_name) === $last_name
+        && trim((string) $current->display_name) === $full
+    ) {
+        return ['ok' => true];
+    }
     $result = wp_update_user([
         'ID'           => $user_id,
-        'display_name' => $name,
+        'display_name' => $full,
+        'nickname'     => $full,
+        'first_name'   => $first_name,
+        'last_name'    => $last_name,
     ]);
     if ($result instanceof WP_Error) {
-        return ['ok' => false, 'error' => 'ذخیره نام ناموفق: ' . $result->get_error_message()];
+        return ['ok' => false, 'error' => 'ذخیره نام ناموفق: ' . $result->get_error_message(), 'fields' => ['first_name']];
     }
 
     return ['ok' => true];
@@ -105,6 +146,11 @@ function casting_update_user_email(int $user_id, string $email): array
     $existing = email_exists($email);
     if ($existing && (int) $existing !== $user_id) {
         return ['ok' => false, 'error' => 'این ایمیل قبلاً ثبت شده است.'];
+    }
+
+    $current = get_userdata($user_id);
+    if ($current && strtolower((string) $current->user_email) === strtolower($email)) {
+        return ['ok' => true];
     }
 
     $result = wp_update_user([

@@ -1361,7 +1361,6 @@
         const cat = row.querySelector("[data-activity-category]")?.value || "";
         const spec = row.querySelector("[data-activity-specialty]")?.value || "";
         if (spec && cat === "acting") return true;
-        if (cat === "none" || spec === "activity_none") return true;
       }
       return false;
     };
@@ -1383,17 +1382,26 @@
         wrap.hidden = hideTalentFields;
         wrap.classList.remove("is-talent-muted");
         wrap.querySelectorAll("input, select, textarea, button").forEach((el) => {
+          const actingRequired =
+            el.hasAttribute("data-acting-required") ||
+            el.name === "height" ||
+            el.name === "weight" ||
+            el.name === "look" ||
+            el.name === "availability" ||
+            el.name === "health_well";
           if (hideTalentFields) {
-            if (el.required) {
-              el.dataset.talentWasRequired = "1";
+            if (el.required || actingRequired) {
+              el.dataset.talentWasRequired = actingRequired ? "1" : el.dataset.talentWasRequired || "1";
               el.required = false;
+              el.removeAttribute("required");
             }
-            el.disabled = true;
             return;
           }
-          if (el.dataset.talentWasRequired === "1") {
+          if (actingRequired || el.dataset.talentWasRequired === "1") {
             el.required = true;
-            delete el.dataset.talentWasRequired;
+            if (!actingRequired) {
+              delete el.dataset.talentWasRequired;
+            }
           }
           el.disabled = false;
         });
@@ -1475,10 +1483,13 @@
         window.setTimeout(syncTalentProfileFields, 0);
       }
     });
+    form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+      btn.addEventListener("click", syncTalentProfileFields);
+    });
     syncTalentProfileFields();
   });
 
-  document.querySelectorAll("form[data-register-form]").forEach((form) => {
+  document.querySelectorAll("form[data-register-form], form[data-profile-edit-form]").forEach((form) => {
     const syncRegisterSubmit = () => {
       const submitBtn = form.querySelector("[data-register-submit]");
       if (!(submitBtn instanceof HTMLButtonElement)) return;
@@ -1599,6 +1610,53 @@
     const focusId = form.getAttribute("data-focus-field");
     if (focusId) {
       window.setTimeout(() => focusRegisterField(focusId), 80);
+    }
+
+    if (form.hasAttribute("data-profile-edit-form")) {
+      const toEnDigits = (value) =>
+        String(value || "").replace(/[۰-۹٠-٩]/g, (ch) => {
+          const fa = "۰۱۲۳۴۵۶۷۸۹";
+          const ar = "٠١٢٣٤٥٦٧٨٩";
+          const i = fa.indexOf(ch);
+          if (i >= 0) return String(i);
+          const j = ar.indexOf(ch);
+          return j >= 0 ? String(j) : ch;
+        });
+
+      const prepareProfileEditSubmit = () => {
+        form.setAttribute("novalidate", "novalidate");
+        ["mobile", "mobile2", "phone", "experience"].forEach((id) => {
+          const el = form.querySelector("#" + id);
+          if (el && "value" in el) {
+            el.value = toEnDigits(el.value);
+          }
+        });
+        const province = form.querySelector("[data-location-province]");
+        const city = form.querySelector("[data-location-city]");
+        if (city && province instanceof HTMLSelectElement && province.value) {
+          city.disabled = false;
+        }
+        form.querySelectorAll("input, select, textarea").forEach((el) => {
+          if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) {
+            return;
+          }
+          const hidden = !!(el.hidden || el.closest("[hidden]"));
+          if (hidden) {
+            el.required = false;
+            el.removeAttribute("required");
+          }
+        });
+      };
+
+      form.setAttribute("novalidate", "novalidate");
+      form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+        btn.addEventListener("click", prepareProfileEditSubmit);
+      });
+      form.addEventListener("submit", prepareProfileEditSubmit);
+    }
+
+    if (!form.hasAttribute("data-register-form")) {
+      return;
     }
 
     const cfg = window.CASTING_REGISTER || {};

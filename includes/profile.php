@@ -154,7 +154,7 @@ function casting_render_body_metric_select(
     }
     $selected = casting_body_metric_select_value($kind, $selected);
     ?>
-    <select id="<?= casting_e($id) ?>" name="<?= casting_e($name) ?>"<?= $required ? ' required' : '' ?>>
+    <select id="<?= casting_e($id) ?>" name="<?= casting_e($name) ?>"<?= $required ? ' required' : '' ?><?= in_array($kind, ['height', 'weight'], true) ? ' data-acting-required' : '' ?>>
       <option value=""><?= casting_e($empty_label) ?></option>
       <?php foreach (casting_body_metric_options($kind) as $opt) : ?>
         <option value="<?= casting_e($opt['value']) ?>" <?= $selected === $opt['value'] ? 'selected' : '' ?>><?= casting_e($opt['label']) ?></option>
@@ -285,11 +285,11 @@ function casting_render_health_fields(string $well = '', string $detail = '', bo
     $is_unhealthy = $well === 'unhealthy';
     ?>
   <fieldset class="field health-field-wrap" data-health-field>
-    <legend>وضعیت سلامت<?= $required ? ' <span class="req-mark">*</span>' : '' ?></legend>
+    <legend>وضعیت سلامت<?= $required ? ' <span class="req-mark">*</span>' : ' <span class="req-mark" data-talent-required-mark hidden>*</span>' ?></legend>
     <div class="role-grid role-grid-2">
       <?php foreach ($labels as $key => $label) : ?>
         <label class="role-option">
-          <input type="radio" name="health_well" value="<?= casting_e($key) ?>" <?= $well === $key ? 'checked' : '' ?> <?= $required ? 'required' : '' ?> data-health-well>
+          <input type="radio" name="health_well" value="<?= casting_e($key) ?>" <?= $well === $key ? 'checked' : '' ?> <?= $required ? 'required' : '' ?> data-health-well data-acting-required>
           <span><?= casting_e($label) ?></span>
         </label>
       <?php endforeach; ?>
@@ -641,7 +641,9 @@ function casting_render_artistic_membership_fields(string $has = '', array $orgs
  */
 function casting_activities_need_body_metrics(array $activities): bool
 {
-    return casting_activities_need_talent_fields($activities);
+    return function_exists('casting_activities_has_acting')
+        ? casting_activities_has_acting(casting_normalize_activities($activities))
+        : casting_activities_need_talent_fields($activities);
 }
 
 /**
@@ -2117,9 +2119,24 @@ function casting_get_profile(int $user_id): array
         casting_purge_actor_trait_meta($user_id);
     }
     $wp_user = get_user_by('id', $user_id);
+    $display_name = $wp_user instanceof WP_User ? (string) $wp_user->display_name : '';
+    $first_name = $wp_user instanceof WP_User ? trim((string) $wp_user->first_name) : '';
+    $last_name = $wp_user instanceof WP_User ? trim((string) $wp_user->last_name) : '';
+    if ($last_name === '' && $first_name !== '' && preg_match('/\s/u', $first_name)) {
+        $split_first = casting_split_person_name($first_name);
+        $first_name = $split_first['first'];
+        $last_name = $split_first['last'];
+    }
+    if ($first_name === '' && $last_name === '' && $display_name !== '') {
+        $split_name = casting_split_person_name($display_name);
+        $first_name = $split_name['first'];
+        $last_name = $split_name['last'];
+    }
 
     return [
-        'name'              => $wp_user instanceof WP_User ? (string) $wp_user->display_name : '',
+        'name'              => $display_name,
+        'first_name'        => $first_name,
+        'last_name'         => $last_name,
         'username'          => $wp_user instanceof WP_User ? (string) $wp_user->user_login : '',
         'email'             => $wp_user instanceof WP_User ? (string) $wp_user->user_email : '',
         'birthdate'         => (string) get_user_meta($user_id, 'casting_birthdate', true),
@@ -2176,6 +2193,15 @@ function casting_get_profile(int $user_id): array
 
 function casting_normalize_mobile(string $mobile): string
 {
+    if (function_exists('casting_fa_to_en_digits')) {
+        $mobile = casting_fa_to_en_digits($mobile);
+    } else {
+        $mobile = str_replace(
+            ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            $mobile
+        );
+    }
     $mobile = preg_replace('/\D+/', '', $mobile) ?? '';
     if (str_starts_with($mobile, '98') && strlen($mobile) === 12) {
         $mobile = '0' . substr($mobile, 2);
@@ -2312,7 +2338,8 @@ function casting_register_focus_for_error(string $error): string
         'لهجه'             => 'accent',
         'تشکل'             => 'artistic_membership',
         'قوانین'           => 'rules_accepted',
-        'نام'              => 'name',
+        'نام خانوادگی'     => 'last_name',
+        'نام'              => 'first_name',
         'فعالیت'           => 'activities',
     ];
     foreach ($map as $needle => $field) {
@@ -2581,87 +2608,253 @@ function casting_save_registration_profile(int $user_id, array $data): array
 }
 
 /**
+ * @return array{first:string,last:string}
+ */
+function casting_split_person_name(string $name): array
+{
+    $name = trim(preg_replace('/\s+/u', ' ', $name) ?? $name);
+    if ($name === '') {
+        return ['first' => '', 'last' => ''];
+    }
+    $parts = preg_split('/\s+/u', $name, 2);
+    if (!is_array($parts)) {
+        return ['first' => $name, 'last' => ''];
+    }
+
+    return [
+        'first' => trim((string) ($parts[0] ?? '')),
+        'last'  => trim((string) ($parts[1] ?? '')),
+    ];
+}
+
+/**
+ * @param array<string, mixed> $post
+ * @return array<string, mixed>
+ */
+function casting_profile_posted_data(int $user_id, array $post): array
+{
+    $first = trim(sanitize_text_field((string) ($post['first_name'] ?? '')));
+    $last = trim(sanitize_text_field((string) ($post['last_name'] ?? '')));
+    $name = trim(sanitize_text_field((string) ($post['name'] ?? '')));
+    if ($first === '' && $last === '' && $name !== '') {
+        $split = casting_split_person_name($name);
+        $first = $split['first'];
+        $last = $split['last'];
+    }
+    $full = trim($first . ' ' . $last);
+    if ($full === '') {
+        $full = $name;
+    }
+
+    return [
+        'first_name'          => $first,
+        'last_name'           => $last,
+        'name'                => $full,
+        'birthdate'           => casting_birthdate_from_jalali_post($post) ?? '',
+        'age'                 => $post['age'] ?? '',
+        'gender'              => $post['gender'] ?? '',
+        'email'               => $post['email'] ?? '',
+        'mobile'              => $post['mobile'] ?? '',
+        'mobile2'             => $post['mobile2'] ?? '',
+        'phone'               => $post['phone'] ?? '',
+        'province'            => $post['province'] ?? '',
+        'city'                => $post['city'] ?? '',
+        'height'              => $post['height'] ?? '',
+        'weight'              => $post['weight'] ?? '',
+        'health_well'         => $post['health_well'] ?? '',
+        'health_status'       => $post['health_status'] ?? '',
+        'experience'          => $post['experience'] ?? '',
+        'artistic_membership' => $post['artistic_membership'] ?? '',
+        'artistic_orgs'       => $post['artistic_orgs'] ?? [],
+        'artistic_other_items'=> $post['artistic_other_items'] ?? [],
+        'activity_license'    => $post['activity_license'] ?? '',
+        'look'                => $post['look'] ?? '',
+        'eye_color'           => $post['eye_color'] ?? '',
+        'hair_color'          => $post['hair_color'] ?? '',
+        'accent'              => $post['accent'] ?? '',
+        'accent_other'        => $post['accent_other'] ?? '',
+        'apparent_age_range'  => $post['apparent_age_range'] ?? '',
+        'skill_items'         => function_exists('casting_parse_skill_items_post') ? casting_parse_skill_items_post($post) : [],
+        'language_items'      => function_exists('casting_parse_language_items_post') ? casting_parse_language_items_post($post) : [],
+        'availability'        => $post['availability'] ?? '',
+        'bio'                 => $post['bio'] ?? '',
+        'work_history'        => $post['work_history'] ?? '',
+        'award_items'         => function_exists('casting_parse_award_items_post') ? casting_parse_award_items_post($post) : [],
+        'work_credits'        => function_exists('casting_parse_work_credits_post') ? casting_parse_work_credits_post($post) : [],
+        'artistic_works'      => function_exists('casting_parse_artistic_works_post') ? casting_parse_artistic_works_post($post) : [],
+        'education'           => $post['education'] ?? '',
+        'education_items'     => function_exists('casting_parse_education_items_post') ? casting_parse_education_items_post($post) : [],
+        'activities'          => function_exists('casting_parse_activities_post') ? casting_parse_activities_post($post, $user_id) : [],
+        'video_url'           => $post['video_url'] ?? '',
+        'visible'             => !empty($post['visible']),
+    ];
+}
+
+/**
+ * نگه داشتن مقادیر ارسال‌شده بعد از خطای اعتبارسنجی
+ *
+ * @param array<string, mixed> $profile
+ * @param array<string, mixed> $data
+ * @return array<string, mixed>
+ */
+function casting_profile_apply_posted_values(array $profile, array $data, int $user_id): array
+{
+    $string_keys = [
+        'first_name', 'last_name', 'name', 'email', 'mobile', 'mobile2', 'phone',
+        'province', 'city', 'height', 'weight', 'health_well', 'health_status',
+        'experience', 'activity_license', 'look', 'eye_color', 'hair_color',
+        'accent', 'accent_other', 'apparent_age_range', 'availability',
+        'bio', 'work_history', 'education', 'video_url', 'birthdate', 'gender',
+    ];
+    foreach ($string_keys as $key) {
+        if (array_key_exists($key, $data)) {
+            $profile[$key] = is_scalar($data[$key]) ? (string) $data[$key] : $profile[$key];
+        }
+    }
+    foreach (['skill_items', 'language_items', 'award_items', 'work_credits', 'artistic_works', 'education_items'] as $key) {
+        if (array_key_exists($key, $data) && is_array($data[$key])) {
+            $profile[$key] = $data[$key];
+        }
+    }
+    if (array_key_exists('activities', $data)) {
+        $profile['activities'] = casting_normalize_activities($data['activities'], $user_id);
+    }
+    if (array_key_exists('visible', $data)) {
+        $profile['visible'] = !empty($data['visible']);
+    }
+    if (array_key_exists('artistic_membership', $data) || array_key_exists('artistic_orgs', $data)) {
+        $profile['artistic_membership'] = [
+            'has'         => (string) ($data['artistic_membership'] ?? ($profile['artistic_membership']['has'] ?? '')),
+            'orgs'        => is_array($data['artistic_orgs'] ?? null) ? $data['artistic_orgs'] : ($profile['artistic_membership']['orgs'] ?? []),
+            'other_items' => is_array($data['artistic_other_items'] ?? null) ? $data['artistic_other_items'] : ($profile['artistic_membership']['other_items'] ?? []),
+        ];
+    }
+
+    return $profile;
+}
+
+/**
+ * @param array<string, mixed> $data
+ * @return array{errors: list<string>, fields: list<string>}
+ */
+function casting_profile_edit_collect_issues(int $user_id, array $data): array
+{
+    $errors = [];
+    $fields = [];
+    $add = static function (string $field, string $message) use (&$errors, &$fields): void {
+        if (!in_array($field, $fields, true)) {
+            $fields[] = $field;
+        }
+        if (!in_array($message, $errors, true)) {
+            $errors[] = $message;
+        }
+    };
+
+    $first = trim(sanitize_text_field((string) ($data['first_name'] ?? '')));
+    $last = trim(sanitize_text_field((string) ($data['last_name'] ?? '')));
+    $name = trim(sanitize_text_field((string) ($data['name'] ?? '')));
+    if ($first === '' && $last === '' && $name !== '') {
+        $split = casting_split_person_name($name);
+        $first = $split['first'];
+        $last = $split['last'];
+    }
+    if ($first === '' || casting_strlen($first) < 2) {
+        $add('first_name', 'قسمت «نام» را پر کنید (حداقل ۲ کاراکتر).');
+    }
+    if ($last !== '' && casting_strlen($last) < 2) {
+        $add('last_name', 'قسمت «نام خانوادگی» اگر پر می‌شود حداقل ۲ کاراکتر باشد.');
+    }
+
+    $email = trim((string) ($data['email'] ?? ''));
+    if ($email === '' || !is_email($email)) {
+        $add('email', 'قسمت «ایمیل» را با یک ایمیل معتبر پر کنید.');
+    }
+
+    $mobile = casting_normalize_mobile((string) ($data['mobile'] ?? ''));
+    if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
+        $add('mobile', 'قسمت «موبایل» را با شماره ۱۱ رقمی (مثل 0912…) پر کنید.');
+    }
+
+    $birthdate = sanitize_text_field((string) ($data['birthdate'] ?? ''));
+    if ($birthdate === '' || casting_age_from_birthdate($birthdate) === null) {
+        $add('birth_jd', 'قسمت «تاریخ تولد» را کامل کنید (روز، ماه و سال شمسی).');
+    }
+
+    $gender = sanitize_key((string) ($data['gender'] ?? ''));
+    if (!array_key_exists($gender, casting_gender_labels())) {
+        $add('gender', 'قسمت «جنسیت» را انتخاب کنید.');
+    }
+
+    $province = sanitize_key((string) ($data['province'] ?? ''));
+    if (!array_key_exists($province, casting_province_labels())) {
+        $add('province', 'قسمت «استان» را انتخاب کنید.');
+    }
+    $city = casting_normalize_city_name((string) ($data['city'] ?? ''));
+    if (!casting_is_valid_city_for_province($province, $city)) {
+        $add('city', 'قسمت «شهر» را انتخاب یا بنویسید.');
+    }
+
+    if (!array_key_exists('experience', $data) || $data['experience'] === '' || (int) $data['experience'] < 0 || (int) $data['experience'] > 60) {
+        $add('experience', 'قسمت «سابقه فعالیت» را وارد کنید.');
+    }
+
+    $license = sanitize_key((string) ($data['activity_license'] ?? ''));
+    if (!isset(casting_yes_no_labels()[$license])) {
+        $add('activity_license', 'قسمت «پروانه فعالیت» را مشخص کنید.');
+    }
+
+    $activities = casting_normalize_activities($data['activities'] ?? [], $user_id);
+    if ($activities === []) {
+        $add('activities', 'حداقل یک «نوع فعالیت / تخصص» انتخاب کنید.');
+    }
+
+    $group_fields = function_exists('casting_activity_group_required_field_keys')
+        ? casting_activity_group_required_field_keys($activities)
+        : [];
+    if (in_array('look', $group_fields, true)) {
+        $look = sanitize_key((string) ($data['look'] ?? ''));
+        if (!array_key_exists($look, casting_look_labels())) {
+            $add('look', 'برای بازیگری قسمت «رنگ پوست» را انتخاب کنید.');
+        }
+    }
+    if (in_array('health_well', $group_fields, true)) {
+        $health_err = casting_validate_health_fields([
+            'well'   => (string) ($data['health_well'] ?? ''),
+            'detail' => (string) ($data['health_status'] ?? ''),
+        ], true);
+        if ($health_err !== null) {
+            $add('health_well', $health_err);
+        }
+    }
+    if (in_array('availability', $group_fields, true)) {
+        $availability = sanitize_key((string) ($data['availability'] ?? ''));
+        if (!array_key_exists($availability, casting_availability_labels())) {
+            $add('availability', 'برای بازیگری قسمت «وضعیت آمادگی همکاری» را انتخاب کنید.');
+        }
+    }
+    if (in_array('height', $group_fields, true) && trim((string) ($data['height'] ?? '')) === '') {
+        $add('height', 'برای بازیگری قسمت «قد» را انتخاب کنید.');
+    }
+    if (in_array('weight', $group_fields, true) && trim((string) ($data['weight'] ?? '')) === '') {
+        $add('weight', 'برای بازیگری قسمت «وزن» را انتخاب کنید.');
+    }
+
+    return ['errors' => $errors, 'fields' => $fields];
+}
+
+/**
  * اعتبارسنجی فیلدهای اجباری هنگام ویرایش پروفایل (مثل ثبت‌نام، بدون رمز/نام‌کاربری/عکس)
  *
  * @param array<string, mixed> $data
  */
 function casting_profile_edit_required_error(int $user_id, array $data): ?string
 {
-    $name = trim(sanitize_text_field((string) ($data['name'] ?? '')));
-    if ($name === '' || casting_strlen($name) < 2) {
-        return 'نام و نام خانوادگی الزامی است.';
+    $issues = casting_profile_edit_collect_issues($user_id, $data);
+    if ($issues['errors'] === []) {
+        return null;
     }
 
-    $email = trim((string) ($data['email'] ?? ''));
-    if ($email === '' || !is_email($email)) {
-        return 'ایمیل الزامی است.';
-    }
-
-    $mobile = casting_normalize_mobile((string) ($data['mobile'] ?? ''));
-    if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
-        return 'موبایل الزامی است و باید معتبر باشد.';
-    }
-
-    $birthdate = sanitize_text_field((string) ($data['birthdate'] ?? ''));
-    if ($birthdate === '' || casting_age_from_birthdate($birthdate) === null) {
-        return 'تاریخ تولد شمسی الزامی است.';
-    }
-
-    $gender = sanitize_key((string) ($data['gender'] ?? ''));
-    if (!array_key_exists($gender, casting_gender_labels())) {
-        return 'جنسیت را انتخاب کنید.';
-    }
-
-    $province = sanitize_key((string) ($data['province'] ?? ''));
-    if (!array_key_exists($province, casting_province_labels())) {
-        return 'استان را انتخاب کنید.';
-    }
-    $city = casting_normalize_city_name((string) ($data['city'] ?? ''));
-    if (!casting_is_valid_city_for_province($province, $city)) {
-        return 'شهر را انتخاب کنید.';
-    }
-
-    if (!array_key_exists('experience', $data) || $data['experience'] === '' || (int) $data['experience'] < 0 || (int) $data['experience'] > 60) {
-        return 'سابقه فعالیت الزامی است.';
-    }
-
-    $license = sanitize_key((string) ($data['activity_license'] ?? ''));
-    if (!isset(casting_yes_no_labels()[$license])) {
-        return 'پروانه فعالیت را مشخص کنید.';
-    }
-
-    $activities = casting_normalize_activities($data['activities'] ?? [], $user_id);
-    if ($activities === []) {
-        return 'حداقل یک نوع فعالیت انتخاب کنید.';
-    }
-
-    if (casting_activities_need_talent_fields($activities)) {
-        $look = sanitize_key((string) ($data['look'] ?? ''));
-        if (!array_key_exists($look, casting_look_labels())) {
-            return 'رنگ پوست الزامی است.';
-        }
-        $health_err = casting_validate_health_fields([
-            'well'   => (string) ($data['health_well'] ?? ''),
-            'detail' => (string) ($data['health_status'] ?? ''),
-        ], true);
-        if ($health_err !== null) {
-            return $health_err;
-        }
-        $availability = sanitize_key((string) ($data['availability'] ?? ''));
-        if (!array_key_exists($availability, casting_availability_labels())) {
-            return 'وضعیت آمادگی همکاری را انتخاب کنید.';
-        }
-        if (casting_activities_need_body_metrics($activities)) {
-            if (trim((string) ($data['height'] ?? '')) === '') {
-                return 'قد الزامی است.';
-            }
-            if (trim((string) ($data['weight'] ?? '')) === '') {
-                return 'وزن الزامی است.';
-            }
-        }
-    }
-
-    return null;
+    return implode(' ', $issues['errors']);
 }
 
 function casting_save_profile(int $user_id, array $data): array
@@ -2670,45 +2863,58 @@ function casting_save_profile(int $user_id, array $data): array
         require_once __DIR__ . '/auth.php';
     }
 
-    $required_err = casting_profile_edit_required_error($user_id, $data);
-    if ($required_err !== null) {
-        return ['ok' => false, 'error' => $required_err];
-    }
-
-    if (array_key_exists('name', $data)) {
-        $name_result = casting_update_user_display_name($user_id, (string) $data['name']);
-        if (!$name_result['ok']) {
-            return $name_result;
+    // بعد از ثبت‌نام پروفایل ناقص است؛ فیلدهای معتبر را ذخیره کن و ناقص‌ها را بلاک نکن.
+    if (array_key_exists('first_name', $data) || array_key_exists('last_name', $data)) {
+        if (!function_exists('casting_update_user_person_name')) {
+            require_once __DIR__ . '/auth.php';
+        }
+        $first = trim(sanitize_text_field((string) ($data['first_name'] ?? '')));
+        $last = trim(sanitize_text_field((string) ($data['last_name'] ?? '')));
+        if ($first !== '' && casting_strlen($first) >= 2) {
+            $name_result = casting_update_user_person_name($user_id, $first, $last);
+            if (!$name_result['ok']) {
+                return $name_result;
+            }
+        }
+    } elseif (array_key_exists('name', $data)) {
+        $name = trim(sanitize_text_field((string) $data['name']));
+        if ($name !== '' && casting_strlen($name) >= 2) {
+            $name_result = casting_update_user_display_name($user_id, $name);
+            if (!$name_result['ok']) {
+                return $name_result;
+            }
         }
     }
 
     $birthdate = sanitize_text_field((string) ($data['birthdate'] ?? ''));
-    $age = casting_age_from_birthdate($birthdate);
-    if ($age === null || $age < 3 || $age > 120) {
-        return ['ok' => false, 'error' => 'تاریخ تولد معتبر نیست.'];
+    if ($birthdate !== '') {
+        $age = casting_age_from_birthdate($birthdate);
+        if ($age !== null && $age >= 3 && $age <= 120) {
+            update_user_meta($user_id, 'casting_birthdate', $birthdate);
+            update_user_meta($user_id, 'casting_age', (string) $age);
+        }
     }
-    update_user_meta($user_id, 'casting_birthdate', $birthdate);
-    update_user_meta($user_id, 'casting_age', (string) $age);
 
     $gender = sanitize_key((string) ($data['gender'] ?? ''));
-    if (!array_key_exists($gender, casting_gender_labels())) {
-        return ['ok' => false, 'error' => 'جنسیت را انتخاب کنید.'];
+    if ($gender !== '' && array_key_exists($gender, casting_gender_labels())) {
+        update_user_meta($user_id, 'casting_gender', $gender);
     }
-    update_user_meta($user_id, 'casting_gender', $gender);
 
     if (array_key_exists('email', $data)) {
-        $email_result = casting_update_user_email($user_id, (string) $data['email']);
-        if (!$email_result['ok']) {
-            return $email_result;
+        $email = trim((string) $data['email']);
+        if ($email !== '' && is_email($email)) {
+            $email_result = casting_update_user_email($user_id, $email);
+            if (!$email_result['ok']) {
+                return $email_result;
+            }
         }
     }
 
     if (array_key_exists('mobile', $data)) {
         $mobile = casting_normalize_mobile((string) $data['mobile']);
-        if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
-            return ['ok' => false, 'error' => 'شماره موبایل را درست وارد کنید.'];
+        if ($mobile !== '' && preg_match('/^09\d{9}$/', $mobile)) {
+            update_user_meta($user_id, 'casting_mobile', $mobile);
         }
-        update_user_meta($user_id, 'casting_mobile', $mobile);
     }
     if (array_key_exists('mobile2', $data)) {
         $primary = casting_normalize_mobile((string) (
@@ -2717,58 +2923,51 @@ function casting_save_profile(int $user_id, array $data): array
                 : get_user_meta($user_id, 'casting_mobile', true)
         ));
         $mobile2_res = casting_normalize_optional_mobile2((string) $data['mobile2'], $primary);
-        if (!$mobile2_res['ok']) {
-            return ['ok' => false, 'error' => $mobile2_res['error']];
+        if ($mobile2_res['ok']) {
+            $mobile2 = $mobile2_res['mobile'];
+            if ($mobile2 === '' || !function_exists('casting_mobile_is_taken') || !casting_mobile_is_taken($mobile2, $user_id)) {
+                update_user_meta($user_id, 'casting_mobile2', $mobile2);
+            }
         }
-        $mobile2 = $mobile2_res['mobile'];
-        if ($mobile2 !== '' && function_exists('casting_mobile_is_taken') && casting_mobile_is_taken($mobile2, $user_id)) {
-            return ['ok' => false, 'error' => 'شماره موبایل دوم قبلاً برای حساب دیگری ثبت شده است.'];
-        }
-        update_user_meta($user_id, 'casting_mobile2', $mobile2);
     }
     if (array_key_exists('phone', $data)) {
         $phone = casting_normalize_phone((string) $data['phone']);
-        if ($phone !== '' && (strlen($phone) < 8 || strlen($phone) > 11)) {
-            return ['ok' => false, 'error' => 'تلفن ثابت معتبر نیست.'];
+        if ($phone === '' || (strlen($phone) >= 8 && strlen($phone) <= 11)) {
+            update_user_meta($user_id, 'casting_phone', $phone);
         }
-        update_user_meta($user_id, 'casting_phone', $phone);
     }
 
     $province = sanitize_key((string) ($data['province'] ?? ''));
-    if ($province !== '') {
-        if (!array_key_exists($province, casting_province_labels())) {
-            return ['ok' => false, 'error' => 'استان را درست انتخاب کنید.'];
-        }
+    if ($province !== '' && array_key_exists($province, casting_province_labels())) {
         update_user_meta($user_id, 'casting_province', $province);
+    } else {
+        $province = '';
     }
 
     $city = casting_normalize_city_name((string) ($data['city'] ?? ''));
     if ($city !== '') {
         $check_province = $province !== '' ? $province : (string) get_user_meta($user_id, 'casting_province', true);
-        if (!casting_is_valid_city_for_province($check_province, $city)) {
-            return ['ok' => false, 'error' => 'شهر را از فهرست همان استان انتخاب کنید.'];
-        }
-        update_user_meta($user_id, 'casting_city', $city);
-        if ($city !== casting_city_all_label()) {
-            casting_remember_city($city);
+        if (casting_is_valid_city_for_province($check_province, $city)) {
+            update_user_meta($user_id, 'casting_city', $city);
+            if ($city !== casting_city_all_label()) {
+                casting_remember_city($city);
+            }
         }
     }
 
 
     if (isset($data['height']) && $data['height'] !== '') {
         $height = (int) $data['height'];
-        if (!casting_body_metric_is_valid('height', $height)) {
-            return ['ok' => false, 'error' => 'قد را از فهرست انتخاب کنید (۵۰ تا ۲۰۰ سانتی‌متر یا بالاتر).'];
+        if (casting_body_metric_is_valid('height', $height)) {
+            update_user_meta($user_id, 'casting_height', (string) $height);
         }
-        update_user_meta($user_id, 'casting_height', (string) $height);
     }
 
     if (isset($data['weight']) && $data['weight'] !== '') {
         $weight = (int) $data['weight'];
-        if (!casting_body_metric_is_valid('weight', $weight)) {
-            return ['ok' => false, 'error' => 'وزن را از فهرست انتخاب کنید (۱۵ تا ۱۵۰ کیلوگرم یا بالاتر).'];
+        if (casting_body_metric_is_valid('weight', $weight)) {
+            update_user_meta($user_id, 'casting_weight', (string) $weight);
         }
-        update_user_meta($user_id, 'casting_weight', (string) $weight);
     }
 
     $activities_for_traits = isset($data['activities'])
@@ -2779,10 +2978,7 @@ function casting_save_profile(int $user_id, array $data): array
     if ($is_actor_profile && (array_key_exists('health_well', $data) || array_key_exists('health_status', $data))) {
         $health = casting_parse_health_post($data);
         $health_err = casting_validate_health_fields($health, false);
-        if ($health_err !== null) {
-            return ['ok' => false, 'error' => $health_err];
-        }
-        if (($health['well'] ?? '') !== '') {
+        if ($health_err === null && ($health['well'] ?? '') !== '') {
             casting_save_health_meta($user_id, $health);
         }
     }
@@ -2806,10 +3002,9 @@ function casting_save_profile(int $user_id, array $data): array
     if (array_key_exists('artistic_membership', $data) || array_key_exists('artistic_orgs', $data)) {
         $artistic = casting_parse_artistic_membership_post($data);
         $artistic_err = casting_validate_artistic_membership($artistic);
-        if ($artistic_err !== null) {
-            return ['ok' => false, 'error' => $artistic_err];
+        if ($artistic_err === null) {
+            casting_save_artistic_membership_meta($user_id, $artistic);
         }
-        casting_save_artistic_membership_meta($user_id, $artistic);
     }
 
     $look = sanitize_key((string) ($data['look'] ?? ''));
@@ -2822,8 +3017,8 @@ function casting_save_profile(int $user_id, array $data): array
 
     if ($is_actor_profile) {
         $traits = casting_save_talent_trait_meta($user_id, $data);
-        if (!$traits['ok']) {
-            return $traits;
+        if (!$traits['ok'] && function_exists('error_log')) {
+            error_log('[casting-profile-save] traits: ' . (string) ($traits['error'] ?? ''));
         }
     } else {
         casting_purge_non_actor_profile_meta($user_id);
@@ -2832,11 +3027,9 @@ function casting_save_profile(int $user_id, array $data): array
     if ($is_actor_profile) {
         if (array_key_exists('skill_items', $data)) {
             $skill_items = casting_normalize_skill_items($data['skill_items']);
-            foreach ($skill_items as $row) {
-                if ($row['skill'] === 'other' && $row['note'] === '') {
-                    return ['ok' => false, 'error' => 'برای مهارت «سایر» بنویسید چه هنری دارید.'];
-                }
-            }
+            $skill_items = array_values(array_filter($skill_items, static function (array $row): bool {
+                return !($row['skill'] === 'other' && $row['note'] === '');
+            }));
             update_user_meta($user_id, 'casting_skill_items', $skill_items);
             update_user_meta($user_id, 'casting_skills_other', '');
             update_user_meta($user_id, 'casting_skills', casting_format_skill_labels($skill_items));
@@ -2881,24 +3074,8 @@ function casting_save_profile(int $user_id, array $data): array
 
     if (array_key_exists('activities', $data)) {
         $activities = casting_normalize_activities($data['activities'], $user_id);
-        if ($activities === []) {
-            return ['ok' => false, 'error' => 'حداقل یک نوع فعالیت انتخاب کنید.'];
-        }
         if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id) && !in_array('it', $activities, true)) {
             $activities[] = 'it';
-        }
-        if (casting_activities_need_body_metrics($activities)) {
-            $h = (string) get_user_meta($user_id, 'casting_height', true);
-            $w = (string) get_user_meta($user_id, 'casting_weight', true);
-            if (isset($data['height']) && $data['height'] !== '') {
-                $h = (string) $data['height'];
-            }
-            if (isset($data['weight']) && $data['weight'] !== '') {
-                $w = (string) $data['weight'];
-            }
-            if ($h === '' || $w === '') {
-                return ['ok' => false, 'error' => 'برای بازیگری قد و وزن الزامی است.'];
-            }
         }
         update_user_meta($user_id, 'casting_activities', $activities);
         $new_role = casting_infer_role_from_activities($activities);
@@ -2908,10 +3085,9 @@ function casting_save_profile(int $user_id, array $data): array
     }
 
     $video_url = esc_url_raw((string) ($data['video_url'] ?? ''));
-    if ($video_url !== '' && !filter_var($video_url, FILTER_VALIDATE_URL)) {
-        return ['ok' => false, 'error' => 'لینک ویدیو معتبر نیست.'];
+    if ($video_url === '' || filter_var($video_url, FILTER_VALIDATE_URL)) {
+        update_user_meta($user_id, 'casting_video_url', $video_url);
     }
-    update_user_meta($user_id, 'casting_video_url', $video_url);
     update_user_meta($user_id, 'casting_visible', !empty($data['visible']) ? '1' : '0');
 
     return ['ok' => true];
