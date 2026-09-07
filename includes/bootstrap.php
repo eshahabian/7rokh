@@ -388,6 +388,32 @@ function casting_user_can_manage_message_access(int $user_id): bool
     return in_array(strtolower((string) $user->user_login), casting_message_access_manager_logins(), true);
 }
 
+/**
+ * مدیران ابزارهای پیامک پورتال (تست، تکمیل پروفایل، همگانی، ارسال به کاربر خاص)
+ *
+ * @return list<string>
+ */
+function casting_sms_admin_logins(): array
+{
+    return ['eshahabian', 'ardavan'];
+}
+
+function casting_user_can_manage_sms(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return false;
+    }
+
+    return in_array(strtolower((string) $user->user_login), casting_sms_admin_logins(), true);
+}
+
 function casting_user_can_member_search(int $user_id): bool
 {
     if (casting_user_is_portal_owner($user_id) || casting_user_is_listed_portal_admin($user_id)) {

@@ -956,6 +956,36 @@ function casting_sms_send_otp_matched_text(string $mobile, string $content, stri
 }
 
 /**
+ * ارسال الگوی ثابت (بدون متغیر) — متن کامل باید در پنل WebOne تأیید شده باشد.
+ *
+ * @return array{ok:bool,error:string,ref_id?:string,code?:int}
+ */
+function casting_sms_send_pattern_fixed(string $mobile, string $pattern_id): array
+{
+    $pattern_id = trim($pattern_id);
+    if ($pattern_id === '') {
+        return ['ok' => false, 'error' => 'شناسه الگو خالی است.', 'code' => -1];
+    }
+    $from = casting_sms_line_number();
+    if ($from === '') {
+        return ['ok' => false, 'error' => 'شماره فرستنده (CASTING_SMS_FROM) تنظیم نشده است.', 'code' => -1];
+    }
+
+    $result = casting_sms_request('SMS/Send', [
+        'From'      => $from,
+        'ToNumber'  => $mobile,
+        'PatternId' => $pattern_id,
+    ]);
+
+    return [
+        'ok'     => !empty($result['ok']),
+        'error'  => (string) ($result['error'] ?? ''),
+        'ref_id' => (string) ($result['ref_id'] ?? ''),
+        'code'   => (int) ($result['code'] ?? 0),
+    ];
+}
+
+/**
  * ارسال کد OTP با شناسه پترن — RestDocument v1.4
  *
  * POST {base}/SMS/Send
