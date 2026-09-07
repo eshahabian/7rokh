@@ -231,6 +231,11 @@ function casting_login(string $login, string $password, string $portal = '', boo
     }
     casting_portal_login_user($user, true);
 
+    if (!function_exists('casting_profile_completion_sms_maybe_send_on_login')) {
+        require_once __DIR__ . '/profile-completion-sms.php';
+    }
+    casting_profile_completion_sms_maybe_send_on_login((int) $user->ID);
+
     return ['ok' => true, 'user' => $user, 'role' => $role];
 }
 
@@ -606,6 +611,11 @@ function casting_login_with_otp(string $mobile_raw, string $otp_code, bool $forc
         require_once __DIR__ . '/portal-auth.php';
     }
     casting_portal_login_user($user, true);
+
+    if (!function_exists('casting_profile_completion_sms_maybe_send_on_login')) {
+        require_once __DIR__ . '/profile-completion-sms.php';
+    }
+    casting_profile_completion_sms_maybe_send_on_login((int) $user->ID);
 
     return ['ok' => true, 'user' => $user, 'role' => $role];
 }
