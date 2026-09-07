@@ -18,6 +18,9 @@ $profile_post = casting_process_profile_post($user_id);
 if ($profile_post['error'] !== '') {
     $profile_error = $profile_post['error'];
 }
+if ($profile_success === '' && isset($_GET['saved']) && (string) $_GET['saved'] === '1') {
+    $profile_success = 'پروفایل ذخیره شد.';
+}
 if ($profile_post['success'] !== '') {
     $profile_success = $profile_post['success'];
 }
@@ -44,17 +47,17 @@ if (isset($profile_post['fields']) && is_array($profile_post['fields'])) {
 
 casting_render_panel_start('ویرایش پروفایل من', 'edit-profile');
 if ($profile_errors !== []) {
-    echo '<div class="flash flash-error" role="alert">';
+    echo '<div class="flash flash-error profile-save-flash" role="alert">';
     echo '<p><strong>پروفایل ذخیره نشد. این قسمت‌ها را کامل کنید:</strong></p><ul>';
     foreach ($profile_errors as $item) {
         echo '<li>' . casting_e($item) . '</li>';
     }
     echo '</ul></div>';
 } elseif ($profile_error !== '') {
-    echo '<div class="flash flash-error" role="alert">' . casting_e($profile_error) . '</div>';
+    echo '<div class="flash flash-error profile-save-flash" role="alert">' . casting_e($profile_error) . '</div>';
 }
 if ($profile_success !== '') {
-    echo '<div class="flash flash-success" role="alert">' . casting_e($profile_success) . '</div>';
+    echo '<div class="flash flash-success profile-save-flash" role="alert">' . casting_e($profile_success) . '</div>';
 }
 casting_render_flash();
 

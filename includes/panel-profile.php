@@ -177,6 +177,9 @@ function casting_process_profile_post(int $user_id): array
 
     $out['success'] = 'پروفایل ذخیره شد.';
     $out['profile'] = casting_get_profile($user_id);
+    if (function_exists('casting_redirect')) {
+        casting_redirect('edit-profile.php?saved=1');
+    }
 
     return $out;
 }
@@ -925,7 +928,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     ?>
   <p class="lede">می‌توانید همهٔ اطلاعات پروفایل را دوباره تغییر دهید؛ فیلدهای ستاره‌دار همچنان الزامی‌اند. رمز عبور را از <a href="change-password.php">تنظیمات</a> عوض کنید.</p>
 
-  <form class="form" method="post" action="edit-profile.php" enctype="multipart/form-data" data-loading data-talent-profile-toggle data-profile-edit-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?><?= $invalid_fields !== [] ? ' data-invalid-fields="' . casting_e(implode(',', $invalid_fields)) . '"' : '' ?>>
+  <form class="form" method="post" action="edit-profile.php" enctype="multipart/form-data" novalidate data-loading data-talent-profile-toggle data-profile-edit-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?><?= $invalid_fields !== [] ? ' data-invalid-fields="' . casting_e(implode(',', $invalid_fields)) . '"' : '' ?>>
     <?php wp_nonce_field('casting_profile'); ?>
     <?php if ($form_errors !== []) : ?>
       <div class="flash flash-error profile-save-issues" role="alert">
@@ -968,14 +971,14 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     </div>
     <div class="field">
       <label for="email">ایمیل <span class="req-mark">*</span></label>
-      <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($profile['email'] ?? '') ?>">
+      <input id="email" name="email" type="text" inputmode="email" autocomplete="email" required value="<?= casting_e($profile['email'] ?? '') ?>">
       <p class="field-hint">برای ورود، اعلان‌ها و بازیابی رمز. برای دیگر اعضا نمایش داده نمی‌شود. می‌توانید از <a href="change-email.php">تغییر ایمیل</a> هم استفاده کنید.</p>
     </div>
 
     <div class="form-grid">
       <div class="field">
         <label for="mobile">موبایل <span class="req-mark">*</span></label>
-        <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($profile['mobile'] ?? '') ?>" placeholder="09121234567">
+        <input id="mobile" name="mobile" type="tel" required inputmode="numeric" value="<?= casting_e($profile['mobile'] ?? '') ?>" placeholder="09121234567">
         <p class="field-hint">فقط خودتان و مدیران اصلی سایت این شماره را می‌بینند. برای تغییر با تأیید پیامک به <a href="change-phone.php">تغییر شماره تلفن</a> بروید.</p>
       </div>
       <div class="field">

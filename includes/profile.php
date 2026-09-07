@@ -2193,6 +2193,15 @@ function casting_get_profile(int $user_id): array
 
 function casting_normalize_mobile(string $mobile): string
 {
+    if (function_exists('casting_fa_to_en_digits')) {
+        $mobile = casting_fa_to_en_digits($mobile);
+    } else {
+        $mobile = str_replace(
+            ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            $mobile
+        );
+    }
     $mobile = preg_replace('/\D+/', '', $mobile) ?? '';
     if (str_starts_with($mobile, '98') && strlen($mobile) === 12) {
         $mobile = '0' . substr($mobile, 2);

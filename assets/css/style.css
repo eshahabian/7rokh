@@ -1391,6 +1391,12 @@ fieldset.field legend {
   margin: 0 0 1rem;
 }
 
+.profile-save-flash {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 6;
+}
+
 .flash-success {
   background: rgba(124, 184, 154, 0.15);
   border: 1px solid rgba(124, 184, 154, 0.4);

@@ -1393,8 +1393,8 @@
             if (el.required || actingRequired) {
               el.dataset.talentWasRequired = actingRequired ? "1" : el.dataset.talentWasRequired || "1";
               el.required = false;
+              el.removeAttribute("required");
             }
-            el.disabled = true;
             return;
           }
           if (actingRequired || el.dataset.talentWasRequired === "1") {
@@ -1612,18 +1612,48 @@
       window.setTimeout(() => focusRegisterField(focusId), 80);
     }
 
-    form.addEventListener("submit", () => {
-      const province = form.querySelector("[data-location-province]");
-      const city = form.querySelector("[data-location-city]");
-      if (province instanceof HTMLSelectElement && city && province.value) {
-        city.disabled = false;
-      }
-      form.querySelectorAll("[hidden] [required], [hidden][required]").forEach((el) => {
-        if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
-          el.required = false;
+    if (form.hasAttribute("data-profile-edit-form")) {
+      const toEnDigits = (value) =>
+        String(value || "").replace(/[۰-۹٠-٩]/g, (ch) => {
+          const fa = "۰۱۲۳۴۵۶۷۸۹";
+          const ar = "٠١٢٣٤٥٦٧٨٩";
+          const i = fa.indexOf(ch);
+          if (i >= 0) return String(i);
+          const j = ar.indexOf(ch);
+          return j >= 0 ? String(j) : ch;
+        });
+
+      const prepareProfileEditSubmit = () => {
+        form.setAttribute("novalidate", "novalidate");
+        ["mobile", "mobile2", "phone", "experience"].forEach((id) => {
+          const el = form.querySelector("#" + id);
+          if (el && "value" in el) {
+            el.value = toEnDigits(el.value);
+          }
+        });
+        const province = form.querySelector("[data-location-province]");
+        const city = form.querySelector("[data-location-city]");
+        if (city && province instanceof HTMLSelectElement && province.value) {
+          city.disabled = false;
         }
+        form.querySelectorAll("input, select, textarea").forEach((el) => {
+          if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) {
+            return;
+          }
+          const hidden = !!(el.hidden || el.closest("[hidden]"));
+          if (hidden) {
+            el.required = false;
+            el.removeAttribute("required");
+          }
+        });
+      };
+
+      form.setAttribute("novalidate", "novalidate");
+      form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+        btn.addEventListener("click", prepareProfileEditSubmit);
       });
-    });
+      form.addEventListener("submit", prepareProfileEditSubmit);
+    }
 
     if (!form.hasAttribute("data-register-form")) {
       return;
