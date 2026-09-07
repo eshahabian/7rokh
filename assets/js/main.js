@@ -1361,7 +1361,6 @@
         const cat = row.querySelector("[data-activity-category]")?.value || "";
         const spec = row.querySelector("[data-activity-specialty]")?.value || "";
         if (spec && cat === "acting") return true;
-        if (cat === "none" || spec === "activity_none") return true;
       }
       return false;
     };
@@ -1383,17 +1382,26 @@
         wrap.hidden = hideTalentFields;
         wrap.classList.remove("is-talent-muted");
         wrap.querySelectorAll("input, select, textarea, button").forEach((el) => {
+          const actingRequired =
+            el.hasAttribute("data-acting-required") ||
+            el.name === "height" ||
+            el.name === "weight" ||
+            el.name === "look" ||
+            el.name === "availability" ||
+            el.name === "health_well";
           if (hideTalentFields) {
-            if (el.required) {
-              el.dataset.talentWasRequired = "1";
+            if (el.required || actingRequired) {
+              el.dataset.talentWasRequired = actingRequired ? "1" : el.dataset.talentWasRequired || "1";
               el.required = false;
             }
             el.disabled = true;
             return;
           }
-          if (el.dataset.talentWasRequired === "1") {
+          if (actingRequired || el.dataset.talentWasRequired === "1") {
             el.required = true;
-            delete el.dataset.talentWasRequired;
+            if (!actingRequired) {
+              delete el.dataset.talentWasRequired;
+            }
           }
           el.disabled = false;
         });
@@ -1474,6 +1482,9 @@
       if (e.target.closest("[data-add-activity], [data-remove-activity]")) {
         window.setTimeout(syncTalentProfileFields, 0);
       }
+    });
+    form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+      btn.addEventListener("click", syncTalentProfileFields);
     });
     syncTalentProfileFields();
   });

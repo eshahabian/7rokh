@@ -611,7 +611,10 @@ function casting_activities_has_none(array $activities): bool
 }
 
 /**
- * فیلدهای ظاهری/مهارتی مثل بازیگر لازم است؟ (بازیگر یا هیچ‌کدام)
+ * فیلدهای ستاره‌دار مخصوص بازیگری (قد، وزن، رنگ پوست، سلامت، آمادگی)
+ *
+ * فقط وقتی حداقل یک تخصص از دسته «بازیگری» انتخاب شده باشد.
+ * کارگردانی، تهیه، تصویر و بقیه گروه‌ها این فیلدها را لازم ندارند.
  *
  * @param list<string> $activities
  */
@@ -619,7 +622,22 @@ function casting_activities_need_talent_fields(array $activities): bool
 {
     $activities = casting_normalize_activities($activities);
 
-    return casting_activities_has_acting($activities) || casting_activities_has_none($activities);
+    return casting_activities_has_acting($activities);
+}
+
+/**
+ * کلید فیلدهای اجباری وابسته به گروه فعالیت (علاوه بر فیلدهای مشترک حساب)
+ *
+ * @param list<string> $activities
+ * @return list<string>
+ */
+function casting_activity_group_required_field_keys(array $activities): array
+{
+    if (!casting_activities_need_talent_fields($activities)) {
+        return [];
+    }
+
+    return ['look', 'health_well', 'availability', 'height', 'weight'];
 }
 
 /**

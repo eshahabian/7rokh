@@ -154,7 +154,7 @@ function casting_render_body_metric_select(
     }
     $selected = casting_body_metric_select_value($kind, $selected);
     ?>
-    <select id="<?= casting_e($id) ?>" name="<?= casting_e($name) ?>"<?= $required ? ' required' : '' ?>>
+    <select id="<?= casting_e($id) ?>" name="<?= casting_e($name) ?>"<?= $required ? ' required' : '' ?><?= in_array($kind, ['height', 'weight'], true) ? ' data-acting-required' : '' ?>>
       <option value=""><?= casting_e($empty_label) ?></option>
       <?php foreach (casting_body_metric_options($kind) as $opt) : ?>
         <option value="<?= casting_e($opt['value']) ?>" <?= $selected === $opt['value'] ? 'selected' : '' ?>><?= casting_e($opt['label']) ?></option>
@@ -285,11 +285,11 @@ function casting_render_health_fields(string $well = '', string $detail = '', bo
     $is_unhealthy = $well === 'unhealthy';
     ?>
   <fieldset class="field health-field-wrap" data-health-field>
-    <legend>وضعیت سلامت<?= $required ? ' <span class="req-mark">*</span>' : '' ?></legend>
+    <legend>وضعیت سلامت<?= $required ? ' <span class="req-mark">*</span>' : ' <span class="req-mark" data-talent-required-mark hidden>*</span>' ?></legend>
     <div class="role-grid role-grid-2">
       <?php foreach ($labels as $key => $label) : ?>
         <label class="role-option">
-          <input type="radio" name="health_well" value="<?= casting_e($key) ?>" <?= $well === $key ? 'checked' : '' ?> <?= $required ? 'required' : '' ?> data-health-well>
+          <input type="radio" name="health_well" value="<?= casting_e($key) ?>" <?= $well === $key ? 'checked' : '' ?> <?= $required ? 'required' : '' ?> data-health-well data-acting-required>
           <span><?= casting_e($label) ?></span>
         </label>
       <?php endforeach; ?>
@@ -641,7 +641,9 @@ function casting_render_artistic_membership_fields(string $has = '', array $orgs
  */
 function casting_activities_need_body_metrics(array $activities): bool
 {
-    return casting_activities_need_talent_fields($activities);
+    return function_exists('casting_activities_has_acting')
+        ? casting_activities_has_acting(casting_normalize_activities($activities))
+        : casting_activities_need_talent_fields($activities);
 }
 
 /**
@@ -2797,11 +2799,16 @@ function casting_profile_edit_collect_issues(int $user_id, array $data): array
         $add('activities', 'حداقل یک «نوع فعالیت / تخصص» انتخاب کنید.');
     }
 
-    if ($activities !== [] && casting_activities_need_talent_fields($activities)) {
+    $group_fields = function_exists('casting_activity_group_required_field_keys')
+        ? casting_activity_group_required_field_keys($activities)
+        : [];
+    if (in_array('look', $group_fields, true)) {
         $look = sanitize_key((string) ($data['look'] ?? ''));
         if (!array_key_exists($look, casting_look_labels())) {
-            $add('look', 'قسمت «رنگ پوست» را انتخاب کنید.');
+            $add('look', 'برای بازیگری قسمت «رنگ پوست» را انتخاب کنید.');
         }
+    }
+    if (in_array('health_well', $group_fields, true)) {
         $health_err = casting_validate_health_fields([
             'well'   => (string) ($data['health_well'] ?? ''),
             'detail' => (string) ($data['health_status'] ?? ''),
@@ -2809,18 +2816,18 @@ function casting_profile_edit_collect_issues(int $user_id, array $data): array
         if ($health_err !== null) {
             $add('health_well', $health_err);
         }
+    }
+    if (in_array('availability', $group_fields, true)) {
         $availability = sanitize_key((string) ($data['availability'] ?? ''));
         if (!array_key_exists($availability, casting_availability_labels())) {
-            $add('availability', 'قسمت «وضعیت آمادگی همکاری» را انتخاب کنید.');
+            $add('availability', 'برای بازیگری قسمت «وضعیت آمادگی همکاری» را انتخاب کنید.');
         }
-        if (casting_activities_need_body_metrics($activities)) {
-            if (trim((string) ($data['height'] ?? '')) === '') {
-                $add('height', 'قسمت «قد» را انتخاب کنید.');
-            }
-            if (trim((string) ($data['weight'] ?? '')) === '') {
-                $add('weight', 'قسمت «وزن» را انتخاب کنید.');
-            }
-        }
+    }
+    if (in_array('height', $group_fields, true) && trim((string) ($data['height'] ?? '')) === '') {
+        $add('height', 'برای بازیگری قسمت «قد» را انتخاب کنید.');
+    }
+    if (in_array('weight', $group_fields, true) && trim((string) ($data['weight'] ?? '')) === '') {
+        $add('weight', 'برای بازیگری قسمت «وزن» را انتخاب کنید.');
     }
 
     return ['errors' => $errors, 'fields' => $fields];
