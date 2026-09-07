@@ -1377,6 +1377,20 @@ fieldset.field legend {
   color: var(--reject-fg);
 }
 
+.flash-error ul {
+  margin: 0.45rem 0 0;
+  padding-inline-start: 1.2rem;
+}
+
+.flash-error p {
+  margin: 0;
+}
+
+.form .profile-save-issues {
+  width: 100%;
+  margin: 0 0 1rem;
+}
+
 .flash-success {
   background: rgba(124, 184, 154, 0.15);
   border: 1px solid rgba(124, 184, 154, 0.4);

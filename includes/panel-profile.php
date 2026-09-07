@@ -68,100 +68,116 @@ function casting_render_profile_portraits(array $portraits, bool $actor_set = tr
 }
 
 /**
- * @return array{error:string,success:string,profile:array|null}
+ * @return array{error:string,success:string,profile:array|null,errors:list<string>,fields:list<string>}
  */
 function casting_process_profile_post(int $user_id): array
 {
-    $out = ['error' => '', 'success' => '', 'profile' => null];
+    $out = ['error' => '', 'success' => '', 'profile' => null, 'errors' => [], 'fields' => []];
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         return $out;
     }
-    if (casting_upload_post_too_large()) {
-        $out['error'] = casting_upload_post_too_large_message();
+
+    $fail = static function (array $out, string $error, array $fields = [], ?array $posted = null) use ($user_id): array {
+        $out['error'] = $error;
+        $out['errors'] = $error !== '' ? [$error] : [];
+        $out['fields'] = $fields;
+        if ($posted !== null) {
+            $current = casting_get_profile($user_id);
+            $out['profile'] = casting_profile_apply_posted_values($current, $posted, $user_id);
+        }
 
         return $out;
+    };
+
+    if (casting_upload_post_too_large()) {
+        return $fail($out, casting_upload_post_too_large_message(), ['video']);
+    }
+    if (empty($_POST) && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        return $fail($out, 'فرم ارسال نشد. حجم فایل خیلی زیاد است یا نشست قطع شده؛ بدون ویدیوی بزرگ دوباره ذخیره کنید.');
     }
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_profile')) {
-        return $out;
+        $posted = function_exists('casting_profile_posted_data') ? casting_profile_posted_data($user_id, $_POST) : null;
+
+        return $fail($out, 'نشست منقضی شده یا فرم ناقص رسید. صفحه را رفرش کنید و دوباره ذخیره کنید.', [], $posted);
     }
 
-    $video = casting_handle_video_upload($user_id);
-    if (!$video['ok']) {
-        $out['error'] = $video['error'];
-        return $out;
-    }
+    $posted = casting_profile_posted_data($user_id, $_POST);
 
-    if (casting_user_can_upload_portraits($user_id)) {
-        $actor_photos = casting_user_uses_actor_portrait_set($user_id);
-        $has_photo = false;
-        if ($actor_photos) {
-            foreach (array_keys(casting_all_portrait_slots()) as $slot) {
-                if (!empty($_FILES['photo_' . $slot]['name'])) {
-                    $has_photo = true;
-                    break;
+    try {
+        $video = casting_handle_video_upload($user_id);
+        if (!$video['ok']) {
+            return $fail($out, (string) ($video['error'] ?? 'آپلود ویدیو ناموفق بود.'), ['video'], $posted);
+        }
+
+        if (casting_user_can_upload_portraits($user_id)) {
+            $actor_photos = casting_user_uses_actor_portrait_set($user_id);
+            $has_photo = false;
+            if ($actor_photos) {
+                foreach (array_keys(casting_all_portrait_slots()) as $slot) {
+                    if (!empty($_FILES['photo_' . $slot]['name'])) {
+                        $has_photo = true;
+                        break;
+                    }
+                }
+            } else {
+                $has_photo = !empty($_FILES['photo_medium']['name']);
+            }
+            if ($has_photo) {
+                $photo_res = $actor_photos
+                    ? casting_handle_portrait_uploads($user_id, false)
+                    : casting_handle_portrait_upload($user_id, 'medium');
+                if (!$photo_res['ok']) {
+                    return $fail($out, (string) ($photo_res['error'] ?? 'آپلود عکس ناموفق بود.'), ['photo_medium'], $posted);
                 }
             }
-        } else {
-            $has_photo = !empty($_FILES['photo_medium']['name']);
         }
-        if ($has_photo) {
-            $photo_res = $actor_photos
-                ? casting_handle_portrait_uploads($user_id, false)
-                : casting_handle_portrait_upload($user_id, 'medium');
-            if (!$photo_res['ok']) {
-                $out['error'] = (string) ($photo_res['error'] ?? 'آپلود عکس ناموفق بود.');
-                return $out;
-            }
-        }
-    }
 
-    $save = casting_save_profile($user_id, [
-        'name'                => $_POST['name'] ?? '',
-        'birthdate'           => casting_birthdate_from_jalali_post($_POST) ?? '',
-        'age'                 => $_POST['age'] ?? '',
-        'gender'              => $_POST['gender'] ?? '',
-        'email'               => $_POST['email'] ?? '',
-        'mobile'              => $_POST['mobile'] ?? '',
-        'mobile2'             => $_POST['mobile2'] ?? '',
-        'phone'               => $_POST['phone'] ?? '',
-        'province'            => $_POST['province'] ?? '',
-        'city'                => $_POST['city'] ?? '',
-        'height'              => $_POST['height'] ?? '',
-        'weight'              => $_POST['weight'] ?? '',
-        'health_well'         => $_POST['health_well'] ?? '',
-        'health_status'       => $_POST['health_status'] ?? '',
-        'experience'          => $_POST['experience'] ?? '',
-        'artistic_membership' => $_POST['artistic_membership'] ?? '',
-        'artistic_orgs'       => $_POST['artistic_orgs'] ?? [],
-        'artistic_other_items'=> $_POST['artistic_other_items'] ?? [],
-        'activity_license'    => $_POST['activity_license'] ?? '',
-        'look'                => $_POST['look'] ?? '',
-        'eye_color'           => $_POST['eye_color'] ?? '',
-        'hair_color'          => $_POST['hair_color'] ?? '',
-        'accent'              => $_POST['accent'] ?? '',
-        'accent_other'        => $_POST['accent_other'] ?? '',
-        'apparent_age_range'  => $_POST['apparent_age_range'] ?? '',
-        'skill_items'         => casting_parse_skill_items_post($_POST),
-        'language_items'      => casting_parse_language_items_post($_POST),
-        'availability'        => $_POST['availability'] ?? '',
-        'bio'                 => $_POST['bio'] ?? '',
-        'work_history'        => $_POST['work_history'] ?? '',
-        'award_items'         => casting_parse_award_items_post($_POST),
-        'work_credits'        => casting_parse_work_credits_post($_POST),
-        'artistic_works'      => casting_parse_artistic_works_post($_POST),
-        'education'           => $_POST['education'] ?? '',
-        'education_items'     => casting_parse_education_items_post($_POST),
-        'activities'          => casting_parse_activities_post($_POST, $user_id),
-        'video_url'           => $_POST['video_url'] ?? '',
-        'visible'             => !empty($_POST['visible']),
-    ]);
-    if (!$save['ok']) {
-        $out['error'] = $save['error'];
-        return $out;
+        $save = casting_save_profile($user_id, $posted);
+        if (!$save['ok']) {
+            $errors = [];
+            if (isset($save['errors']) && is_array($save['errors'])) {
+                foreach ($save['errors'] as $item) {
+                    if (is_string($item) && $item !== '') {
+                        $errors[] = $item;
+                    }
+                }
+            }
+            $error = (string) ($save['error'] ?? '');
+            if ($errors === [] && $error !== '') {
+                $errors = [$error];
+            }
+            $fields = [];
+            if (isset($save['fields']) && is_array($save['fields'])) {
+                foreach ($save['fields'] as $field) {
+                    if (is_string($field) && $field !== '') {
+                        $fields[] = $field;
+                    }
+                }
+            }
+            if ($fields === [] && $error !== '' && function_exists('casting_register_focus_for_error')) {
+                $focus = casting_register_focus_for_error($error);
+                if ($focus !== '') {
+                    $fields[] = $focus;
+                }
+            }
+            $out['error'] = $error !== '' ? $error : implode(' ', $errors);
+            $out['errors'] = $errors;
+            $out['fields'] = $fields;
+            $out['profile'] = casting_profile_apply_posted_values(casting_get_profile($user_id), $posted, $user_id);
+
+            return $out;
+        }
+    } catch (Throwable $e) {
+        if (function_exists('error_log')) {
+            error_log('[casting-profile-save] ' . $e->getMessage());
+        }
+
+        return $fail($out, 'ذخیره پروفایل ناموفق بود: ' . $e->getMessage(), [], $posted);
     }
 
     $out['success'] = 'پروفایل ذخیره شد.';
     $out['profile'] = casting_get_profile($user_id);
+
     return $out;
 }
 
@@ -861,10 +877,35 @@ function casting_render_member_profile_view(int $member_id, int $viewer_id, bool
     <?php
 }
 
-function casting_render_profile_edit_form(int $user_id, array $profile, bool $open = false): void
+function casting_render_profile_edit_form(int $user_id, array $profile, bool $open = false, array $form_state = []): void
 {
     $hide_talent_profile = casting_profile_hides_talent_fields($profile['activities'] ?? [], $user_id);
     $talent_hidden = $hide_talent_profile ? ' hidden' : '';
+    $invalid_fields = [];
+    foreach ($form_state['fields'] ?? [] as $field) {
+        if (is_string($field) && $field !== '') {
+            $invalid_fields[] = $field;
+        }
+    }
+    $form_errors = [];
+    foreach ($form_state['errors'] ?? [] as $item) {
+        if (is_string($item) && $item !== '') {
+            $form_errors[] = $item;
+        }
+    }
+    $focus_field = (string) ($form_state['focus'] ?? ($invalid_fields[0] ?? ''));
+    $first_name = trim((string) ($profile['first_name'] ?? ''));
+    $last_name = trim((string) ($profile['last_name'] ?? ''));
+    if ($first_name === '' && $last_name === '') {
+        $split = function_exists('casting_split_person_name')
+            ? casting_split_person_name((string) ($profile['name'] ?? ''))
+            : ['first' => (string) ($profile['name'] ?? ''), 'last' => ''];
+        $first_name = $split['first'];
+        $last_name = $split['last'];
+    }
+    $field_invalid = static function (string $key) use ($invalid_fields): string {
+        return in_array($key, $invalid_fields, true) ? ' is-invalid' : '';
+    };
     if ($open) {
         ?>
 <section class="dash-card panel-profile-edit" id="edit-profile">
@@ -884,8 +925,18 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     ?>
   <p class="lede">می‌توانید همهٔ اطلاعات پروفایل را دوباره تغییر دهید؛ فیلدهای ستاره‌دار همچنان الزامی‌اند. رمز عبور را از <a href="change-password.php">تنظیمات</a> عوض کنید.</p>
 
-  <form class="form" method="post" action="edit-profile.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
+  <form class="form" method="post" action="edit-profile.php" enctype="multipart/form-data" data-loading data-talent-profile-toggle data-profile-edit-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?><?= $invalid_fields !== [] ? ' data-invalid-fields="' . casting_e(implode(',', $invalid_fields)) . '"' : '' ?>>
     <?php wp_nonce_field('casting_profile'); ?>
+    <?php if ($form_errors !== []) : ?>
+      <div class="flash flash-error profile-save-issues" role="alert">
+        <p><strong>این قسمت‌ها را کامل کنید تا پروفایل ذخیره شود:</strong></p>
+        <ul>
+          <?php foreach ($form_errors as $item) : ?>
+            <li><?= casting_e($item) ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+    <?php endif; ?>
 
     <?php if (casting_user_can_upload_portraits($user_id)) : ?>
     <h3 class="panel-section-title" id="profile-photos">عکس پروفایل</h3>
@@ -898,9 +949,17 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <?php endif; ?>
 
     <h3 class="panel-section-title" id="account-email">اطلاعات حساب</h3>
-    <div class="field">
-      <label for="name">نام و نام خانوادگی <span class="req-mark">*</span></label>
-      <input id="name" name="name" type="text" required autocomplete="name" value="<?= casting_e($profile['name'] ?? '') ?>">
+    <div class="form-grid">
+      <div class="field<?= $field_invalid('first_name') ?>">
+        <label for="first_name">نام <span class="req-mark">*</span></label>
+        <input id="first_name" name="first_name" type="text" required minlength="2" autocomplete="given-name" value="<?= casting_e($first_name) ?>">
+        <p class="field-req-hint" data-field-req-hint<?= in_array('first_name', $invalid_fields, true) ? '' : ' hidden' ?>>نام را وارد کنید.</p>
+      </div>
+      <div class="field<?= $field_invalid('last_name') ?>">
+        <label for="last_name">نام خانوادگی <span class="req-mark">*</span></label>
+        <input id="last_name" name="last_name" type="text" required minlength="2" autocomplete="family-name" value="<?= casting_e($last_name) ?>">
+        <p class="field-req-hint" data-field-req-hint<?= in_array('last_name', $invalid_fields, true) ? '' : ' hidden' ?>>نام خانوادگی را وارد کنید.</p>
+      </div>
     </div>
     <div class="field">
       <label for="username_display">نام کاربری</label>
@@ -1078,7 +1137,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 
     <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
       <label for="video_url">یا لینک ویدیو (آپارات / یوتیوب)</label>
-      <input id="video_url" name="video_url" type="url" placeholder="https://" value="<?= casting_e($profile['video_url']) ?>">
+      <input id="video_url" name="video_url" type="text" inputmode="url" placeholder="https://" value="<?= casting_e($profile['video_url']) ?>">
     </div>
 
     <label class="check-row">

@@ -201,9 +201,13 @@ function casting_render_jalali_birthday_fields(string $gregorian = '', bool $req
         $parts['jd'] = (int) $selected['jd'];
     }
     $today = casting_jalali_today();
-    $maxYear = $today[0] - 5;
-    $minYear = $today[0] - 90;
+    $maxYear = $today[0] - 1;
+    $minYear = $today[0] - 100;
     $selJy = $parts['jy'] > 0 ? $parts['jy'] : 0;
+    if ($selJy > 0) {
+        $maxYear = max($maxYear, $selJy);
+        $minYear = min($minYear, $selJy);
+    }
     $selJm = $parts['jm'] > 0 ? $parts['jm'] : 0;
     $selJd = $parts['jd'] > 0 ? $parts['jd'] : 0;
     $req = $required ? 'required' : '';

@@ -11,6 +11,8 @@ $user_id = (int) $user->ID;
 $profile = casting_get_profile($user_id);
 $profile_error = '';
 $profile_success = '';
+$profile_errors = [];
+$invalid_fields = [];
 
 $profile_post = casting_process_profile_post($user_id);
 if ($profile_post['error'] !== '') {
@@ -22,9 +24,33 @@ if ($profile_post['success'] !== '') {
 if ($profile_post['profile'] !== null) {
     $profile = $profile_post['profile'];
 }
+if (isset($profile_post['errors']) && is_array($profile_post['errors'])) {
+    foreach ($profile_post['errors'] as $item) {
+        if (is_string($item) && $item !== '') {
+            $profile_errors[] = $item;
+        }
+    }
+}
+if ($profile_errors === [] && $profile_error !== '') {
+    $profile_errors[] = $profile_error;
+}
+if (isset($profile_post['fields']) && is_array($profile_post['fields'])) {
+    foreach ($profile_post['fields'] as $field) {
+        if (is_string($field) && $field !== '') {
+            $invalid_fields[] = $field;
+        }
+    }
+}
 
 casting_render_panel_start('ویرایش پروفایل من', 'edit-profile');
-if ($profile_error !== '') {
+if ($profile_errors !== []) {
+    echo '<div class="flash flash-error" role="alert">';
+    echo '<p><strong>پروفایل ذخیره نشد. این قسمت‌ها را کامل کنید:</strong></p><ul>';
+    foreach ($profile_errors as $item) {
+        echo '<li>' . casting_e($item) . '</li>';
+    }
+    echo '</ul></div>';
+} elseif ($profile_error !== '') {
     echo '<div class="flash flash-error" role="alert">' . casting_e($profile_error) . '</div>';
 }
 if ($profile_success !== '') {
@@ -34,8 +60,12 @@ casting_render_flash();
 
 casting_render_panel_completion_card($profile, $user_id);
 
-casting_panel_render_section($user_id, static function () use ($user_id, $profile): void {
-    casting_render_profile_edit_form($user_id, $profile, true);
+casting_panel_render_section($user_id, static function () use ($user_id, $profile, $profile_errors, $invalid_fields): void {
+    casting_render_profile_edit_form($user_id, $profile, true, [
+        'errors' => $profile_errors,
+        'fields' => $invalid_fields,
+        'focus'  => $invalid_fields[0] ?? '',
+    ]);
 }, 'ویرایش پروفایل');
 
 casting_render_panel_end();

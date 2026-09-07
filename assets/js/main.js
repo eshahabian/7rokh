@@ -1478,7 +1478,7 @@
     syncTalentProfileFields();
   });
 
-  document.querySelectorAll("form[data-register-form]").forEach((form) => {
+  document.querySelectorAll("form[data-register-form], form[data-profile-edit-form]").forEach((form) => {
     const syncRegisterSubmit = () => {
       const submitBtn = form.querySelector("[data-register-submit]");
       if (!(submitBtn instanceof HTMLButtonElement)) return;
@@ -1599,6 +1599,23 @@
     const focusId = form.getAttribute("data-focus-field");
     if (focusId) {
       window.setTimeout(() => focusRegisterField(focusId), 80);
+    }
+
+    form.addEventListener("submit", () => {
+      const province = form.querySelector("[data-location-province]");
+      const city = form.querySelector("[data-location-city]");
+      if (province instanceof HTMLSelectElement && city && province.value) {
+        city.disabled = false;
+      }
+      form.querySelectorAll("[hidden] [required], [hidden][required]").forEach((el) => {
+        if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
+          el.required = false;
+        }
+      });
+    });
+
+    if (!form.hasAttribute("data-register-form")) {
+      return;
     }
 
     const cfg = window.CASTING_REGISTER || {};
