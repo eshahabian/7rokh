@@ -46,6 +46,9 @@ if (isset($profile_post['fields']) && is_array($profile_post['fields'])) {
 }
 
 casting_render_panel_start('ویرایش پروفایل من', 'edit-profile');
+if (isset($_GET['welcome']) && (string) $_GET['welcome'] === '1' && $profile_success === '' && $profile_errors === []) {
+    echo '<div class="flash flash-success profile-save-flash" role="status">ثبت‌نام انجام شد. پروفایل را همین‌جا کامل کنید؛ با هر بار ذخیره، همان تغییراتی که وارد کرده‌اید ثبت می‌شود.</div>';
+}
 if ($profile_errors !== []) {
     echo '<div class="flash flash-error profile-save-flash" role="alert">';
     echo '<p><strong>پروفایل ذخیره نشد. این قسمت‌ها را کامل کنید:</strong></p><ul>';

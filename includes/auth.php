@@ -97,18 +97,15 @@ function casting_update_user_person_name(int $user_id, string $first_name, strin
 {
     $first_name = trim(sanitize_text_field($first_name));
     $last_name = trim(sanitize_text_field($last_name));
-    $fields = [];
+    if ($first_name === '' && $last_name !== '') {
+        $first_name = $last_name;
+        $last_name = '';
+    }
     if ($first_name === '' || casting_strlen($first_name) < 2) {
-        $fields[] = 'first_name';
-    }
-    if ($last_name === '' || casting_strlen($last_name) < 2) {
-        $fields[] = 'last_name';
-    }
-    if ($fields !== []) {
         return [
             'ok'     => false,
-            'error'  => 'نام و نام خانوادگی را جداگانه وارد کنید (هر کدام حداقل ۲ کاراکتر).',
-            'fields' => $fields,
+            'error'  => 'قسمت «نام» را پر کنید (حداقل ۲ کاراکتر).',
+            'fields' => ['first_name'],
         ];
     }
 

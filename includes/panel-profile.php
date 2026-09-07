@@ -906,6 +906,10 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
         $first_name = $split['first'];
         $last_name = $split['last'];
     }
+    $login = trim((string) ($profile['username'] ?? ''));
+    if ($last_name === '' && $login !== '' && strcasecmp($first_name, $login) === 0) {
+        $first_name = '';
+    }
     $field_invalid = static function (string $key) use ($invalid_fields): string {
         return in_array($key, $invalid_fields, true) ? ' is-invalid' : '';
     };
@@ -926,7 +930,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
         <?php
     }
     ?>
-  <p class="lede">می‌توانید همهٔ اطلاعات پروفایل را دوباره تغییر دهید؛ فیلدهای ستاره‌دار همچنان الزامی‌اند. رمز عبور را از <a href="change-password.php">تنظیمات</a> عوض کنید.</p>
+  <p class="lede">بعد از ثبت‌نام هر بار که ذخیره را بزنید همان فیلدهایی که پر کرده‌اید ثبت می‌شود؛ لازم نیست همه را یک‌جا تمام کنید. موارد مانده در کارت بالای صفحه دیده می‌شود. رمز عبور را از <a href="change-password.php">تنظیمات</a> عوض کنید.</p>
 
   <form class="form" method="post" action="edit-profile.php" enctype="multipart/form-data" novalidate data-loading data-talent-profile-toggle data-profile-edit-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?><?= $invalid_fields !== [] ? ' data-invalid-fields="' . casting_e(implode(',', $invalid_fields)) . '"' : '' ?>>
     <?php wp_nonce_field('casting_profile'); ?>
@@ -955,12 +959,12 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <div class="form-grid">
       <div class="field<?= $field_invalid('first_name') ?>">
         <label for="first_name">نام <span class="req-mark">*</span></label>
-        <input id="first_name" name="first_name" type="text" required minlength="2" autocomplete="given-name" value="<?= casting_e($first_name) ?>">
+        <input id="first_name" name="first_name" type="text" minlength="2" autocomplete="given-name" value="<?= casting_e($first_name) ?>">
         <p class="field-req-hint" data-field-req-hint<?= in_array('first_name', $invalid_fields, true) ? '' : ' hidden' ?>>نام را وارد کنید.</p>
       </div>
       <div class="field<?= $field_invalid('last_name') ?>">
-        <label for="last_name">نام خانوادگی <span class="req-mark">*</span></label>
-        <input id="last_name" name="last_name" type="text" required minlength="2" autocomplete="family-name" value="<?= casting_e($last_name) ?>">
+        <label for="last_name">نام خانوادگی</label>
+        <input id="last_name" name="last_name" type="text" minlength="2" autocomplete="family-name" value="<?= casting_e($last_name) ?>">
         <p class="field-req-hint" data-field-req-hint<?= in_array('last_name', $invalid_fields, true) ? '' : ' hidden' ?>>نام خانوادگی را وارد کنید.</p>
       </div>
     </div>
