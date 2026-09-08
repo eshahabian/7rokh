@@ -3,6 +3,40 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config.php';
 
+$casting_is_portal_request = static function (): bool {
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+
+    return $uri !== '' && strpos($uri, '/casting-portal/') !== false;
+};
+
+if ($casting_is_portal_request() && !defined('WP_DISABLE_FATAL_ERROR_HANDLER')) {
+    define('WP_DISABLE_FATAL_ERROR_HANDLER', true);
+}
+
+if ($casting_is_portal_request()) {
+    register_shutdown_function(static function (): void {
+        $err = error_get_last();
+        if (!is_array($err) || !in_array((int) ($err['type'] ?? 0), [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+            return;
+        }
+        $file = str_replace('\\', '/', (string) ($err['file'] ?? ''));
+        $file = preg_replace('#^.*/casting-portal/#', 'casting-portal/', $file) ?? $file;
+        $file = preg_replace('#^.*/public_html/#', '', $file) ?? $file;
+        $line = (int) ($err['line'] ?? 0);
+        $msg = (string) ($err['message'] ?? '');
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: text/html; charset=utf-8');
+        }
+        echo '<div style="font-family:Tahoma,sans-serif;direction:rtl;padding:1.5rem;background:#fff3f0;border:1px solid #c0392b;margin:1rem">';
+        echo '<strong>خطای PHP پورتال:</strong> ';
+        echo htmlspecialchars($msg, ENT_QUOTES, 'UTF-8');
+        echo '<br><code dir="ltr">' . htmlspecialchars($file . ':' . $line, ENT_QUOTES, 'UTF-8') . '</code>';
+        echo '<p style="margin:0.75rem 0 0">گزارش فایل‌ها: <a href="portal-health.php?key=7rokh-health">portal-health.php</a></p>';
+        echo '</div>';
+    });
+}
+
 if (!file_exists(CASTING_WP_LOAD)) {
     http_response_code(500);
     header('Content-Type: text/html; charset=utf-8');
