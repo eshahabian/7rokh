@@ -901,9 +901,16 @@ function casting_approved_ad_promo_slides(int $limit = 20): array
 /**
  * @param list<array{src:string,alt:string}> $fallback
  */
-function casting_render_promo_banner(array $fallback, string $extra_class = '', string $heading = 'اینجا برای تبلیغات شماست'): void
+function casting_render_promo_banner(array $fallback, string $extra_class = '', string $heading = 'اینجا برای تبلیغات شماست', bool $use_paid_ads = true): void
 {
-    $slides = casting_approved_ad_promo_slides();
+    $slides = [];
+    if ($use_paid_ads) {
+        try {
+            $slides = casting_approved_ad_promo_slides();
+        } catch (Throwable $e) {
+            $slides = [];
+        }
+    }
     if ($slides === []) {
         $slides = $fallback;
     }

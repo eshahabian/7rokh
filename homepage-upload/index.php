@@ -68,7 +68,8 @@ if (function_exists('casting_render_flash')) {
     $banner_shown = false;
     try {
         if (function_exists('casting_render_promo_banner')) {
-            casting_render_promo_banner($home_slides, 'hero-promo-banner');
+            // پوسترهای تبلیغاتی جای اسلایدهای صفحه اول را نگیرند
+            casting_render_promo_banner($home_slides, 'hero-promo-banner', 'اینجا برای تبلیغات شماست', false);
             $banner_shown = true;
         }
     } catch (Throwable $e) {
@@ -86,7 +87,31 @@ if (function_exists('casting_render_flash')) {
     }
     ?>
 
+    <?php
+    $nastaliq = [];
+    if (function_exists('casting_public_home_file_slide')) {
+        $nastaliq = casting_public_home_file_slide('images/rokh-nastaliq.png', '۷ رخ');
+        if ($nastaliq === []) {
+            $nastaliq = casting_public_home_file_slide('images/rokh-nastaliq.jpg', '۷ رخ');
+        }
+    }
+    if ($nastaliq !== []) :
+        $mark = $nastaliq[0];
+        ?>
+    <p class="home-brand-mark">
+      <img src="<?= htmlspecialchars((string) ($mark['src'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) ($mark['alt'] ?? '۷ رخ'), ENT_QUOTES, 'UTF-8') ?>">
+    </p>
+    <?php endif; ?>
+
     <p class="hero-lead"><?= function_exists('casting_brand_html') ? casting_brand_html() : '۷ رخ' ?> - پورتال ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
+
+    <?php
+    if (function_exists('casting_render_public_home_photo_row') && function_exists('casting_public_home_dir_slides')) {
+        // اینستاگرام در صفحه اول نیست
+        casting_render_public_home_photo_row('پروژه‌ها', casting_public_home_dir_slides('projects', 'پروژه'));
+        casting_render_public_home_photo_row('تصاویر لندینگ', casting_public_home_dir_slides('landing', 'صفحه اصلی'));
+    }
+    ?>
 
     <div class="home-enamad" aria-label="نماد اعتماد الکترونیکی">
 <a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=768314&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=768314&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS' alt='' style='cursor:pointer' code='s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS'></a>

@@ -521,6 +521,41 @@ body.has-panel-drawer .wrap.panel-shell {
   text-align: right;
 }
 
+.home-brand-mark {
+  margin: 0 auto 1.1rem;
+}
+
+.home-brand-mark img {
+  display: block;
+  margin-inline: auto;
+  max-width: min(280px, 72vw);
+  height: auto;
+}
+
+.home-photo-row {
+  width: 100%;
+  margin: 0 auto 1rem;
+}
+
+.home-photo-row-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.55rem;
+}
+
+.home-photo-row figure {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 0.7rem;
+}
+
+.home-photo-row img {
+  display: block;
+  width: 100%;
+  height: 7.5rem;
+  object-fit: cover;
+}
+
 .page-home .home-stats {
   width: 100%;
   margin: 1.15rem auto 0;

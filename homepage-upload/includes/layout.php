@@ -383,6 +383,94 @@ function casting_render_flash(): void
 <?php
 }
 
+/** اینستاگرام در صفحهٔ اول عمومی نیست. */
+function casting_public_home_skip_instagram(string $path): bool
+{
+    $n = strtolower(str_replace('\\', '/', $path));
+
+    return str_contains($n, '/instagram/')
+        || str_ends_with($n, '/instagram')
+        || str_starts_with($n, 'instagram/')
+        || $n === 'instagram';
+}
+
+/**
+ * @return list<array{src:string,alt:string}>
+ */
+function casting_public_home_file_slide(string $relative, string $alt): array
+{
+    $relative = ltrim(str_replace('\\', '/', $relative), '/');
+    if ($relative === '' || casting_public_home_skip_instagram($relative)) {
+        return [];
+    }
+    $full = dirname(__DIR__) . '/assets/' . $relative;
+    if (!is_file($full)) {
+        return [];
+    }
+
+    return [['src' => casting_asset($relative), 'alt' => $alt]];
+}
+
+/**
+ * @return list<array{src:string,alt:string}>
+ */
+function casting_public_home_dir_slides(string $subdir, string $alt): array
+{
+    $subdir = trim(str_replace('\\', '/', $subdir), '/');
+    if ($subdir === '' || casting_public_home_skip_instagram('images/' . $subdir)) {
+        return [];
+    }
+    $dir = dirname(__DIR__) . '/assets/images/' . $subdir;
+    if (!is_dir($dir)) {
+        return [];
+    }
+    $names = scandir($dir);
+    if (!is_array($names)) {
+        return [];
+    }
+    sort($names);
+    $out = [];
+    foreach ($names as $name) {
+        if ($name === '.' || $name === '..') {
+            continue;
+        }
+        if (!preg_match('/\.(png|jpe?g|webp)$/i', $name)) {
+            continue;
+        }
+        $full = $dir . '/' . $name;
+        if (!is_file($full) || casting_public_home_skip_instagram($full)) {
+            continue;
+        }
+        $out[] = [
+            'src' => casting_asset('images/' . $subdir . '/' . $name),
+            'alt' => $alt,
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * @param list<array{src:string,alt:string}> $slides
+ */
+function casting_render_public_home_photo_row(string $title, array $slides): void
+{
+    if ($slides === []) {
+        return;
+    }
+    ?>
+    <section class="home-photo-row" aria-label="<?= casting_e($title) ?>">
+      <div class="home-photo-row-track">
+        <?php foreach ($slides as $slide) : ?>
+          <figure>
+            <img src="<?= casting_e((string) ($slide['src'] ?? '')) ?>" alt="<?= casting_e((string) ($slide['alt'] ?? $title)) ?>">
+          </figure>
+        <?php endforeach; ?>
+      </div>
+    </section>
+    <?php
+}
+
 /**
  * نشان اعتماد اینماد — فقط کد رسمی اینماد (بدون عکس محلی و بدون دستکاری URL)
  */
