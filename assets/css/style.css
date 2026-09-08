@@ -469,6 +469,57 @@ html[data-theme="day"] .brand-mark-rokh {
   width: 100%;
   margin: 0 auto 1.25rem;
   text-align: right;
+  min-height: min(48vh, 400px);
+  aspect-ratio: 16 / 7;
+}
+
+.page-home .hero-promo-banner .panel-promo-slides::after {
+  background: linear-gradient(180deg, transparent 58%, rgba(8, 10, 14, 0.42) 100%);
+}
+
+.page-home .hero-promo-banner .panel-promo-banner-copy {
+  display: none;
+}
+
+.home-brand-mark {
+  margin: 0 auto 1.1rem;
+}
+
+.home-brand-mark img {
+  display: block;
+  margin-inline: auto;
+  max-width: min(280px, 72vw);
+  height: auto;
+}
+
+.home-photo-row {
+  width: 100%;
+  margin: 0 auto 1rem;
+}
+
+.home-photo-row-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.55rem;
+}
+
+.home-photo-row figure {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 0.7rem;
+}
+
+.home-photo-row img {
+  display: block;
+  width: 100%;
+  height: 7.5rem;
+  object-fit: cover;
+}
+
+.home-enamad {
+  display: flex;
+  justify-content: center;
+  margin: 1.35rem auto 0.25rem;
 }
 
 .page-home .home-stats {
@@ -1457,6 +1508,34 @@ fieldset.field legend {
 
 .site-footer-inner p {
   margin: 0;
+}
+
+.site-footer-verse-art {
+  display: block;
+  width: min(520px, 90%);
+  height: auto;
+  max-height: 8.5rem;
+  object-fit: contain;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  pointer-events: none;
+}
+
+html:not([data-theme="day"]) .site-footer-verse-art {
+  filter: invert(1) brightness(0.95);
+}
+
+html.is-native-app .site-footer-verse-art,
+body:not(.page-home) .site-footer-verse-art {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .site-footer-verse-art {
+    max-height: 6.5rem;
+    width: min(420px, 94%);
+  }
 }
 
 .site-footer-inner > a,

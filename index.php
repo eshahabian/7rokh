@@ -1,44 +1,143 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/includes/bootstrap.php';
-require_once __DIR__ . '/includes/profile.php';
-require_once __DIR__ . '/includes/layout.php';
-require_once __DIR__ . '/includes/ad-posters.php';
+require_once __DIR__ . '/includes/safe-load.php';
 
-$user = casting_current_user();
-if ($user) {
-    $role = casting_get_user_role((int) $user->ID);
-    if ($role !== '') {
-        casting_redirect('home.php');
+if (!casting_safe_require_once(__DIR__ . '/includes/bootstrap.php')) {
+    casting_safe_fail_page(
+        'صفحه اصلی پورتال بارگذاری نشد',
+        'فایل includes/bootstrap.php ناقص یا خراب است. ' . casting_safe_load_error()
+    );
+}
+
+if (!casting_safe_require_once(__DIR__ . '/includes/layout.php')) {
+    casting_safe_fail_page(
+        'صفحه اصلی پورتال بارگذاری نشد',
+        'فایل includes/layout.php ناقص یا خراب است. ' . casting_safe_load_error()
+    );
+}
+
+$stats_on = defined('CASTING_PUBLIC_HOME_STATS') && CASTING_PUBLIC_HOME_STATS;
+if ($stats_on) {
+    casting_safe_require_once(__DIR__ . '/includes/profile.php');
+}
+casting_safe_require_once(__DIR__ . '/includes/ad-posters.php');
+
+try {
+    $user = function_exists('casting_current_user') ? casting_current_user() : null;
+    if ($user && function_exists('casting_get_user_role')) {
+        $role = casting_get_user_role((int) $user->ID);
+        if ($role !== '' && function_exists('casting_redirect')) {
+            casting_redirect('home.php');
+        }
+    }
+} catch (Throwable $e) {
+    $user = null;
+}
+
+$counts = ['tiles' => []];
+if ($stats_on && function_exists('casting_member_counts')) {
+    try {
+        $counts = casting_member_counts();
+    } catch (Throwable $e) {
+        $counts = ['tiles' => []];
     }
 }
 
-$counts = CASTING_PUBLIC_HOME_STATS ? casting_member_counts() : ['tiles' => []];
-
-casting_render_head('خانه', 'page-home');
-casting_render_header('home');
-casting_render_flash();
+if (function_exists('casting_render_head')) {
+    casting_render_head('خانه', 'page-home');
+}
+if (function_exists('casting_render_header')) {
+    casting_render_header('home');
+}
+if (function_exists('casting_render_flash')) {
+    casting_render_flash();
+}
 ?>
 <main class="wrap hero">
   <div class="hero-copy">
     <?php
     $home_slides = [
-        ['src' => casting_asset('images/home-slide-1.png'), 'alt' => 'صحنه فیلم‌برداری و صندلی کارگردان'],
-        ['src' => casting_asset('images/home-slide-2.png'), 'alt' => 'دوربین سینمایی و تجهیزات تولید'],
-        ['src' => casting_asset('images/home-slide-3.png'), 'alt' => 'سالن تئاتر و صحنه نمایش'],
-        ['src' => casting_asset('images/home-slide-4.png'), 'alt' => 'پشت صحنه و میز گریم'],
-        ['src' => casting_asset('images/home-slide-5.png'), 'alt' => 'کلاکت و فیلمنامه'],
-        ['src' => casting_asset('images/home-slide-6.png'), 'alt' => 'تجهیزات صدا و فیلم‌برداری'],
+        ['src' => function_exists('casting_asset') ? casting_asset('images/home-slide-1.png') : 'assets/images/home-slide-1.png', 'alt' => 'صحنه فیلم‌برداری و صندلی کارگردان'],
+        ['src' => function_exists('casting_asset') ? casting_asset('images/home-slide-2.png') : 'assets/images/home-slide-2.png', 'alt' => 'دوربین سینمایی و تجهیزات تولید'],
+        ['src' => function_exists('casting_asset') ? casting_asset('images/home-slide-3.png') : 'assets/images/home-slide-3.png', 'alt' => 'سالن تئاتر و صحنه نمایش'],
+        ['src' => function_exists('casting_asset') ? casting_asset('images/home-slide-4.png') : 'assets/images/home-slide-4.png', 'alt' => 'پشت صحنه و میز گریم'],
+        ['src' => function_exists('casting_asset') ? casting_asset('images/home-slide-5.png') : 'assets/images/home-slide-5.png', 'alt' => 'کلاکت و فیلمنامه'],
+        ['src' => function_exists('casting_asset') ? casting_asset('images/home-slide-6.png') : 'assets/images/home-slide-6.png', 'alt' => 'تجهیزات صدا و فیلم‌برداری'],
     ];
-    casting_render_promo_banner($home_slides, 'hero-promo-banner');
+    $banner_shown = false;
+    try {
+        if (function_exists('casting_render_public_home_slides')) {
+            casting_render_public_home_slides($home_slides);
+            $banner_shown = true;
+        }
+    } catch (Throwable $e) {
+        $banner_shown = false;
+    }
+    if (!$banner_shown) {
+        echo '<section class="panel-promo-banner hero-promo-banner" aria-label="تصاویر صفحه اول" data-promo-slider><div class="panel-promo-slides">';
+        foreach ($home_slides as $i => $slide) {
+            $active = $i === 0 ? ' is-active' : '';
+            $src = htmlspecialchars((string) ($slide['src'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $alt = htmlspecialchars((string) ($slide['alt'] ?? ''), ENT_QUOTES, 'UTF-8');
+            echo '<figure class="panel-promo-slide' . $active . '"><img src="' . $src . '" alt="' . $alt . '" width="1920" height="810"></figure>';
+        }
+        echo '</div><div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدهای صفحه اول">';
+        foreach ($home_slides as $i => $slide) {
+            $active = $i === 0 ? ' is-active' : '';
+            $selected = $i === 0 ? 'true' : 'false';
+            echo '<button type="button" class="' . $active . '" aria-label="اسلاید ' . (int) ($i + 1) . '" aria-selected="' . $selected . '" data-promo-dot="' . (int) $i . '"></button>';
+        }
+        echo '</div></section>';
+    }
     ?>
 
-    <p class="hero-lead"><?= casting_brand_html() ?> - پورتال ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
+    <?php
+    $nastaliq = [];
+    if (function_exists('casting_public_home_file_slide')) {
+        $nastaliq = casting_public_home_file_slide('images/rokh-nastaliq.png', '۷ رخ');
+        if ($nastaliq === []) {
+            $nastaliq = casting_public_home_file_slide('images/rokh-nastaliq.jpg', '۷ رخ');
+        }
+    }
+    if ($nastaliq !== []) :
+        $mark = $nastaliq[0];
+        ?>
+    <p class="home-brand-mark">
+      <img src="<?= htmlspecialchars((string) ($mark['src'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) ($mark['alt'] ?? '۷ رخ'), ENT_QUOTES, 'UTF-8') ?>">
+    </p>
+    <?php endif; ?>
 
-    <?php if (CASTING_PUBLIC_HOME_STATS) : ?>
+    <p class="hero-lead"><?= function_exists('casting_brand_html') ? casting_brand_html() : '۷ رخ' ?> - پورتال ارتباط هنرمندان سینما و تئاتر با پروژه های هنری</p>
+
+    <?php
+    if (function_exists('casting_render_public_home_photo_row') && function_exists('casting_public_home_dir_slides')) {
+        // اینستاگرام در صفحه اول نیست
+        casting_render_public_home_photo_row('پروژه‌ها', casting_public_home_dir_slides('projects', 'پروژه'));
+        casting_render_public_home_photo_row('تصاویر لندینگ', casting_public_home_dir_slides('landing', 'صفحه اصلی'));
+    }
+    ?>
+
+    <div class="home-enamad" aria-label="نماد اعتماد الکترونیکی">
+<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=768314&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=768314&Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS' alt='' style='cursor:pointer' code='s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS'></a>
+    </div>
+
+    <?php if ($stats_on && function_exists('casting_render_member_count_tiles')) : ?>
       <?php casting_render_member_count_tiles($counts); ?>
     <?php endif; ?>
   </div>
 </main>
-<?php casting_render_footer(); ?>
+<?php
+try {
+    if (function_exists('casting_render_footer')) {
+        casting_render_footer(true);
+    }
+} catch (Throwable $e) {
+    if (function_exists('casting_render_footer')) {
+        try {
+            casting_render_footer();
+        } catch (Throwable $e2) {
+            echo '</body></html>';
+        }
+    }
+}

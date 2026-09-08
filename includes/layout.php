@@ -8,6 +8,21 @@ function casting_main_site_url(): string
     return defined('CASTING_MAIN_SITE_URL') ? (string) CASTING_MAIN_SITE_URL : 'https://7rokh.ir';
 }
 
+function casting_is_native_app_request(): bool
+{
+    $xrw = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    if ($xrw === 'ir.rokh7.app') {
+        return true;
+    }
+
+    $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    if ($ua === '') {
+        return false;
+    }
+
+    return stripos($ua, 'Capacitor') !== false || stripos($ua, 'ir.rokh7') !== false;
+}
+
 function casting_render_head(string $title, string $body_class = ''): void
 {
     $brand = casting_e(casting_brand());
@@ -25,7 +40,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $css ?>?v=211">
+  <link rel="stylesheet" href="<?= $css ?>?v=215">
   <script>
     (function () {
       try {
@@ -234,6 +249,135 @@ function casting_render_flash(): void
 <?php
 }
 
+/** اینستاگرام در صفحهٔ اول عمومی نیست. */
+function casting_public_home_skip_instagram(string $path): bool
+{
+    $n = strtolower(str_replace('\\', '/', $path));
+
+    return str_contains($n, '/instagram/')
+        || str_ends_with($n, '/instagram')
+        || str_starts_with($n, 'instagram/')
+        || $n === 'instagram';
+}
+
+/**
+ * @return list<array{src:string,alt:string}>
+ */
+function casting_public_home_file_slide(string $relative, string $alt): array
+{
+    $relative = ltrim(str_replace('\\', '/', $relative), '/');
+    if ($relative === '' || casting_public_home_skip_instagram($relative)) {
+        return [];
+    }
+    $full = dirname(__DIR__) . '/assets/' . $relative;
+    if (!is_file($full)) {
+        return [];
+    }
+
+    return [['src' => casting_asset($relative), 'alt' => $alt]];
+}
+
+/**
+ * @return list<array{src:string,alt:string}>
+ */
+function casting_public_home_dir_slides(string $subdir, string $alt): array
+{
+    $subdir = trim(str_replace('\\', '/', $subdir), '/');
+    if ($subdir === '' || casting_public_home_skip_instagram('images/' . $subdir)) {
+        return [];
+    }
+    $dir = dirname(__DIR__) . '/assets/images/' . $subdir;
+    if (!is_dir($dir)) {
+        return [];
+    }
+    $names = scandir($dir);
+    if (!is_array($names)) {
+        return [];
+    }
+    sort($names);
+    $out = [];
+    foreach ($names as $name) {
+        if ($name === '.' || $name === '..') {
+            continue;
+        }
+        if (!preg_match('/\.(png|jpe?g|webp)$/i', $name)) {
+            continue;
+        }
+        $full = $dir . '/' . $name;
+        if (!is_file($full) || casting_public_home_skip_instagram($full)) {
+            continue;
+        }
+        $out[] = [
+            'src' => casting_asset('images/' . $subdir . '/' . $name),
+            'alt' => $alt,
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * @param list<array{src:string,alt:string}> $slides
+ */
+function casting_render_public_home_photo_row(string $title, array $slides): void
+{
+    if ($slides === []) {
+        return;
+    }
+    ?>
+    <section class="home-photo-row" aria-label="<?= casting_e($title) ?>">
+      <div class="home-photo-row-track">
+        <?php foreach ($slides as $slide) : ?>
+          <figure>
+            <img src="<?= casting_e((string) ($slide['src'] ?? '')) ?>" alt="<?= casting_e((string) ($slide['alt'] ?? $title)) ?>">
+          </figure>
+        <?php endforeach; ?>
+      </div>
+    </section>
+    <?php
+}
+
+/**
+ * اسلایدر عکس‌های صفحهٔ اول — پوستر تبلیغات جایگزین نمی‌شود.
+ *
+ * @param list<array{src:string,alt:string}> $slides
+ */
+function casting_render_public_home_slides(array $slides): void
+{
+    if ($slides === []) {
+        return;
+    }
+    ?>
+  <section class="panel-promo-banner hero-promo-banner" aria-label="تصاویر صفحه اول" data-promo-slider>
+    <div class="panel-promo-slides">
+      <?php foreach ($slides as $i => $slide) : ?>
+        <figure class="panel-promo-slide<?= $i === 0 ? ' is-active' : '' ?>">
+          <img
+            src="<?= casting_e((string) ($slide['src'] ?? '')) ?>"
+            alt="<?= casting_e((string) ($slide['alt'] ?? '')) ?>"
+            width="1920"
+            height="810"
+            decoding="<?= $i === 0 ? 'sync' : 'async' ?>"
+            <?= $i === 0 ? 'fetchpriority="high"' : '' ?>
+          >
+        </figure>
+      <?php endforeach; ?>
+    </div>
+    <div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدهای صفحه اول">
+      <?php foreach ($slides as $i => $slide) : ?>
+        <button
+          type="button"
+          class="<?= $i === 0 ? 'is-active' : '' ?>"
+          aria-label="اسلاید <?= (int) ($i + 1) ?>"
+          aria-selected="<?= $i === 0 ? 'true' : 'false' ?>"
+          data-promo-dot="<?= (int) $i ?>"
+        ></button>
+      <?php endforeach; ?>
+    </div>
+  </section>
+    <?php
+}
+
 /**
  * نشان اعتماد اینماد — کد رسمی اینماد (بدون دستکاری URL)
  */
@@ -256,13 +400,38 @@ function casting_render_enamad_seal(string $extra_class = ''): void
     <?php
 }
 
-function casting_render_footer(): void
+function casting_render_footer(bool $show_home_verse = false): void
 {
+    $verse_src = '';
+    if ($show_home_verse && !casting_is_native_app_request()) {
+        try {
+            $hafez = __DIR__ . '/hafez.php';
+            if (!function_exists('casting_hafez_random_image') && is_file($hafez)) {
+                require_once $hafez;
+            }
+            if (function_exists('casting_hafez_random_image')) {
+                $verse_src = (string) casting_hafez_random_image();
+            }
+        } catch (Throwable $e) {
+            $verse_src = '';
+        }
+    }
     ?>
   <footer class="site-footer">
     <div class="site-footer-inner">
       <p><?= casting_brand_html() ?> — پورتال استعداد و بازیگری</p>
+      <?php if ($verse_src !== '') : ?>
+        <img
+          class="site-footer-verse-art"
+          src="<?= casting_e($verse_src) ?>"
+          alt=""
+          width="560"
+          height="160"
+        >
+      <?php endif; ?>
+      <?php if (!$show_home_verse) : ?>
       <?php casting_render_enamad_seal(); ?>
+      <?php endif; ?>
     </div>
   </footer>
   <button type="button" class="scroll-top" data-scroll-top aria-label="بازگشت به بالای صفحه">
@@ -299,7 +468,7 @@ function casting_render_footer(): void
       fullUrl: <?= wp_json_encode(casting_url('chat.php')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=122" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=140" defer></script>
 </body>
 </html>
 <?php

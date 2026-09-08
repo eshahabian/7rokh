@@ -519,6 +519,16 @@ body.has-panel-drawer .wrap.panel-shell {
   width: 100%;
   margin: 0 auto 1.25rem;
   text-align: right;
+  min-height: min(48vh, 400px);
+  aspect-ratio: 16 / 7;
+}
+
+.page-home .hero-promo-banner .panel-promo-slides::after {
+  background: linear-gradient(180deg, transparent 58%, rgba(8, 10, 14, 0.42) 100%);
+}
+
+.page-home .hero-promo-banner .panel-promo-banner-copy {
+  display: none;
 }
 
 .home-brand-mark {

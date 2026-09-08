@@ -67,21 +67,26 @@ if (function_exists('casting_render_flash')) {
     ];
     $banner_shown = false;
     try {
-        if (function_exists('casting_render_promo_banner')) {
-            // پوسترهای تبلیغاتی جای اسلایدهای صفحه اول را نگیرند
-            casting_render_promo_banner($home_slides, 'hero-promo-banner', 'اینجا برای تبلیغات شماست', false);
+        if (function_exists('casting_render_public_home_slides')) {
+            casting_render_public_home_slides($home_slides);
             $banner_shown = true;
         }
     } catch (Throwable $e) {
         $banner_shown = false;
     }
     if (!$banner_shown) {
-        $first = $home_slides[0]['src'] ?? '';
-        $alt = $home_slides[0]['alt'] ?? '';
-        echo '<section class="panel-promo-banner hero-promo-banner" aria-label="اینجا برای تبلیغات شماست" data-promo-slider><div class="panel-promo-slides">';
+        echo '<section class="panel-promo-banner hero-promo-banner" aria-label="تصاویر صفحه اول" data-promo-slider><div class="panel-promo-slides">';
         foreach ($home_slides as $i => $slide) {
             $active = $i === 0 ? ' is-active' : '';
-            echo '<figure class="panel-promo-slide' . $active . '"><img src="' . htmlspecialchars((string) ($slide['src'] ?? $first), ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars((string) ($slide['alt'] ?? $alt), ENT_QUOTES, 'UTF-8') . '"></figure>';
+            $src = htmlspecialchars((string) ($slide['src'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $alt = htmlspecialchars((string) ($slide['alt'] ?? ''), ENT_QUOTES, 'UTF-8');
+            echo '<figure class="panel-promo-slide' . $active . '"><img src="' . $src . '" alt="' . $alt . '" width="1920" height="810"></figure>';
+        }
+        echo '</div><div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدهای صفحه اول">';
+        foreach ($home_slides as $i => $slide) {
+            $active = $i === 0 ? ' is-active' : '';
+            $selected = $i === 0 ? 'true' : 'false';
+            echo '<button type="button" class="' . $active . '" aria-label="اسلاید ' . (int) ($i + 1) . '" aria-selected="' . $selected . '" data-promo-dot="' . (int) $i . '"></button>';
         }
         echo '</div></section>';
     }

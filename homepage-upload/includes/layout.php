@@ -472,6 +472,47 @@ function casting_render_public_home_photo_row(string $title, array $slides): voi
 }
 
 /**
+ * اسلایدر عکس‌های صفحهٔ اول — پوستر تبلیغات جایگزین نمی‌شود.
+ *
+ * @param list<array{src:string,alt:string}> $slides
+ */
+function casting_render_public_home_slides(array $slides): void
+{
+    if ($slides === []) {
+        return;
+    }
+    ?>
+  <section class="panel-promo-banner hero-promo-banner" aria-label="تصاویر صفحه اول" data-promo-slider>
+    <div class="panel-promo-slides">
+      <?php foreach ($slides as $i => $slide) : ?>
+        <figure class="panel-promo-slide<?= $i === 0 ? ' is-active' : '' ?>">
+          <img
+            src="<?= casting_e((string) ($slide['src'] ?? '')) ?>"
+            alt="<?= casting_e((string) ($slide['alt'] ?? '')) ?>"
+            width="1920"
+            height="810"
+            decoding="<?= $i === 0 ? 'sync' : 'async' ?>"
+            <?= $i === 0 ? 'fetchpriority="high"' : '' ?>
+          >
+        </figure>
+      <?php endforeach; ?>
+    </div>
+    <div class="panel-promo-dots" data-promo-dots role="tablist" aria-label="اسلایدهای صفحه اول">
+      <?php foreach ($slides as $i => $slide) : ?>
+        <button
+          type="button"
+          class="<?= $i === 0 ? 'is-active' : '' ?>"
+          aria-label="اسلاید <?= (int) ($i + 1) ?>"
+          aria-selected="<?= $i === 0 ? 'true' : 'false' ?>"
+          data-promo-dot="<?= (int) $i ?>"
+        ></button>
+      <?php endforeach; ?>
+    </div>
+  </section>
+    <?php
+}
+
+/**
  * نشان اعتماد اینماد — فقط کد رسمی اینماد (بدون عکس محلی و بدون دستکاری URL)
  */
 function casting_render_enamad_seal(string $extra_class = ''): void
