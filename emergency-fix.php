@@ -27,6 +27,7 @@ $roots = array_unique([
 $files = [
     'wp-content/mu-plugins/casting-wp-admin-guard.php',
     'wp-content/mu-plugins/casting-wp-admin-guard-loader.php',
+    'wp-content/mu-plugins/casting-force-domain.php',
     'casting-portal/mu-plugin/casting-wp-admin-guard.php',
     'casting-portal/mu-plugin/casting-wp-admin-guard-loader.php',
     'casting-portal/mu-plugin/README.txt',

@@ -409,12 +409,20 @@ function casting_render_footer(bool $show_home_verse = false): void
 {
     $verse_src = '';
     if ($show_home_verse && !casting_is_native_app_request()) {
-        $hafez = __DIR__ . '/hafez.php';
-        if (!function_exists('casting_hafez_random_image') && is_file($hafez)) {
-            require_once $hafez;
-        }
-        if (function_exists('casting_hafez_random_image')) {
-            $verse_src = casting_hafez_random_image();
+        try {
+            $hafez = __DIR__ . '/hafez.php';
+            if (!function_exists('casting_hafez_random_image') && is_file($hafez)) {
+                if (function_exists('casting_safe_require_once')) {
+                    casting_safe_require_once($hafez);
+                } else {
+                    require_once $hafez;
+                }
+            }
+            if (function_exists('casting_hafez_random_image')) {
+                $verse_src = (string) casting_hafez_random_image();
+            }
+        } catch (Throwable $e) {
+            $verse_src = '';
         }
     }
     ?>
@@ -475,7 +483,7 @@ function casting_render_footer(bool $show_home_verse = false): void
       fullUrl: <?= wp_json_encode(casting_url('chat.php')) ?>
     };
   </script>
-  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=139" defer></script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=140" defer></script>
 </body>
 </html>
 <?php

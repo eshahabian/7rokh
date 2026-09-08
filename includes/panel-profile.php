@@ -72,19 +72,30 @@ function casting_render_profile_portraits(array $portraits, bool $actor_set = tr
  */
 function casting_process_profile_post(int $user_id): array
 {
-    $out = ['error' => '', 'success' => '', 'profile' => null];
+    $out = ['error' => '', 'success' => '', 'profile' => null, 'errors' => []];
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         return $out;
     }
     if (casting_upload_post_too_large()) {
         $out['error'] = casting_upload_post_too_large_message();
+        $out['errors'] = [$out['error']];
+
+        return $out;
+    }
+    if (empty($_POST) && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        $out['error'] = 'فرم ارسال نشد. حجم فایل خیلی زیاد است؛ بدون ویدیوی بزرگ دوباره ذخیره کنید.';
+        $out['errors'] = [$out['error']];
 
         return $out;
     }
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_profile')) {
+        $out['error'] = 'نشست منقضی شده. صفحه را رفرش کنید و دوباره ذخیره کنید.';
+        $out['errors'] = [$out['error']];
+
         return $out;
     }
 
+    try {
     $video = casting_handle_video_upload($user_id);
     if (!$video['ok']) {
         $out['error'] = $video['error'];
@@ -116,8 +127,23 @@ function casting_process_profile_post(int $user_id): array
         }
     }
 
+    $first = trim(sanitize_text_field((string) ($_POST['first_name'] ?? '')));
+    $last = trim(sanitize_text_field((string) ($_POST['last_name'] ?? '')));
+    $name = trim(sanitize_text_field((string) ($_POST['name'] ?? '')));
+    if ($first === '' && $last === '' && $name !== '') {
+        $parts = preg_split('/\s+/u', $name, 2);
+        $first = trim((string) ($parts[0] ?? ''));
+        $last = trim((string) ($parts[1] ?? ''));
+    }
+    $full = trim($first . ' ' . $last);
+    if ($full === '') {
+        $full = $name;
+    }
+
     $save = casting_save_profile($user_id, [
-        'name'                => $_POST['name'] ?? '',
+        'first_name'          => $first,
+        'last_name'           => $last,
+        'name'                => $full,
         'birthdate'           => casting_birthdate_from_jalali_post($_POST) ?? '',
         'age'                 => $_POST['age'] ?? '',
         'gender'              => $_POST['gender'] ?? '',
@@ -157,13 +183,26 @@ function casting_process_profile_post(int $user_id): array
         'visible'             => !empty($_POST['visible']),
     ]);
     if (!$save['ok']) {
-        $out['error'] = $save['error'];
+        $out['error'] = (string) ($save['error'] ?? 'ذخیره پروفایل ناموفق بود.');
+        $out['errors'] = [$out['error']];
         return $out;
     }
 
     $out['success'] = 'پروفایل ذخیره شد.';
     $out['profile'] = casting_get_profile($user_id);
+    if (function_exists('casting_redirect')) {
+        casting_redirect('edit-profile.php?saved=1');
+    }
     return $out;
+    } catch (Throwable $e) {
+        if (function_exists('error_log')) {
+            error_log('[casting-profile-save] ' . $e->getMessage());
+        }
+        $out['error'] = 'ذخیره پروفایل ناموفق بود: ' . $e->getMessage();
+        $out['errors'] = [$out['error']];
+
+        return $out;
+    }
 }
 
 /**
@@ -883,10 +922,23 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
         <?php
     }
     ?>
-  <p class="lede">می‌توانید همهٔ اطلاعات پروفایل را دوباره تغییر دهید؛ فیلدهای ستاره‌دار همچنان الزامی‌اند. رمز عبور را از <a href="change-password.php">تنظیمات</a> عوض کنید.</p>
+  <p class="lede">بعد از ثبت‌نام هر بار که ذخیره را بزنید همان فیلدهایی که پر کرده‌اید ثبت می‌شود. رمز عبور را از <a href="change-password.php">تنظیمات</a> عوض کنید.</p>
 
-  <form class="form" method="post" action="edit-profile.php#edit-profile" enctype="multipart/form-data" data-loading data-talent-profile-toggle>
+  <form class="form" method="post" action="edit-profile.php" enctype="multipart/form-data" novalidate data-loading data-talent-profile-toggle data-profile-edit-form>
     <?php wp_nonce_field('casting_profile'); ?>
+    <?php
+    $first_name = trim((string) ($profile['first_name'] ?? ''));
+    $last_name = trim((string) ($profile['last_name'] ?? ''));
+    if ($first_name === '' && $last_name === '') {
+        $display = trim((string) ($profile['name'] ?? ''));
+        $login = trim((string) ($profile['username'] ?? ''));
+        if ($display !== '' && strcasecmp($display, $login) !== 0) {
+            $parts = preg_split('/\s+/u', $display, 2);
+            $first_name = trim((string) ($parts[0] ?? ''));
+            $last_name = trim((string) ($parts[1] ?? ''));
+        }
+    }
+    ?>
 
     <?php if (casting_user_can_upload_portraits($user_id)) : ?>
     <h3 class="panel-section-title" id="profile-photos">عکس پروفایل</h3>
@@ -902,9 +954,15 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <?php endif; ?>
 
     <h3 class="panel-section-title" id="account-email">اطلاعات حساب</h3>
-    <div class="field">
-      <label for="name">نام و نام خانوادگی <span class="req-mark">*</span></label>
-      <input id="name" name="name" type="text" required autocomplete="name" value="<?= casting_e($profile['name'] ?? '') ?>">
+    <div class="form-grid">
+      <div class="field">
+        <label for="first_name">نام</label>
+        <input id="first_name" name="first_name" type="text" minlength="2" autocomplete="given-name" value="<?= casting_e($first_name) ?>">
+      </div>
+      <div class="field">
+        <label for="last_name">نام خانوادگی</label>
+        <input id="last_name" name="last_name" type="text" minlength="2" autocomplete="family-name" value="<?= casting_e($last_name) ?>">
+      </div>
     </div>
     <div class="field">
       <label for="username_display">نام کاربری</label>
@@ -913,14 +971,14 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     </div>
     <div class="field">
       <label for="email">ایمیل <span class="req-mark">*</span></label>
-      <input id="email" name="email" type="email" required autocomplete="email" value="<?= casting_e($profile['email'] ?? '') ?>">
+      <input id="email" name="email" type="text" inputmode="email" autocomplete="email" value="<?= casting_e($profile['email'] ?? '') ?>">
       <p class="field-hint">برای ورود، اعلان‌ها و بازیابی رمز. برای دیگر اعضا نمایش داده نمی‌شود. می‌توانید از <a href="change-email.php">تغییر ایمیل</a> هم استفاده کنید.</p>
     </div>
 
     <div class="form-grid">
       <div class="field">
         <label for="mobile">موبایل <span class="req-mark">*</span></label>
-        <input id="mobile" name="mobile" type="tel" required inputmode="numeric" pattern="09[0-9]{9}" value="<?= casting_e($profile['mobile'] ?? '') ?>" placeholder="09121234567">
+        <input id="mobile" name="mobile" type="tel" inputmode="numeric" value="<?= casting_e($profile['mobile'] ?? '') ?>" placeholder="09121234567">
         <p class="field-hint">فقط خودتان و مدیران اصلی سایت این شماره را می‌بینند. برای تغییر با تأیید پیامک به <a href="change-phone.php">تغییر شماره تلفن</a> بروید.</p>
       </div>
       <div class="field">
@@ -931,9 +989,9 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     </div>
     <?php casting_render_optional_mobile2_field((string) ($profile['mobile2'] ?? '')); ?>
 
-    <?php casting_render_activity_fields($profile['activities'] ?? [], true, $user_id); ?>
+    <?php casting_render_activity_fields($profile['activities'] ?? [], false, $user_id); ?>
 
-    <?php casting_render_jalali_birthday_fields($profile['birthdate'], true); ?>
+    <?php casting_render_jalali_birthday_fields($profile['birthdate'], false); ?>
     <div class="field">
       <label for="age_display">سن (خودکار از تاریخ تولد)</label>
       <select id="age_display" data-age-output data-age-plus="<?= (int) casting_body_metric_plus_value('age') ?>" disabled aria-live="polite">
@@ -950,7 +1008,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       <div class="role-grid role-grid-2">
         <?php foreach (casting_gender_labels() as $key => $label) : ?>
           <label class="role-option">
-            <input type="radio" name="gender" value="<?= casting_e($key) ?>" <?= $profile['gender'] === $key ? 'checked' : '' ?> required>
+            <input type="radio" name="gender" value="<?= casting_e($key) ?>" <?= $profile['gender'] === $key ? 'checked' : '' ?>>
             <span><?= casting_e($label) ?></span>
           </label>
         <?php endforeach; ?>
@@ -962,7 +1020,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       <div class="role-grid role-grid-3">
         <?php foreach (casting_look_labels() as $key => $label) : ?>
           <label class="role-option">
-            <input type="radio" name="look" value="<?= casting_e($key) ?>" <?= $profile['look'] === $key ? 'checked' : '' ?><?= $hide_talent_profile ? '' : ' required' ?>>
+            <input type="radio" name="look" value="<?= casting_e($key) ?>" <?= $profile['look'] === $key ? 'checked' : '' ?>>
             <span><?= casting_e($label) ?></span>
           </label>
         <?php endforeach; ?>
@@ -980,16 +1038,15 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     </div>
 
     <div class="form-grid" data-talent-profile-field<?= $talent_hidden ?>>
-      <?php $need_body = casting_activities_need_body_metrics($profile['activities'] ?? []); ?>
       <div class="field">
-        <label for="height">قد (سانتی‌متر)<?= $need_body ? ' <span class="req-mark">*</span>' : '' ?></label>
-        <?php casting_render_body_metric_select('height', 'height', 'height', (string) ($profile['height'] ?? ''), 'انتخاب کنید', $need_body); ?>
-        <p class="field-hint">برای بازیگری الزامی است</p>
+        <label for="height">قد (سانتی‌متر)</label>
+        <?php casting_render_body_metric_select('height', 'height', 'height', (string) ($profile['height'] ?? ''), 'انتخاب کنید', false); ?>
+        <p class="field-hint">برای بازیگری</p>
       </div>
       <div class="field">
-        <label for="weight">وزن (کیلوگرم)<?= $need_body ? ' <span class="req-mark">*</span>' : '' ?></label>
-        <?php casting_render_body_metric_select('weight', 'weight', 'weight', (string) ($profile['weight'] ?? ''), 'انتخاب کنید', $need_body); ?>
-        <p class="field-hint">برای بازیگری الزامی است</p>
+        <label for="weight">وزن (کیلوگرم)</label>
+        <?php casting_render_body_metric_select('weight', 'weight', 'weight', (string) ($profile['weight'] ?? ''), 'انتخاب کنید', false); ?>
+        <p class="field-hint">برای بازیگری</p>
       </div>
     </div>
 
@@ -997,11 +1054,11 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <?php casting_render_health_fields(
         (string) ($profile['health_well'] ?? 'healthy'),
         (string) ($profile['health_status'] ?? ''),
-        !$hide_talent_profile
+        false
     ); ?>
     </div>
 
-    <?php casting_render_location_fields((string) ($profile['province'] ?? ''), (string) ($profile['city'] ?? ''), '', true, 'form-grid', false); ?>
+    <?php casting_render_location_fields((string) ($profile['province'] ?? ''), (string) ($profile['city'] ?? ''), '', false, 'form-grid', false); ?>
 
     <?php
     $artistic = $profile['artistic_membership'] ?? ['has' => '', 'orgs' => [], 'other_items' => []];
@@ -1015,7 +1072,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
     <div class="form-grid">
       <div class="field">
         <label for="activity_license">دارای پروانه فعالیت <span class="req-mark">*</span></label>
-        <select id="activity_license" name="activity_license" required>
+        <select id="activity_license" name="activity_license">
           <option value="">انتخاب کنید</option>
           <?php foreach (casting_yes_no_labels() as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= ($profile['activity_license'] ?? '') === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
@@ -1024,11 +1081,11 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
       </div>
       <div class="field">
         <label for="experience">سابقه فعالیت (سال) <span class="req-mark">*</span></label>
-        <input id="experience" name="experience" type="number" min="0" max="60" required value="<?= casting_e($profile['experience'] !== '' ? $profile['experience'] : '0') ?>">
+        <input id="experience" name="experience" type="number" min="0" max="60" value="<?= casting_e($profile['experience'] !== '' ? $profile['experience'] : '0') ?>">
       </div>
       <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
         <label for="availability">وضعیت آمادگی برای همکاری <span class="req-mark">*</span></label>
-        <select id="availability" name="availability"<?= $hide_talent_profile ? '' : ' required' ?>>
+        <select id="availability" name="availability">
           <option value="">انتخاب کنید</option>
           <?php foreach (casting_availability_labels() as $key => $label) : ?>
             <option value="<?= casting_e($key) ?>" <?= ($profile['availability'] ?? '') === $key ? 'selected' : '' ?>><?= casting_e($label) ?></option>
@@ -1082,7 +1139,7 @@ function casting_render_profile_edit_form(int $user_id, array $profile, bool $op
 
     <div class="field" data-talent-profile-field<?= $talent_hidden ?>>
       <label for="video_url">یا لینک ویدیو (آپارات / یوتیوب)</label>
-      <input id="video_url" name="video_url" type="url" placeholder="https://" value="<?= casting_e($profile['video_url']) ?>">
+      <input id="video_url" name="video_url" type="text" inputmode="url" placeholder="https://" value="<?= casting_e($profile['video_url']) ?>">
     </div>
 
     <label class="check-row">

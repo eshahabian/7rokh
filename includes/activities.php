@@ -619,7 +619,7 @@ function casting_activities_need_talent_fields(array $activities): bool
 {
     $activities = casting_normalize_activities($activities);
 
-    return casting_activities_has_acting($activities) || casting_activities_has_none($activities);
+    return casting_activities_has_acting($activities);
 }
 
 /**

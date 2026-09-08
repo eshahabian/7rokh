@@ -1,14 +1,23 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/includes/bootstrap.php';
-require_once __DIR__ . '/includes/auth.php';
-require_once __DIR__ . '/includes/profile.php';
-require_once __DIR__ . '/includes/rules-content.php';
-if (is_file(__DIR__ . '/includes/webhook.php')) {
-    require_once __DIR__ . '/includes/webhook.php';
+require_once __DIR__ . '/includes/safe-load.php';
+if (!casting_safe_require_once(__DIR__ . '/includes/bootstrap.php')) {
+    casting_safe_fail_page('ثبت‌نام بارگذاری نشد', 'includes/bootstrap.php ناقص است. ' . casting_safe_load_error());
 }
-require_once __DIR__ . '/includes/layout.php';
+if (!casting_safe_require_once(__DIR__ . '/includes/auth.php')) {
+    casting_safe_fail_page('ثبت‌نام بارگذاری نشد', 'includes/auth.php ناقص است. ' . casting_safe_load_error());
+}
+if (!casting_safe_require_once(__DIR__ . '/includes/profile.php')) {
+    casting_safe_fail_page('ثبت‌نام بارگذاری نشد', 'includes/profile.php ناقص است. ' . casting_safe_load_error());
+}
+casting_safe_require_once(__DIR__ . '/includes/rules-content.php');
+if (is_file(__DIR__ . '/includes/webhook.php')) {
+    casting_safe_require_once(__DIR__ . '/includes/webhook.php');
+}
+if (!casting_safe_require_once(__DIR__ . '/includes/layout.php')) {
+    casting_safe_fail_page('ثبت‌نام بارگذاری نشد', 'includes/layout.php ناقص است. ' . casting_safe_load_error());
+}
 
 casting_nocache();
 
@@ -78,8 +87,8 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $referral_code = (string) ($_POST['referral_code'] ?? '');
         casting_register_draft_save($_POST);
 
-        $mobile_norm = casting_normalize_mobile($mobile);
-        $otp_enabled = casting_mobile_otp_enabled();
+        $mobile_norm = function_exists('casting_normalize_mobile') ? casting_normalize_mobile($mobile) : '';
+        $otp_enabled = function_exists('casting_mobile_otp_enabled') && casting_mobile_otp_enabled();
 
         if ($is_otp_only) {
             if (!$otp_enabled) {
@@ -258,12 +267,13 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$otp_enabled = casting_mobile_otp_enabled();
-$mobile_norm_view = casting_normalize_mobile($mobile);
-$mobile_verified = $otp_enabled && casting_otp_session_is_verified('register', $mobile_norm_view);
+$otp_enabled = function_exists('casting_mobile_otp_enabled') && casting_mobile_otp_enabled();
+$mobile_norm_view = function_exists('casting_normalize_mobile') ? casting_normalize_mobile($mobile) : '';
+$mobile_verified = $otp_enabled && function_exists('casting_otp_session_is_verified') && casting_otp_session_is_verified('register', $mobile_norm_view);
 $account_unlocked = !$otp_enabled || $mobile_verified;
-$rules_accepted = !empty($_POST['rules_accepted']) || !empty(casting_register_draft_get()['rules_accepted']);
-$captcha_passed = $mobile_norm_view !== '' && casting_captcha_register_passed_for($mobile_norm_view);
+$draft = function_exists('casting_register_draft_get') ? casting_register_draft_get() : [];
+$rules_accepted = !empty($_POST['rules_accepted']) || !empty($draft['rules_accepted']);
+$captcha_passed = $mobile_norm_view !== '' && function_exists('casting_captcha_register_passed_for') && casting_captcha_register_passed_for($mobile_norm_view);
 // کپچا فقط قبل از ارسال کد (یا وقتی OTP خاموش است)
 $show_captcha = !$otp_enabled || (!$mobile_verified && !$captcha_passed);
 
@@ -309,7 +319,7 @@ if ($otp_notice !== '') {
         </div>
 
         <?php if ($otp_enabled && !$mobile_verified) : ?>
-          <?php if ($show_captcha) : ?>
+          <?php if ($show_captcha && function_exists('casting_render_captcha_field')) : ?>
             <?php casting_render_captcha_field(trim($reg_invalid('captcha_answer'))); ?>
           <?php endif; ?>
 
@@ -328,7 +338,7 @@ if ($otp_notice !== '') {
           </div>
         <?php elseif ($otp_enabled) : ?>
           <input type="hidden" name="otp_code" value="verified">
-        <?php elseif ($show_captcha) : ?>
+        <?php elseif ($show_captcha && function_exists('casting_render_captcha_field')) : ?>
           <?php casting_render_captcha_field(trim($reg_invalid('captcha_answer'))); ?>
         <?php endif; ?>
       </fieldset>
@@ -385,7 +395,7 @@ if ($otp_notice !== '') {
   <div class="rules-lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="rules-lightbox-title">
     <button type="button" class="rules-lightbox-close" data-rules-lightbox-close aria-label="بستن">×</button>
     <h2 class="rules-lightbox-title" id="rules-lightbox-title">قوانین <?= casting_brand_html() ?></h2>
-    <?php casting_render_rules_list(); ?>
+    <?php if (function_exists('casting_render_rules_list')) { casting_render_rules_list(); } ?>
   </div>
 </div>
 <?php casting_render_footer(); ?>

@@ -1811,8 +1811,8 @@
             if (el.required) {
               el.dataset.talentWasRequired = "1";
               el.required = false;
+              el.removeAttribute("required");
             }
-            el.disabled = true;
             return;
           }
           if (el.dataset.talentWasRequired === "1") {
@@ -1899,7 +1899,45 @@
         window.setTimeout(syncTalentProfileFields, 0);
       }
     });
+    form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+      btn.addEventListener("click", syncTalentProfileFields);
+    });
     syncTalentProfileFields();
+  });
+
+  document.querySelectorAll("form[data-profile-edit-form]").forEach((form) => {
+    const toEnDigits = (value) =>
+      String(value || "").replace(/[۰-۹٠-٩]/g, (ch) => {
+        const fa = "۰۱۲۳۴۵۶۷۸۹";
+        const ar = "٠١٢٣٤٥٦٧٨٩";
+        const i = fa.indexOf(ch);
+        if (i >= 0) return String(i);
+        const j = ar.indexOf(ch);
+        return j >= 0 ? String(j) : ch;
+      });
+    const prepare = () => {
+      form.setAttribute("novalidate", "novalidate");
+      ["mobile", "mobile2", "phone", "experience"].forEach((id) => {
+        const el = form.querySelector("#" + id);
+        if (el && "value" in el) el.value = toEnDigits(el.value);
+      });
+      const province = form.querySelector("[data-location-province]");
+      const city = form.querySelector("[data-location-city]");
+      if (city && province instanceof HTMLSelectElement && province.value) {
+        city.disabled = false;
+      }
+      form.querySelectorAll("[hidden] [required], [hidden][required]").forEach((el) => {
+        if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
+          el.required = false;
+          el.removeAttribute("required");
+        }
+      });
+    };
+    form.setAttribute("novalidate", "novalidate");
+    form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+      btn.addEventListener("click", prepare);
+    });
+    form.addEventListener("submit", prepare);
   });
 
   document.querySelectorAll("form[data-register-form]").forEach((form) => {
