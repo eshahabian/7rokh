@@ -65,13 +65,23 @@ if (function_exists('casting_render_flash')) {
         ['src' => function_exists('casting_asset') ? casting_asset('images/home-slide-5.png') : 'assets/images/home-slide-5.png', 'alt' => 'کلاکت و فیلمنامه'],
         ['src' => function_exists('casting_asset') ? casting_asset('images/home-slide-6.png') : 'assets/images/home-slide-6.png', 'alt' => 'تجهیزات صدا و فیلم‌برداری'],
     ];
+    $banner_shown = false;
     try {
         if (function_exists('casting_render_promo_banner')) {
             casting_render_promo_banner($home_slides, 'hero-promo-banner');
+            $banner_shown = true;
         }
     } catch (Throwable $e) {
-        echo '<section class="panel-promo-banner hero-promo-banner" aria-label="اینجا برای تبلیغات شماست"><div class="panel-promo-slides">';
-        echo '<figure class="panel-promo-slide is-active"><img src="' . htmlspecialchars($home_slides[0]['src'], ENT_QUOTES, 'UTF-8') . '" alt=""></figure>';
+        $banner_shown = false;
+    }
+    if (!$banner_shown) {
+        $first = $home_slides[0]['src'] ?? '';
+        $alt = $home_slides[0]['alt'] ?? '';
+        echo '<section class="panel-promo-banner hero-promo-banner" aria-label="اینجا برای تبلیغات شماست" data-promo-slider><div class="panel-promo-slides">';
+        foreach ($home_slides as $i => $slide) {
+            $active = $i === 0 ? ' is-active' : '';
+            echo '<figure class="panel-promo-slide' . $active . '"><img src="' . htmlspecialchars((string) ($slide['src'] ?? $first), ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars((string) ($slide['alt'] ?? $alt), ENT_QUOTES, 'UTF-8') . '"></figure>';
+        }
         echo '</div></section>';
     }
     ?>
