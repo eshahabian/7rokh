@@ -115,12 +115,16 @@ function casting_ad_posters_archive_expired(): void
 
 function casting_ad_posters_ensure_table(): void
 {
-    $ver = (string) get_option('casting_ad_posters_db_version', '');
-    if ($ver !== '2') {
-        casting_ad_posters_install();
-        casting_ad_posters_migrate_v2();
+    try {
+        $ver = (string) get_option('casting_ad_posters_db_version', '');
+        if ($ver !== '2') {
+            casting_ad_posters_install();
+            casting_ad_posters_migrate_v2();
+        }
+        casting_ad_posters_archive_expired();
+    } catch (Throwable $e) {
+        return;
     }
-    casting_ad_posters_archive_expired();
 }
 
 /**
@@ -839,24 +843,32 @@ function casting_render_ad_poster_zoom(string $url, string $alt = ''): void
  */
 function casting_approved_ad_promo_slides(int $limit = 20): array
 {
-    casting_ad_posters_ensure_table();
+    try {
+        casting_ad_posters_ensure_table();
+    } catch (Throwable $e) {
+        return [];
+    }
     global $wpdb;
     $table = casting_ad_posters_table();
     $limit = max(1, min(40, $limit));
     $now = current_time('mysql');
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $rows = $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM {$table}
-         WHERE status = 'approved'
-           AND attachment_id > 0
-           AND (display_from IS NULL OR display_from <= %s)
-           AND (display_until IS NULL OR display_until >= %s)
-         ORDER BY reviewed_at DESC, id DESC
-         LIMIT %d",
-        $now,
-        $now,
-        $limit
-    ), ARRAY_A);
+    try {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table}
+             WHERE status = 'approved'
+               AND attachment_id > 0
+               AND (display_from IS NULL OR display_from <= %s)
+               AND (display_until IS NULL OR display_until >= %s)
+             ORDER BY reviewed_at DESC, id DESC
+             LIMIT %d",
+            $now,
+            $now,
+            $limit
+        ), ARRAY_A);
+    } catch (Throwable $e) {
+        return [];
+    }
     if (!is_array($rows) || $rows === []) {
         return [];
     }
@@ -889,7 +901,7 @@ function casting_approved_ad_promo_slides(int $limit = 20): array
 /**
  * @param list<array{src:string,alt:string}> $fallback
  */
-function casting_render_promo_banner(array $fallback, string $extra_class = '', string $heading = 'مکانی برای دیده شدن', bool $use_paid_ads = true): void
+function casting_render_promo_banner(array $fallback, string $extra_class = '', string $heading = 'اینجا برای تبلیغات شماست', bool $use_paid_ads = true): void
 {
     $slides = [];
     if ($use_paid_ads) {

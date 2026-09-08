@@ -1,0 +1,573 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../config.php';
+
+$casting_is_portal_request = static function (): bool {
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+
+    return $uri !== '' && strpos($uri, '/casting-portal/') !== false;
+};
+
+if ($casting_is_portal_request() && !defined('WP_DISABLE_FATAL_ERROR_HANDLER')) {
+    define('WP_DISABLE_FATAL_ERROR_HANDLER', true);
+}
+
+if ($casting_is_portal_request()) {
+    register_shutdown_function(static function (): void {
+        $err = error_get_last();
+        if (!is_array($err) || !in_array((int) ($err['type'] ?? 0), [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+            return;
+        }
+        $file = str_replace('\\', '/', (string) ($err['file'] ?? ''));
+        $file = preg_replace('#^.*/casting-portal/#', 'casting-portal/', $file) ?? $file;
+        $file = preg_replace('#^.*/public_html/#', '', $file) ?? $file;
+        $line = (int) ($err['line'] ?? 0);
+        $msg = (string) ($err['message'] ?? '');
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: text/html; charset=utf-8');
+        }
+        echo '<div style="font-family:Tahoma,sans-serif;direction:rtl;padding:1.5rem;background:#fff3f0;border:1px solid #c0392b;margin:1rem">';
+        echo '<strong>خطای PHP پورتال:</strong> ';
+        echo htmlspecialchars($msg, ENT_QUOTES, 'UTF-8');
+        echo '<br><code dir="ltr">' . htmlspecialchars($file . ':' . $line, ENT_QUOTES, 'UTF-8') . '</code>';
+        echo '<p style="margin:0.75rem 0 0">گزارش فایل‌ها: <a href="portal-health.php?key=7rokh-health">portal-health.php</a></p>';
+        echo '</div>';
+    });
+}
+
+if (!file_exists(CASTING_WP_LOAD)) {
+    http_response_code(500);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>خطا</title></head><body style="font-family:sans-serif;padding:2rem;direction:rtl">';
+    echo '<h1>وردپرس پیدا نشد</h1>';
+    echo '<p>فایل <code>config.php</code> را باز کنید و مسیر <code>CASTING_WP_LOAD</code> را به <code>wp-load.php</code> سایت خودتان تنظیم کنید.</p>';
+    echo '<p>مسیر فعلی: <code>' . htmlspecialchars(CASTING_WP_LOAD, ENT_QUOTES, 'UTF-8') . '</code></p>';
+    echo '</body></html>';
+    exit;
+}
+
+require_once CASTING_WP_LOAD;
+
+add_filter('wp_fatal_error_handler_enabled', static function ($enabled) {
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+    if ($uri !== '' && strpos($uri, '/casting-portal/') !== false) {
+        return false;
+    }
+
+    return $enabled;
+});
+
+add_action('init', static function (): void {
+    add_image_size('casting_portrait', 360, 480, true);
+});
+
+if (!function_exists('str_starts_with')) {
+    function str_starts_with(string $haystack, string $needle): bool
+    {
+        return $needle === '' || strncmp($haystack, $needle, strlen($needle)) === 0;
+    }
+}
+
+if (!function_exists('str_contains')) {
+    function str_contains(string $haystack, string $needle): bool
+    {
+        return $needle === '' || strpos($haystack, $needle) !== false;
+    }
+}
+
+if (!function_exists('str_ends_with')) {
+    function str_ends_with(string $haystack, string $needle): bool
+    {
+        if ($needle === '') {
+            return true;
+        }
+
+        return substr($haystack, -strlen($needle)) === $needle;
+    }
+}
+
+require_once __DIR__ . '/portal-auth.php';
+require_once __DIR__ . '/session-guard.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    $script_name = strtolower(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '')));
+    $has_mellat = (isset($_POST['RefId']) || isset($_GET['RefId']) || isset($_POST['refId']) || isset($_GET['refId']))
+        && (isset($_POST['ResCode']) || isset($_GET['ResCode']) || isset($_POST['resCode']) || isset($_GET['resCode'])
+            || isset($_POST['SaleOrderId']) || isset($_GET['SaleOrderId']));
+    $has_sep = (isset($_POST['ResNum']) || isset($_GET['ResNum']))
+        && (isset($_POST['State']) || isset($_GET['State']) || isset($_POST['state']) || isset($_GET['state'])
+            || isset($_POST['RefNum']) || isset($_GET['RefNum']));
+    $is_bank_callback = str_ends_with($script_name, '/checkout-callback.php')
+        || (str_ends_with($script_name, '/cart.php') && ($has_mellat || $has_sep));
+    $has_portal_session = !empty($_COOKIE['casting_portal_sid']);
+    // POST بانک کراس‌سایت است و کوکی SameSite=Lax را نمی‌فرستد؛ نشست خالی جدید نباید لاگین را خراب کند.
+    if (!($is_bank_callback && !$has_portal_session)) {
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path'     => casting_portal_cookie_path(),
+            'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+        session_name('casting_portal_sid');
+        session_start();
+    }
+}
+
+casting_bootstrap_portal_auth();
+
+if ((string) get_option('casting_purged_test_calls_posters_v1', '') !== '1'
+    && is_file(__DIR__ . '/tmp-test-cleanup.php')
+) {
+    require_once __DIR__ . '/tmp-test-cleanup.php';
+    if (function_exists('casting_purge_test_calls_and_posters_once')) {
+        casting_purge_test_calls_and_posters_once();
+    }
+}
+
+require_once __DIR__ . '/mail.php';
+require_once __DIR__ . '/rate-limit.php';
+require_once __DIR__ . '/sms.php';
+require_once __DIR__ . '/otp.php';
+require_once __DIR__ . '/captcha.php';
+
+function casting_strlen(string $value): int
+{
+    if (function_exists('mb_strlen')) {
+        return (int) mb_strlen($value, 'UTF-8');
+    }
+    return strlen($value);
+}
+
+function casting_nocache(): void
+{
+    if (function_exists('nocache_headers')) {
+        nocache_headers();
+    }
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+}
+
+function casting_brand(): string
+{
+    return CASTING_BRAND;
+}
+
+/**
+ * نمایش رنگی برند: ۷ سفید، رخ زرد
+ */
+function casting_brand_html(): string
+{
+    return '<span class="brand-mark"><span class="brand-mark-7">۷</span> <span class="brand-mark-rokh">رخ</span></span>';
+}
+
+/**
+ * جایگزینی امن «۷ رخ» با نسخه رنگی داخل متن HTML-escaped
+ */
+function casting_brandify(string $text): string
+{
+    $safe = casting_e($text);
+    $mark = casting_brand_html();
+    $out = preg_replace('/۷\s*رخ|7\s*رخ/u', $mark, $safe);
+
+    return is_string($out) ? $out : $safe;
+}
+
+function casting_role_label(string $role): string
+{
+    return CASTING_ROLES[$role] ?? $role;
+}
+
+/**
+ * برچسب نقش عمومی کاربر برای کارت‌ها، چت، پروفایل و …
+ * اولویت با اولین نوع فعالیت است (مثلاً «بازیگر تئاتر» به‌جای «هنرمند»).
+ * مدیر اصلی پورتال همیشه «مدیر سایت» دیده می‌شود.
+ */
+function casting_user_public_role_label(int $user_id): string
+{
+    if ($user_id <= 0) {
+        return '';
+    }
+    if (casting_user_is_portal_owner($user_id)) {
+        return 'مدیر سایت';
+    }
+    if (function_exists('casting_dm_is_support_peer') && casting_dm_is_support_peer($user_id)) {
+        return 'مدیر سایت';
+    }
+
+    if (!function_exists('casting_user_primary_activity_label')) {
+        $activities_file = __DIR__ . '/activities.php';
+        if (is_file($activities_file)) {
+            require_once $activities_file;
+        }
+    }
+    if (function_exists('casting_user_primary_activity_label')) {
+        $activity = casting_user_primary_activity_label($user_id);
+        if ($activity !== '') {
+            return $activity;
+        }
+    }
+
+    return casting_role_label(casting_get_user_role($user_id));
+}
+
+function casting_valid_role(string $role): bool
+{
+    return array_key_exists($role, CASTING_ROLES);
+}
+
+function casting_is_employer_role(string $role): bool
+{
+    return in_array($role, CASTING_EMPLOYER_ROLES, true);
+}
+
+function casting_portal_owner_login(): string
+{
+    if (defined('CASTING_PORTAL_OWNER')) {
+        $login = strtolower(trim((string) CASTING_PORTAL_OWNER));
+        if ($login !== '') {
+            return $login;
+        }
+    }
+
+    return 'eshahabian';
+}
+
+function casting_user_is_portal_owner(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return false;
+    }
+
+    return strtolower((string) $user->user_login) === casting_portal_owner_login();
+}
+
+function casting_portal_admin_logins(): array
+{
+    $logins = [];
+    if (defined('CASTING_PORTAL_ADMINS') && is_array(CASTING_PORTAL_ADMINS)) {
+        foreach (CASTING_PORTAL_ADMINS as $login) {
+            $login = strtolower(trim((string) $login));
+            if ($login !== '') {
+                $logins[] = $login;
+            }
+        }
+    }
+    $owner = casting_portal_owner_login();
+    if ($owner !== '') {
+        $logins[] = $owner;
+    }
+    if (defined('CASTING_CONTACT_BRAND_ADMIN')) {
+        $brand = strtolower(trim((string) CASTING_CONTACT_BRAND_ADMIN));
+        if ($brand !== '') {
+            $logins[] = $brand;
+        }
+    }
+    if ($logins === []) {
+        $logins = ['eshahabian', 'ardavan'];
+    }
+
+    return array_values(array_unique($logins));
+}
+
+function casting_user_is_listed_portal_admin(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return false;
+    }
+
+    return in_array(strtolower((string) $user->user_login), casting_portal_admin_logins(), true);
+}
+
+/**
+ * عضو پورتال یا مدیر رسمی — حتی اگر نقش کستینگ خالی باشد.
+ */
+function casting_user_can_use_member_portal(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (casting_get_user_role($user_id) !== '') {
+        return true;
+    }
+
+    return casting_user_is_listed_portal_admin($user_id) || casting_user_is_portal_owner($user_id);
+}
+
+/**
+ * پروفایل مدیران رسمی برای عموم مخفی است. خودشان و دیگر مدیران رسمی می‌توانند ببینند.
+ */
+function casting_user_profile_is_hidden(int $user_id): bool
+{
+    return casting_user_is_listed_portal_admin($user_id);
+}
+
+/**
+ * @return list<int>
+ */
+function casting_hidden_profile_user_ids(): array
+{
+    static $ids = null;
+    if (is_array($ids)) {
+        return $ids;
+    }
+    $ids = [];
+    foreach (casting_portal_admin_logins() as $login) {
+        $user = get_user_by('login', $login);
+        if ($user) {
+            $ids[] = (int) $user->ID;
+        }
+    }
+    $ids = array_values(array_unique(array_filter($ids)));
+
+    return $ids;
+}
+
+/**
+ * @param array<string, mixed> $args
+ * @return array<string, mixed>
+ */
+function casting_user_query_exclude_hidden_profiles(array $args, int $extra_exclude = 0): array
+{
+    $ids = casting_hidden_profile_user_ids();
+    if ($extra_exclude > 0) {
+        $ids[] = $extra_exclude;
+    }
+    if (isset($args['exclude'])) {
+        $existing = is_array($args['exclude']) ? $args['exclude'] : [(int) $args['exclude']];
+        $ids = array_merge($existing, $ids);
+    }
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+    if ($ids !== []) {
+        $args['exclude'] = $ids;
+    }
+
+    return $args;
+}
+
+/**
+ * آیا بیننده می‌تواند پروفایل عضو را ببیند؟
+ * پروفایل مدیران رسمی برای عموم مخفی است. مدیران رسمی همه پروفایل‌ها را می‌بینند.
+ */
+function casting_user_can_view_member_profile(int $viewer_id, int $member_id): bool
+{
+    if ($viewer_id <= 0 || $member_id <= 0) {
+        return false;
+    }
+    if ($viewer_id === $member_id) {
+        return true;
+    }
+    if (casting_user_is_listed_portal_admin($viewer_id) || casting_user_is_portal_owner($viewer_id)) {
+        return (bool) get_user_by('id', $member_id);
+    }
+    if (casting_user_profile_is_hidden($member_id)) {
+        return false;
+    }
+    if (casting_get_user_role($member_id) === '') {
+        return false;
+    }
+    if (casting_get_user_role($viewer_id) === '') {
+        return false;
+    }
+    $visible = get_user_meta($member_id, 'casting_visible', true) !== '0';
+    if (!$visible) {
+        return false;
+    }
+    if (function_exists('casting_users_block_each_other') && casting_users_block_each_other($viewer_id, $member_id)) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * مشاهدهٔ پست/مدیای عضو — پست مدیران رسمی در فید می‌ماند، حتی اگر پروفایل مخفی باشد.
+ */
+function casting_user_can_view_member_media(int $viewer_id, int $owner_id): bool
+{
+    if ($viewer_id <= 0 || $owner_id <= 0) {
+        return false;
+    }
+    if ($viewer_id === $owner_id) {
+        return true;
+    }
+    if (casting_user_profile_is_hidden($owner_id)) {
+        return casting_get_user_role($viewer_id) !== '';
+    }
+
+    return casting_user_can_view_member_profile($viewer_id, $owner_id);
+}
+
+/**
+ * مدیرانی که جدول دسترسی پیام‌رسان را می‌بینند
+ *
+ * @return list<string>
+ */
+function casting_message_access_manager_logins(): array
+{
+    return ['eshahabian', 'ardavan'];
+}
+
+function casting_user_can_manage_message_access(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return false;
+    }
+
+    return in_array(strtolower((string) $user->user_login), casting_message_access_manager_logins(), true);
+}
+
+/**
+ * مدیران ابزارهای پیامک پورتال (تست، تکمیل پروفایل، همگانی، ارسال به کاربر خاص)
+ *
+ * @return list<string>
+ */
+function casting_sms_admin_logins(): array
+{
+    return ['eshahabian', 'ardavan'];
+}
+
+function casting_user_can_manage_sms(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return false;
+    }
+
+    return in_array(strtolower((string) $user->user_login), casting_sms_admin_logins(), true);
+}
+
+function casting_user_can_member_search(int $user_id): bool
+{
+    if (casting_user_is_portal_owner($user_id) || casting_user_is_listed_portal_admin($user_id)) {
+        return true;
+    }
+
+    if (casting_get_user_role($user_id) === 'director') {
+        return true;
+    }
+
+    if (!function_exists('casting_user_is_premium')) {
+        require_once __DIR__ . '/premium.php';
+    }
+
+    return casting_user_is_premium($user_id);
+}
+
+function casting_get_user_role(int $user_id): string
+{
+    $role = get_user_meta($user_id, 'casting_role', true);
+    return is_string($role) ? $role : '';
+}
+
+function casting_set_flash(string $type, string $message): void
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return;
+    }
+    $_SESSION['casting_flash'] = ['type' => $type, 'message' => $message];
+}
+
+function casting_get_flash(): ?array
+{
+    if (session_status() !== PHP_SESSION_ACTIVE || empty($_SESSION['casting_flash'])) {
+        return null;
+    }
+    $flash = $_SESSION['casting_flash'];
+    unset($_SESSION['casting_flash']);
+    return $flash;
+}
+
+function casting_url(string $path): string
+{
+    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+        return $path;
+    }
+
+    $hash = '';
+    $query = '';
+    if (str_contains($path, '#')) {
+        [$path, $hashPart] = explode('#', $path, 2);
+        $hash = '#' . $hashPart;
+    }
+    if (str_contains($path, '?')) {
+        [$path, $queryPart] = explode('?', $path, 2);
+        $query = '?' . $queryPart;
+    }
+
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $base = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');
+    if ($base === '/' || $base === '\\' || $base === '.') {
+        $base = '';
+    }
+
+    return $scheme . '://' . $host . $base . '/' . ltrim($path, '/') . $query . $hash;
+}
+
+function casting_redirect(string $path): void
+{
+    $url = casting_url($path);
+    if (!headers_sent()) {
+        // مستقیم — وابسته به siteurl وردپرس / wp_safe_redirect نباشد
+        header('Location: ' . $url, true, 302);
+        exit;
+    }
+    echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url='
+        . htmlspecialchars($url, ENT_QUOTES, 'UTF-8')
+        . '"></head><body></body></html>';
+    exit;
+}
+
+function casting_require_login(string $portal): WP_User
+{
+    $user = casting_current_user();
+    if (!$user) {
+        if (empty($_SESSION['casting_flash'])) {
+            casting_set_flash('error', 'لطفاً ابتدا وارد شوید.');
+        }
+        casting_redirect('login.php');
+    }
+
+    $role = casting_get_user_role((int) $user->ID);
+    if ($portal === 'talent' && $role !== 'talent') {
+        casting_set_flash('error', 'این بخش فقط برای هنرمندان است.');
+        casting_redirect(casting_is_employer_role($role) ? 'home.php' : 'login.php');
+    }
+    if ($portal === 'employer' && !casting_is_employer_role($role)) {
+        casting_set_flash('error', 'این بخش فقط برای کارگردان و تهیه‌کننده است.');
+        casting_redirect($role === 'talent' ? 'home.php' : 'login.php');
+    }
+
+    return $user;
+}
+
+function casting_e(?string $value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+function casting_asset(string $path): string
+{
+    return 'assets/' . ltrim($path, '/');
+}
