@@ -1,0 +1,490 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/pwa.php';
+
+function casting_main_site_url(): string
+{
+    return defined('CASTING_MAIN_SITE_URL') ? (string) CASTING_MAIN_SITE_URL : 'https://7rokh.com';
+}
+
+function casting_is_native_app_request(): bool
+{
+    $xrw = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    if ($xrw === 'ir.rokh7.app') {
+        return true;
+    }
+
+    $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    if ($ua === '') {
+        return false;
+    }
+
+    return stripos($ua, 'Capacitor') !== false || stripos($ua, 'ir.rokh7') !== false;
+}
+
+function casting_render_head(string $title, string $body_class = ''): void
+{
+    $brand = casting_e(casting_brand());
+    $full_title = casting_e($title) . ' | ' . $brand;
+    $css = casting_e(casting_asset('css/style.css'));
+    $css_file = dirname(__DIR__) . '/assets/css/style.css';
+    $css_v = is_file($css_file) ? (string) filemtime($css_file) : '214';
+    ?>
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title><?= $full_title ?></title>
+  <?php casting_render_pwa_head(); ?>
+  <link rel="preload" href="<?= casting_e(casting_asset('fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="<?= casting_e(casting_asset('fonts/Shoor-SemiBold.woff2')) ?>" as="font" type="font/woff2" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="<?= $css ?>?v=<?= casting_e($css_v) ?>">
+  <style id="casting-live-overrides">
+    @font-face {
+      font-family: "Shoor_Bold";
+      src: url("<?= casting_e(casting_asset('fonts/Shoor-SemiBold.woff2')) ?>") format("woff2");
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Shoor_Bold";
+      src: url("<?= casting_e(casting_asset('fonts/Shoor-SemiBold.woff2')) ?>") format("woff2");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    .nav a,
+    .site-header-quick-link,
+    .site-header-app-link,
+    .panel-nav-link,
+    .nav-cart {
+      font-family: "Shoor_Bold", "Vazirmatn", Tahoma, sans-serif !important;
+    }
+    .nav a:hover,
+    .nav a.is-active,
+    .site-header .nav a:hover,
+    .site-header .nav a.is-active,
+    .site-header-quick-link:hover,
+    .site-header-quick-link.is-active,
+    .site-header-app-link:hover,
+    .panel-nav-link:hover,
+    .nav-cart:hover {
+      color: #f99d1b !important;
+    }
+    body.page-login .panel h1,
+    body.page-register .panel h1 {
+      font-family: "Vazirmatn", Tahoma, sans-serif !important;
+      font-size: 1.2rem !important;
+      font-weight: 600 !important;
+    }
+    html.is-native-app .nav a.nav-auth-link {
+      font-size: calc(1.125rem * 2) !important;
+    }
+    html.is-native-app body:not(.has-panel-drawer) .site-header-quick-link.nav-auth-link {
+      font-size: calc(0.72rem * 2) !important;
+    }
+    html.is-native-app body.page-login .panel h1,
+    html.is-native-app body.page-register .panel h1 {
+      font-family: "Vazirmatn", Tahoma, sans-serif !important;
+      font-size: 1.2rem !important;
+      font-weight: 600 !important;
+    }
+    html.is-native-app body.page-login .panel .lede,
+    html.is-native-app body.page-register .panel .lede,
+    html.is-native-app body.page-register .lede-req-note {
+      font-size: 0.95rem !important;
+      font-weight: 400 !important;
+    }
+    html.is-native-app body.page-register .lede-req-note {
+      font-weight: 700 !important;
+    }
+    html.is-native-app body.page-login .field label,
+    html.is-native-app body.page-register .field label {
+      font-size: 0.9rem !important;
+      font-weight: 500 !important;
+    }
+    html.is-native-app body.page-login .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    html.is-native-app body.page-register .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+      font-size: 1rem !important;
+      font-weight: 400 !important;
+    }
+    html.is-native-app body.page-login .form .btn,
+    html.is-native-app body.page-register .form .btn {
+      font-size: 0.98rem !important;
+      font-weight: 600 !important;
+    }
+    html.is-native-app body.page-login .admin-tab {
+      font-size: 0.88rem !important;
+    }
+    html.is-native-app body.page-login .form-foot,
+    html.is-native-app body.page-register .form-foot,
+    html.is-native-app body.page-login .form-inline-link,
+    html.is-native-app body.page-register .field-hint {
+      font-size: 0.92rem !important;
+      font-weight: 400 !important;
+    }
+    html:not(.is-native-app) {
+      font-size: 16px !important;
+    }
+  </style>
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('casting_theme');
+        if (theme === 'night') {
+          document.documentElement.removeAttribute('data-theme');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'day');
+        }
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'day');
+      }
+      try {
+        var detectNative = function () {
+          var cap = window.Capacitor;
+          if (cap) {
+            if (typeof cap.isNativePlatform === 'function') {
+              return !!cap.isNativePlatform();
+            }
+            if (typeof cap.getPlatform === 'function') {
+              var platform = String(cap.getPlatform() || 'web').toLowerCase();
+              if (platform === 'android' || platform === 'ios') {
+                return true;
+              }
+            }
+          }
+          var ua = navigator.userAgent || '';
+          return /Capacitor/i.test(ua) || /ir\.rokh7/i.test(ua);
+        };
+        var applyNative = function () {
+          var root = document.documentElement;
+          if (!detectNative()) {
+            root.classList.remove('is-native-app');
+            root.style.removeProperty('--app-scale');
+            root.style.removeProperty('--app-vh');
+            root.style.removeProperty('--app-vw');
+            root.style.removeProperty('font-size');
+            return;
+          }
+          root.classList.add('is-native-app');
+          var vv = window.visualViewport;
+          var w = Math.round((vv && vv.width) || window.innerWidth || 390);
+          var h = Math.round((vv && vv.height) || window.innerHeight || 800);
+          if (w < 280) w = 280;
+          if (w > 1400) w = 1400;
+          var scale = w / 390;
+          if (scale < 0.88) scale = 0.88;
+          if (scale > 1.15) scale = 1.15;
+          root.style.setProperty('--app-scale', String(Math.round(scale * 1000) / 1000));
+          root.style.setProperty('--app-vw', w + 'px');
+          root.style.setProperty('--app-vh', h + 'px');
+        };
+        applyNative();
+        window.addEventListener('resize', applyNative);
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', applyNative);
+        }
+        document.addEventListener('DOMContentLoaded', applyNative);
+      } catch (e2) {}
+    })();
+  </script>
+</head>
+<body class="<?= casting_e($body_class) ?>">
+  <div class="bg-atmosphere" aria-hidden="true"></div>
+<?php
+}
+
+function casting_render_theme_toggle(): void
+{
+    ?>
+      <div class="header-theme theme-toggle" role="group" aria-label="انتخاب روز یا شب">
+        <button type="button" class="theme-toggle-btn" data-theme-pick="night">شب</button>
+        <button type="button" class="theme-toggle-btn is-active" data-theme-pick="day">روز</button>
+      </div>
+    <?php
+}
+
+/**
+ * سفارش‌ها / خرید اشتراک کنار دکمه روز/شب در منوی اصلی پورتال
+ */
+function casting_render_nav_cart(?string $active = null): void
+{
+    $user = casting_current_user();
+    $role = $user ? casting_get_user_role((int) $user->ID) : '';
+    $logged_in = $user && ($role !== '' || (function_exists('casting_user_can_use_member_portal') && casting_user_can_use_member_portal((int) $user->ID)));
+
+    $cart_count = 0;
+    try {
+        if (!function_exists('casting_cart_count')) {
+            $cart_lib = __DIR__ . '/cart.php';
+            if (is_file($cart_lib)) {
+                require_once $cart_lib;
+            }
+        }
+        if (function_exists('casting_cart_count')) {
+            $cart_count = (int) casting_cart_count();
+        }
+    } catch (Throwable $e) {
+        $cart_count = 0;
+    }
+    $href = casting_url('cart.php');
+    $title = $logged_in ? 'خرید اشتراک' : 'مشاهده خدمات و خرید اشتراک';
+    ?>
+      <a
+        href="<?= casting_e($href) ?>"
+        class="nav-cart<?= $active === 'cart' || $active === 'premium' ? ' is-active' : '' ?><?= $cart_count > 0 ? ' has-notify' : '' ?>"
+        title="<?= casting_e($title) ?>"
+      >
+        <span class="nav-cart-icon" aria-hidden="true">
+          <svg viewBox="0 0 576 512" width="16" height="16" focusable="false"><path fill="currentColor" d="M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1-96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></svg>
+        </span>
+        <span class="nav-cart-label">خرید اشتراک</span>
+        <?php if ($cart_count > 0) : ?>
+          <span class="nav-badge" aria-label="<?= (int) $cart_count ?> مورد در خرید اشتراک"><?= (int) $cart_count ?></span>
+        <?php endif; ?>
+      </a>
+    <?php
+}
+
+function casting_render_menu_toggle_button(
+    string $controls_id,
+    string $aria_label,
+    string $extra_attrs = '',
+    int $badge = 0,
+    string $extra_class = ''
+): void {
+    $class = trim('panel-menu-toggle ' . $extra_class);
+    ?>
+    <button
+      type="button"
+      class="<?= casting_e($class) ?>"
+      aria-controls="<?= casting_e($controls_id) ?>"
+      aria-expanded="false"
+      aria-label="<?= casting_e($aria_label) ?>"
+      <?= $extra_attrs ?>
+    >
+      <span class="panel-menu-toggle-icon" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </span>
+      <span class="panel-menu-toggle-text">منو</span>
+      <?php if ($badge > 0) : ?>
+        <span class="nav-badge panel-menu-toggle-badge"><?= (int) $badge ?></span>
+      <?php endif; ?>
+    </button>
+    <?php
+}
+
+function casting_render_panel_menu_toggle(int $badge = 0): void
+{
+    casting_render_menu_toggle_button(
+        'panel-drawer',
+        'باز کردن منوی پنل',
+        'id="panel-menu-toggle" data-panel-menu-toggle',
+        $badge
+    );
+}
+
+function casting_render_site_nav_toggle(): void
+{
+    casting_render_menu_toggle_button(
+        'site-main-nav',
+        'باز کردن منو',
+        'data-site-nav-toggle',
+        0,
+        'site-nav-toggle'
+    );
+}
+
+function casting_render_header(?string $active = null, bool $panel_menu = false, int $panel_menu_badge = 0): void
+{
+    $user = casting_current_user();
+    $role = $user ? casting_get_user_role((int) $user->ID) : '';
+    $is_member = $user && ($role !== '' || (function_exists('casting_user_can_use_member_portal') && casting_user_can_use_member_portal((int) $user->ID)));
+    $new_followers = 0;
+    if ($is_member) {
+        if (!function_exists('casting_new_followers_count')) {
+            require_once __DIR__ . '/follows.php';
+        }
+        $new_followers = casting_new_followers_count((int) $user->ID);
+    }
+    ?>
+  <header class="site-header<?= $panel_menu ? ' site-header--panel' : '' ?>">
+    <div class="site-header-bar">
+      <?php if ($panel_menu) : ?>
+        <?php casting_render_panel_menu_toggle($panel_menu_badge); ?>
+        <div class="site-header-bar-actions">
+          <a class="site-header-app-link<?= $active === 'app' ? ' is-active' : '' ?>" href="<?= casting_e(casting_url('app.php')) ?>" data-app-download>اپلیکیشن</a>
+          <div class="site-header-panel-theme">
+            <?php casting_render_theme_toggle(); ?>
+          </div>
+        </div>
+      <?php else : ?>
+        <?php casting_render_site_nav_toggle(); ?>
+        <div class="site-header-bar-actions">
+          <div class="site-header-panel-theme">
+            <?php casting_render_theme_toggle(); ?>
+          </div>
+        </div>
+      <?php endif; ?>
+      <?php if (!$panel_menu && !$is_member) : ?>
+        <nav class="site-header-quick" aria-label="دسترسی سریع">
+          <a href="<?= casting_e(casting_main_site_url()) ?>" class="site-header-quick-link"><?= casting_brand_html() ?></a>
+          <a href="register.php" class="site-header-quick-link nav-auth-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
+          <a href="login.php" class="site-header-quick-link nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود</a>
+          <a href="<?= casting_e(casting_url('app.php')) ?>" class="site-header-quick-link<?= $active === 'app' ? ' is-active' : '' ?>" data-app-download>اپلیکیشن</a>
+        </nav>
+      <?php endif; ?>
+    </div>
+    <nav class="nav" id="site-main-nav" aria-label="منوی اصلی" data-site-nav>
+      <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external">سایت <?= casting_brand_html() ?></a>
+      <?php if ($is_member) : ?>
+        <a href="home.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
+        <a href="<?= casting_e(casting_url($new_followers > 0 ? 'following.php?tab=followers' : 'panel.php')) ?>" class="<?= $active === 'panel' || $active === 'following' ? 'is-active' : '' ?><?= $new_followers > 0 ? ' has-notify' : '' ?>">
+          پنل کاربری
+          <?php if ($new_followers > 0) : ?>
+            <span class="nav-badge" aria-label="<?= (int) $new_followers ?> دنبال‌کننده جدید"><?= (int) $new_followers ?></span>
+          <?php endif; ?>
+        </a>
+        <a href="<?= casting_e(casting_url('app.php')) ?>" class="<?= $active === 'app' ? 'is-active' : '' ?>" data-app-download>اپلیکیشن موبایل</a>
+        <a href="logout.php">خروج</a>
+      <?php else : ?>
+        <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
+        <a href="register.php" class="nav-auth-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
+        <a href="login.php" class="nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود</a>
+        <a href="<?= casting_e(casting_url('app.php')) ?>" class="<?= $active === 'app' ? 'is-active' : '' ?>" data-app-download>اپلیکیشن موبایل</a>
+        <a href="contact.php" class="<?= $active === 'contact' ? 'is-active' : '' ?>">تماس با ما</a>
+        <a href="faq.php" class="<?= $active === 'faq' ? 'is-active' : '' ?>">سوالات متداول</a>
+        <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>
+      <?php endif; ?>
+      <?php casting_render_nav_cart($active); ?>
+      <div class="nav-theme">
+        <?php casting_render_theme_toggle(); ?>
+      </div>
+    </nav>
+  </header>
+<?php
+}
+
+function casting_render_flash(): void
+{
+    $flash = casting_get_flash();
+    if (!$flash) {
+        return;
+    }
+    $type = $flash['type'] === 'success' ? 'success' : 'error';
+    ?>
+  <div class="flash flash-<?= casting_e($type) ?>" role="alert"><?= casting_brandify($flash['message']) ?></div>
+<?php
+}
+
+/**
+ * نشان اعتماد اینماد — فقط کد رسمی اینماد (بدون عکس محلی و بدون دستکاری URL)
+ */
+function casting_render_enamad_seal(string $extra_class = ''): void
+{
+    $class = trim('enamad-seal ' . $extra_class);
+    ?>
+  <a
+    class="<?= casting_e($class) ?>"
+    referrerpolicy="origin"
+    target="_blank"
+    href="https://trustseal.enamad.ir/?id=768314&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+  ><img
+      referrerpolicy="origin"
+      src="https://trustseal.enamad.ir/logo.aspx?id=768314&amp;Code=s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+      alt=""
+      style="cursor:pointer"
+      code="s5XHl5CaYUtaNbfKIaHLRyYFbuIoYbAS"
+  ></a>
+    <?php
+}
+
+function casting_render_footer(bool $show_home_verse = false): void
+{
+    $verse_src = '';
+    if ($show_home_verse && !casting_is_native_app_request()) {
+        try {
+            $hafez = __DIR__ . '/hafez.php';
+            if (!function_exists('casting_hafez_random_image') && is_file($hafez)) {
+                if (function_exists('casting_safe_require_once')) {
+                    casting_safe_require_once($hafez);
+                } else {
+                    require_once $hafez;
+                }
+            }
+            if (function_exists('casting_hafez_random_image')) {
+                $verse_src = (string) casting_hafez_random_image();
+            }
+        } catch (Throwable $e) {
+            $verse_src = '';
+        }
+    }
+    ?>
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <p><?= casting_brand_html() ?> — پورتال استعداد و بازیگری</p>
+      <?php if ($verse_src !== '') : ?>
+        <img
+          class="site-footer-verse-art"
+          src="<?= casting_e($verse_src) ?>"
+          alt=""
+          width="560"
+          height="160"
+        >
+      <?php endif; ?>
+      <?php if (!$show_home_verse) : ?>
+      <?php casting_render_enamad_seal(); ?>
+      <?php endif; ?>
+    </div>
+  </footer>
+  <button type="button" class="scroll-top" data-scroll-top aria-label="بازگشت به بالای صفحه">
+    <span aria-hidden="true">↑</span>
+  </button>
+  <?php casting_render_pwa_bootstrap(); ?>
+  <script>
+    window.CASTING_FOLLOW = {
+      url: <?= wp_json_encode(casting_url('follow-toggle.php')) ?>,
+      nonce: <?= wp_json_encode(wp_create_nonce('casting_follow')) ?>
+    };
+    window.CASTING_MEDIA_ENGAGE = {
+      url: <?= wp_json_encode(casting_url('media-engage.php')) ?>,
+      nonce: <?= wp_json_encode(wp_create_nonce('casting_media_engage')) ?>
+    };
+    <?php
+    if (!function_exists('casting_media_protect_viewer_label')) {
+        $media_protect = __DIR__ . '/media-protect.php';
+        if (is_file($media_protect)) {
+            require_once $media_protect;
+        }
+    }
+    $protect_label = function_exists('casting_media_protect_viewer_label')
+        ? casting_media_protect_viewer_label()
+        : '';
+    ?>
+    window.CASTING_MEDIA_PROTECT = {
+      watermark: <?= wp_json_encode($protect_label) ?>,
+      isMobile: <?= wp_json_encode(wp_is_mobile()) ?>
+    };
+    window.CASTING_SESSION = {
+      active: <?= casting_current_user() ? 'true' : 'false' ?>,
+      idleSeconds: <?= (int) (function_exists('casting_session_idle_seconds') ? casting_session_idle_seconds() : 900) ?>,
+      pingUrl: <?= wp_json_encode(casting_url('session-ping.php')) ?>,
+      logoutUrl: <?= wp_json_encode(casting_url('logout.php?reason=idle')) ?>
+    };
+    window.CASTING_CHAT_DOCK = {
+      url: <?= wp_json_encode(casting_url('chat-dock-api.php')) ?>,
+      nonce: <?= wp_json_encode(wp_create_nonce('casting_dm')) ?>,
+      fullUrl: <?= wp_json_encode(casting_url('chat.php')) ?>
+    };
+  </script>
+  <script src="<?= casting_e(casting_asset('js/main.js')) ?>?v=140" defer></script>
+</body>
+</html>
+<?php
+}
