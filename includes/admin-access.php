@@ -557,14 +557,19 @@ function casting_panel_admin_nav_items(int $user_id): array
     if (casting_user_is_super_admin($user_id) || casting_user_is_portal_owner($user_id)) {
         $items[] = ['key' => 'admin-dm-archive', 'label' => 'آرشیو پیام‌ها', 'href' => 'admin-dm-archive.php', 'perm' => 'super'];
     }
-    if (casting_user_is_portal_owner($user_id) && is_file(dirname(__DIR__) . '/admin-sms-test.php')) {
-        $items[] = ['key' => 'admin-sms', 'label' => 'تست پیامک', 'href' => 'admin-sms-test.php', 'perm' => 'owner'];
-    }
-    if (casting_user_is_portal_owner($user_id) && is_file(dirname(__DIR__) . '/admin-profile-sms.php')) {
-        $items[] = ['key' => 'admin-profile-sms', 'label' => 'پیامک تکمیل پروفایل', 'href' => 'admin-profile-sms.php', 'perm' => 'owner'];
-    }
-    if (casting_user_is_portal_owner($user_id) && is_file(dirname(__DIR__) . '/admin-broadcast-sms.php')) {
-        $items[] = ['key' => 'admin-broadcast-sms', 'label' => 'پیامک همگانی', 'href' => 'admin-broadcast-sms.php', 'perm' => 'owner'];
+    if (function_exists('casting_user_can_manage_sms') && casting_user_can_manage_sms($user_id)) {
+        if (is_file(dirname(__DIR__) . '/admin-sms-test.php')) {
+            $items[] = ['key' => 'admin-sms', 'label' => 'تست پیامک', 'href' => 'admin-sms-test.php', 'perm' => 'sms'];
+        }
+        if (is_file(dirname(__DIR__) . '/admin-profile-sms.php')) {
+            $items[] = ['key' => 'admin-profile-sms', 'label' => 'پیامک تکمیل پروفایل', 'href' => 'admin-profile-sms.php', 'perm' => 'sms'];
+        }
+        if (is_file(dirname(__DIR__) . '/admin-broadcast-sms.php')) {
+            $items[] = ['key' => 'admin-broadcast-sms', 'label' => 'پیامک همگانی', 'href' => 'admin-broadcast-sms.php', 'perm' => 'sms'];
+        }
+        if (is_file(dirname(__DIR__) . '/admin-direct-sms.php')) {
+            $items[] = ['key' => 'admin-direct-sms', 'label' => 'پیامک به کاربر خاص', 'href' => 'admin-direct-sms.php', 'perm' => 'sms'];
+        }
     }
     return $items;
 }

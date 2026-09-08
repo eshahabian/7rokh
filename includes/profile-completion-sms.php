@@ -39,7 +39,7 @@ function casting_profile_completion_sms_threshold_percent(): int
  */
 function casting_profile_completion_sms_always_send_logins(): array
 {
-    $logins = ['ardvan', 'eshahabian'];
+    $logins = ['ardavan', 'eshahabian'];
     if (defined('CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS') && is_array(CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS)) {
         $logins = CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS;
     }
@@ -326,7 +326,7 @@ function casting_profile_completion_sms_maybe_send_on_login(int $user_id): void
 }
 
 /**
- * ارسال به کاربران همیشگی (ardvan، eshahabian) — بدون شرط درصد پروفایل.
+ * ارسال به کاربران همیشگی (ardavan، eshahabian) — بدون شرط درصد پروفایل.
  *
  * @return array{sent:int,skipped:int,failed:int,items:array<int, array{id:int,name:string,mobile:string,percent:int,status:string,error:string}>,errors:array<int,string>}
  */

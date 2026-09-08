@@ -257,3 +257,134 @@ function casting_portal_broadcast_sms_run_all(string $message, bool $dry_run = f
 
     return $total;
 }
+
+/**
+ * @return array{id:int,name:string,login:string,email:string,mobile:string,mobiles:list<string>,role:string,suspended:bool}
+ */
+function casting_portal_direct_sms_user_row(WP_User $user): array
+{
+    $user_id = (int) $user->ID;
+    $mobiles = casting_portal_broadcast_sms_user_mobiles($user_id);
+
+    return [
+        'id'        => $user_id,
+        'name'      => (string) $user->display_name,
+        'login'     => (string) $user->user_login,
+        'email'     => (string) $user->user_email,
+        'mobile'    => $mobiles[0] ?? '',
+        'mobiles'   => $mobiles,
+        'role'      => function_exists('casting_get_user_role') ? casting_get_user_role($user_id) : '',
+        'suspended' => function_exists('casting_user_is_suspended') && casting_user_is_suspended($user_id),
+    ];
+}
+
+/**
+ * پیدا کردن کاربر پورتال با شناسه، نام کاربری، ایمیل، نام نمایشی یا موبایل.
+ *
+ * @return list<array{id:int,name:string,login:string,email:string,mobile:string,mobiles:list<string>,role:string,suspended:bool}>
+ */
+function casting_portal_direct_sms_search_users(string $query, int $limit = 20): array
+{
+    $query = trim($query);
+    if ($query === '') {
+        return [];
+    }
+    if (!function_exists('casting_get_user_role')) {
+        require_once __DIR__ . '/auth.php';
+    }
+    if (!function_exists('casting_admin_search_casting_users')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if (!function_exists('casting_find_user_by_mobile')) {
+        require_once __DIR__ . '/otp.php';
+    }
+
+    $limit = max(1, min(50, $limit));
+    $seen = [];
+    $out = [];
+
+    $append = static function (WP_User $user) use (&$seen, &$out): void {
+        $id = (int) $user->ID;
+        if ($id <= 0 || isset($seen[$id]) || casting_get_user_role($id) === '') {
+            return;
+        }
+        $seen[$id] = true;
+        $out[] = casting_portal_direct_sms_user_row($user);
+    };
+
+    if (ctype_digit($query)) {
+        $by_id = get_user_by('id', (int) $query);
+        if ($by_id instanceof WP_User) {
+            $append($by_id);
+        }
+    }
+
+    foreach (['login', 'slug', 'email'] as $field) {
+        $found = get_user_by($field, $query);
+        if ($found instanceof WP_User) {
+            $append($found);
+        }
+    }
+
+    foreach (casting_admin_search_casting_users($query, $limit) as $row) {
+        $user = get_user_by('id', (int) ($row['id'] ?? 0));
+        if ($user instanceof WP_User) {
+            $append($user);
+        }
+    }
+
+    $mobile = function_exists('casting_normalize_mobile')
+        ? casting_normalize_mobile($query)
+        : $query;
+    if ($mobile !== '' && preg_match('/^09\d{9}$/', $mobile)) {
+        $found = casting_find_user_by_mobile($mobile);
+        if (!empty($found['ok']) && !empty($found['user_id'])) {
+            $user = get_user_by('id', (int) $found['user_id']);
+            if ($user instanceof WP_User) {
+                $append($user);
+            }
+        }
+        $q = new WP_User_Query([
+            'number'     => 5,
+            'meta_query' => [
+                [
+                    'key'   => 'casting_mobile2',
+                    'value' => $mobile,
+                ],
+            ],
+            'fields' => 'all',
+        ]);
+        foreach ($q->get_results() as $user) {
+            if ($user instanceof WP_User) {
+                $append($user);
+            }
+        }
+    }
+
+    return array_slice($out, 0, $limit);
+}
+
+/**
+ * @return array{ok:bool,error:string,ref_id:string,code:int,mobile:string,user_id:int}
+ */
+function casting_portal_direct_sms_send(string $mobile, string $message, int $user_id = 0): array
+{
+    $empty = ['ok' => false, 'error' => '', 'ref_id' => '', 'code' => -1, 'mobile' => '', 'user_id' => $user_id];
+    if (!function_exists('casting_normalize_mobile')) {
+        require_once __DIR__ . '/profile.php';
+    }
+    $mobile = casting_normalize_mobile($mobile);
+    if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
+        return array_merge($empty, ['error' => 'شماره موبایل معتبر وارد کنید.']);
+    }
+    $result = casting_portal_broadcast_sms_send_text($mobile, $message);
+
+    return [
+        'ok'      => !empty($result['ok']),
+        'error'   => (string) ($result['error'] ?? ''),
+        'ref_id'  => (string) ($result['ref_id'] ?? ''),
+        'code'    => (int) ($result['code'] ?? 0),
+        'mobile'  => $mobile,
+        'user_id' => $user_id,
+    ];
+}

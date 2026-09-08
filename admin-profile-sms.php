@@ -12,8 +12,8 @@ require_once __DIR__ . '/includes/panel.php';
 $user = casting_require_casting_user();
 $user_id = (int) $user->ID;
 
-if (!casting_user_is_portal_owner($user_id)) {
-    wp_die('فقط مدیر اصلی پورتال به این بخش دسترسی دارد.', 'دسترسی غیرمجاز', ['response' => 403]);
+if (!casting_user_can_manage_sms($user_id)) {
+    wp_die('فقط مدیران اصلی پورتال (eshahabian و ardavan) به این بخش دسترسی دارند.', 'دسترسی غیرمجاز', ['response' => 403]);
 }
 
 casting_nocache();

@@ -238,7 +238,7 @@ if (!defined('CASTING_PROFILE_SMS_REMINDER_PATTERN_ID')) {
 if (!defined('CASTING_PROFILE_SMS_REMINDER_INCLUDE_LINK')) {
     define('CASTING_PROFILE_SMS_REMINDER_INCLUDE_LINK', false);
 }
-/** همیشه پیامک بگیرند (بدون شرط درصد) — login: ardvan, eshahabian */
+/** همیشه پیامک بگیرند (بدون شرط درصد) — login: ardavan, eshahabian */
 if (!defined('CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS')) {
-    define('CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS', ['ardvan', 'eshahabian']);
+    define('CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS', ['ardavan', 'eshahabian']);
 }
