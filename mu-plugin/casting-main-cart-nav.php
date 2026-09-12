@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: Casting Portal — خرید اشتراک در هدر سایت
- * Description: آیکون خرید اشتراک کنار شبکه‌های اجتماعی هدر + شمارنده زنده
+ * Plugin Name: Casting Portal — اشتراک ویژه در هدر سایت
+ * Description: آیکون اشتراک ویژه کنار شبکه‌های اجتماعی هدر + شمارنده زنده
  * Version: 2.2
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-cart-nav.php
@@ -66,7 +66,7 @@ function casting_main_cart_should_render(): bool
 function casting_main_cart_link_html(): string
 {
     $url = esc_url(casting_main_cart_url());
-    $label = esc_attr('خرید اشتراک');
+    $label = esc_attr('اشتراک ویژه');
     $count = casting_main_cart_count_from_cookie();
     $badge_class = 'casting-main-cart-badge' . ($count > 0 ? '' : ' is-empty');
     $badge_text = $count > 0 ? (string) (int) $count : '';
@@ -235,7 +235,7 @@ function casting_main_cart_enqueue_assets(): void
         'url'      => casting_main_cart_url(),
         'countUrl' => casting_main_cart_count_url(),
         'count'    => casting_main_cart_count_from_cookie(),
-        'label'    => 'خرید اشتراک',
+        'label'    => 'اشتراک ویژه',
     ];
 
     $js = <<<'JS'
@@ -319,8 +319,8 @@ function casting_main_cart_enqueue_assets(): void
     }
     a.className = classes.join(" ");
     a.href = CFG.url || "#";
-    a.title = CFG.label || "خرید اشتراک";
-    a.setAttribute("aria-label", CFG.label || "خرید اشتراک");
+    a.title = CFG.label || "اشتراک ویژه";
+    a.setAttribute("aria-label", CFG.label || "اشتراک ویژه");
     a.removeAttribute("target");
     a.removeAttribute("rel");
 
@@ -456,7 +456,7 @@ function casting_main_cart_footer_markup(): void
     $count = casting_main_cart_count_from_cookie();
     $badge_class = 'casting-main-cart-badge' . ($count > 0 ? '' : ' is-empty');
     $badge = '<span class="' . esc_attr($badge_class) . '">' . ($count > 0 ? (string) (int) $count : '') . '</span>';
-    echo '<a class="casting-main-cart-fallback" href="' . $url . '" aria-label="خرید اشتراک">خرید اشتراک' . $badge . '</a>';
+    echo '<a class="casting-main-cart-fallback" href="' . $url . '" aria-label="اشتراک ویژه">اشتراک ویژه' . $badge . '</a>';
 }
 
 add_action('init', 'casting_main_cart_maybe_purge_cache', 20);

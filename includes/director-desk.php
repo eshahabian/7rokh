@@ -1489,8 +1489,8 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
           <?php if ($has_credit) : ?>
             <p class="meta flash-success" style="margin:0.35rem 0 0">پرداخت این فراخوان انجام شده — می‌توانید ارسال کنید.</p>
           <?php elseif ($checkout_href !== '') : ?>
-            <p class="meta" style="margin:0.35rem 0 0.65rem">به خرید اشتراک اضافه کنید؛ مالیات ۱۰٪ هنگام پرداخت اعمال می‌شود.</p>
-            <a class="btn btn-primary btn-sm" href="<?= casting_e($checkout_href) ?>">افزودن هزینه فراخوان به خرید اشتراک</a>
+            <p class="meta" style="margin:0.35rem 0 0.65rem">به اشتراک ویژه اضافه کنید؛ مالیات ۱۰٪ هنگام پرداخت اعمال می‌شود.</p>
+            <a class="btn btn-primary btn-sm" href="<?= casting_e($checkout_href) ?>">افزودن هزینه فراخوان به اشتراک ویژه</a>
           <?php endif; ?>
         </div>
       <?php endif; ?>
@@ -1535,7 +1535,7 @@ function casting_render_director_casting_call_form(int $project_id, array $filte
         </label>
         <button class="btn btn-primary" type="submit"<?= !$can_submit_call ? ' disabled title="ابتدا هزینه فراخوان را پرداخت کنید"' : '' ?>>ارسال و انتشار فراخوان</button>
         <?php if (!$has_credit && !$is_portal_owner && $checkout_href !== '') : ?>
-          <a class="btn btn-ghost" href="<?= casting_e($checkout_href) ?>">افزودن به خرید اشتراک</a>
+          <a class="btn btn-ghost" href="<?= casting_e($checkout_href) ?>">افزودن به اشتراک ویژه</a>
         <?php endif; ?>
       </form>
 

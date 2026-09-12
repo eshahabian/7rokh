@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * خرید اشتراک — مهمان هم می‌تواند ببیند و انتخاب کند؛ پرداخت نیازمند ورود است
+ * اشتراک ویژه — مهمان هم می‌تواند ببیند و انتخاب کند؛ پرداخت نیازمند ورود است
  */
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/auth.php';
@@ -80,10 +80,10 @@ if ($can_approve_receipts && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_PO
         $receipt_id = (int) ($_POST['receipt_id'] ?? 0);
         $action_receipt = (string) ($_POST['action'] ?? '');
         if ($action_receipt === 'approve') {
-            $result = casting_approve_premium_receipt($receipt_id);
+            $result = casting_approve_premium_receipt($receipt_id, $user_id);
             casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'فیش تأیید و حساب کاربری ویژه فعال شد.' : $result['error']);
         } elseif ($action_receipt === 'reject') {
-            $result = casting_reject_premium_receipt($receipt_id);
+            $result = casting_reject_premium_receipt($receipt_id, $user_id);
             casting_set_flash($result['ok'] ? 'success' : 'error', $result['ok'] ? 'فیش رد شد.' : $result['error']);
         }
     }
@@ -104,7 +104,7 @@ if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $project_id = max(0, (int) ($_GET['project'] ?? 0));
     $result = casting_cart_add($service, $plan, $project_id);
     if ($result['ok']) {
-        casting_set_flash('success', 'به خرید اشتراک اضافه شد.');
+        casting_set_flash('success', 'به اشتراک ویژه اضافه شد.');
         casting_redirect('cart.php');
     }
     casting_set_flash('error', $result['error']);
@@ -200,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['admin_receipt'])) {
         casting_redirect('cart.php');
     } elseif ($action === 'clear') {
         casting_cart_clear();
-        casting_set_flash('success', 'لیست خرید اشتراک خالی شد.');
+        casting_set_flash('success', 'لیست اشتراک ویژه خالی شد.');
         casting_redirect('cart.php');
     } elseif ($action === 'checkout') {
         if (!$logged_in) {
@@ -230,16 +230,16 @@ foreach ($shop_tiles as $tile) {
 $admin_receipts = $can_approve_receipts ? casting_admin_list_receipts($admin_filter === 'all' ? '' : $admin_filter) : [];
 
 if ($logged_in) {
-    casting_render_panel_start('خرید اشتراک', 'cart');
+    casting_render_panel_start('اشتراک ویژه', 'cart');
 } else {
-    casting_render_head('خرید اشتراک', 'page-cart-guest');
+    casting_render_head('اشتراک ویژه', 'page-cart-guest');
     casting_render_header('cart');
     echo '<main class="wrap panel-page cart-guest-page">';
 }
 casting_render_flash();
 ?>
 <section class="dash-card cart-card">
-  <h1>خرید اشتراک</h1>
+  <h1>اشتراک ویژه</h1>
   <?php if ($logged_in) : ?>
     <p class="meta">اقلام انتخاب‌شده را بررسی کنید؛ برای پرداخت، دکمهٔ زیر را بزنید. مالیات فقط در مرحلهٔ پرداخت محاسبه می‌شود.</p>
   <?php else : ?>
@@ -319,7 +319,7 @@ casting_render_flash();
       <?php else : ?>
         <button class="btn btn-primary" type="button" data-cart-auth-open>پرداخت</button>
       <?php endif; ?>
-      <form method="post" action="cart.php" onsubmit="return confirm('لیست خرید اشتراک خالی شود؟');">
+      <form method="post" action="cart.php" onsubmit="return confirm('لیست اشتراک ویژه خالی شود؟');">
         <?php wp_nonce_field('casting_cart'); ?>
         <input type="hidden" name="cart_action" value="clear">
         <button class="btn btn-ghost" type="submit">خالی کردن</button>
@@ -330,7 +330,7 @@ casting_render_flash();
 
 <section class="dash-card cart-shop-card" id="cart-shop">
   <h2>خدمات قابل خرید</h2>
-  <p class="meta">روی هر کاشی بزنید تا به خرید اشتراک اضافه شود.</p>
+  <p class="meta">روی هر کاشی بزنید تا به اشتراک ویژه اضافه شود.</p>
 
   <?php foreach ($tiles_by_group as $group => $tiles) : ?>
     <h3 class="shop-group-title"<?= $group === 'تبلیغات' ? ' id="shop-ads"' : '' ?>><?= casting_e($group) ?></h3>
@@ -372,7 +372,7 @@ casting_render_flash();
 <div class="bio-block premium-payment-block" style="margin-top:1.25rem">
   <h2>نکته مهم</h2>
   <ul class="info-list">
-    <li>با زدن «افزودن» وارد لیست خرید اشتراک می‌شوید؛ سپس پرداخت. تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
+    <li>با زدن «افزودن» وارد لیست اشتراک ویژه می‌شوید؛ سپس پرداخت. تا پرداخت موفق، حساب شارژ نمی‌شود.</li>
     <li>عضویت ویژه: ۳ ماه ۲۱۰٬۰۰۰ · ۶ ماه ۳۷۰٬۰۰۰ · ۱۲ ماه ۷۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت).</li>
     <li>فراخوان تئاتر، فیلم کوتاه و مستند: ۷۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت) · سینمایی و تلویزیونی: ۷٬۰۰۰٬۰۰۰ تومان (+ مالیات هنگام پرداخت).</li>
     <li>تبلیغات: بنر پوستر تئاتر ۱٬۰۰۰٬۰۰۰ · بنر پوستر فیلم ۳٬۰۰۰٬۰۰۰ · بنر پوستر فیلم مستند ۱ تومان (+ مالیات هنگام پرداخت).</li>

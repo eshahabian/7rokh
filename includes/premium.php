@@ -334,8 +334,19 @@ function casting_premium_status_label(string $status): string
  *
  * @return array{ok:bool,error:string}
  */
-function casting_approve_premium_receipt(int $receipt_id): array
+function casting_approve_premium_receipt(int $receipt_id, int $admin_id = 0): array
 {
+    if (!function_exists('casting_user_has_admin_permission')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if ($admin_id <= 0
+        || (!casting_user_has_admin_permission($admin_id, 'approve_receipts')
+            && !casting_user_is_super_admin($admin_id)
+            && !(function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($admin_id)))
+    ) {
+        return ['ok' => false, 'error' => 'اجازه تأیید فیش ندارید.'];
+    }
+
     casting_premium_ensure_table();
     global $wpdb;
     $table = casting_premium_table();
@@ -752,8 +763,19 @@ function casting_premium_repair_orphan_once(int $admin_id): array
 /**
  * @return array{ok:bool,error:string}
  */
-function casting_reject_premium_receipt(int $receipt_id): array
+function casting_reject_premium_receipt(int $receipt_id, int $admin_id = 0): array
 {
+    if (!function_exists('casting_user_has_admin_permission')) {
+        require_once __DIR__ . '/admin-access.php';
+    }
+    if ($admin_id <= 0
+        || (!casting_user_has_admin_permission($admin_id, 'approve_receipts')
+            && !casting_user_is_super_admin($admin_id)
+            && !(function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($admin_id)))
+    ) {
+        return ['ok' => false, 'error' => 'اجازه رد فیش ندارید.'];
+    }
+
     casting_premium_ensure_table();
     global $wpdb;
     $table = casting_premium_table();
@@ -892,6 +914,27 @@ function casting_handle_receipt_upload(int $user_id): array
     require_once ABSPATH . 'wp-admin/includes/file.php';
     require_once ABSPATH . 'wp-admin/includes/media.php';
     require_once ABSPATH . 'wp-admin/includes/image.php';
+    require_once __DIR__ . '/image-process.php';
+    if (!function_exists('casting_normalize_uploaded_file_type')) {
+        require_once __DIR__ . '/profile.php';
+    }
+    $file = &$_FILES['receipt'];
+    $norm = casting_normalize_uploaded_file_type($file, 'image');
+    if (!$norm['ok']) {
+        return ['ok' => false, 'error' => (string) $norm['error'], 'attachment_id' => 0];
+    }
+    $ftype = (string) ($norm['type'] ?? '');
+    if (!in_array($ftype, casting_image_upload_allowed_mimes(), true)) {
+        return ['ok' => false, 'error' => 'فقط عکس JPG، PNG، WebP یا GIF مجاز است.', 'attachment_id' => 0];
+    }
+    $size_check = casting_uploaded_file_within_limit($file, 'image');
+    if (!$size_check['ok']) {
+        return ['ok' => false, 'error' => (string) $size_check['error'], 'attachment_id' => 0];
+    }
+    $prep = casting_prepare_uploaded_image($file, 'receipt');
+    if (!$prep['ok']) {
+        return ['ok' => false, 'error' => (string) $prep['error'], 'attachment_id' => 0];
+    }
     casting_enable_user_upload_dir($user_id);
     $attachment_id = media_handle_upload('receipt', 0);
     casting_disable_user_upload_dir();

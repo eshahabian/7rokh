@@ -115,18 +115,22 @@ function casting_ad_posters_archive_expired(): void
 
 function casting_ad_posters_ensure_table(): void
 {
-    $ver = (string) get_option('casting_ad_posters_db_version', '');
-    if ($ver !== '2') {
-        casting_ad_posters_install();
-        casting_ad_posters_migrate_v2();
+    try {
+        $ver = (string) get_option('casting_ad_posters_db_version', '');
+        if ($ver !== '2') {
+            casting_ad_posters_install();
+            casting_ad_posters_migrate_v2();
+        }
+        casting_ad_posters_archive_expired();
+    } catch (Throwable $e) {
+        return;
     }
-    casting_ad_posters_archive_expired();
 }
 
 /**
  * مشخصات فایل پوستر برای بنر صفحه اصلی (۱۶:۶.۷۵ با object-fit: cover).
  *
- * @return array{min_width:int,min_height:int,recommended_width:int,recommended_height:int,formats:list<string>,max_bytes:int}
+ * @return array{min_width:int,min_height:int,recommended_width:int,recommended_height:int,formats:list<string>,max_bytes:int,auto_fit?:bool}
  */
 function casting_ad_poster_spec(): array
 {
@@ -135,8 +139,9 @@ function casting_ad_poster_spec(): array
         'min_height'         => 540,
         'recommended_width'  => 1920,
         'recommended_height' => 810,
-        'formats'            => ['image/jpeg', 'image/png', 'image/webp'],
+        'formats'            => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
         'max_bytes'          => function_exists('casting_upload_max_bytes') ? casting_upload_max_bytes('image') : (5 * 1024 * 1024),
+        'auto_fit'           => true,
     ];
 }
 
@@ -550,7 +555,7 @@ function casting_render_file_pick(array $opts): void
     $name = (string) ($opts['name'] ?? 'poster_file');
     $disabled = !empty($opts['disabled']);
     $required = !empty($opts['required']) && !$disabled;
-    $accept = (string) ($opts['accept'] ?? 'image/jpeg,image/png,image/webp');
+    $accept = (string) ($opts['accept'] ?? 'image/jpeg,image/png,image/webp,image/gif');
     $max_bytes = (int) ($opts['max_bytes'] ?? 0);
     ?>
     <div class="file-pick<?= $disabled ? ' is-disabled' : '' ?>">
@@ -839,24 +844,32 @@ function casting_render_ad_poster_zoom(string $url, string $alt = ''): void
  */
 function casting_approved_ad_promo_slides(int $limit = 20): array
 {
-    casting_ad_posters_ensure_table();
+    try {
+        casting_ad_posters_ensure_table();
+    } catch (Throwable $e) {
+        return [];
+    }
     global $wpdb;
     $table = casting_ad_posters_table();
     $limit = max(1, min(40, $limit));
     $now = current_time('mysql');
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $rows = $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM {$table}
-         WHERE status = 'approved'
-           AND attachment_id > 0
-           AND (display_from IS NULL OR display_from <= %s)
-           AND (display_until IS NULL OR display_until >= %s)
-         ORDER BY reviewed_at DESC, id DESC
-         LIMIT %d",
-        $now,
-        $now,
-        $limit
-    ), ARRAY_A);
+    try {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table}
+             WHERE status = 'approved'
+               AND attachment_id > 0
+               AND (display_from IS NULL OR display_from <= %s)
+               AND (display_until IS NULL OR display_until >= %s)
+             ORDER BY reviewed_at DESC, id DESC
+             LIMIT %d",
+            $now,
+            $now,
+            $limit
+        ), ARRAY_A);
+    } catch (Throwable $e) {
+        return [];
+    }
     if (!is_array($rows) || $rows === []) {
         return [];
     }
@@ -975,9 +988,11 @@ function casting_ad_poster_submit(int $user_id, int $credit_id, string $field, s
         return ['ok' => false, 'error' => $norm['error']];
     }
     $ftype = (string) ($norm['type'] ?? '');
-    $spec = casting_ad_poster_spec();
-    if (!in_array($ftype, $spec['formats'], true)) {
-        return ['ok' => false, 'error' => 'فقط تصویر JPG، PNG یا WebP مجاز است.'];
+    $allowed = function_exists('casting_image_upload_allowed_mimes')
+        ? casting_image_upload_allowed_mimes()
+        : ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!in_array($ftype, $allowed, true)) {
+        return ['ok' => false, 'error' => 'فقط تصویر JPG، PNG، WebP یا GIF مجاز است. سایت خودش اندازه و نسبت بنر را تنظیم می‌کند.'];
     }
     $size_check = casting_uploaded_file_within_limit($file, 'image');
     if (!$size_check['ok']) {
@@ -988,25 +1003,27 @@ function casting_ad_poster_submit(int $user_id, int $credit_id, string $field, s
     if ($tmp === '' || !is_uploaded_file($tmp)) {
         return ['ok' => false, 'error' => 'آپلود نامعتبر است.'];
     }
-    $info = @getimagesize($tmp);
-    if (!is_array($info) || (int) ($info[0] ?? 0) <= 0) {
+    require_once __DIR__ . '/image-process.php';
+    if (!casting_image_process_is_readable($tmp)) {
         return ['ok' => false, 'error' => 'ابعاد تصویر خوانده نشد. فایل معتبری انتخاب کنید.'];
     }
-    $width = (int) $info[0];
-    $height = (int) $info[1];
-    if ($width < $spec['min_width'] || $height < $spec['min_height']) {
-        return [
-            'ok'    => false,
-            'error' => 'حداقل ابعاد پوستر ' . $spec['min_width'] . '×' . $spec['min_height'] . ' پیکسل است. تصویر شما ' . $width . '×' . $height . ' است.',
-        ];
-    }
-    if ($height > $width) {
-        return ['ok' => false, 'error' => 'پوستر باید افقی (landscape) باشد.'];
-    }
 
-    $attachment_id = casting_media_handle_upload_as_user($field, $user_id);
+    $attachment_id = casting_media_handle_upload_as_user($field, $user_id, 'ad_poster');
     if (is_wp_error($attachment_id)) {
         return ['ok' => false, 'error' => 'آپلود ناموفق بود: ' . $attachment_id->get_error_message()];
+    }
+
+    $width = 0;
+    $height = 0;
+    $meta = wp_get_attachment_metadata((int) $attachment_id);
+    if (is_array($meta)) {
+        $width = (int) ($meta['width'] ?? 0);
+        $height = (int) ($meta['height'] ?? 0);
+    }
+    $spec = casting_ad_poster_spec();
+    if ($width <= 0 || $height <= 0) {
+        $width = (int) $spec['recommended_width'];
+        $height = (int) $spec['recommended_height'];
     }
 
     casting_ad_posters_ensure_table();
@@ -1068,34 +1085,38 @@ function casting_ad_poster_resubmit(int $user_id, int $poster_id, string $field,
     if (!$norm['ok']) {
         return ['ok' => false, 'error' => $norm['error']];
     }
-    $spec = casting_ad_poster_spec();
-    if (!in_array((string) ($norm['type'] ?? ''), $spec['formats'], true)) {
-        return ['ok' => false, 'error' => 'فقط تصویر JPG، PNG یا WebP مجاز است.'];
+    $allowed = function_exists('casting_image_upload_allowed_mimes')
+        ? casting_image_upload_allowed_mimes()
+        : ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!in_array((string) ($norm['type'] ?? ''), $allowed, true)) {
+        return ['ok' => false, 'error' => 'فقط تصویر JPG، PNG، WebP یا GIF مجاز است. سایت خودش اندازه و نسبت بنر را تنظیم می‌کند.'];
     }
     $size_check = casting_uploaded_file_within_limit($file, 'image');
     if (!$size_check['ok']) {
         return ['ok' => false, 'error' => $size_check['error']];
     }
     $tmp = (string) ($file['tmp_name'] ?? '');
-    $info = ($tmp !== '' && is_uploaded_file($tmp)) ? @getimagesize($tmp) : false;
-    if (!is_array($info) || (int) ($info[0] ?? 0) <= 0) {
+    require_once __DIR__ . '/image-process.php';
+    if ($tmp === '' || !is_uploaded_file($tmp) || !casting_image_process_is_readable($tmp)) {
         return ['ok' => false, 'error' => 'ابعاد تصویر خوانده نشد.'];
     }
-    $width = (int) $info[0];
-    $height = (int) $info[1];
-    if ($width < $spec['min_width'] || $height < $spec['min_height']) {
-        return [
-            'ok'    => false,
-            'error' => 'حداقل ابعاد پوستر ' . $spec['min_width'] . '×' . $spec['min_height'] . ' پیکسل است.',
-        ];
-    }
-    if ($height > $width) {
-        return ['ok' => false, 'error' => 'پوستر باید افقی (landscape) باشد.'];
-    }
 
-    $attachment_id = casting_media_handle_upload_as_user($field, $user_id);
+    $attachment_id = casting_media_handle_upload_as_user($field, $user_id, 'ad_poster');
     if (is_wp_error($attachment_id)) {
         return ['ok' => false, 'error' => 'آپلود ناموفق بود: ' . $attachment_id->get_error_message()];
+    }
+
+    $width = 0;
+    $height = 0;
+    $meta = wp_get_attachment_metadata((int) $attachment_id);
+    if (is_array($meta)) {
+        $width = (int) ($meta['width'] ?? 0);
+        $height = (int) ($meta['height'] ?? 0);
+    }
+    $spec = casting_ad_poster_spec();
+    if ($width <= 0 || $height <= 0) {
+        $width = (int) $spec['recommended_width'];
+        $height = (int) $spec['recommended_height'];
     }
 
     $old_aid = (int) ($poster['attachment_id'] ?? 0);

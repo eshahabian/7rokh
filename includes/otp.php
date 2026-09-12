@@ -78,11 +78,9 @@ function casting_find_user_by_mobile(string $mobile, int $exclude_user_id = 0): 
  */
 function casting_mobile_is_taken(string $mobile, int $exclude_user_id = 0): bool
 {
-    $found = casting_find_user_by_mobile($mobile, $exclude_user_id);
-    if (!empty($found['ok'])) {
-        return true;
+    if (!function_exists('casting_normalize_mobile')) {
+        require_once __DIR__ . '/profile.php';
     }
-
     $mobile = casting_normalize_mobile($mobile);
     if ($mobile === '' || !preg_match('/^09\d{9}$/', $mobile)) {
         return false;
@@ -91,6 +89,11 @@ function casting_mobile_is_taken(string $mobile, int $exclude_user_id = 0): bool
     $q = new WP_User_Query([
         'number'     => 5,
         'meta_query' => [
+            'relation' => 'OR',
+            [
+                'key'   => 'casting_mobile',
+                'value' => $mobile,
+            ],
             [
                 'key'   => 'casting_mobile2',
                 'value' => $mobile,

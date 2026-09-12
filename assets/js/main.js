@@ -4504,7 +4504,7 @@
             const cartLink = document.createElement("a");
             cartLink.href = cartUrl;
             cartLink.className = "btn btn-primary btn-sm";
-            cartLink.textContent = "خرید اشتراک";
+            cartLink.textContent = "اشتراک ویژه";
             errEl.appendChild(document.createElement("br"));
             errEl.appendChild(cartLink);
           }
@@ -5680,5 +5680,17 @@
         window.clearInterval(timer);
       }
     }, 1000);
+  });
+
+  document.querySelectorAll("[data-contact-chat-toggle]").forEach((btn) => {
+    const bubble = btn.closest(".contact-chat-bubble");
+    const label = btn.querySelector("[data-contact-chat-more-label]");
+    if (!bubble) return;
+    btn.addEventListener("click", () => {
+      bubble.classList.toggle("is-collapsed");
+      const collapsed = bubble.classList.contains("is-collapsed");
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      if (label) label.textContent = collapsed ? "بیشتر" : "کمتر";
+    });
   });
 })();

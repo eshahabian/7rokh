@@ -9,6 +9,7 @@ Options -Indexes
   Header set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
 </IfModule>
 
 <IfModule LiteSpeed>
@@ -16,8 +17,8 @@ Options -Indexes
   CacheDisable private /
 </IfModule>
 
-# مسدود کردن فایل‌های حساس احتمالی در ریشه پورتال
-<FilesMatch "(?i)^(config\.php|\.env|composer\.(json|lock)|.*\.(sql|bak|log|ini))$">
+# مسدود کردن فایل‌های حساس در ریشه پورتال
+<FilesMatch "(?i)^(config(\.local)?\.php|\.env|composer\.(json|lock)|.*\.(sql|bak|log|ini))$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -26,3 +27,9 @@ Options -Indexes
     Deny from all
   </IfModule>
 </FilesMatch>
+
+# جلوگیری از اجرای مستقیم فایل‌های includes و mu-plugin از وب
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(includes|mu-plugin)/ - [F,L]
+</IfModule>

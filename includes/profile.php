@@ -2040,10 +2040,10 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
         </div>
         <div class="field">
           <label for="<?= casting_e($field) ?>"><?= casting_e($label) ?><?= $slot_req !== '' ? ' <span class="req-mark">*</span>' : '' ?></label>
-          <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp"<?= $slot_req ?> data-file-preview-input data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
+          <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp,image/gif"<?= $slot_req ?> data-file-preview-input data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
           <p class="field-hint portrait-upload-hint">
             <span class="portrait-upload-hint-desc"><?= casting_e($hints[$slot] ?? '') ?></span>
-            <span class="portrait-upload-hint-formats">JPG / PNG / WebP</span>
+            <span class="portrait-upload-hint-formats">JPG / PNG / WebP / GIF — سایت خودش اندازه و نسبت را تنظیم می‌کند</span>
             <span class="portrait-upload-hint-size">حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></span>
           </p>
         </div>
@@ -2082,10 +2082,10 @@ function casting_render_single_profile_photo_field(array $portraits = [], bool $
       </div>
       <div class="field">
         <label for="<?= casting_e($input_id) ?>">عکس پروفایل<?= $required ? ' <span class="req-mark">*</span>' : '' ?></label>
-        <input id="<?= casting_e($input_id) ?>" name="photo_medium" type="file" accept="image/jpeg,image/png,image/webp"<?= $req ?> data-profile-photo-single data-file-preview-input data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
+        <input id="<?= casting_e($input_id) ?>" name="photo_medium" type="file" accept="image/jpeg,image/png,image/webp,image/gif"<?= $req ?> data-profile-photo-single data-file-preview-input data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
         <p class="field-hint portrait-upload-hint">
           <span class="portrait-upload-hint-desc">یک عکس واضح از خودتان</span>
-          <span class="portrait-upload-hint-formats">JPG / PNG / WebP</span>
+          <span class="portrait-upload-hint-formats">JPG / PNG / WebP / GIF — سایت خودش اندازه را تنظیم می‌کند</span>
           <span class="portrait-upload-hint-size">حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></span>
         </p>
       </div>
@@ -3079,7 +3079,13 @@ function casting_normalize_uploaded_file_type(array &$file, string $kind = 'imag
             $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
             $map = $kind === 'video'
                 ? ['mp4' => 'video/mp4', 'webm' => 'video/webm', 'mov' => 'video/quicktime']
-                : ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+                : [
+                    'jpg'  => 'image/jpeg',
+                    'jpeg' => 'image/jpeg',
+                    'png'  => 'image/png',
+                    'webp' => 'image/webp',
+                    'gif'  => 'image/gif',
+                ];
             if (isset($map[$ext])) {
                 $ftype = $map[$ext];
                 $file['type'] = $ftype;
@@ -3091,13 +3097,39 @@ function casting_normalize_uploaded_file_type(array &$file, string $kind = 'imag
 }
 
 /**
+ * MIMEهای ورودی مجاز برای عکس (قبل از نرمال‌سازی خودکار سایت)
+ *
+ * @return list<string>
+ */
+function casting_image_upload_allowed_mimes(): array
+{
+    if (!function_exists('casting_image_process_allowed_mimes')) {
+        require_once __DIR__ . '/image-process.php';
+    }
+
+    return casting_image_process_allowed_mimes();
+}
+
+/**
  * آپلود با دسترسی موقت — برای ثبت‌نام (هنوز لاگین نیست) و نقش subscriber
+ *
+ * اگر $image_profile مقدار داشته باشد، قبل از ذخیره عکس ریسایز/تبدیل می‌شود.
+ * برای ویدیو null بفرستید.
  *
  * @return int|\WP_Error
  */
-function casting_media_handle_upload_as_user(string $field, int $user_id)
+function casting_media_handle_upload_as_user(string $field, int $user_id, ?string $image_profile = null)
 {
     casting_require_media_includes();
+
+    if ($image_profile !== null && isset($_FILES[$field]) && is_array($_FILES[$field])) {
+        require_once __DIR__ . '/image-process.php';
+        $prep = casting_prepare_uploaded_image($_FILES[$field], $image_profile);
+        if (!$prep['ok']) {
+            return new WP_Error('casting_image_process', (string) $prep['error']);
+        }
+    }
+
     casting_enable_user_upload_dir($user_id);
 
     $prev_user = get_current_user_id();
@@ -3205,8 +3237,21 @@ function casting_register_pending_capture_uploads(): string
 
             return $norm['error'];
         }
-        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
-        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+        $ftype = (string) ($norm['type'] ?? '');
+        if (!in_array($ftype, casting_image_upload_allowed_mimes(), true)) {
+            $persist($pending);
+
+            return 'فقط عکس JPG، PNG، WebP یا GIF مجاز است. سایت خودش اندازه و فرمت را تنظیم می‌کند.';
+        }
+        require_once __DIR__ . '/image-process.php';
+        $prep = casting_prepare_uploaded_image($file, 'portrait');
+        if (!$prep['ok']) {
+            $persist($pending);
+
+            return $prep['error'];
+        }
+        $ext = (string) pathinfo((string) $file['name'], PATHINFO_EXTENSION);
+        if ($ext === '') {
             $ext = 'jpg';
         }
         $dest_name = $slot . '.' . $ext;
@@ -3215,7 +3260,11 @@ function casting_register_pending_capture_uploads(): string
             @unlink($pending['portraits'][$slot]['path']);
         }
         if (!@move_uploaded_file((string) $file['tmp_name'], $dest)) {
-            continue;
+            // پس از پردازش ممکن است tmp دیگر «uploaded» نباشد؛ کپی مستقیم.
+            if (!@copy((string) $file['tmp_name'], $dest)) {
+                continue;
+            }
+            @unlink((string) $file['tmp_name']);
         }
         $pending['portraits'][$slot] = [
             'id'   => 0,
@@ -3223,7 +3272,7 @@ function casting_register_pending_capture_uploads(): string
             'full' => $paths['url'] . '/' . rawurlencode($dest_name),
             'path' => $dest,
             'name' => (string) $file['name'],
-            'type' => (string) ($norm['type'] ?? 'image/jpeg'),
+            'type' => (string) ($file['type'] ?? $prep['mime'] ?? 'image/jpeg'),
         ];
         $_FILES[$field]['name'] = '';
         $_FILES[$field]['tmp_name'] = '';
@@ -3549,17 +3598,16 @@ function casting_handle_portrait_upload(int $user_id, string $slot): array
         return ['ok' => false, 'error' => $norm['error']];
     }
 
-    $allowed = ['image/jpeg', 'image/png', 'image/webp'];
     $ftype = (string) ($norm['type'] ?? '');
-    if (!in_array($ftype, $allowed, true)) {
-        return ['ok' => false, 'error' => 'فقط عکس JPG، PNG یا WebP مجاز است.'];
+    if (!in_array($ftype, casting_image_upload_allowed_mimes(), true)) {
+        return ['ok' => false, 'error' => 'فقط عکس JPG، PNG، WebP یا GIF مجاز است. سایت خودش اندازه و فرمت را تنظیم می‌کند.'];
     }
     $size_check = casting_uploaded_file_within_limit($file, 'image');
     if (!$size_check['ok']) {
         return ['ok' => false, 'error' => $size_check['error']];
     }
 
-    $attachment_id = casting_media_handle_upload_as_user($field, $user_id);
+    $attachment_id = casting_media_handle_upload_as_user($field, $user_id, 'portrait');
 
     if (is_wp_error($attachment_id)) {
         return ['ok' => false, 'error' => 'آپلود عکس ناموفق بود: ' . $attachment_id->get_error_message()];

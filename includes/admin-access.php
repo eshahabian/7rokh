@@ -64,6 +64,23 @@ function casting_user_is_super_admin(int $user_id): bool
 }
 
 /**
+ * تست پیامک، پیامک تکمیل پروفایل، پیامک همگانی — فقط مدیران اصلی پورتال.
+ * eshahabian (مالک) و ardavan (لیست CASTING_PORTAL_ADMINS).
+ */
+function casting_user_can_manage_portal_sms(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (casting_user_is_super_admin($user_id)) {
+        return true;
+    }
+
+    return function_exists('casting_user_is_listed_portal_admin')
+        && casting_user_is_listed_portal_admin($user_id);
+}
+
+/**
  * شماره موبایل / تلفن اعضا فقط برای مدیران اصلی پورتال (eshahabian و ardavan).
  * سایر اعضا، کارمندان با دسترسی جزئی، و خودِ پروفایل عمومی این شماره‌ها را نمی‌بینند.
  */
@@ -557,14 +574,23 @@ function casting_panel_admin_nav_items(int $user_id): array
     if (casting_user_is_super_admin($user_id) || casting_user_is_portal_owner($user_id)) {
         $items[] = ['key' => 'admin-dm-archive', 'label' => 'آرشیو پیام‌ها', 'href' => 'admin-dm-archive.php', 'perm' => 'super'];
     }
-    if (casting_user_is_portal_owner($user_id) && is_file(dirname(__DIR__) . '/admin-sms-test.php')) {
-        $items[] = ['key' => 'admin-sms', 'label' => 'تست پیامک', 'href' => 'admin-sms-test.php', 'perm' => 'owner'];
+    if (casting_user_can_manage_portal_sms($user_id) && is_file(dirname(__DIR__) . '/admin-sms-test.php')) {
+        $items[] = ['key' => 'admin-sms', 'label' => 'تست پیامک', 'href' => 'admin-sms-test.php', 'perm' => 'sms'];
     }
-    if (casting_user_is_portal_owner($user_id) && is_file(dirname(__DIR__) . '/admin-profile-sms.php')) {
-        $items[] = ['key' => 'admin-profile-sms', 'label' => 'پیامک تکمیل پروفایل', 'href' => 'admin-profile-sms.php', 'perm' => 'owner'];
+    if (casting_user_can_manage_portal_sms($user_id) && is_file(dirname(__DIR__) . '/admin-profile-sms.php')) {
+        $items[] = ['key' => 'admin-profile-sms', 'label' => 'پیامک تکمیل پروفایل', 'href' => 'admin-profile-sms.php', 'perm' => 'sms'];
     }
-    if (casting_user_is_portal_owner($user_id) && is_file(dirname(__DIR__) . '/admin-broadcast-sms.php')) {
-        $items[] = ['key' => 'admin-broadcast-sms', 'label' => 'پیامک همگانی', 'href' => 'admin-broadcast-sms.php', 'perm' => 'owner'];
+    if (casting_user_can_manage_portal_sms($user_id) && is_file(dirname(__DIR__) . '/admin-broadcast-sms.php')) {
+        $items[] = ['key' => 'admin-broadcast-sms', 'label' => 'پیامک همگانی', 'href' => 'admin-broadcast-sms.php', 'perm' => 'sms'];
+    }
+    if (!function_exists('casting_contact_user_can_manage_inbox')) {
+        $cm = __DIR__ . '/contact-messages.php';
+        if (is_file($cm)) {
+            require_once $cm;
+        }
+    }
+    if (function_exists('casting_contact_user_can_manage_inbox') && casting_contact_user_can_manage_inbox($user_id)) {
+        $items[] = ['key' => 'contact', 'label' => 'تماس با ما', 'href' => 'contact.php#contact-inbox', 'perm' => 'contact'];
     }
     return $items;
 }

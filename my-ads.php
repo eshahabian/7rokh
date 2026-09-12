@@ -133,7 +133,7 @@ if (!$can_upload) {
     } elseif ($has_pending) {
         $upload_hint = 'پوستر شما در انتظار تأیید است. پس از تأیید ادمین، برای پوستر بعدی باید دوباره هزینه تبلیغات را پرداخت کنید.';
     } elseif ($has_approved) {
-        $upload_hint = 'پوستر تأیید و منتشر شد. برای ارسال پوستر جدید از خرید اشتراک اقدام کنید.';
+        $upload_hint = 'پوستر تأیید و منتشر شد. برای ارسال پوستر جدید از اشتراک ویژه اقدام کنید.';
     } else {
         $upload_hint = 'پس از پرداخت هزینهٔ تبلیغات، انتخاب فایل و ارسال برای تأیید فعال می‌شود.';
     }
@@ -276,20 +276,19 @@ casting_render_flash();
     <p class="lede"><?= $is_admin ? 'پوستر خودتان را از اینجا بفرستید.' : 'بعد از ارسال تا ۵ دقیقه مثل undo ایمیل می‌توانید پوستر را حذف یا عوض کنید. بعد از آن برای تأیید ادمین می‌رود. انتخاب فایل فقط بعد از پرداخت هزینهٔ تبلیغات فعال است.' ?></p>
 
     <div class="ad-spec-box" role="note">
-      <h2>فرمت و اندازه لازم</h2>
+      <h2>فرمت و اندازه</h2>
       <ul class="info-list">
-        <li><strong>فرمت:</strong> JPG، PNG یا WebP</li>
-        <li><strong>سایز پیشنهادی:</strong> <?= (int) $spec['recommended_width'] ?> × <?= (int) $spec['recommended_height'] ?> پیکسل (نسبت ۱۶ به ۶.۷۵ مطابق بنر صفحه اصلی)</li>
-        <li><strong>حداقل:</strong> <?= (int) $spec['min_width'] ?> × <?= (int) $spec['min_height'] ?> پیکسل — تصویر باید افقی باشد</li>
-        <li><strong>حجم:</strong> حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></li>
-        <li>اگر نسبت ۱۶:۹ بفرستید هم قبول است؛ بالا و پایین کمی برش می‌خورد چون بنر پهن‌تر است.</li>
+        <li><strong>فرمت:</strong> JPG، PNG، WebP یا GIF</li>
+        <li><strong>خروجی سایت:</strong> <?= (int) $spec['recommended_width'] ?> × <?= (int) $spec['recommended_height'] ?> پیکسل (نسبت بنر صفحه اصلی)</li>
+        <li><strong>حجم آپلود:</strong> حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></li>
+        <li>هر سایزی بفرستید؛ سایت خودش کراپ و ریسایز می‌کند. برای نتیجه بهتر، تصویر افقی و باکیفیت بفرستید.</li>
       </ul>
     </div>
 
     <?php if ($upload_hint !== '') : ?>
       <p class="meta ad-upload-hint"><?= casting_e($upload_hint) ?>
         <?php if (!$has_pending) : ?>
-          <a href="<?= casting_e(casting_url('cart.php#shop-ads')) ?>">خرید اشتراک</a>
+          <a href="<?= casting_e(casting_url('cart.php#shop-ads')) ?>">اشتراک ویژه</a>
         <?php endif; ?>
       </p>
     <?php endif; ?>
@@ -333,7 +332,7 @@ casting_render_flash();
             'required'  => true,
             'max_bytes' => (int) $spec['max_bytes'],
         ]); ?>
-        <p class="field-hint">JPG / PNG / WebP — حداقل <?= (int) $spec['min_width'] ?>×<?= (int) $spec['min_height'] ?> — حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></p>
+        <p class="field-hint">JPG / PNG / WebP / GIF — سایت به <?= (int) $spec['recommended_width'] ?>×<?= (int) $spec['recommended_height'] ?> تنظیم می‌کند — حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></p>
       </div>
       <button class="btn btn-primary" type="submit"<?= $can_upload ? '' : ' disabled' ?>>ارسال برای تأیید</button>
     </form>

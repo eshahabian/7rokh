@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * صفحهٔ قدیمی خرید اشتراک — همه به cart.php منتقل شده است.
+ * صفحهٔ قدیمی اشتراک ویژه — همه به cart.php منتقل شده است.
  */
 require_once __DIR__ . '/includes/bootstrap.php';
 

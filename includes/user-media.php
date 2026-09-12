@@ -419,9 +419,11 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
     }
     $ftype = (string) ($norm['type'] ?? '');
     if ($media_type === 'photo') {
-        $allowed = ['image/jpeg', 'image/png', 'image/webp'];
+        $allowed = function_exists('casting_image_upload_allowed_mimes')
+            ? casting_image_upload_allowed_mimes()
+            : ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
         if (!in_array($ftype, $allowed, true)) {
-            return ['ok' => false, 'error' => 'فقط عکس JPG، PNG یا WebP مجاز است.'];
+            return ['ok' => false, 'error' => 'فقط عکس JPG، PNG، WebP یا GIF مجاز است. سایت خودش اندازه را تنظیم می‌کند.'];
         }
         $size_check = casting_uploaded_file_within_limit($file, 'image');
         if (!$size_check['ok']) {
@@ -440,7 +442,11 @@ function casting_user_media_submit_upload(int $user_id, string $field, string $m
         }
     }
 
-    $attachment_id = casting_media_handle_upload_as_user($field, $user_id);
+    $attachment_id = casting_media_handle_upload_as_user(
+        $field,
+        $user_id,
+        $media_type === 'photo' ? 'gallery' : null
+    );
     if (is_wp_error($attachment_id)) {
         return ['ok' => false, 'error' => 'آپلود ناموفق بود: ' . $attachment_id->get_error_message()];
     }
@@ -532,9 +538,11 @@ function casting_user_media_edit_own(int $user_id, int $media_id, string $captio
         }
         $ftype = (string) ($norm['type'] ?? '');
         if ($media_type === 'photo') {
-            $allowed = ['image/jpeg', 'image/png', 'image/webp'];
+            $allowed = function_exists('casting_image_upload_allowed_mimes')
+                ? casting_image_upload_allowed_mimes()
+                : ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
             if (!in_array($ftype, $allowed, true)) {
-                return ['ok' => false, 'error' => 'فقط عکس JPG، PNG یا WebP مجاز است.'];
+                return ['ok' => false, 'error' => 'فقط عکس JPG، PNG، WebP یا GIF مجاز است. سایت خودش اندازه را تنظیم می‌کند.'];
             }
         } else {
             $allowed = ['video/mp4', 'video/webm', 'video/quicktime'];
@@ -547,6 +555,13 @@ function casting_user_media_edit_own(int $user_id, int $media_id, string $captio
         $size_check = casting_uploaded_file_within_limit($file, $kind);
         if (!$size_check['ok']) {
             return ['ok' => false, 'error' => $size_check['error']];
+        }
+        if ($media_type === 'photo') {
+            require_once __DIR__ . '/image-process.php';
+            $prep = casting_prepare_uploaded_image($file, 'gallery');
+            if (!$prep['ok']) {
+                return ['ok' => false, 'error' => $prep['error']];
+            }
         }
         casting_enable_user_upload_dir($user_id);
         $uploaded = media_handle_upload($file_field, 0);

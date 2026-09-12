@@ -3,6 +3,33 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config.php';
 
+$casting_is_portal_request = static function (): bool {
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+
+    return $uri !== '' && strpos($uri, '/casting-portal/') !== false;
+};
+
+if ($casting_is_portal_request() && !defined('WP_DISABLE_FATAL_ERROR_HANDLER')) {
+    define('WP_DISABLE_FATAL_ERROR_HANDLER', true);
+}
+
+if ($casting_is_portal_request()) {
+    register_shutdown_function(static function (): void {
+        $err = error_get_last();
+        if (!is_array($err) || !in_array((int) ($err['type'] ?? 0), [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+            return;
+        }
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: text/html; charset=utf-8');
+        }
+        echo '<div style="font-family:Tahoma,sans-serif;direction:rtl;padding:1.5rem;background:#fff3f0;border:1px solid #c0392b;margin:1rem">';
+        echo '<strong>خطای موقت پورتال.</strong> لطفاً چند لحظه دیگر دوباره تلاش کنید.';
+        echo '<p style="margin:0.75rem 0 0"><a href="login.php">ورود</a> · <a href="contact.php">تماس با ما</a></p>';
+        echo '</div>';
+    });
+}
+
 if (!file_exists(CASTING_WP_LOAD)) {
     http_response_code(500);
     header('Content-Type: text/html; charset=utf-8');
@@ -395,6 +422,32 @@ function casting_user_can_manage_message_access(int $user_id): bool
     }
 
     return in_array(strtolower((string) $user->user_login), casting_message_access_manager_logins(), true);
+}
+
+/**
+ * مدیران ابزارهای پیامک پورتال (تست، تکمیل پروفایل، همگانی، ارسال به کاربر خاص)
+ *
+ * @return list<string>
+ */
+function casting_sms_admin_logins(): array
+{
+    return ['eshahabian', 'ardavan'];
+}
+
+function casting_user_can_manage_sms(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return false;
+    }
+
+    return in_array(strtolower((string) $user->user_login), casting_sms_admin_logins(), true);
 }
 
 function casting_user_can_member_search(int $user_id): bool

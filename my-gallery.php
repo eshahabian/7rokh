@@ -106,8 +106,8 @@ casting_render_flash();
     <div class="form-grid">
       <div class="field">
         <label for="gallery_photo">عکس جدید</label>
-        <input id="gallery_photo" name="gallery_photo" type="file" accept="image/jpeg,image/png,image/webp" data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
-        <p class="field-hint">JPG / PNG / WebP — حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></p>
+        <input id="gallery_photo" name="gallery_photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
+        <p class="field-hint">JPG / PNG / WebP / GIF — حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?>؛ سایت خودش اندازه را تنظیم می‌کند</p>
       </div>
       <div class="field">
         <label for="gallery_video">ویدیو جدید</label>
@@ -170,7 +170,7 @@ casting_render_flash();
                   <?php if ($is_video) : ?>
                     <input id="edit_file_<?= (int) $item['id'] ?>" name="edit_video" type="file" accept="video/mp4,video/webm,video/quicktime" data-upload-kind="video" data-max-bytes="<?= (int) casting_upload_max_bytes('video') ?>">
                   <?php else : ?>
-                    <input id="edit_file_<?= (int) $item['id'] ?>" name="edit_photo" type="file" accept="image/jpeg,image/png,image/webp" data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
+                    <input id="edit_file_<?= (int) $item['id'] ?>" name="edit_photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
                   <?php endif; ?>
                 </div>
                 <p class="field-hint"><?= $auto_publish ? 'بعد از ذخیره، پست بلافاصله منتشر می‌شود.' : 'بعد از ذخیره، پست دوباره در صف تأیید مدیر قرار می‌گیرد.' ?></p>

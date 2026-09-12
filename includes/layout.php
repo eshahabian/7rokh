@@ -211,7 +211,7 @@ function casting_render_theme_toggle(): void
 }
 
 /**
- * سفارش‌ها / خرید اشتراک کنار دکمه روز/شب در منوی اصلی پورتال
+ * سفارش‌ها / اشتراک ویژه کنار دکمه روز/شب در منوی اصلی پورتال
  */
 function casting_render_nav_cart(?string $active = null): void
 {
@@ -234,7 +234,7 @@ function casting_render_nav_cart(?string $active = null): void
         $cart_count = 0;
     }
     $href = casting_url('cart.php');
-    $title = $logged_in ? 'خرید اشتراک' : 'مشاهده خدمات و خرید اشتراک';
+    $title = $logged_in ? 'اشتراک ویژه' : 'مشاهده خدمات و اشتراک ویژه';
     ?>
       <a
         href="<?= casting_e($href) ?>"
@@ -244,9 +244,9 @@ function casting_render_nav_cart(?string $active = null): void
         <span class="nav-cart-icon" aria-hidden="true">
           <svg viewBox="0 0 576 512" width="16" height="16" focusable="false"><path fill="currentColor" d="M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1-96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></svg>
         </span>
-        <span class="nav-cart-label">خرید اشتراک</span>
+        <span class="nav-cart-label">اشتراک ویژه</span>
         <?php if ($cart_count > 0) : ?>
-          <span class="nav-badge" aria-label="<?= (int) $cart_count ?> مورد در خرید اشتراک"><?= (int) $cart_count ?></span>
+          <span class="nav-badge" aria-label="<?= (int) $cart_count ?> مورد در اشتراک ویژه"><?= (int) $cart_count ?></span>
         <?php endif; ?>
       </a>
     <?php
@@ -335,7 +335,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <?php if (!$panel_menu && !$is_member) : ?>
         <nav class="site-header-quick" aria-label="دسترسی سریع">
           <a href="<?= casting_e(casting_main_site_url()) ?>" class="site-header-quick-link"><?= casting_brand_html() ?></a>
-          <a href="register.php" class="site-header-quick-link nav-auth-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
+          <a href="register.php" class="site-header-quick-link nav-auth-link nav-register-btn<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
           <a href="login.php" class="site-header-quick-link nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود</a>
           <a href="<?= casting_e(casting_url('app.php')) ?>" class="site-header-quick-link<?= $active === 'app' ? ' is-active' : '' ?>" data-app-download>اپلیکیشن</a>
         </nav>
@@ -352,10 +352,13 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
           <?php endif; ?>
         </a>
         <a href="<?= casting_e(casting_url('app.php')) ?>" class="<?= $active === 'app' ? 'is-active' : '' ?>" data-app-download>اپلیکیشن موبایل</a>
+        <a href="contact.php" class="<?= $active === 'contact' ? 'is-active' : '' ?>">تماس با ما</a>
+        <a href="faq.php" class="<?= $active === 'faq' ? 'is-active' : '' ?>">سوالات متداول</a>
+        <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>
         <a href="logout.php">خروج</a>
       <?php else : ?>
         <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
-        <a href="register.php" class="nav-auth-link<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
+        <a href="register.php" class="nav-auth-link nav-register-btn<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
         <a href="login.php" class="nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود</a>
         <a href="<?= casting_e(casting_url('app.php')) ?>" class="<?= $active === 'app' ? 'is-active' : '' ?>" data-app-download>اپلیکیشن موبایل</a>
         <a href="contact.php" class="<?= $active === 'contact' ? 'is-active' : '' ?>">تماس با ما</a>
@@ -409,12 +412,20 @@ function casting_render_footer(bool $show_home_verse = false): void
 {
     $verse_src = '';
     if ($show_home_verse && !casting_is_native_app_request()) {
-        $hafez = __DIR__ . '/hafez.php';
-        if (!function_exists('casting_hafez_random_image') && is_file($hafez)) {
-            require_once $hafez;
-        }
-        if (function_exists('casting_hafez_random_image')) {
-            $verse_src = casting_hafez_random_image();
+        try {
+            $hafez = __DIR__ . '/hafez.php';
+            if (!function_exists('casting_hafez_random_image') && is_file($hafez)) {
+                if (function_exists('casting_safe_require_once')) {
+                    casting_safe_require_once($hafez);
+                } else {
+                    require_once $hafez;
+                }
+            }
+            if (function_exists('casting_hafez_random_image')) {
+                $verse_src = (string) casting_hafez_random_image();
+            }
+        } catch (Throwable $e) {
+            $verse_src = '';
         }
     }
     ?>

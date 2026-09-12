@@ -242,3 +242,8 @@ if (!defined('CASTING_PROFILE_SMS_REMINDER_INCLUDE_LINK')) {
 if (!defined('CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS')) {
     define('CASTING_PROFILE_SMS_REMINDER_ALWAYS_SEND_LOGINS', ['ardvan', 'eshahabian']);
 }
+
+/** کلید گزارش سلامت portal-health.php — در config.local.php مقدار تصادفی بگذارید */
+if (!defined('CASTING_HEALTH_KEY')) {
+    define('CASTING_HEALTH_KEY', '');
+}

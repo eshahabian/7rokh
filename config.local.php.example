@@ -53,3 +53,9 @@ define('CASTING_SMS_OTP_TEMPLATE', 'کد ورود شما {x}');
  * اگر پخش ویدیو خالی شد، این را false کنید تا استریم PHP فعال شود.
  */
 // define('CASTING_MEDIA_OFFLOAD', true);
+
+/**
+ * کلید گزارش سلامت فایل‌ها (portal-health.php?key=...)
+ * یک رشته تصادفی طولانی بگذارید؛ بدون این کلید گزارش بسته است.
+ */
+// define('CASTING_HEALTH_KEY', 'یک-رشته-تصادفی-بلند-اینجا');

@@ -311,16 +311,18 @@ function casting_opportunity_handle_cover_upload(int $user_id): array
     if (!$norm['ok']) {
         return ['ok' => false, 'error' => (string) ($norm['error'] ?? 'فایل عکس نامعتبر است.')];
     }
-    $allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    $allowed = function_exists('casting_image_upload_allowed_mimes')
+        ? casting_image_upload_allowed_mimes()
+        : ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     $ftype = (string) ($norm['type'] ?? '');
     if (!in_array($ftype, $allowed, true)) {
-        return ['ok' => false, 'error' => 'فقط عکس JPG، PNG یا WebP مجاز است.'];
+        return ['ok' => false, 'error' => 'فقط عکس JPG، PNG، WebP یا GIF مجاز است. سایت خودش اندازه را تنظیم می‌کند.'];
     }
     $size_check = casting_uploaded_file_within_limit($file, 'image');
     if (!$size_check['ok']) {
         return ['ok' => false, 'error' => (string) $size_check['error']];
     }
-    $attachment_id = casting_media_handle_upload_as_user('opp_cover', $user_id);
+    $attachment_id = casting_media_handle_upload_as_user('opp_cover', $user_id, 'cover');
     if (is_wp_error($attachment_id)) {
         return ['ok' => false, 'error' => 'آپلود عکس ناموفق بود.'];
     }
@@ -1592,8 +1594,8 @@ function casting_render_opportunity_create_form(array $values = [], bool $open =
       </div>
       <div class="field">
         <label for="opp_cover">عکس پوستر (اختیاری)</label>
-        <input id="opp_cover" name="opp_cover" type="file" accept="image/jpeg,image/png,image/webp">
-        <p class="field-hint">JPG، PNG یا WebP. اگر نگذارید، فرصت بدون عکس منتشر می‌شود.</p>
+        <input id="opp_cover" name="opp_cover" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <p class="field-hint">JPG، PNG، WebP یا GIF. سایت خودش اندازه را تنظیم می‌کند. اگر نگذارید، فرصت بدون عکس منتشر می‌شود.</p>
       </div>
       <div class="cta-row">
         <button class="btn btn-primary" type="submit">انتشار فرصت</button>

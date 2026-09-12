@@ -57,7 +57,7 @@ function casting_panel_nav_groups(): array
             'id'    => 'account',
             'label' => 'حساب',
             'items' => [
-                ['key' => 'cart',         'label' => 'خرید اشتراک',          'href' => 'cart.php'],
+                ['key' => 'cart',         'label' => 'اشتراک ویژه',          'href' => 'cart.php'],
                 ['key' => 'my-ads',       'label' => 'ارسال پوستر',         'href' => 'my-ads.php'],
                 ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',      'href' => 'transactions.php'],
                 ['key' => 'cancel',       'label' => 'انصراف از عضویت',      'href' => 'cancel-membership.php'],
@@ -181,7 +181,7 @@ function casting_render_premium_account_links(string $wrapper_class = 'cta-row p
 {
     ?>
     <div class="<?= casting_e($wrapper_class) ?>">
-      <a class="btn btn-ghost" href="<?= casting_e(casting_url('cart.php')) ?>">خرید اشتراک</a>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('cart.php')) ?>">اشتراک ویژه</a>
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('transactions.php')) ?>">تراکنش‌های مالی</a>
     </div>
     <?php
@@ -310,7 +310,7 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
             <?php elseif (($item['key'] === 'cart' || $item['key'] === 'membership') && $pending_receipts > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $pending_receipts) ?> فیش در انتظار"><?= (int) $pending_receipts ?></span>
             <?php elseif ($item['key'] === 'cart' && (int) ($ctx['cart_count'] ?? 0) > 0) : ?>
-              <span class="nav-badge" aria-label="<?= (int) ($ctx['cart_count'] ?? 0) ?> مورد در خرید اشتراک"><?= (int) ($ctx['cart_count'] ?? 0) ?></span>
+              <span class="nav-badge" aria-label="<?= (int) ($ctx['cart_count'] ?? 0) ?> مورد در اشتراک ویژه"><?= (int) ($ctx['cart_count'] ?? 0) ?></span>
             <?php elseif ($item['key'] === 'my-requests' && $request_count > 0) : ?>
               <span class="nav-badge" aria-label="<?= casting_e((string) $request_count) ?> مورد جدید"><?= (int) $request_count ?></span>
             <?php elseif ($item['key'] === 'desk' && $desk_response_count > 0) : ?>
@@ -666,6 +666,8 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
                 <span class="nav-badge" aria-label="<?= casting_e((string) $pending_media) ?> فایل در انتظار"><?= (int) $pending_media ?></span>
               <?php elseif ($item['key'] === 'admin-ads' && $pending_ads > 0) : ?>
                 <span class="nav-badge" aria-label="<?= casting_e((string) $pending_ads) ?> پوستر در انتظار"><?= (int) $pending_ads ?></span>
+              <?php elseif ($item['key'] === 'contact' && $unread_contacts > 0) : ?>
+                <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
               <?php endif; ?>
             </a>
           <?php endforeach; ?>

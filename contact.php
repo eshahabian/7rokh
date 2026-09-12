@@ -7,7 +7,10 @@ require_once __DIR__ . '/includes/contact-messages.php';
 casting_nocache();
 
 $user = casting_current_user();
-$logged_in = $user && casting_get_user_role((int) $user->ID) !== '';
+$logged_in = $user && (
+    casting_get_user_role((int) $user->ID) !== ''
+    || (function_exists('casting_user_can_use_member_portal') && casting_user_can_use_member_portal((int) $user->ID))
+);
 $user_id = $logged_in ? (int) $user->ID : 0;
 
 if ($logged_in) {
@@ -17,7 +20,6 @@ if ($logged_in) {
 }
 
 $channels = casting_contact_channel_labels();
-$recipient_channels = $logged_in ? casting_contact_channels_for_recipient($user_id) : [];
 $error = '';
 $name = '';
 $email = '';
@@ -38,12 +40,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'mark_read' && $logged_in) {
             $message_id = (string) ($_POST['message_id'] ?? '');
-            if (casting_contact_mark_read_for_recipient($message_id, $user_id)) {
+            if (casting_contact_mark_thread_read($message_id, $user_id) || casting_contact_mark_read_for_recipient($message_id, $user_id)) {
                 casting_set_flash('success', 'پیام خوانده شد.');
             } else {
                 casting_set_flash('error', 'پیام پیدا نشد.');
             }
-            casting_redirect('contact.php');
+            casting_redirect('contact.php#contact-inbox');
+        }
+
+        if ($action === 'reply' && $logged_in) {
+            $message_id = (string) ($_POST['message_id'] ?? '');
+            $reply = (string) ($_POST['reply'] ?? '');
+            $result = casting_contact_reply($message_id, $user_id, $reply);
+            if ($result['ok']) {
+                $note = $result['via'] === 'email'
+                    ? 'پاسخ در صندوق تماس با ما ثبت شد و با ایمیل هم ارسال شد.'
+                    : 'پاسخ در صندوق تماس با ما ثبت شد.';
+                casting_set_flash('success', $note);
+            } else {
+                casting_set_flash('error', $result['error']);
+            }
+            casting_redirect('contact.php#contact-inbox');
         }
 
         if ($action === 'send') {
@@ -71,10 +88,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$inboxes = [];
-foreach ($recipient_channels as $recipient_channel) {
-    $inboxes[$recipient_channel] = casting_contact_list_for_recipient($user_id, $recipient_channel, 200);
+$can_manage_inbox = $logged_in && casting_contact_user_can_manage_inbox($user_id);
+if ($can_manage_inbox) {
+    $purged = casting_contact_maybe_purge_except_keep_login();
+    if ($purged > 0) {
+        casting_set_flash('success', 'صندوق تماس با ما خلوت شد؛ فقط پیام‌های mn_niky باقی ماند.');
+        casting_redirect('contact.php#contact-inbox');
+    }
 }
+$inbox_rows = $can_manage_inbox ? casting_contact_list_for_manager($user_id, 200) : [];
+$inbox_threads = $can_manage_inbox ? casting_contact_group_threads($inbox_rows) : [];
+$my_contact_rows = ($logged_in && !$can_manage_inbox) ? casting_contact_list_for_sender($user_id, 50) : [];
+$my_contact_threads = $my_contact_rows !== [] ? casting_contact_group_threads($my_contact_rows) : [];
 
 $form_state = [
     'name'      => $name,
@@ -102,52 +127,35 @@ casting_render_flash();
 <?php if (!$logged_in) : ?><main class="wrap panel-page"><?php endif; ?>
   <section class="<?= $logged_in ? 'dash-card panel-wide' : 'panel panel-wide' ?>">
     <h1>تماس با ما</h1>
-    <p class="lede">برای پشتیبانی، پیشنهاد یا سوال درباره پورتال <?= casting_brand_html() ?> پیام بگذارید. نیازی به ورود نیست.</p>
+    <p class="lede">برای پشتیبانی، پیشنهاد یا سوال درباره پورتال <?= casting_brand_html() ?> از همین صفحه به مدیران سایت پیام بگذارید. این پیام‌ها فقط در تماس با ما ثبت می‌شوند و با پیام‌رسان قاطی نمی‌شوند. بدون عضویت ویژه هم می‌توانید به هر دو مدیر (eshahabian و ardavan) پیام بدهید.</p>
 
-    <?php if ($recipient_channels !== []) : ?>
-      <?php foreach ($recipient_channels as $recipient_channel) :
-          $rows = $inboxes[$recipient_channel] ?? [];
-          $unread = count(array_filter($rows, static fn(array $row): bool => !$row['read']));
-          ?>
-        <div class="contact-inbox-block">
-          <h2 class="panel-section-title">
-            پیام‌های دریافتی — <?= casting_brandify($channels[$recipient_channel]) ?>
-            <?php if ($unread > 0) : ?><span class="chip chip-active"><?= (int) $unread ?> جدید</span><?php endif; ?>
-          </h2>
-          <?php if ($rows === []) : ?>
-            <p class="empty-state">هنوز پیامی دریافت نشده است.</p>
-          <?php else : ?>
-            <ul class="panel-list admin-contact-list">
-              <?php foreach ($rows as $row) : ?>
-                <li class="panel-list-item admin-contact-item <?= $row['read'] ? '' : 'is-unread' ?>">
-                  <div class="admin-contact-body">
-                    <div class="admin-contact-head">
-                      <strong><?= casting_e($row['name']) ?></strong>
-                      <?php if ($row['sender_login'] !== '') : ?>
-                        <span class="meta">@<?= casting_e($row['sender_login']) ?></span>
-                      <?php elseif ($row['email'] !== '') : ?>
-                        <a class="meta" href="mailto:<?= casting_e($row['email']) ?>"><?= casting_e($row['email']) ?></a>
-                      <?php endif; ?>
-                      <?php if (!$row['read']) : ?><span class="chip chip-active">جدید</span><?php endif; ?>
-                    </div>
-                    <p class="admin-contact-subject"><strong><?= casting_e($row['subject']) ?></strong></p>
-                    <p class="admin-contact-message"><?= nl2br(casting_e($row['message'])) ?></p>
-                    <span class="meta"><?= casting_e($row['at']) ?></span>
-                  </div>
-                  <?php if (!$row['read']) : ?>
-                    <form method="post" action="contact.php">
-                      <?php wp_nonce_field('casting_contact'); ?>
-                      <input type="hidden" name="action" value="mark_read">
-                      <input type="hidden" name="message_id" value="<?= casting_e($row['id']) ?>">
-                      <button class="btn btn-ghost btn-sm" type="submit">علامت خوانده</button>
-                    </form>
-                  <?php endif; ?>
-                </li>
-              <?php endforeach; ?>
-            </ul>
-          <?php endif; ?>
-        </div>
-      <?php endforeach; ?>
+    <?php if ($can_manage_inbox) :
+        $unread = count(array_filter($inbox_rows, static fn(array $row): bool => !$row['read']));
+        ?>
+      <div id="contact-inbox" class="contact-inbox-block">
+        <h2 class="panel-section-title">
+          پاسخگویی به پیام‌های تماس با ما
+          <?php if ($unread > 0) : ?><span class="chip chip-active"><?= (int) $unread ?> جدید</span><?php endif; ?>
+        </h2>
+        <p class="meta">فقط پیام‌های فرم تماس با ما. گفتگو مثل واتساپ جدا می‌شود؛ پیام‌رسان جداست.</p>
+        <?php if ($inbox_threads === []) : ?>
+          <p class="empty-state">هنوز پیامی دریافت نشده است.</p>
+        <?php else : ?>
+          <?php foreach ($inbox_threads as $thread) : ?>
+            <?php casting_render_contact_chat_thread($thread, $channels, true); ?>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($my_contact_threads !== []) : ?>
+      <div class="contact-inbox-block">
+        <h2 class="panel-section-title">پیام‌های من در تماس با ما</h2>
+        <p class="meta">پاسخ مدیران را همین‌جا می‌بینید. این بخش جدا از پیام‌رسان است.</p>
+        <?php foreach ($my_contact_threads as $thread) : ?>
+          <?php casting_render_contact_chat_thread($thread, $channels, false); ?>
+        <?php endforeach; ?>
+      </div>
     <?php endif; ?>
 
     <?php casting_render_contact_send_form($form_state); ?>

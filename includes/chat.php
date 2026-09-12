@@ -1430,13 +1430,13 @@ function casting_dm_send_photo(int $sender_id, int $recipient_id, string $field 
     }
     $mime = strtolower((string) ($info['mime'] ?? ''));
     if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
-        return ['ok' => false, 'error' => 'فرمت عکس باید JPG، PNG، WEBP یا GIF باشد.'];
+        return ['ok' => false, 'error' => 'فرمت عکس باید JPG، PNG، WEBP یا GIF باشد. سایت خودش اندازه را تنظیم می‌کند.'];
     }
 
     if (!function_exists('casting_media_handle_upload_as_user')) {
         require_once __DIR__ . '/profile.php';
     }
-    $attachment_id = casting_media_handle_upload_as_user($field, $sender_id);
+    $attachment_id = casting_media_handle_upload_as_user($field, $sender_id, 'chat');
     if (is_wp_error($attachment_id) || (int) $attachment_id <= 0) {
         $err = is_wp_error($attachment_id) ? $attachment_id->get_error_message() : '';
         return ['ok' => false, 'error' => $err !== '' ? ('آپلود ناموفق بود: ' . $err) : 'آپلود عکس ناموفق بود.'];

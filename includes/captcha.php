@@ -100,7 +100,7 @@ function casting_fa_to_en_digits(string $value): string
     return str_replace($fa, $en, $value);
 }
 
-function casting_render_captcha_field(string $invalid_class = ''): void
+function casting_render_captcha_field(string $invalid_class = '', bool $required = true): void
 {
     $captcha = casting_captcha_issue();
     ?>
@@ -109,7 +109,7 @@ function casting_render_captcha_field(string $invalid_class = ''): void
   <div class="captcha-row">
     <span class="captcha-question" aria-hidden="true"><?= casting_e($captcha['question']) ?></span>
     <input type="hidden" name="captcha_token" value="<?= casting_e($captcha['token']) ?>">
-    <input id="captcha_answer" name="captcha_answer" type="text" inputmode="numeric" required autocomplete="off" placeholder="پاسخ" aria-label="پاسخ کپچا: <?= casting_e($captcha['question']) ?>">
+    <input id="captcha_answer" name="captcha_answer" type="text" inputmode="numeric"<?= $required ? ' required' : '' ?> autocomplete="off" placeholder="پاسخ" aria-label="پاسخ کپچا: <?= casting_e($captcha['question']) ?>">
   </div>
   <p class="field-hint">حاصل عبارت بالا را وارد کنید.</p>
   <p class="field-req-hint" data-field-req-hint hidden>کپچا الزامی است.</p>

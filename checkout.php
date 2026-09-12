@@ -46,7 +46,7 @@ if ($order === [] && $service !== '') {
         casting_set_flash('error', $added['error']);
         casting_redirect($service === 'casting_call' ? 'director-desk.php' : 'cart.php');
     }
-    casting_set_flash('success', 'به خرید اشتراک اضافه شد.');
+    casting_set_flash('success', 'به اشتراک ویژه اضافه شد.');
     casting_redirect('cart.php');
 }
 
@@ -79,7 +79,7 @@ if ($show_gateway_step && $gateway_mode === 'live' && casting_gateway_available_
     casting_redirect('checkout.php?order=' . rawurlencode((string) $order['order_code']));
 }
 
-// انصراف — سبد خالی می‌شود و به خرید اشتراک برمی‌گردد
+// انصراف — سبد خالی می‌شود و به اشتراک ویژه برمی‌گردد
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_cancel'])) {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce((string) $_POST['_wpnonce'], 'casting_checkout_cancel_' . $order['order_code'])) {
         $error = 'درخواست نامعتبر است.';
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout_cancel'])) {
         if (in_array((string) ($order['status'] ?? ''), ['pending', 'failed', 'awaiting_payment', 'draft'], true)) {
             casting_order_update((int) $order['id'], ['status' => 'cancelled']);
         }
-        casting_set_flash('success', 'از خرید انصراف دادید و لیست خرید اشتراک خالی شد.');
+        casting_set_flash('success', 'از خرید انصراف دادید و لیست اشتراک ویژه خالی شد.');
         casting_redirect($cancel_url);
     }
 }
@@ -283,24 +283,24 @@ casting_render_flash();
       </label>
     </form>
 
-    <form id="checkout-cancel-form" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>" onsubmit="return confirm('از خرید انصراف می‌دهید؟ لیست خرید اشتراک خالی می‌شود.');" hidden>
+    <form id="checkout-cancel-form" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>" onsubmit="return confirm('از خرید انصراف می‌دهید؟ لیست اشتراک ویژه خالی می‌شود.');" hidden>
       <?php wp_nonce_field('casting_checkout_cancel_' . $order['order_code']); ?>
       <input type="hidden" name="order_code" value="<?= casting_e((string) $order['order_code']) ?>">
     </form>
 
     <div class="checkout-actions checkout-actions-tiles">
       <button class="btn btn-primary" type="submit" form="checkout-pay-form">ادامه — انتخاب درگاه پرداخت</button>
-      <a class="btn btn-ghost" href="<?= casting_e($back_url) ?>">بازگشت به خرید اشتراک</a>
+      <a class="btn btn-ghost" href="<?= casting_e($back_url) ?>">بازگشت به اشتراک ویژه</a>
       <button class="btn btn-ghost" type="submit" form="checkout-cancel-form" name="checkout_cancel" value="1">انصراف</button>
     </div>
   <?php else : ?>
-    <form id="checkout-cancel-form" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>" onsubmit="return confirm('از خرید انصراف می‌دهید؟ لیست خرید اشتراک خالی می‌شود.');" hidden>
+    <form id="checkout-cancel-form" method="post" action="checkout.php?order=<?= casting_e(rawurlencode((string) $order['order_code'])) ?>" onsubmit="return confirm('از خرید انصراف می‌دهید؟ لیست اشتراک ویژه خالی می‌شود.');" hidden>
       <?php wp_nonce_field('casting_checkout_cancel_' . $order['order_code']); ?>
       <input type="hidden" name="order_code" value="<?= casting_e((string) $order['order_code']) ?>">
     </form>
     <div class="checkout-actions checkout-actions-tiles">
       <button class="btn btn-primary" type="button" disabled>پرداخت به‌زودی فعال می‌شود</button>
-      <a class="btn btn-ghost" href="<?= casting_e($back_url) ?>">بازگشت به خرید اشتراک</a>
+      <a class="btn btn-ghost" href="<?= casting_e($back_url) ?>">بازگشت به اشتراک ویژه</a>
       <button class="btn btn-ghost" type="submit" form="checkout-cancel-form" name="checkout_cancel" value="1">انصراف</button>
     </div>
   <?php endif; ?>
