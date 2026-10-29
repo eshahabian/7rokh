@@ -124,10 +124,10 @@ if (!defined('CASTING_SEP_CALLBACK_URL')) {
 
 /**
  * SMTP — برای ارسال ایمیل (تماس با ما، بازیابی رمز، …)
- * رمز را در config.local.php بگذارید (نمونه: config.local.php.example)
+ * روی همان سرور سی‌پنل معمولاً Host باید localhost باشد؛ رمز را در config.local.php بگذارید.
  */
 if (!defined('CASTING_SMTP_HOST')) {
-    define('CASTING_SMTP_HOST', 'mail.7rokh.com');
+    define('CASTING_SMTP_HOST', 'localhost');
 }
 if (!defined('CASTING_SMTP_PORT')) {
     define('CASTING_SMTP_PORT', 465);

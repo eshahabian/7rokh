@@ -401,11 +401,9 @@ function casting_request_password_reset(string $login, string $channel = 'email'
     $mail = casting_send_mail($user->user_email, $subject, $body);
     if (!$mail['ok']) {
         $error = $mail['error'];
-        if (stripos($error, 'authenticate') !== false || stripos($error, 'احراز') !== false) {
-            $error = 'رمز SMTP اکانت noreply@7rokh.com اشتباه است. در cPanel رمز ایمیل را چک کنید و همان را در config.local.php بگذارید.';
-        } elseif (!casting_mail_is_smtp_ready()) {
+        if (!casting_mail_is_smtp_ready()) {
             $hint = casting_mail_setup_hint();
-            if ($hint !== '') {
+            if ($hint !== '' && stripos($error, trim($hint)) === false) {
                 $error .= ' —' . $hint;
             }
         }

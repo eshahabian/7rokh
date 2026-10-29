@@ -133,8 +133,12 @@ function casting_premium_activate_for_user(int $user_id, int $days, string $plan
     $now = (string) current_time('mysql');
     $now_ts = strtotime($now);
     $base_ts = ($current !== '' && strtotime($current) > $now_ts) ? strtotime($current) : $now_ts;
-    $until = wp_date('Y-m-d H:i:s', $base_ts + ($days * DAY_IN_SECONDS));
+    // Store a Gregorian database date without display filters or a second timezone offset.
+    $until = date('Y-m-d H:i:s', $base_ts + ($days * DAY_IN_SECONDS));
     update_user_meta($user_id, 'casting_premium_until', $until);
+    if ((string) get_user_meta($user_id, 'casting_premium_until', true) !== $until) {
+        return ['ok' => false, 'error' => 'ذخیره اشتراک ویژه انجام نشد. دوباره تلاش کنید.'];
+    }
     if ($plan_key !== '') {
         update_user_meta($user_id, 'casting_premium_last_plan', sanitize_key($plan_key));
     }
@@ -371,8 +375,12 @@ function casting_approve_premium_receipt(int $receipt_id, int $admin_id = 0): ar
     $now = (string) current_time('mysql');
     $now_ts = strtotime($now);
     $base_ts = ($current !== '' && strtotime($current) > $now_ts) ? strtotime($current) : $now_ts;
-    $until = wp_date('Y-m-d H:i:s', $base_ts + ($days * DAY_IN_SECONDS));
+    // Store a Gregorian database date without display filters or a second timezone offset.
+    $until = date('Y-m-d H:i:s', $base_ts + ($days * DAY_IN_SECONDS));
     update_user_meta($user_id, 'casting_premium_until', $until);
+    if ((string) get_user_meta($user_id, 'casting_premium_until', true) !== $until) {
+        return ['ok' => false, 'error' => 'ذخیره اشتراک ویژه انجام نشد. دوباره تلاش کنید.'];
+    }
 
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery
     $wpdb->update(
@@ -427,8 +435,12 @@ function casting_admin_grant_premium(int $target_id, int $admin_id, string $plan
     if ($base_ts === false || $now_ts === false) {
         return ['ok' => false, 'error' => 'محاسبه تاریخ اشتراک ممکن نشد.'];
     }
-    $until = wp_date('Y-m-d H:i:s', $base_ts + ($days * DAY_IN_SECONDS));
+    // Store a Gregorian database date without display filters or a second timezone offset.
+    $until = date('Y-m-d H:i:s', $base_ts + ($days * DAY_IN_SECONDS));
     update_user_meta($target_id, 'casting_premium_until', $until);
+    if ((string) get_user_meta($target_id, 'casting_premium_until', true) !== $until) {
+        return ['ok' => false, 'error' => 'ذخیره اشتراک ویژه انجام نشد. دوباره تلاش کنید.'];
+    }
     update_user_meta($target_id, 'casting_premium_last_plan', sanitize_key($plan_key));
     update_user_meta($target_id, 'casting_premium_last_ref', 'admin:' . $admin_id);
 

@@ -32,4 +32,6 @@ Options -Indexes
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteRule ^(includes|mu-plugin)/ - [F,L]
+  # sitemap.xml → sitemap.php (برای ثبت در Google Search Console)
+  RewriteRule ^sitemap\.xml$ sitemap.php [L]
 </IfModule>

@@ -294,7 +294,7 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
         }
         if ($item['key'] === 'search' && !$can_member_search) {
             ?>
-          <span class="panel-nav-link is-disabled" aria-disabled="true" title="برای دسترسی به جستجو، کارگردان باشید یا اشتراک ویژه فعال کنید">
+          <span class="panel-nav-link is-disabled" aria-disabled="true" title="جستجوی کاربران فقط برای اعضای پورتال فعال است">
             <span class="panel-nav-label"><?= casting_brandify($item['label']) ?></span>
           </span>
             <?php

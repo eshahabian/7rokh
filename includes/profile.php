@@ -2043,7 +2043,7 @@ function casting_render_portrait_upload_fields(array $portraits = [], bool $requ
           <input id="<?= casting_e($field) ?>" name="<?= casting_e($field) ?>" type="file" accept="image/jpeg,image/png,image/webp,image/gif"<?= $slot_req ?> data-file-preview-input data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
           <p class="field-hint portrait-upload-hint">
             <span class="portrait-upload-hint-desc"><?= casting_e($hints[$slot] ?? '') ?></span>
-            <span class="portrait-upload-hint-formats">JPG / PNG / WebP / GIF — سایت خودش اندازه و نسبت را تنظیم می‌کند</span>
+            <span class="portrait-upload-hint-formats">JPG / PNG / WebP / GIF</span>
             <span class="portrait-upload-hint-size">حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></span>
           </p>
         </div>
@@ -2085,7 +2085,7 @@ function casting_render_single_profile_photo_field(array $portraits = [], bool $
         <input id="<?= casting_e($input_id) ?>" name="photo_medium" type="file" accept="image/jpeg,image/png,image/webp,image/gif"<?= $req ?> data-profile-photo-single data-file-preview-input data-upload-kind="image" data-max-bytes="<?= (int) casting_upload_max_bytes('image') ?>">
         <p class="field-hint portrait-upload-hint">
           <span class="portrait-upload-hint-desc">یک عکس واضح از خودتان</span>
-          <span class="portrait-upload-hint-formats">JPG / PNG / WebP / GIF — سایت خودش اندازه را تنظیم می‌کند</span>
+          <span class="portrait-upload-hint-formats">JPG / PNG / WebP / GIF</span>
           <span class="portrait-upload-hint-size">حداکثر <?= casting_e(casting_upload_max_label_fa('image')) ?></span>
         </p>
       </div>

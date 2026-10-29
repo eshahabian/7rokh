@@ -47,12 +47,12 @@ function casting_render_panel_home_quick_filters(bool $can_search): void
         <?php if ($can_search) : ?>
           <a class="panel-home-filter-chip" role="listitem" href="<?= casting_e($chip['href']) ?>"><?= casting_e($chip['label']) ?></a>
         <?php else : ?>
-          <span class="panel-home-filter-chip is-disabled" role="listitem" title="جستجو برای کارگردان یا عضو ویژه فعال است"><?= casting_e($chip['label']) ?></span>
+          <span class="panel-home-filter-chip is-disabled" role="listitem" title="جستجو فقط برای اعضای پورتال فعال است"><?= casting_e($chip['label']) ?></span>
         <?php endif; ?>
       <?php endforeach; ?>
     </div>
     <?php if (!$can_search) : ?>
-      <p class="panel-home-filters-hint meta">برای استفاده از جستجو، حساب ویژه فعال کنید یا با نقش کارگردان وارد شوید.</p>
+      <p class="panel-home-filters-hint meta">جستجوی کاربران پس از تکمیل عضویت در پورتال فعال می‌شود.</p>
     <?php endif; ?>
   </nav>
     <?php

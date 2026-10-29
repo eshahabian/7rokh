@@ -24,14 +24,16 @@ $batch_result = null;
 $last_test_variant = '';
 $last_test_code = 0;
 $debug = function_exists('casting_sms_last_debug') ? casting_sms_last_debug() : null;
-$test_mobile = casting_profile_completion_sms_user_mobile($user_id);
-if ($test_mobile === '' && function_exists('casting_normalize_mobile')) {
+$profile_mobile = casting_profile_completion_sms_user_mobile($user_id);
+if ($profile_mobile === '' && function_exists('casting_normalize_mobile')) {
     try {
-        $test_mobile = casting_normalize_mobile((string) get_user_meta($user_id, 'casting_mobile', true));
+        $profile_mobile = casting_normalize_mobile((string) get_user_meta($user_id, 'casting_mobile', true));
     } catch (Throwable $e) {
-        $test_mobile = '';
+        $profile_mobile = '';
     }
 }
+$test_mobile = $profile_mobile;
+$test_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -40,11 +42,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $action = sanitize_key((string) ($_POST['action'] ?? ''));
             if ($action === 'test_self' || $action === 'test_self_no_link') {
+                $test_message = trim((string) ($_POST['message'] ?? ''));
+                $raw_mobile = trim((string) ($_POST['mobile'] ?? ''));
+                if (function_exists('casting_normalize_mobile')) {
+                    try {
+                        $test_mobile = casting_normalize_mobile($raw_mobile !== '' ? $raw_mobile : $profile_mobile);
+                    } catch (Throwable $e) {
+                        $test_mobile = preg_replace('/\D+/', '', $raw_mobile !== '' ? $raw_mobile : $profile_mobile) ?? '';
+                    }
+                } else {
+                    $test_mobile = preg_replace('/\D+/', '', $raw_mobile !== '' ? $raw_mobile : $profile_mobile) ?? '';
+                }
+
                 if ($test_mobile === '' || !preg_match('/^09\d{9}$/', $test_mobile)) {
-                    $error = 'موبایل معتبر در پروفایل شما نیست.';
+                    $error = 'شماره موبایل معتبر وارد کنید (مثل 09123456789).';
+                } elseif ($test_message === '') {
+                    $error = 'متن پیامک را وارد کنید.';
+                } elseif (function_exists('casting_strlen') ? casting_strlen($test_message) > 500 : mb_strlen($test_message, 'UTF-8') > 500) {
+                    $error = 'متن پیامک حداکثر ۵۰۰ کاراکتر باشد.';
                 } else {
                     $with_link = $action !== 'test_self_no_link';
-                    $result = casting_profile_completion_sms_send_test($test_mobile, $with_link);
+                    $result = casting_profile_completion_sms_send_test($test_mobile, $with_link, $test_message);
                     $debug = casting_sms_last_debug();
                     $last_test_variant = (string) ($result['variant'] ?? '');
                     $last_test_code = (int) ($result['code'] ?? 0);
@@ -99,9 +117,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$message_preview = casting_profile_completion_sms_message_body(
-    !(defined('CASTING_PROFILE_SMS_REMINDER_INCLUDE_LINK') && !CASTING_PROFILE_SMS_REMINDER_INCLUDE_LINK)
-);
+$message_preview = casting_profile_completion_sms_message_body(false);
+if ($test_message === '') {
+    $test_message = $message_preview;
+}
+if ($test_mobile === '') {
+    $test_mobile = $profile_mobile;
+}
 $threshold = casting_profile_completion_sms_threshold_percent();
 $always_logins = implode(', ', casting_profile_completion_sms_always_send_logins());
 $cooldown_days = casting_profile_completion_sms_cooldown_days();
@@ -139,18 +161,21 @@ casting_render_flash();
     <?php endif; ?></dd>
   </dl>
 
-  <div class="dash-card" style="margin:1rem 0;padding:1rem;">
-    <h2>متن پیامک</h2>
-    <pre dir="rtl" style="white-space:pre-wrap;margin:0;"><?= casting_e($message_preview) ?></pre>
-    <p class="meta">اگر پیامک با لینک نمی‌رسد، احتمالاً پنل WebOne آن را فیلتر کرده (کد ۷). «تست بدون لینک» را بزنید یا الگوی تأییدشده در پنل بسازید.</p>
-  </div>
-
   <form class="form" method="post" action="admin-profile-sms.php" style="margin-bottom:1.5rem;">
     <?php wp_nonce_field('casting_profile_sms_admin'); ?>
-    <p class="meta">موبایل مقصد از پروفایل شما: <strong dir="ltr"><?= $test_mobile !== '' ? casting_e($test_mobile) : '— ثبت نشده' ?></strong></p>
+    <div class="field">
+      <label for="message">متن پیامک</label>
+      <textarea id="message" name="message" rows="4" maxlength="500" required placeholder="متن پیامک..."><?= casting_e($test_message) ?></textarea>
+      <p class="field-hint">حداکثر ۵۰۰ کاراکتر. اگر لینک فیلتر شد (کد ۷)، «تست بدون لینک» را بزنید.</p>
+    </div>
+    <div class="field">
+      <label for="mobile">موبایل مقصد</label>
+      <input id="mobile" name="mobile" type="tel" dir="ltr" inputmode="numeric" pattern="09[0-9]{9}" maxlength="11" value="<?= casting_e($test_mobile) ?>" placeholder="09123456789" required>
+      <p class="field-hint">شماره دلخواه را وارد کنید<?= $profile_mobile !== '' ? ' — پیش‌فرض پروفایل شما: ' . casting_e($profile_mobile) : '' ?>.</p>
+    </div>
     <div class="cta-row">
-      <button class="btn btn-primary" type="submit" name="action" value="test_self" <?= $test_mobile === '' ? 'disabled' : '' ?>>تست با لینک</button>
-      <button class="btn btn-ghost" type="submit" name="action" value="test_self_no_link" <?= $test_mobile === '' ? 'disabled' : '' ?>>تست بدون لینک</button>
+      <button class="btn btn-primary" type="submit" name="action" value="test_self">تست با لینک</button>
+      <button class="btn btn-ghost" type="submit" name="action" value="test_self_no_link">تست بدون لینک</button>
     </div>
   </form>
 

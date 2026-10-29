@@ -10,6 +10,11 @@
  * کد ۲۳ = داخل متغیر لینک یا IP است
  */
 define('CASTING_SMTP_PASS', 'رمز-ایمیل-noreply-اینجا');
+// روی همان سرور سی‌پنل:
+// define('CASTING_SMTP_HOST', 'localhost');
+// define('CASTING_SMTP_USER', 'noreply@7rokh.com');
+// define('CASTING_SMTP_PORT', 465);
+// define('CASTING_SMTP_SECURE', 'ssl');
 
 define('CASTING_SMS_API_KEY', 'کلید-api-اینجا');
 define('CASTING_SMS_FROM', '9998624065');

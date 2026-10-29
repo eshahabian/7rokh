@@ -269,15 +269,27 @@ function casting_render_member_message_button(int $viewer_id, int $target_id, st
     $allow = casting_can_user_open_dm($viewer_id, $target_id);
     $label = 'پیام';
     $aria = $display_name !== '' ? ('پیام به ' . $display_name) : 'پیام';
-    if (!empty($allow['ok'])) {
+    if (!function_exists('casting_can_user_send_dm')) {
+        $chat_lib = __DIR__ . '/chat.php';
+        if (is_file($chat_lib)) {
+            require_once $chat_lib;
+        }
+    }
+    $send = $allow;
+    if (!empty($allow['ok']) && function_exists('casting_can_user_send_dm')) {
+        $send = casting_can_user_send_dm($viewer_id, $target_id);
+    }
+    if (!empty($send['ok'])) {
         ?>
 <a class="btn btn-ghost btn-sm member-card-msg" href="chat.php?with=<?= (int) $target_id ?>" title="<?= casting_e($aria) ?>" aria-label="<?= casting_e($aria) ?>"><?= casting_e($label) ?></a>
         <?php
         return;
     }
-    $reason = trim((string) ($allow['error'] ?? ''));
+    $reason = trim((string) ($send['error'] ?? $allow['error'] ?? ''));
     if ($reason === '') {
-        $reason = 'طبق جدول دسترسی پیام‌رسان، امکان ارسال پیام نیست.';
+        $reason = !empty($allow['ok'])
+            ? casting_dm_premium_required_notice_message()
+            : 'طبق جدول دسترسی پیام‌رسان، امکان ارسال پیام نیست.';
     }
     ?>
 <button type="button" class="btn btn-ghost btn-sm member-card-msg is-disabled" disabled title="<?= casting_e($reason) ?>" aria-label="<?= casting_e($reason) ?>"><?= casting_e($label) ?></button>

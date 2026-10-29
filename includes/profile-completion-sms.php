@@ -107,8 +107,7 @@ function casting_profile_completion_sms_message(): string
 
 function casting_profile_completion_sms_message_body(bool $with_link = true): string
 {
-    $body = "پروفایل شما در «۷رخ» هنوز کامل نشده!\n"
-        . "با تکمیل پروفایل، شانس دیده‌شدن در پروژه‌های سینما و تئاتر را بیشتر کنید.";
+    $body = "پروفایل شما در «۷رخ» هنوز کامل نیست. با تکمیل آن، شانس دیده‌شدن در پروژه‌ها بیشتر می‌شود.";
     if ($with_link) {
         $body .= "\n" . casting_profile_completion_sms_link();
     }
@@ -589,7 +588,7 @@ function casting_profile_completion_sms_run_all(bool $dry_run = false, int $per_
 /**
  * @return array{ok:bool,error:string,ref_id:string,code:int,variant:string}
  */
-function casting_profile_completion_sms_send_test(string $mobile, bool $with_link = true): array
+function casting_profile_completion_sms_send_test(string $mobile, bool $with_link = true, string $custom_message = ''): array
 {
     if (!casting_profile_completion_sms_is_enabled()) {
         return ['ok' => false, 'error' => 'پیامک در پورتال فعال یا پیکربندی نشده است.', 'ref_id' => '', 'code' => -1, 'variant' => 'disabled'];
@@ -598,12 +597,25 @@ function casting_profile_completion_sms_send_test(string $mobile, bool $with_lin
         require_once __DIR__ . '/sms.php';
     }
 
+    $custom_message = trim($custom_message);
+    // الگوی ثابت فقط وقتی متن سفارشی نداریم؛ وگرنه همان متن ادیت‌شده ارسال می‌شود
     $pattern_id = casting_profile_completion_sms_pattern_id();
-    if ($pattern_id !== '') {
+    if ($pattern_id !== '' && $custom_message === '') {
         return casting_profile_completion_sms_deliver($mobile);
     }
 
-    $message = casting_profile_completion_sms_message_body($with_link);
+    if ($custom_message !== '') {
+        $message = $custom_message;
+        if ($with_link) {
+            $link = casting_profile_completion_sms_link();
+            if ($link !== '' && strpos($message, $link) === false) {
+                $message .= "\n" . $link;
+            }
+        }
+    } else {
+        $message = casting_profile_completion_sms_message_body($with_link);
+    }
+
     $result = casting_sms_send_text($mobile, $message);
     $code = (int) ($result['code'] ?? 0);
     if (!empty($result['ok'])) {

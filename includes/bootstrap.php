@@ -452,19 +452,13 @@ function casting_user_can_manage_sms(int $user_id): bool
 
 function casting_user_can_member_search(int $user_id): bool
 {
+    // ادمین‌های پورتال همیشه مستثنی‌اند
     if (casting_user_is_portal_owner($user_id) || casting_user_is_listed_portal_admin($user_id)) {
         return true;
     }
 
-    if (casting_get_user_role($user_id) === 'director') {
-        return true;
-    }
-
-    if (!function_exists('casting_user_is_premium')) {
-        require_once __DIR__ . '/premium.php';
-    }
-
-    return casting_user_is_premium($user_id);
+    // همهٔ اعضای پورتال می‌توانند نام‌ها را جستجو کنند (پیام‌رسانی جداگانه محدود است)
+    return casting_get_user_role($user_id) !== '';
 }
 
 function casting_get_user_role(int $user_id): string

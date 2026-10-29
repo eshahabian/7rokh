@@ -16,10 +16,10 @@ if (!casting_user_can_member_search($user_id)) {
     ) {
         http_response_code(403);
         header('Content-Type: application/json; charset=utf-8');
-        echo wp_json_encode(['ok' => false, 'error' => 'جستجو برای کارگردان‌ها یا اعضای دارای اشتراک ویژه فعال است.'], JSON_UNESCAPED_UNICODE);
+        echo wp_json_encode(['ok' => false, 'error' => 'جستجوی کاربران فقط برای اعضای پورتال فعال است.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    casting_set_flash('error', 'جستجوی کاربران برای کارگردان‌ها یا اعضای دارای اشتراک ویژه فعال است.');
+    casting_set_flash('error', 'جستجوی کاربران فقط برای اعضای پورتال فعال است.');
     casting_redirect('home.php');
 }
 

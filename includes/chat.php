@@ -202,7 +202,13 @@ function casting_can_user_send_dm(int $sender_id, int $recipient_id): array
     if (!function_exists('casting_user_is_super_admin')) {
         require_once __DIR__ . '/admin-access.php';
     }
+    // ادمین‌های پورتال همیشه مستثنی‌اند
     if (casting_user_is_portal_owner($sender_id) || casting_user_is_super_admin($sender_id)) {
+        return ['ok' => true, 'error' => ''];
+    }
+    // همه می‌توانند بدون اشتراک به مدیران رسمی (eshahabian / ardavan) پیام بدهند
+    if (function_exists('casting_user_is_public_support_contact')
+        && casting_user_is_public_support_contact($recipient_id)) {
         return ['ok' => true, 'error' => ''];
     }
     if (!casting_user_requires_premium_for_dm($sender_id)) {
@@ -229,9 +235,17 @@ function casting_user_needs_premium_to_read_inbox(int $user_id): bool
 
 function casting_dm_thread_locked_for_user(int $user_id, int $peer_id): bool
 {
-    unset($peer_id);
+    if (!casting_user_needs_premium_to_read_inbox($user_id)) {
+        return false;
+    }
+    // گفتگو با مدیران رسمی بدون اشتراک هم باز است
+    if ($peer_id > 0
+        && function_exists('casting_user_is_public_support_contact')
+        && casting_user_is_public_support_contact($peer_id)) {
+        return false;
+    }
 
-    return casting_user_needs_premium_to_read_inbox($user_id);
+    return true;
 }
 
 function casting_employer_free_dm_limit(): int
