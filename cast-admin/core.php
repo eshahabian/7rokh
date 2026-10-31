@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace CastingCms;
 use RuntimeException, InvalidArgumentException, JsonException, Throwable;
+require_once __DIR__.'/compat.php';
 // Runtime data is deliberately outside the public document root and Git checkout.
 const SITE_ROOT = __DIR__ . '/..';
 function config(): array { static $c; return $c ??= require __DIR__.'/config.php'; }
@@ -9,9 +10,10 @@ function data_dir(): string {
     static $dir; if ($dir) return $dir;
     $root=realpath(SITE_ROOT); $public=realpath(($_SERVER['DOCUMENT_ROOT'] ?? '') ?: SITE_ROOT) ?: $root;
     $candidate=getenv('CASTING_CMS_DATA_DIR') ?: dirname($public).'/.fara-cms-'.config()['installation'];
-    if (!is_dir($candidate) && !@mkdir($candidate,0700,true)) throw new RuntimeException('Private storage is not writable');
-    $resolved=realpath($candidate);
+    if (!@is_dir($candidate) && !@mkdir($candidate,0700,true)) throw new RuntimeException('Private storage is not writable');
+    $resolved=@realpath($candidate);
     if (!$resolved || $resolved===$root || str_starts_with(strtolower($resolved).DIRECTORY_SEPARATOR,strtolower($root).DIRECTORY_SEPARATOR) || $resolved===$public || str_starts_with(strtolower($resolved).DIRECTORY_SEPARATOR,strtolower($public).DIRECTORY_SEPARATOR)) throw new RuntimeException('Storage must be outside document root');
+    if(!@is_writable($resolved))throw new RuntimeException('Private storage is not writable');
     return $dir=$resolved;
 }
 function read_json(string $name,array $default=[]): array { $f=data_dir().'/'.$name.'.json';return is_file($f)?json_decode((string)@file_get_contents($f),true,512,JSON_THROW_ON_ERROR):$default; }
@@ -20,7 +22,7 @@ function write_json(string $name,array $value): void {
     $bytes=json_encode($value,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);if(@file_put_contents($tmp,$bytes)!==strlen($bytes)){@unlink($tmp);throw new RuntimeException('Write failed');}
     @chmod($tmp,0600);if(!@rename($tmp,$f)){@unlink($tmp);throw new RuntimeException('Atomic write failed');}
 }
-function locked(callable $fn,bool $checkSession=true): mixed { $lock=@fopen(data_dir().'/write.lock','c');if(!$lock||!flock($lock,LOCK_EX))throw new RuntimeException('Lock failed');try{if($checkSession&&isset($_SESSION['uid'])&&!current_user())throw new RuntimeException('Session revoked');return $fn();}finally{flock($lock,LOCK_UN);fclose($lock);} }
+function locked(callable $fn,bool $checkSession=true) { $lock=@fopen(data_dir().'/write.lock','c');if(!$lock||!flock($lock,LOCK_EX))throw new RuntimeException('Lock failed');try{if($checkSession&&isset($_SESSION['uid'])&&!current_user())throw new RuntimeException('Session revoked');return $fn();}finally{flock($lock,LOCK_UN);fclose($lock);} }
 function initial_state(): array {return ['edits'=>[],'menu'=>null,'menus'=>[],'images'=>[],'version'=>0];}
 
 function state(): array {return read_json('state',initial_state());}
@@ -104,7 +106,7 @@ function session_boot(): void {
 }
 function current_user(): ?array {$id=$_SESSION['uid']??null;if(!$id)return null;$users=read_json('users');$u=$users[$id]??null;return $u&&$u['active']&&($u['version']??0)===($_SESSION['uv']??-1)?$u+['id'=>$id]:null;}
 function public_user(array $u): array {return array_intersect_key($u,array_flip(['id','username','role','active','mustChange']))+['permissions'=>design_permissions($u)];}
-function api_json(int $status,array $data): never {http_response_code($status);header('Content-Type: application/json; charset=utf-8');try{$data['stateVersion']=state()['version'];}catch(Throwable $e){/* Error responses must also work when private storage is unavailable. */}echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE);exit;}
+function api_json(int $status,array $data): void {http_response_code($status);header('Content-Type: application/json; charset=utf-8');try{$data['stateVersion']=state()['version'];}catch(Throwable $e){/* Error responses must also work when private storage is unavailable. */}echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE);exit;}
 
 function audit(string $action): void { /* Account/content commits must not fail after an auxiliary log write. */ }
 

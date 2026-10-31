@@ -41,7 +41,7 @@ function design_permission_options(): array {
         'menus'=>array_values(array_map(fn($g)=>['id'=>$g['id'],'title'=>$g['title']],read_json('menus'))),
         'images'=>array_map(fn($i)=>['id'=>$i['id'],'title'=>$i['label']],site_config()['images'])];
 }
-function validate_design_permissions(mixed $input): array {
+function validate_design_permissions($input): array {
     if(!is_array($input)||array_diff(array_keys($input),['pages','shared','fields','menus','images']))throw new InvalidArgumentException('Invalid permissions');
     $options=design_permission_options();$clean=[];
     foreach($options as $type=>$choices){$list=$input[$type]??[];if(!is_array($list)||!array_is_list($list)||count($list)>1000)throw new InvalidArgumentException('Invalid permissions');$known=array_column($choices,'id');foreach($list as $id)if(!is_string($id)||!in_array($id,$known,true))throw new InvalidArgumentException('Unknown design section');$clean[$type]=array_values(array_unique($list));}
