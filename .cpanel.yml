@@ -1,10 +1,12 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/rokhcom/public_html/casting-portal/
-    - export MUPATH=/home/rokhcom/public_html/wp-content/mu-plugins/
+    - export DEPLOYPATH="$HOME/public_html/casting-portal/"
+    - export MUPATH="$HOME/public_html/wp-content/mu-plugins/"
+    - /bin/mkdir -p "$DEPLOYPATH"
     - /bin/rm -f $MUPATH/casting-wp-admin-guard-loader.php
     - /bin/cp -R * $DEPLOYPATH
+    - /bin/cp .htaccess "$DEPLOYPATH.htaccess"
     - test -f $DEPLOYPATH/config.local.php || cp $DEPLOYPATH/config.local.php.example $DEPLOYPATH/config.local.php
     - /bin/mkdir -p $MUPATH
     - /bin/cp $DEPLOYPATH/mu-plugin/casting-wp-admin-guard.php $MUPATH/casting-wp-admin-guard.php

@@ -1,0 +1,8 @@
+(() => {
+  const style=document.createElement('style');style.textContent='[data-editor-fields]{cursor:text!important}.fara-editor-hover{outline:2px dashed #b59447!important;outline-offset:4px!important}.fara-editor-selected{outline:2px solid #b59447!important;outline-offset:4px!important;background-color:#b5944710!important}';document.head.append(style);
+  let hovered,selected;
+  document.addEventListener('mouseover',event=>{const field=event.target.closest('[data-editor-fields]');if(hovered&&hovered!==field)hovered.classList.remove('fara-editor-hover');hovered=field;if(field)field.classList.add('fara-editor-hover')});
+  document.addEventListener('mouseout',event=>{if(!event.relatedTarget&&hovered){hovered.classList.remove('fara-editor-hover');hovered=null}});
+  document.addEventListener('click',event=>{const field=event.target.closest('[data-editor-fields]');if(field){event.preventDefault();event.stopImmediatePropagation();const ids=JSON.parse(field.dataset.editorFields);if(selected)selected.classList.remove('fara-editor-selected');selected=field;field.classList.add('fara-editor-selected');parent.postMessage({type:'fara-select-field',id:ids[0]},location.origin)}else if(event.target.closest('a'))event.preventDefault()},true);
+  window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='fara-focus-field')return;const field=[...document.querySelectorAll('[data-editor-fields]')].find(e=>JSON.parse(e.dataset.editorFields).includes(event.data.id));if(!field)return;if(selected)selected.classList.remove('fara-editor-selected');selected=field;field.classList.add('fara-editor-selected');field.scrollIntoView({behavior:'smooth',block:'center'})});
+})();

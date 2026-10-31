@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+// Content overlay has its own identity/storage and never changes WordPress users.
+require_once __DIR__ . '/../cast-admin/core.php';
+\CastingCms\start_runtime();
+
 require_once __DIR__ . '/../config.php';
 
 $casting_is_portal_request = static function (): bool {

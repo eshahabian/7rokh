@@ -31,7 +31,7 @@ Options -Indexes
 # جلوگیری از اجرای مستقیم فایل‌های includes و mu-plugin از وب
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^(includes|mu-plugin)/ - [F,L]
+  RewriteRule ^(includes|mu-plugin|tools|\.cms-tests)/ - [F,L]
   # sitemap.xml → sitemap.php (برای ثبت در Google Search Console)
   RewriteRule ^sitemap\.xml$ sitemap.php [L]
 </IfModule>
