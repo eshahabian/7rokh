@@ -10,11 +10,11 @@ foreach($files as $file){if(preg_match('~config(?:\.local)?\.php$~',$file))conti
     }
 }
 $images=[];$assetFiles=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root.'/assets',FilesystemIterator::SKIP_DOTS));$css='';foreach($assetFiles as $f)if($f->isFile()&&strtolower($f->getExtension())==='css')$css.=file_get_contents($f->getPathname());
-$assetFiles->rewind();foreach($assetFiles as $f){if(!$f->isFile()||!preg_match('~^(png|jpe?g|webp)$~i',$f->getExtension()))continue;$rel=str_replace('\\','/',substr($f->getPathname(),strlen($root)+1));if(!str_contains($combined,basename($rel))&&!str_contains($css,basename($rel)))continue;$usage=[];foreach($sources as $src=>$hash)if(str_contains(file_get_contents($root.'/'.$src),basename($rel)))$usage[]=$src;
+$assetFiles->rewind();foreach($assetFiles as $f){if(!$f->isFile()||!preg_match('~^(png|jpe?g|webp)$~i',$f->getExtension()))continue;$rel=str_replace('\\','/',substr($f->getPathname(),strlen($root)+1));$usage=[];foreach($sources as $src=>$hash)if(str_contains(file_get_contents($root.'/'.$src),basename($rel)))$usage[]=$src;
     $name=pathinfo($rel,PATHINFO_FILENAME);$label=$name;
     if(preg_match('~^promo-slide-(\d+)$~',$name,$m))$label='بنر معرفی شمارهٔ '.$m[1];elseif(preg_match('~^home-slide-(\d+)$~',$name,$m))$label='تصویر اسلاید خانه شمارهٔ '.$m[1];elseif(stripos($name,'background')!==false)$label='پس‌زمینهٔ سایت';elseif(stripos($name,'logo')!==false)$label='نشان سایت';
     $locations=[];$pageIds=[];foreach($usage as $src){if(str_starts_with($src,'includes/')){$locations[]='قالب مشترک سایت';continue;}foreach($pages as $p)if($p['href']===$src){$locations[]=$p['title'];$pageIds[]=$p['id'];}}
-    $size=@getimagesize($f->getPathname());$images[]=['id'=>$rel,'label'=>$label,'pages'=>array_values(array_unique($pageIds)),'usage'=>array_values(array_unique($locations)),'width'=>$size[0]??null,'height'=>$size[1]??null];
+    $size=@getimagesize($f->getPathname());$images[]=['id'=>$rel,'label'=>$label,'pages'=>array_values(array_unique($pageIds)),'usage'=>array_values(array_unique($locations?:['کتابخانهٔ تصاویر قالب'])),'width'=>$size[0]??null,'height'=>$size[1]??null];
 }
 usort($pages,fn($a,$b)=>($a['id']==='home'?-1:($b['id']==='home'?1:strcmp($a['title'],$b['title']))));
 file_put_contents($root.'/cast-admin/catalog.json',json_encode(['pages'=>$pages,'sources'=>$sources,'texts'=>array_keys($texts),'images'=>$images,'menu'=>['items'=>[]]],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));

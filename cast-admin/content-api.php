@@ -8,6 +8,7 @@ function content_get(string $route): array {
     if($route==='pages')return [200,['pages'=>array_values(array_map(fn($p)=>['id'=>$p['id'],'title'=>$p['title']],array_filter(site_config()['pages'],fn($p)=>design_preview_allowed($user,$p['id'])))),'canUndo'=>isset($s['_undo'])&&design_undo_allowed($s,$user)]];
     if($route==='page'){$id=(string)($_GET['id']??'');$p=page_config($id);if(!design_preview_allowed($user,$id))return [403,['error'=>'ادمین دسترسی این صفحه را برای حساب طراحی شما فعال نکرده است.']];$html=render_page($id,$s);return [200,['id'=>$id,'title'=>$p['title'],'url'=>site_base().'/cast-admin/preview.php?page='.rawurlencode($id),'publicUrl'=>site_base().'/'.$p['href'],'revision'=>revision($html),'fields'=>array_values(array_map(fn($f)=>array_intersect_key($f,array_flip(['id','scope','label','value'])),array_filter(fields_for($html,$id,$s),fn($f)=>design_field_allowed($user,$id,$f['scope'],$f['id'])))),'notice'=>$html===''?'برای خواندن متن‌های طراحی، پیش‌نمایش را باز کنید.':'']];}
     if($route==='menu'){$id=(string)($_GET['group']??array_key_first($groups)??'');if($id!==''&&!isset($groups[$id]))return [403,['error'=>'اجازهٔ ویرایش این منو را ندارید.']];$GLOBALS['cms_menu_id']=$id;$items=$id!==''?menu_items($s):[];return [200,['group'=>$id,'groups'=>array_values(array_map(fn($g)=>['id'=>$g['id'],'title'=>$g['title']],$groups)),'items'=>$items,'revision'=>revision(json_encode($items)),'destinations'=>site_config()['pages']]];}
+    if($route==='design')return design_get((string)($_GET['page']??''),$user);
     if($route==='images')return [200,['images'=>array_values(array_filter(image_catalog(),fn($i)=>design_can($user,'images',$i['id'])))]];
     return [404,['error'=>'مسیر پیدا نشد.']];
 }
@@ -24,6 +25,7 @@ function valid_link(string $href): bool {
 }
 function content_post(string $route,array $data): array {
     $s=state();$user=current_user();if(($data['stateVersion']??null)!==$s['version'])return [409,['error'=>'نسخهٔ سایت تغییر کرده است. پیش از ذخیره یا بازگردانی، صفحه را دوباره بارگذاری کنید.']];
+    if($route==='design')return design_post($data,$user,$s);
     if($route==='undo'){if(!isset($s['_undo']))return [404,['error'=>'نسخه‌ای برای بازگردانی وجود ندارد.']];if(!design_undo_allowed($s,$user))return [403,['error'=>'اجازهٔ بازگرداندن تغییر این بخش را ندارید.']];commit_state($s['_undo'],$s['_lastChange']??[]);return [200,['ok'=>true,'message'=>'آخرین ذخیره بازگردانده شد.']];}
     if($route==='save'){
         $id=(string)($data['page']??'');page_config($id);$html=render_page($id,$s);if(($data['revision']??'')!==revision($html)||$html==='')return [409,['error'=>'صفحه تغییر کرده یا پیش‌نمایش هنوز خوانده نشده است.']];

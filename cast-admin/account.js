@@ -14,7 +14,7 @@
  function permissionEditor(u,options){
   const box=el('details');box.className='design-permissions';box.append(el('summary','تعیین بخش‌های قابل ویرایش'));
   box.append(el('p','فقط بخش‌های انتخاب‌شده قابل ویرایش‌اند. هدر و فوتر مشترک روی همهٔ صفحات اثر دارند. تغییر دسترسی، نشست قبلی این حساب را باطل می‌کند.'));
-  const values={},titles={pages:'تمام محتوای یک صفحه',fields:'متن‌های مشخص داخل صفحه',shared:'بخش‌های مشترک',menus:'منوهای مشخص',images:'تصویرهای مشخص'};
+  const values={},titles={pages:'تمام محتوای یک صفحه',fields:'متن‌های مشخص داخل صفحه',shared:'بخش‌های مشترک',menus:'منوهای مشخص',images:'تصویرهای مشخص',design:'طراحی و ظاهر بخش‌ها'};
   for(const [type,title] of Object.entries(titles)){
    const fieldset=el('fieldset');fieldset.append(el('legend',title));values[type]=[];
    const choices=options[type]||[];if(!choices.length)fieldset.append(el('small',type==='menus'?'برای شناسایی منوها، ابتدا پیش‌نمایش صفحهٔ موردنظر را باز کنید.':type==='fields'?'ابتدا پیش‌نمایش صفحه را باز کنید تا متن‌های قابل انتخاب شناسایی شوند.':'موردی برای انتخاب وجود ندارد.'));

@@ -112,3 +112,4 @@ function audit(string $action): void { /* Account/content commits must not fail 
 
 require_once __DIR__.'/permissions.php';
 require_once __DIR__.'/runtime.php';
+require_once __DIR__.'/design.php';

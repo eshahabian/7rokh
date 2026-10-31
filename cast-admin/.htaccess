@@ -1,4 +1,4 @@
 Options -Indexes
-<FilesMatch "^(core|compat|runtime|config|content-api|permissions|setup-error)\.php$|\.(json|html)$">
+<FilesMatch "^(core|compat|design|runtime|config|content-api|permissions|setup-error)\.php$|\.(json|html)$">
   Require all denied
 </FilesMatch>

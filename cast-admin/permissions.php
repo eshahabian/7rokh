@@ -5,7 +5,7 @@ use InvalidArgumentException;
 
 function design_permissions(?array $user): array {
     $p=$user['permissions']??[];
-    return ['pages'=>$p['pages']??[], 'shared'=>$p['shared']??[], 'fields'=>$p['fields']??[], 'menus'=>$p['menus']??[], 'images'=>$p['images']??[]];
+    return ['pages'=>$p['pages']??[], 'shared'=>$p['shared']??[], 'fields'=>$p['fields']??[], 'menus'=>$p['menus']??[], 'images'=>$p['images']??[], 'design'=>$p['design']??[]];
 }
 function design_can(?array $user,string $type,string $id): bool {
     if(!$user||!$user['active']||$user['mustChange'])return false;
@@ -18,7 +18,7 @@ function design_preview_allowed(?array $user,string $page): bool {
     if(!$user||!$user['active']||$user['mustChange'])return false;
     $p=design_permissions($user);
     foreach($p['fields'] as $field)if(str_starts_with($field,$page.'/')||str_starts_with($field,'shared:'))return true;
-    return $user['role']==='admin'||in_array($page,$p['pages'],true)||(bool)($p['shared']||$p['menus']||$p['images']);
+    return $user['role']==='admin'||design_target_allowed($user,$page,'page')||design_target_allowed($user,$page,'header')||design_target_allowed($user,$page,'footer')||in_array($page,$p['pages'],true)||(bool)($p['shared']||$p['menus']||$p['images']);
 }
 function design_undo_allowed(array $s,?array $user): bool {
     if(!$user||$user['mustChange']||!$user['active'])return false;
@@ -30,6 +30,11 @@ function design_undo_allowed(array $s,?array $user): bool {
         foreach($change['scopes'] as $scope)if(!design_field_allowed($user,$change['page'],$scope))return false;
         return true;
     }
+    if(($change['type']??'')==='design'){
+        $targets=$change['targets']??[$change['target']??''];
+        foreach($targets as $target)if(!design_can($user,'design','site')&&!design_can($user,'design',$target))return false;
+        return (bool)$targets;
+    }
     if(in_array($change['type']??'',['menus','images'],true))return design_can($user,$change['type'],$change['id']);
     return false;
 }
@@ -39,10 +44,11 @@ function design_permission_options(): array {
         'fields'=>array_values($fields),
         'shared'=>[['id'=>'header','title'=>'هدر مشترک در همهٔ صفحات'],['id'=>'footer','title'=>'فوتر مشترک در همهٔ صفحات']],
         'menus'=>array_values(array_map(fn($g)=>['id'=>$g['id'],'title'=>$g['title']],read_json('menus'))),
+        'design'=>array_merge([['id'=>'site','title'=>'طراحی تمام سایت'],['id'=>'shared:header','title'=>'ظاهر هدر مشترک'],['id'=>'shared:footer','title'=>'ظاهر فوتر مشترک']],array_map(fn($p)=>['id'=>'page:'.$p['id'],'title'=>'ظاهر '.$p['title']],site_config()['pages'])),
         'images'=>array_map(fn($i)=>['id'=>$i['id'],'title'=>$i['label']],site_config()['images'])];
 }
 function validate_design_permissions($input): array {
-    if(!is_array($input)||array_diff(array_keys($input),['pages','shared','fields','menus','images']))throw new InvalidArgumentException('Invalid permissions');
+    if(!is_array($input)||array_diff(array_keys($input),['pages','shared','fields','menus','images','design']))throw new InvalidArgumentException('Invalid permissions');
     $options=design_permission_options();$clean=[];
     foreach($options as $type=>$choices){$list=$input[$type]??[];if(!is_array($list)||!array_is_list($list)||count($list)>1000)throw new InvalidArgumentException('Invalid permissions');$known=array_column($choices,'id');foreach($list as $id)if(!is_string($id)||!in_array($id,$known,true))throw new InvalidArgumentException('Unknown design section');$clean[$type]=array_values(array_unique($list));}
     return $clean;

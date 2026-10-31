@@ -41,7 +41,7 @@ function replace_media(string $html,array $s): string {
 function runtime_render(string $html,string $page,bool $preview): string {
     if(stripos($html,'<html')===false||stripos($html,'</body>')===false)return $html;
     $s=state();
-    if(!$preview&&!$s['edits']&&!$s['menus']&&!$s['images'])return $html;
+    if(!$preview&&!$s['edits']&&!$s['menus']&&!$s['images']&&empty($s['design']))return $html;
     if($preview){
         // Snapshots stay private; API fields are restricted to literal template text.
         locked(function()use($html,$page){$name='page-'.hash('sha256',$page);$prior=read_json($name);$fields=text_scan($html,$page)['fields'];$signature=hash('sha256',json_encode(array_map(fn($f)=>[$f['id'],$f['value']],$fields)));
@@ -52,10 +52,10 @@ function runtime_render(string $html,string $page,bool $preview): string {
     $html=apply_edits($html,$page,$s['edits']);$html=apply_menus($html,$s);$html=replace_media($html,$s);
     // CSS is served through a path-preserving proxy only when image replacements exist.
     if($s['images'])$html=preg_replace_callback('~(<link\b[^>]*href=["\x27])([^"\x27]+\.css(?:\?[^"\x27]*)?)(["\x27])~i',function($m){$p=parse_url(html_entity_decode($m[2]),PHP_URL_PATH);$prefix=site_base().'/';if(str_starts_with($p,$prefix))$p=substr($p,strlen($prefix));if(!str_starts_with($p,'assets/')||!is_file(SITE_ROOT.'/'.$p))return $m[0];return $m[1].esc(site_base().'/cast-admin/css.php?asset='.rawurlencode($p)).$m[3];},$html);
-    if(!$preview)return $html;
+    if(!$preview)return design_render($html,$page,$s,false);
     $scan=text_scan($html,$page);$byParent=[];foreach($scan['fields'] as $f)if(!$f['derived']&&design_field_allowed($GLOBALS['cms_preview_user']??null,$page,$f['scope'],$f['id']))$byParent[$f['parentStart']][]=$f['id'];$patches=[];
     foreach($scan['nodes'] as $n)if(isset($n['start'],$byParent[$n['start']]))$patches[]=['start'=>$n['start'],'end'=>$n['end'],'value'=>substr($n['raw'],0,-1).' data-editor-fields="'.esc(json_encode($byParent[$n['start']],JSON_UNESCAPED_UNICODE)).'">'];
-    $html=patch($html,$patches);$html=str_replace('</body>','<script src="'.esc(site_base()).'/cast-admin/preview.js"></script><script src="'.esc(site_base()).'/cast-admin/preview-ready.js"></script></body>',$html);return $html;
+    $html=patch($html,$patches);$html=design_render($html,$page,$s,true);$html=str_replace('</body>','<script src="'.esc(site_base()).'/cast-admin/preview.js"></script><script src="'.esc(site_base()).'/cast-admin/preview-ready.js"></script></body>',$html);return $html;
 }
 
 function start_runtime(): void {
@@ -64,7 +64,7 @@ function start_runtime(): void {
     $preview=false;
     if(isset($_GET['cms-preview'])){
         $originalSavePath=session_save_path();try{session_boot();$u=current_user();}catch(Throwable $e){http_response_code(503);exit('فضای خصوصی پنل در دسترس نیست.');}$valid=design_preview_allowed($u,$page)&&(time()-($_SESSION['previews'][$page]??0)<600);session_write_close();$_SESSION=[];session_id('');session_name('PHPSESSID');session_save_path($originalSavePath);
-        if(!$valid){http_response_code(403);exit('ابتدا وارد پنل شوید و دسترسی طراحی این صفحه را دریافت کنید.');}$GLOBALS['cms_preview_user']=$u;$preview=true;header('Cache-Control: no-store');header('Referrer-Policy: no-referrer');
+        if(!$valid){http_response_code(403);exit('ابتدا وارد پنل شوید و دسترسی طراحی این صفحه را دریافت کنید.');}$GLOBALS['cms_preview_user']=$u;$preview=true;header('X-Casting-Preview-Page: '.$page);header('Cache-Control: no-store');header('Referrer-Policy: no-referrer');
     }
     ob_start(function($html)use($page,$preview){try{return runtime_render($html,$page,$preview);}catch(Throwable $e){error_log('Casting CMS render failed');return $html;}});
 }

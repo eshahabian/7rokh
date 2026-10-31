@@ -1,10 +1,10 @@
-window.faraImages=async function({api,pages,onSave,toast,lock}){
+window.faraImages=async function({api,pages,onSave,toast,lock,focusId=null,pageId=null}){
  const root=document.getElementById('image-items'),filter=document.getElementById('image-page');
  const {images}=await api('/api/images');
- const selected=filter.value;filter.replaceChildren(new Option('تمام صفحات','all'),...pages.map(p=>new Option(p.title,p.id)));filter.value=selected||'all';
+ const selected=focusId?'all':(filter.dataset.initialized?filter.value:(pageId||'all'));filter.dataset.initialized='1';filter.replaceChildren(new Option('تمام صفحات','all'),...pages.map(p=>new Option(p.title,p.id)));filter.value=selected||'all';
  function el(tag,text){const e=document.createElement(tag);if(text)e.textContent=text;return e}
- function render(){root.replaceChildren();for(const item of images.filter(i=>filter.value==='all'||!i.pages.length||i.pages.includes(filter.value))){
-  const card=el('article');card.className='image-card';const current=el('img');current.src=item.url+'&v='+item.revision;current.alt='عکس فعلی '+item.label;
+ function render(){root.replaceChildren();const query=(document.getElementById('image-search').value||'').trim().toLowerCase();const visible=images.filter(i=>(filter.value==='all'||!i.pages.length||i.pages.includes(filter.value))&&(!query||(i.label+' '+i.id+' '+(i.usage||[]).join(' ')).toLowerCase().includes(query)));document.getElementById('image-count').textContent=visible.length.toLocaleString('fa-IR')+' تصویر';if(!visible.length)root.append(el('p','تصویری با این فیلتر پیدا نشد.'));for(const item of visible){
+  const card=el('article');card.className='image-card';card.dataset.image=item.id;if(item.id===focusId)card.classList.add('selected-image');const current=el('img');current.src=item.url+'&v='+item.revision;current.alt='عکس فعلی '+item.label;
   const title=el('h3',item.label),usage=el('p',(item.usage||[]).join('، ')||'تصویر قالب سایت');
   const dimensions=el('small');current.onload=()=>dimensions.textContent=`${current.naturalWidth} × ${current.naturalHeight} پیکسل`;
   const input=el('input');input.type='file';input.accept='image/png,image/jpeg,image/webp';input.hidden=true;
@@ -20,5 +20,5 @@ window.faraImages=async function({api,pages,onSave,toast,lock}){
   save.onclick=async()=>{if(!base64)return;lock(true);root.querySelectorAll('button').forEach(b=>b.disabled=true);try{const result=await api('/api/image',{id:item.id,revision:item.revision,base64});onSave();toast(result.message);await window.faraImages({api,pages,onSave,toast,lock})}catch(e){toast(e.message,true)}finally{lock(false);root.querySelectorAll('button').forEach(b=>b.disabled=false)}};
   card.append(current,title,usage,dimensions,choose,input,candidate,save,cancel);root.append(card);
  }}
- filter.onchange=render;render();
+ filter.onchange=render;document.getElementById('image-search').oninput=render;if(focusId)document.getElementById('image-search').value='';render();if(focusId)[...root.children].find(e=>e.dataset.image===focusId)?.scrollIntoView({block:'center',behavior:'smooth'});
 };

@@ -4290,6 +4290,196 @@
     ],
     "images": [
         {
+            "id": "assets/images/hafez/verse-01.png",
+            "label": "verse-01",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 512,
+            "height": 554
+        },
+        {
+            "id": "assets/images/hafez/verse-02.png",
+            "label": "verse-02",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 778,
+            "height": 182
+        },
+        {
+            "id": "assets/images/hafez/verse-03.png",
+            "label": "verse-03",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 710,
+            "height": 161
+        },
+        {
+            "id": "assets/images/hafez/verse-04.png",
+            "label": "verse-04",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 906,
+            "height": 260
+        },
+        {
+            "id": "assets/images/hafez/verse-05.png",
+            "label": "verse-05",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 725,
+            "height": 442
+        },
+        {
+            "id": "assets/images/hafez/verse-06.png",
+            "label": "verse-06",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 710,
+            "height": 434
+        },
+        {
+            "id": "assets/images/hafez/verse-07.png",
+            "label": "verse-07",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 615,
+            "height": 477
+        },
+        {
+            "id": "assets/images/hafez/verse-08.png",
+            "label": "verse-08",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 701,
+            "height": 381
+        },
+        {
+            "id": "assets/images/hafez/verse-09.png",
+            "label": "verse-09",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 511,
+            "height": 397
+        },
+        {
+            "id": "assets/images/hafez/verse-10.png",
+            "label": "verse-10",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 710,
+            "height": 166
+        },
+        {
+            "id": "assets/images/hafez/verse-11.png",
+            "label": "verse-11",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 553,
+            "height": 607
+        },
+        {
+            "id": "assets/images/hafez/verse-12.png",
+            "label": "verse-12",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 573,
+            "height": 605
+        },
+        {
+            "id": "assets/images/hafez/verse-13.png",
+            "label": "verse-13",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 583,
+            "height": 318
+        },
+        {
+            "id": "assets/images/hafez/verse-14.png",
+            "label": "verse-14",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 433,
+            "height": 459
+        },
+        {
+            "id": "assets/images/hafez/verse-15.png",
+            "label": "verse-15",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 701,
+            "height": 518
+        },
+        {
+            "id": "assets/images/hafez/verse-16.png",
+            "label": "verse-16",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 582,
+            "height": 320
+        },
+        {
+            "id": "assets/images/hafez/verse-17.png",
+            "label": "verse-17",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 603,
+            "height": 243
+        },
+        {
+            "id": "assets/images/hafez/verse-18.png",
+            "label": "verse-18",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 511,
+            "height": 397
+        },
+        {
+            "id": "assets/images/hafez/verse-19.png",
+            "label": "verse-19",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 662,
+            "height": 428
+        },
+        {
             "id": "assets/images/home-slide-1.png",
             "label": "تصویر اسلاید خانه شمارهٔ 1",
             "pages": [
@@ -4360,6 +4550,186 @@
             ],
             "width": 1536,
             "height": 1024
+        },
+        {
+            "id": "assets/images/instagram/7rokh-instagram-feed.png",
+            "label": "7rokh-instagram-feed",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 1024,
+            "height": 1536
+        },
+        {
+            "id": "assets/images/instagram/7rokh-instagram-story.png",
+            "label": "7rokh-instagram-story",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 1024,
+            "height": 1536
+        },
+        {
+            "id": "assets/images/landing-works/work-antigone.png",
+            "label": "work-antigone",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-dezh-sooq.png",
+            "label": "work-dezh-sooq",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-hamlet.png",
+            "label": "work-hamlet",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-jebhe-shomal.png",
+            "label": "work-jebhe-shomal",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-khoshbakhti.png",
+            "label": "work-khoshbakhti",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-macbeth.png",
+            "label": "work-macbeth",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-mah-gerefte.png",
+            "label": "work-mah-gerefte",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 1024,
+            "height": 1536
+        },
+        {
+            "id": "assets/images/landing-works/work-medea.png",
+            "label": "work-medea",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-mesriye.png",
+            "label": "work-mesriye",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-morteza.png",
+            "label": "work-morteza",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 1024,
+            "height": 1536
+        },
+        {
+            "id": "assets/images/landing-works/work-oroub.png",
+            "label": "work-oroub",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-parva.png",
+            "label": "work-parva",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 1024,
+            "height": 1536
+        },
+        {
+            "id": "assets/images/landing-works/work-qasr-shirin.png",
+            "label": "work-qasr-shirin",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 1024,
+            "height": 1536
+        },
+        {
+            "id": "assets/images/landing-works/work-robin-hood.png",
+            "label": "work-robin-hood",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-se-namayesh.png",
+            "label": "work-se-namayesh",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
+        },
+        {
+            "id": "assets/images/landing-works/work-tars-nakbat.png",
+            "label": "work-tars-nakbat",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 864,
+            "height": 1152
         },
         {
             "id": "assets/images/promo-slide-1.png",
@@ -4507,7 +4877,9 @@
             "id": "assets/img/BackGround.png",
             "label": "پس‌زمینهٔ سایت",
             "pages": [],
-            "usage": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
             "width": 1024,
             "height": 571
         },
@@ -4540,6 +4912,16 @@
             ],
             "width": 512,
             "height": 512
+        },
+        {
+            "id": "assets/img/logo.png",
+            "label": "نشان سایت",
+            "pages": [],
+            "usage": [
+                "کتابخانهٔ تصاویر قالب"
+            ],
+            "width": 591,
+            "height": 793
         }
     ],
     "menu": {
