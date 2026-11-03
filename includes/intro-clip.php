@@ -2,11 +2,12 @@
 declare(strict_types=1);
 
 /**
- * کلیپ معرفی اعضا — حداکثر ۹۰ ثانیه، یک فایل برای هر عضو.
+ * اثر مسابقه «۷رخ از نگاه تو» — بین ۳۰ تا ۹۰ ثانیه، یک فایل برای هر عضو.
  * آپلود: عضو دارای اشتراک ویژه، یا مدیر پورتال (مستثنی از شرط اشتراک).
  * مشاهده فهرست: فقط مدیران پورتال (eshahabian و ardavan).
  */
 
+const CASTING_INTRO_CLIP_MIN_SECONDS = 30.0;
 const CASTING_INTRO_CLIP_MAX_SECONDS = 90.0;
 const CASTING_INTRO_CLIP_META = 'casting_intro_clip';
 
@@ -246,6 +247,12 @@ function casting_intro_clip_duration_seconds(string $path): float
     return (float) $meta['length'];
 }
 
+function casting_intro_clip_duration_is_allowed(float $seconds): bool
+{
+    return $seconds >= CASTING_INTRO_CLIP_MIN_SECONDS - 0.5
+        && $seconds <= CASTING_INTRO_CLIP_MAX_SECONDS + 0.5;
+}
+
 function casting_intro_clip_duration_label(float $seconds): string
 {
     $seconds = (int) round($seconds);
@@ -357,12 +364,12 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
 
     $duration = casting_intro_clip_probe_duration($tmp, $ext);
     if ($duration <= 0) {
-        return ['ok' => false, 'error' => 'مدت ویدیو از فایل خوانده نشد. یک MP4 با مدت مشخص و حداکثر ۹۰ ثانیه بفرستید.'];
+        return ['ok' => false, 'error' => 'مدت ویدیو از فایل خوانده نشد. یک MP4 بین ۳۰ تا ۹۰ ثانیه بفرستید.'];
     }
-    if ($duration > CASTING_INTRO_CLIP_MAX_SECONDS + 0.5) {
+    if (!casting_intro_clip_duration_is_allowed($duration)) {
         return [
             'ok'    => false,
-            'error' => 'این ویدیو ' . casting_intro_clip_duration_label($duration) . ' است. حداکثر ۹۰ ثانیه مجاز است.',
+            'error' => 'این ویدیو ' . casting_intro_clip_duration_label($duration) . ' است. مدت اثر باید بین ۳۰ تا ۹۰ ثانیه باشد.',
         ];
     }
 
@@ -397,10 +404,10 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
     }
 
     $saved_duration = casting_intro_clip_duration_seconds($staging);
-    if ($saved_duration <= 0 || $saved_duration > CASTING_INTRO_CLIP_MAX_SECONDS + 0.5) {
+    if ($saved_duration <= 0 || !casting_intro_clip_duration_is_allowed($saved_duration)) {
         unlink($staging);
 
-        return ['ok' => false, 'error' => 'مدت ویدیو بعد از ذخیره تأیید نشد. حداکثر ۹۰ ثانیه مجاز است.'];
+        return ['ok' => false, 'error' => 'مدت ویدیو بعد از ذخیره تأیید نشد. مدت اثر باید بین ۳۰ تا ۹۰ ثانیه باشد.'];
     }
 
     $previous = casting_intro_clip_get($user_id);

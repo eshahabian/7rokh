@@ -44,7 +44,6 @@ casting_render_flash();
 ?>
 <section class="dash-card">
   <?php casting_render_panel_heading('کلیپ‌های اعضا'); ?>
-  <p class="lede">این فهرست فقط برای مدیران پورتال (eshahabian و ardavan) است. هر ردیف کلیپ معرفی یک عضو است؛ فایل روی هاست با نام و شماره موبایل همان کاربر ذخیره شده.</p>
 
   <form class="form" method="get" action="admin-intro-clips.php">
     <div class="field">
