@@ -20,8 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $action = sanitize_key((string) ($_POST['intro_action'] ?? ''));
     $owner_id = (int) ($_POST['user_id'] ?? 0);
+    $clip_id = (string) ($_POST['clip_id'] ?? '');
     if ($action === 'delete' && $owner_id > 0) {
-        $res = casting_intro_clip_delete($owner_id);
+        $res = casting_intro_clip_delete($owner_id, $clip_id);
         casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'کلیپ حذف شد.' : $res['error']);
     }
     casting_redirect('admin-intro-clips.php');
@@ -60,7 +61,8 @@ casting_render_flash();
     <div class="admin-media-list">
       <?php foreach ($items as $item) :
           $owner_id = (int) $item['user_id'];
-          $stream = $item['missing'] ? '' : casting_intro_clip_stream_url($owner_id);
+          $clip_id = (string) $item['clip_id'];
+          $stream = $item['missing'] ? '' : casting_intro_clip_stream_url($owner_id, $clip_id);
           ?>
         <article class="admin-media-card">
           <div class="admin-media-preview">
@@ -81,8 +83,8 @@ casting_render_flash();
               <?php endif; ?>
             </p>
             <p class="meta">
-              مدت: <?= casting_e(casting_intro_clip_duration_label((float) $item['duration'])) ?>
-              · <?= casting_e(casting_intro_clip_format_when((string) $item['uploaded_at'])) ?>
+              تاریخ ارسال: <?= casting_e(casting_intro_clip_format_when((string) $item['uploaded_at'])) ?>
+              · مدت: <?= casting_e(casting_intro_clip_duration_label((float) $item['duration'])) ?>
             </p>
             <p class="meta" dir="auto">فایل: <?= casting_e((string) $item['file']) ?></p>
             <div class="cta-row">
@@ -91,6 +93,7 @@ casting_render_flash();
                 <?php wp_nonce_field('casting_admin_intro_clip'); ?>
                 <input type="hidden" name="intro_action" value="delete">
                 <input type="hidden" name="user_id" value="<?= $owner_id ?>">
+                <input type="hidden" name="clip_id" value="<?= casting_e($clip_id) ?>">
                 <button class="btn btn-ghost btn-sm" type="submit">حذف</button>
               </form>
             </div>

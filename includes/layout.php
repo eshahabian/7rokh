@@ -344,6 +344,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
     <nav class="nav" id="site-main-nav" aria-label="منوی اصلی" data-site-nav>
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external">سایت <?= casting_brand_html() ?></a>
       <?php if ($is_member) : ?>
+        <a href="<?= casting_e(casting_url('intro-clip.php')) ?>" class="nav-negah<?= $active === 'intro-clip' ? ' is-active' : '' ?>">۷رخ از نگاه تو</a>
         <a href="home.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <a href="<?= casting_e(casting_url($new_followers > 0 ? 'following.php?tab=followers' : 'panel.php')) ?>" class="<?= $active === 'panel' || $active === 'following' ? 'is-active' : '' ?><?= $new_followers > 0 ? ' has-notify' : '' ?>">
           پنل کاربری
@@ -357,6 +358,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
         <a href="rules.php" class="<?= $active === 'rules' ? 'is-active' : '' ?>">قوانین</a>
         <a href="logout.php">خروج</a>
       <?php else : ?>
+        <a href="<?= casting_e(casting_url('login.php?intent=negah')) ?>" class="nav-negah">۷رخ از نگاه تو</a>
         <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <a href="register.php" class="nav-auth-link nav-register-btn<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
         <a href="login.php" class="nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود</a>

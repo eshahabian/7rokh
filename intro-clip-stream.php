@@ -30,9 +30,10 @@ if (function_exists('casting_user_is_suspended') && casting_user_is_suspended($v
     exit;
 }
 $owner_id = (int) ($_GET['uid'] ?? 0);
+$clip_id = strtolower((string) ($_GET['cid'] ?? ''));
 $nonce = (string) ($_GET['n'] ?? '');
 
-if ($owner_id <= 0 || $nonce === '' || !wp_verify_nonce($nonce, 'casting_intro_clip_' . $owner_id)) {
+if ($owner_id <= 0 || !preg_match('/^[a-f0-9]{8,24}$/', $clip_id) || $nonce === '' || !wp_verify_nonce($nonce, 'casting_intro_clip_' . $owner_id . '_' . $clip_id)) {
     status_header(403);
     header('Content-Type: text/plain; charset=utf-8');
     echo 'دسترسی نامعتبر است.';
@@ -46,4 +47,4 @@ if (!casting_user_can_view_intro_clip($viewer_id, $owner_id)) {
     exit;
 }
 
-casting_intro_clip_output($owner_id);
+casting_intro_clip_output($owner_id, $clip_id);

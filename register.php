@@ -22,8 +22,8 @@ if (!casting_safe_require_once(__DIR__ . '/includes/layout.php')) {
 casting_nocache();
 
 $intent = sanitize_key((string) ($_GET['intent'] ?? $_POST['intent'] ?? ''));
-if ($intent === 'cart') {
-    $_SESSION['casting_login_intent'] = 'cart';
+if ($intent === 'cart' || $intent === 'negah') {
+    $_SESSION['casting_login_intent'] = $intent;
 }
 
 $register_path = sanitize_key((string) ($_GET['path'] ?? $_POST['path'] ?? ''));
@@ -247,12 +247,16 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                 casting_set_flash('success', 'ثبت‌نام و ورود با موفقیت انجام شد.');
                                 $after_intent = (string) ($_SESSION['casting_login_intent'] ?? '');
                                 unset($_SESSION['casting_login_intent']);
+                                if ($after_intent === 'negah') {
+                                    casting_redirect('intro-clip.php');
+                                }
                                 if ($after_intent === 'cart') {
                                     casting_redirect('cart.php');
                                 }
                                 casting_redirect('edit-profile.php?welcome=1');
                             }
-                            casting_redirect('login.php?registered=1' . (((string) ($_SESSION['casting_login_intent'] ?? '')) === 'cart' ? '&intent=cart' : ''));
+                            $pending_intent = (string) ($_SESSION['casting_login_intent'] ?? '');
+                            casting_redirect('login.php?registered=1' . (in_array($pending_intent, ['cart', 'negah'], true) ? '&intent=' . rawurlencode($pending_intent) : ''));
                         }
                     } catch (Throwable $e) {
                         $error = 'خطای سرور در ثبت‌نام: ' . $e->getMessage();

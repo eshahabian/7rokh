@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 /**
- * اثر مسابقه «۷رخ از نگاه تو» — بین ۳۰ تا ۹۰ ثانیه، یک فایل برای هر عضو.
+ * اثر مسابقه «۷رخ از نگاه تو» — بین ۳۰ تا ۹۰ ثانیه.
+ * هر ارسال جدا می‌ماند و با تاریخ ارسال از بقیه جدا می‌شود.
  * آپلود: عضو دارای اشتراک ویژه، یا مدیر پورتال (مستثنی از شرط اشتراک).
  * مشاهده فهرست: فقط مدیران پورتال (eshahabian و ardavan).
  */
@@ -98,31 +99,85 @@ function casting_intro_clip_safe_label(string $value, int $max = 60): string
 }
 
 /**
- * @return array{file:string,bytes:int,duration:float,mime:string,uploaded_at:string,display_name:string,mobile:string}|null
+ * @param array<string, mixed> $raw
+ * @return array{id:string,file:string,bytes:int,duration:float,mime:string,uploaded_at:string,display_name:string,mobile:string}|null
  */
-function casting_intro_clip_get(int $user_id): ?array
+function casting_intro_clip_normalize_row(array $raw): ?array
 {
-    if ($user_id <= 0) {
-        return null;
-    }
-    $raw = get_user_meta($user_id, CASTING_INTRO_CLIP_META, true);
-    if (!is_array($raw)) {
-        return null;
-    }
     $file = basename((string) ($raw['file'] ?? ''));
     if ($file === '' || $file === '.' || $file === '..') {
         return null;
     }
+    $uploaded_at = (string) ($raw['uploaded_at'] ?? '');
+    $id = strtolower((string) ($raw['id'] ?? ''));
+    if (!preg_match('/^[a-f0-9]{8,24}$/', $id)) {
+        $id = substr(md5($file . '|' . $uploaded_at), 0, 12);
+    }
 
     return [
+        'id'           => $id,
         'file'         => $file,
         'bytes'        => (int) ($raw['bytes'] ?? 0),
         'duration'     => (float) ($raw['duration'] ?? 0),
         'mime'         => (string) ($raw['mime'] ?? 'video/mp4'),
-        'uploaded_at'  => (string) ($raw['uploaded_at'] ?? ''),
+        'uploaded_at'  => $uploaded_at,
         'display_name' => (string) ($raw['display_name'] ?? ''),
         'mobile'       => (string) ($raw['mobile'] ?? ''),
     ];
+}
+
+/**
+ * @return list<array{id:string,file:string,bytes:int,duration:float,mime:string,uploaded_at:string,display_name:string,mobile:string}>
+ */
+function casting_intro_clip_rows(int $user_id): array
+{
+    if ($user_id <= 0) {
+        return [];
+    }
+    $raw = get_user_meta($user_id, CASTING_INTRO_CLIP_META, true);
+    if (!is_array($raw) || $raw === []) {
+        return [];
+    }
+
+    $source = isset($raw['file']) ? [$raw] : $raw;
+    $out = [];
+    $changed = isset($raw['file']);
+    foreach ($source as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $row = casting_intro_clip_normalize_row($item);
+        if ($row === null) {
+            continue;
+        }
+        if ((string) ($item['id'] ?? '') !== $row['id']) {
+            $changed = true;
+        }
+        $out[] = $row;
+    }
+    usort($out, static function (array $a, array $b): int {
+        return strcmp((string) $b['uploaded_at'], (string) $a['uploaded_at']);
+    });
+    if ($changed) {
+        update_user_meta($user_id, CASTING_INTRO_CLIP_META, $out);
+    }
+
+    return $out;
+}
+
+/**
+ * @return array{id:string,file:string,bytes:int,duration:float,mime:string,uploaded_at:string,display_name:string,mobile:string}|null
+ */
+function casting_intro_clip_row(int $user_id, string $clip_id): ?array
+{
+    $clip_id = strtolower($clip_id);
+    foreach (casting_intro_clip_rows($user_id) as $row) {
+        if ($row['id'] === $clip_id) {
+            return $row;
+        }
+    }
+
+    return null;
 }
 
 function casting_intro_clip_dir_is_allowed(string $dir): bool
@@ -186,9 +241,9 @@ function casting_intro_clip_protect_dir(string $dir): void
     }
 }
 
-function casting_intro_clip_absolute_path(int $user_id): string
+function casting_intro_clip_absolute_path(int $user_id, string $clip_id): string
 {
-    $row = casting_intro_clip_get($user_id);
+    $row = casting_intro_clip_row($user_id, $clip_id);
     if ($row === null) {
         return '';
     }
@@ -292,15 +347,16 @@ function casting_intro_clip_format_when(string $mysql): string
     return trim($date . ($time !== '' ? '، ' . $time : ''));
 }
 
-function casting_intro_clip_stream_url(int $owner_id): string
+function casting_intro_clip_stream_url(int $owner_id, string $clip_id): string
 {
-    if ($owner_id <= 0 || casting_intro_clip_get($owner_id) === null) {
+    if ($owner_id <= 0 || casting_intro_clip_row($owner_id, $clip_id) === null) {
         return '';
     }
 
     return casting_url('intro-clip-stream.php?' . http_build_query([
         'uid' => $owner_id,
-        'n'   => wp_create_nonce('casting_intro_clip_' . $owner_id),
+        'cid' => $clip_id,
+        'n'   => wp_create_nonce('casting_intro_clip_' . $owner_id . '_' . $clip_id),
     ]));
 }
 
@@ -310,7 +366,7 @@ function casting_intro_clip_stream_url(int $owner_id): string
 function casting_intro_clip_save_upload(int $user_id, string $field): array
 {
     if (!casting_user_can_upload_intro_clip($user_id)) {
-        return ['ok' => false, 'error' => 'ارسال کلیپ فقط برای اعضای دارای اشتراک ویژه است. مدیران پورتال از این شرط مستثنی هستند.'];
+        return ['ok' => false, 'error' => 'ارسال اثر فقط برای اعضایی است که اشتراک ویژه فعال دارند.'];
     }
     if (empty($_FILES[$field]['name']) || !is_array($_FILES[$field])) {
         return ['ok' => false, 'error' => 'یک ویدیو انتخاب کنید.'];
@@ -387,7 +443,8 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
         $label = 'user-' . $user_id;
     }
     $phone_part = $mobile !== '' ? $mobile : 'بدون-شماره';
-    $filename = casting_intro_clip_unique_filename($user_id, $label . '_' . $phone_part, $ext);
+    $stamp = preg_replace('/\D+/', '', current_time('mysql')) ?? '';
+    $filename = casting_intro_clip_unique_filename($user_id, $label . '_' . $phone_part . '_' . $stamp, $ext);
 
     $dest = $dir . DIRECTORY_SEPARATOR . $filename;
     $staging_base = $filename;
@@ -410,9 +467,10 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
         return ['ok' => false, 'error' => 'مدت ویدیو بعد از ذخیره تأیید نشد. مدت اثر باید بین ۳۰ تا ۹۰ ثانیه باشد.'];
     }
 
-    $previous = casting_intro_clip_get($user_id);
     if (is_file($dest)) {
-        unlink($dest);
+        unlink($staging);
+
+        return ['ok' => false, 'error' => 'نام فایل روی هاست تکراری بود. یک بار دیگر ارسال کنید.'];
     }
     if (!rename($staging, $dest)) {
         unlink($staging);
@@ -423,6 +481,7 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
 
     $mime = $ftype !== '' ? $ftype : 'video/' . ($ext === 'mov' ? 'quicktime' : $ext);
     $row = [
+        'id'           => bin2hex(random_bytes(6)),
         'file'         => $filename,
         'bytes'        => (int) filesize($dest),
         'duration'     => $saved_duration,
@@ -431,26 +490,16 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
         'display_name' => $display !== '' ? $display : (string) $user->user_login,
         'mobile'       => $mobile,
     ];
-    update_user_meta($user_id, CASTING_INTRO_CLIP_META, $row);
-
-    if ($previous !== null && $previous['file'] !== $filename) {
-        $old = $dir . DIRECTORY_SEPARATOR . $previous['file'];
-        $oldReal = realpath($old);
-        $base = realpath($dir);
-        if ($oldReal !== false && $base !== false && is_file($oldReal)) {
-            $baseNorm = rtrim(str_replace('\\', '/', $base), '/') . '/';
-            if (str_starts_with(str_replace('\\', '/', $oldReal), $baseNorm)) {
-                unlink($oldReal);
-            }
-        }
-    }
+    $rows = casting_intro_clip_rows($user_id);
+    array_unshift($rows, $row);
+    update_user_meta($user_id, CASTING_INTRO_CLIP_META, $rows);
 
     return ['ok' => true, 'error' => ''];
 }
 
 function casting_intro_clip_unique_filename(int $user_id, string $stem, string $ext): string
 {
-    $stem = casting_intro_clip_safe_label($stem, 80);
+    $stem = casting_intro_clip_safe_label($stem, 110);
     if ($stem === '') {
         $stem = 'user-' . $user_id;
     }
@@ -458,15 +507,11 @@ function casting_intro_clip_unique_filename(int $user_id, string $stem, string $
     $candidate = $stem . '.' . $ext;
     $dir = casting_intro_clip_storage_dir();
     $path = $dir . DIRECTORY_SEPARATOR . $candidate;
-    if (!is_file($path)) {
-        return $candidate;
-    }
-    $owner = casting_intro_clip_owner_of_basename($candidate);
-    if ($owner === $user_id) {
+    if ($dir !== '' && !is_file($path)) {
         return $candidate;
     }
 
-    return $stem . '_' . $user_id . '.' . $ext;
+    return $stem . '_' . $user_id . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
 }
 
 function casting_intro_clip_owner_of_basename(string $basename): int
@@ -477,9 +522,10 @@ function casting_intro_clip_owner_of_basename(string $basename): int
         'fields'   => 'ID',
     ]);
     foreach ($users as $id) {
-        $row = casting_intro_clip_get((int) $id);
-        if ($row !== null && $row['file'] === $basename) {
-            return (int) $id;
+        foreach (casting_intro_clip_rows((int) $id) as $row) {
+            if ($row['file'] === $basename) {
+                return (int) $id;
+            }
         }
     }
 
@@ -489,17 +535,31 @@ function casting_intro_clip_owner_of_basename(string $basename): int
 /**
  * @return array{ok:bool,error:string}
  */
-function casting_intro_clip_delete(int $user_id): array
+function casting_intro_clip_delete(int $user_id, string $clip_id): array
 {
     if ($user_id <= 0) {
         return ['ok' => false, 'error' => 'حساب نامعتبر است.'];
     }
-    $row = casting_intro_clip_get($user_id);
-    if ($row === null) {
-        return ['ok' => false, 'error' => 'کلیپی برای حذف نیست.'];
+    $clip_id = strtolower($clip_id);
+    if (!preg_match('/^[a-f0-9]{8,24}$/', $clip_id)) {
+        return ['ok' => false, 'error' => 'اثر انتخاب‌شده نامعتبر است.'];
     }
-    $path = casting_intro_clip_absolute_path($user_id);
-    delete_user_meta($user_id, CASTING_INTRO_CLIP_META);
+    $row = casting_intro_clip_row($user_id, $clip_id);
+    if ($row === null) {
+        return ['ok' => false, 'error' => 'این اثر برای حذف پیدا نشد.'];
+    }
+    $path = casting_intro_clip_absolute_path($user_id, $clip_id);
+    $kept = [];
+    foreach (casting_intro_clip_rows($user_id) as $item) {
+        if ($item['id'] !== $clip_id) {
+            $kept[] = $item;
+        }
+    }
+    if ($kept === []) {
+        delete_user_meta($user_id, CASTING_INTRO_CLIP_META);
+    } else {
+        update_user_meta($user_id, CASTING_INTRO_CLIP_META, $kept);
+    }
     if ($path !== '' && is_file($path)) {
         unlink($path);
     }
@@ -508,7 +568,7 @@ function casting_intro_clip_delete(int $user_id): array
 }
 
 /**
- * @return list<array{user_id:int,name:string,login:string,mobile:string,file:string,duration:float,uploaded_at:string,bytes:int,missing:bool}>
+ * @return list<array{user_id:int,clip_id:string,name:string,login:string,mobile:string,file:string,duration:float,uploaded_at:string,bytes:int,missing:bool}>
  */
 function casting_intro_clip_list(): array
 {
@@ -524,22 +584,21 @@ function casting_intro_clip_list(): array
             continue;
         }
         $id = (int) $user->ID;
-        $row = casting_intro_clip_get($id);
-        if ($row === null) {
-            continue;
+        foreach (casting_intro_clip_rows($id) as $row) {
+            $mobile = $row['mobile'] !== '' ? $row['mobile'] : casting_intro_clip_mobile($id);
+            $out[] = [
+                'user_id'     => $id,
+                'clip_id'     => $row['id'],
+                'name'        => trim((string) $user->display_name) !== '' ? (string) $user->display_name : $row['display_name'],
+                'login'       => (string) $user->user_login,
+                'mobile'      => $mobile,
+                'file'        => $row['file'],
+                'duration'    => $row['duration'],
+                'uploaded_at' => $row['uploaded_at'],
+                'bytes'       => $row['bytes'],
+                'missing'     => casting_intro_clip_absolute_path($id, $row['id']) === '',
+            ];
         }
-        $mobile = $row['mobile'] !== '' ? $row['mobile'] : casting_intro_clip_mobile($id);
-        $out[] = [
-            'user_id'     => $id,
-            'name'        => trim((string) $user->display_name) !== '' ? (string) $user->display_name : $row['display_name'],
-            'login'       => (string) $user->user_login,
-            'mobile'      => $mobile,
-            'file'        => $row['file'],
-            'duration'    => $row['duration'],
-            'uploaded_at' => $row['uploaded_at'],
-            'bytes'       => $row['bytes'],
-            'missing'     => casting_intro_clip_absolute_path($id) === '',
-        ];
     }
     usort($out, static function (array $a, array $b): int {
         return strcmp((string) $b['uploaded_at'], (string) $a['uploaded_at']);
@@ -548,10 +607,10 @@ function casting_intro_clip_list(): array
     return $out;
 }
 
-function casting_intro_clip_output(int $owner_id): void
+function casting_intro_clip_output(int $owner_id, string $clip_id): void
 {
-    $path = casting_intro_clip_absolute_path($owner_id);
-    $row = casting_intro_clip_get($owner_id);
+    $path = casting_intro_clip_absolute_path($owner_id, $clip_id);
+    $row = casting_intro_clip_row($owner_id, $clip_id);
     if ($path === '' || $row === null) {
         status_header(404);
         header('Content-Type: text/plain; charset=utf-8');
