@@ -558,6 +558,15 @@ function casting_panel_admin_nav_items(int $user_id): array
     if (casting_user_has_admin_permission($user_id, 'approve_media')) {
         $items[] = ['key' => 'admin-media', 'label' => 'تأیید گالری', 'href' => 'admin-media.php', 'perm' => 'approve_media'];
     }
+    if (!function_exists('casting_user_can_review_intro_clips')) {
+        $intro = __DIR__ . '/intro-clip.php';
+        if (is_file($intro)) {
+            require_once $intro;
+        }
+    }
+    if (function_exists('casting_user_can_review_intro_clips') && casting_user_can_review_intro_clips($user_id)) {
+        $items[] = ['key' => 'admin-intro-clips', 'label' => 'کلیپ‌های اعضا', 'href' => 'admin-intro-clips.php', 'perm' => 'super'];
+    }
     if (casting_user_has_admin_permission($user_id, 'view_transactions')) {
         $items[] = ['key' => 'admin-transactions', 'label' => 'تراکنش کاربران', 'href' => 'admin-transactions.php', 'perm' => 'view_transactions'];
     }

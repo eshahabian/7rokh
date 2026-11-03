@@ -58,6 +58,7 @@ function casting_panel_nav_groups(): array
             'label' => 'حساب',
             'items' => [
                 ['key' => 'cart',         'label' => 'اشتراک ویژه',          'href' => 'cart.php'],
+                ['key' => 'intro-clip',   'label' => 'کلیپ معرفی',           'href' => 'intro-clip.php'],
                 ['key' => 'my-ads',       'label' => 'ارسال پوستر',         'href' => 'my-ads.php'],
                 ['key' => 'transactions', 'label' => 'تراکنش‌های مالی',      'href' => 'transactions.php'],
                 ['key' => 'cancel',       'label' => 'انصراف از عضویت',      'href' => 'cancel-membership.php'],
@@ -132,6 +133,7 @@ function casting_panel_nav_highlight_key(string $active): string
         'my-profile'   => 'panel',
         'edit-profile' => 'panel',
         'my-ads'       => 'my-ads',
+        'intro-clip'   => 'intro-clip',
         'admin-ads'    => 'my-ads',
         'messages'     => 'messages',
         'news'         => 'news',

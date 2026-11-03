@@ -153,6 +153,7 @@ casting_render_panel_completion_card($profile, $user_id);
       <?php if ($can_gallery) : ?>
         <a class="btn btn-ghost" href="<?= casting_e(casting_url('my-gallery.php')) ?>">افزودن پست</a>
       <?php endif; ?>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('intro-clip.php')) ?>">کلیپ معرفی</a>
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('settings.php')) ?>">تنظیمات</a>
     </div>
   </header>
