@@ -13496,6 +13496,10 @@ a.btn[href*="intro-clip.php"] {
   font-weight: 400;
 }
 
+.nav a.nav-negah .brand-mark {
+  margin-inline-end: 0.45em;
+}
+
 .page-negah .panel-page-heading-title {
   font-size: clamp(1.45rem, 2.2vw, 1.95rem);
   line-height: 1.35;
@@ -13587,5 +13591,22 @@ html[data-theme="day"] .negah-consent {
 
 .negah-submitter-link {
   gap: 0.35rem;
+}
+
+.page-admin-intro .admin-media-card {
+  grid-template-columns: minmax(240px, 380px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.page-admin-intro .admin-media-preview video {
+  width: 100%;
+  max-height: min(70vh, 640px);
+  background: #111;
+}
+
+@media (max-width: 700px) {
+  .page-admin-intro .admin-media-card {
+    grid-template-columns: 1fr;
+  }
 }
 

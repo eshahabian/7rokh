@@ -198,41 +198,104 @@ function casting_intro_clip_dir_is_allowed(string $dir): bool
     return $base === 'casting-intro-clips';
 }
 
-function casting_intro_clip_storage_dir(): string
+/**
+ * @return list<string>
+ */
+function casting_intro_clip_candidate_dirs(): array
 {
+    $dirs = [];
+    $push = static function (string $dir) use (&$dirs): void {
+        $dir = rtrim(str_replace('\\', '/', $dir), '/');
+        if ($dir === '' || !casting_intro_clip_dir_is_allowed($dir)) {
+            return;
+        }
+        $dirs[$dir] = $dir;
+    };
+
     $saved = (string) get_option('casting_intro_clip_dir', '');
-    if ($saved !== '' && casting_intro_clip_dir_is_allowed($saved) && is_dir($saved) && is_writable($saved)) {
-        casting_intro_clip_protect_dir($saved);
-
-        return $saved;
+    if ($saved !== '') {
+        $push($saved);
     }
-
-    $candidates = [];
     if (defined('ABSPATH')) {
-        $parent = dirname(rtrim(ABSPATH, '/\\'));
-        if ($parent !== '' && $parent !== '.' && $parent !== rtrim(ABSPATH, '/\\')) {
-            $candidates[] = $parent . DIRECTORY_SEPARATOR . 'casting-intro-clips';
+        $root = rtrim(str_replace('\\', '/', (string) ABSPATH), '/');
+        $parent = dirname($root);
+        if ($parent !== '' && $parent !== '.' && $parent !== $root) {
+            $push($parent . '/casting-intro-clips');
         }
     }
-    if (!function_exists('wp_upload_dir')) {
+    if (!function_exists('wp_upload_dir') && defined('ABSPATH')) {
         require_once ABSPATH . 'wp-admin/includes/file.php';
     }
-    $uploads = wp_upload_dir();
-    if (is_array($uploads) && empty($uploads['error']) && !empty($uploads['basedir'])) {
-        $candidates[] = (string) $uploads['basedir'] . DIRECTORY_SEPARATOR . 'casting-intro-clips';
+    if (function_exists('wp_upload_dir')) {
+        $uploads = wp_upload_dir();
+        if (is_array($uploads) && empty($uploads['error']) && !empty($uploads['basedir'])) {
+            $push(rtrim(str_replace('\\', '/', (string) $uploads['basedir']), '/') . '/casting-intro-clips');
+        }
     }
 
-    foreach ($candidates as $dir) {
-        if (!is_dir($dir) && !wp_mkdir_p($dir)) {
-            continue;
-        }
-        if (!is_dir($dir) || !is_writable($dir) || !casting_intro_clip_dir_is_allowed($dir)) {
-            continue;
-        }
-        casting_intro_clip_protect_dir($dir);
-        update_option('casting_intro_clip_dir', $dir, false);
+    return array_values($dirs);
+}
 
-        return $dir;
+function casting_intro_clip_storage_dir(): string
+{
+    $readable = '';
+    foreach (casting_intro_clip_candidate_dirs() as $dir) {
+        $fs = str_replace('/', DIRECTORY_SEPARATOR, $dir);
+        if (!is_dir($fs)) {
+            continue;
+        }
+        if ($readable === '') {
+            $readable = $fs;
+        }
+        if (is_writable($fs)) {
+            casting_intro_clip_protect_dir($fs);
+            update_option('casting_intro_clip_dir', $fs, false);
+
+            return $fs;
+        }
+    }
+
+    foreach (casting_intro_clip_candidate_dirs() as $dir) {
+        $fs = str_replace('/', DIRECTORY_SEPARATOR, $dir);
+        if (!is_dir($fs) && function_exists('wp_mkdir_p')) {
+            wp_mkdir_p($fs);
+        }
+        if (!is_dir($fs) || !is_writable($fs)) {
+            continue;
+        }
+        casting_intro_clip_protect_dir($fs);
+        update_option('casting_intro_clip_dir', $fs, false);
+
+        return $fs;
+    }
+
+    return $readable;
+}
+
+function casting_intro_clip_locate_file(string $filename): string
+{
+    $filename = basename(str_replace('\\', '/', $filename));
+    if ($filename === '' || $filename === '.' || $filename === '..') {
+        return '';
+    }
+    foreach (casting_intro_clip_candidate_dirs() as $dir) {
+        $fs = str_replace('/', DIRECTORY_SEPARATOR, $dir);
+        if (!is_dir($fs)) {
+            continue;
+        }
+        $path = $fs . DIRECTORY_SEPARATOR . $filename;
+        if (!is_file($path)) {
+            continue;
+        }
+        $real = realpath($path);
+        $found = $real !== false ? $real : $path;
+        $foundNorm = str_replace('\\', '/', $found);
+        $dirNorm = rtrim(str_replace('\\', '/', $dir), '/') . '/';
+        $base = realpath($fs);
+        $baseNorm = $base !== false ? rtrim(str_replace('\\', '/', $base), '/') . '/' : $dirNorm;
+        if (str_starts_with($foundNorm, $baseNorm) || str_starts_with($foundNorm, $dirNorm)) {
+            return $found;
+        }
     }
 
     return '';
@@ -258,23 +321,7 @@ function casting_intro_clip_absolute_path(int $user_id, string $clip_id): string
     if ($row === null) {
         return '';
     }
-    $dir = casting_intro_clip_storage_dir();
-    if ($dir === '') {
-        return '';
-    }
-    $base = realpath($dir);
-    $path = $dir . DIRECTORY_SEPARATOR . $row['file'];
-    $real = realpath($path);
-    if ($base === false || $real === false || !is_file($real)) {
-        return '';
-    }
-    $baseNorm = rtrim(str_replace('\\', '/', $base), '/') . '/';
-    $realNorm = str_replace('\\', '/', $real);
-    if (!str_starts_with($realNorm, $baseNorm)) {
-        return '';
-    }
-
-    return $real;
+    return casting_intro_clip_locate_file((string) $row['file']);
 }
 
 function casting_intro_clip_probe_duration(string $path, string $ext): float

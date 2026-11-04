@@ -40,11 +40,18 @@ if ($q !== '') {
     }));
 }
 
-casting_render_panel_start('کلیپ‌های اعضا', 'admin-intro-clips');
+$storage_dir = casting_intro_clip_storage_dir();
+if ($storage_dir === '') {
+    $candidates = casting_intro_clip_candidate_dirs();
+    $storage_dir = $candidates[0] ?? '/home/rokhcom/casting-intro-clips';
+}
+
+casting_render_panel_start('کلیپ‌های اعضا', 'admin-intro-clips', 'page-panel page-admin-intro');
 casting_render_flash();
 ?>
 <section class="dash-card">
   <?php casting_render_panel_heading('کلیپ‌های اعضا'); ?>
+  <p class="meta" dir="ltr">پوشه ویدیوها روی هاست: <?= casting_e(str_replace('\\', '/', $storage_dir)) ?></p>
 
   <form class="form" method="get" action="admin-intro-clips.php">
     <div class="field">
@@ -69,7 +76,7 @@ casting_render_flash();
             <?php if ($stream !== '') : ?>
               <video src="<?= casting_e($stream) ?>" controls preload="metadata" playsinline></video>
             <?php else : ?>
-              <p class="empty-state">فایل روی هاست پیدا نشد.</p>
+              <p class="empty-state">فایل در پوشه هاست پیدا نشد.</p>
             <?php endif; ?>
           </div>
           <div class="admin-media-body">
