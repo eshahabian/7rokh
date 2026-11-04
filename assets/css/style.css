@@ -13596,14 +13596,14 @@ html[data-theme="day"] .negah-consent {
 .page-admin-intro .admin-media-card,
 .page-negah .admin-media-list .admin-media-card {
   grid-template-columns: 148px minmax(0, 1fr);
-  align-items: stretch;
+  align-items: center;
 }
 
 .page-admin-intro .admin-media-preview,
 .page-negah .admin-media-list .admin-media-preview {
   position: relative;
-  min-height: 0;
-  height: auto;
+  width: 148px;
+  height: 260px;
 }
 
 .page-admin-intro .admin-media-preview video,
