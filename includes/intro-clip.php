@@ -133,6 +133,7 @@ function casting_intro_clip_normalize_row(array $raw): ?array
         'display_name'       => (string) ($raw['display_name'] ?? ''),
         'mobile'             => (string) ($raw['mobile'] ?? ''),
         'rights_accepted_at' => (string) ($raw['rights_accepted_at'] ?? ''),
+        'owner_hidden'       => (string) ($raw['owner_hidden'] ?? '') === '1' ? '1' : '',
     ];
 }
 
@@ -357,6 +358,26 @@ function casting_intro_clip_format_when(string $mysql): string
     return trim($date . ($time !== '' ? '، ' . $time : ''));
 }
 
+function casting_intro_clip_shamsi_file_date(string $mysql): string
+{
+    if (!function_exists('casting_jalali_parts_from_gregorian')) {
+        $jalali = __DIR__ . '/jalali.php';
+        if (is_file($jalali)) {
+            require_once $jalali;
+        }
+    }
+    $ymd = substr(trim($mysql), 0, 10);
+    if (!function_exists('casting_jalali_parts_from_gregorian')) {
+        return preg_replace('/\D+/', '', $ymd) ?: 'date';
+    }
+    $parts = casting_jalali_parts_from_gregorian($ymd);
+    if ((int) ($parts['jy'] ?? 0) <= 0) {
+        return preg_replace('/\D+/', '', $ymd) ?: 'date';
+    }
+
+    return sprintf('%04d-%02d-%02d', (int) $parts['jy'], (int) $parts['jm'], (int) $parts['jd']);
+}
+
 function casting_intro_clip_stream_url(int $owner_id, string $clip_id): string
 {
     if ($owner_id <= 0 || casting_intro_clip_row($owner_id, $clip_id) === null) {
@@ -456,8 +477,9 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
         $label = 'user-' . $user_id;
     }
     $phone_part = $mobile !== '' ? $mobile : 'بدون-شماره';
-    $stamp = preg_replace('/\D+/', '', current_time('mysql')) ?? '';
-    $filename = casting_intro_clip_unique_filename($user_id, $label . '_' . $phone_part . '_' . $stamp, $ext);
+    $uploaded_at = current_time('mysql');
+    $shamsi = casting_intro_clip_shamsi_file_date($uploaded_at);
+    $filename = casting_intro_clip_unique_filename($user_id, $label . '.' . $phone_part . '.' . $shamsi, $ext);
 
     $dest = $dir . DIRECTORY_SEPARATOR . $filename;
     $staging_base = $filename;
@@ -499,14 +521,16 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
         'bytes'        => (int) filesize($dest),
         'duration'     => $saved_duration,
         'mime'         => $mime,
-        'uploaded_at'        => current_time('mysql'),
+        'uploaded_at'        => $uploaded_at,
         'display_name'       => $display !== '' ? $display : (string) $user->user_login,
         'mobile'             => $mobile,
-        'rights_accepted_at' => current_time('mysql'),
+        'rights_accepted_at' => $uploaded_at,
+        'owner_hidden'       => '',
     ];
     $rows = casting_intro_clip_rows($user_id);
     array_unshift($rows, $row);
     update_user_meta($user_id, CASTING_INTRO_CLIP_META, $rows);
+    casting_intro_clip_notify_reviewers($user_id, (string) $row['display_name']);
 
     return ['ok' => true, 'error' => ''];
 }
@@ -544,6 +568,54 @@ function casting_intro_clip_owner_of_basename(string $basename): int
     }
 
     return 0;
+}
+
+/**
+ * حذف از پروفایل خود کاربر؛ فایل روی هاست و فهرست مدیران می‌ماند.
+ *
+ * @return array{ok:bool,error:string}
+ */
+function casting_intro_clip_hide_from_owner(int $user_id, string $clip_id): array
+{
+    if ($user_id <= 0) {
+        return ['ok' => false, 'error' => 'حساب نامعتبر است.'];
+    }
+    $clip_id = strtolower($clip_id);
+    if (!preg_match('/^[a-f0-9]{8,24}$/', $clip_id)) {
+        return ['ok' => false, 'error' => 'اثر انتخاب‌شده نامعتبر است.'];
+    }
+    $rows = casting_intro_clip_rows($user_id);
+    $found = false;
+    foreach ($rows as $index => $item) {
+        if ($item['id'] !== $clip_id) {
+            continue;
+        }
+        $rows[$index]['owner_hidden'] = '1';
+        $found = true;
+        break;
+    }
+    if (!$found) {
+        return ['ok' => false, 'error' => 'این اثر برای حذف پیدا نشد.'];
+    }
+    update_user_meta($user_id, CASTING_INTRO_CLIP_META, $rows);
+
+    return ['ok' => true, 'error' => ''];
+}
+
+/**
+ * @return list<array{id:string,file:string,bytes:int,duration:float,mime:string,uploaded_at:string,display_name:string,mobile:string,rights_accepted_at:string,owner_hidden:string}>
+ */
+function casting_intro_clip_visible_rows(int $user_id): array
+{
+    $out = [];
+    foreach (casting_intro_clip_rows($user_id) as $row) {
+        if (($row['owner_hidden'] ?? '') === '1') {
+            continue;
+        }
+        $out[] = $row;
+    }
+
+    return $out;
 }
 
 /**
@@ -609,8 +681,9 @@ function casting_intro_clip_list(): array
                 'file'        => $row['file'],
                 'duration'    => $row['duration'],
                 'uploaded_at' => $row['uploaded_at'],
-                'bytes'       => $row['bytes'],
-                'missing'     => casting_intro_clip_absolute_path($id, $row['id']) === '',
+                'bytes'        => $row['bytes'],
+                'missing'      => casting_intro_clip_absolute_path($id, $row['id']) === '',
+                'owner_hidden' => ($row['owner_hidden'] ?? '') === '1',
             ];
         }
     }
@@ -619,6 +692,67 @@ function casting_intro_clip_list(): array
     });
 
     return $out;
+}
+
+function casting_intro_clip_submitter_count(): int
+{
+    $people = [];
+    foreach (casting_intro_clip_list() as $row) {
+        $people[(int) $row['user_id']] = true;
+    }
+
+    return count($people);
+}
+
+function casting_intro_clip_notify_reviewers(int $uploader_id, string $display_name): void
+{
+    if (!function_exists('casting_sms_send_text')) {
+        $sms = __DIR__ . '/sms.php';
+        if (is_file($sms)) {
+            require_once $sms;
+        }
+    }
+    if (!function_exists('casting_sms_send_text') || !function_exists('get_user_by')) {
+        return;
+    }
+    if (!function_exists('casting_normalize_mobile')) {
+        require_once __DIR__ . '/profile.php';
+    }
+
+    $name = trim($display_name);
+    if ($name === '') {
+        $name = 'یک عضو';
+    }
+    if (function_exists('mb_substr')) {
+        $name = mb_substr($name, 0, 40, 'UTF-8');
+    }
+    $count = casting_intro_clip_submitter_count();
+    $message = '۷رخ: اثر جدید از ' . $name . ' ثبت شد. ' . $count . ' نفر ویدیو گذاشته‌اند.';
+
+    foreach (['eshahabian', 'ardavan'] as $login) {
+        $reviewer = get_user_by('login', $login);
+        if (!$reviewer instanceof WP_User) {
+            continue;
+        }
+        $reviewer_id = (int) $reviewer->ID;
+        if ($reviewer_id <= 0 || $reviewer_id === $uploader_id) {
+            continue;
+        }
+        $mobiles = [];
+        foreach (['casting_mobile', 'casting_mobile2'] as $meta_key) {
+            $mobile = casting_normalize_mobile((string) get_user_meta($reviewer_id, $meta_key, true));
+            if (preg_match('/^09\d{9}$/', $mobile) === 1) {
+                $mobiles[$mobile] = true;
+            }
+        }
+        foreach (array_keys($mobiles) as $mobile) {
+            try {
+                casting_sms_send_text($mobile, $message);
+            } catch (Throwable $e) {
+                // ارسال اثر نباید به‌خاطر پیامک متوقف شود
+            }
+        }
+    }
 }
 
 function casting_intro_clip_output(int $owner_id, string $clip_id): void

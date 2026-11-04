@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $action = sanitize_key((string) ($_POST['intro_action'] ?? 'upload'));
     if ($action === 'delete') {
-        $res = casting_intro_clip_delete($user_id, (string) ($_POST['clip_id'] ?? ''));
-        casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'اثر حذف شد. می‌توانید اثر دیگری بفرستید.' : $res['error']);
+        $res = casting_intro_clip_hide_from_owner($user_id, (string) ($_POST['clip_id'] ?? ''));
+        casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'اثر از پروفایل شما حذف شد. می‌توانید اثر دیگری بفرستید.' : $res['error']);
     } else {
         $res = casting_intro_clip_save_upload($user_id, 'intro_clip');
         casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'اثر ذخیره شد.' : $res['error']);
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     casting_redirect('intro-clip.php');
 }
 
-$clips = casting_intro_clip_rows($user_id);
+$clips = casting_intro_clip_visible_rows($user_id);
 
 casting_render_panel_start('۷رخ از نگاه تو', 'intro-clip', 'page-panel page-negah');
 casting_render_flash();
@@ -122,7 +122,7 @@ casting_render_flash();
           data-upload-kind="video"
           data-max-bytes="<?= (int) casting_upload_max_bytes('video') ?>"
         >
-        <p class="field-hint">MP4 / WebM / MOV — بین ۳۰ تا ۹۰ ثانیه و حداکثر <?= casting_e(casting_upload_max_label_fa('video')) ?>. نام فایل روی هاست از نام نمایشی و شماره موبایل حساب ساخته می‌شود.</p>
+        <p class="field-hint">MP4 / WebM / MOV — بین ۳۰ تا ۹۰ ثانیه و حداکثر <?= casting_e(casting_upload_max_label_fa('video')) ?>. نام فایل روی هاست از نام پروفایل، شماره موبایل و تاریخ شمسی ارسال ساخته می‌شود.</p>
         <p id="intro-clip-duration-note" class="field-hint" hidden></p>
       </div>
       <div class="field negah-consent">
@@ -159,7 +159,7 @@ casting_render_flash();
               · مدت: <?= casting_e(casting_intro_clip_duration_label((float) $clip['duration'])) ?>
             </p>
             <p class="meta" dir="auto">نام فایل روی هاست: <?= casting_e((string) $clip['file']) ?></p>
-            <form method="post" action="intro-clip.php" onsubmit="return confirm('این اثر حذف شود؟ بعد از حذف می‌توانید اثر دیگری بفرستید.');">
+            <form method="post" action="intro-clip.php" onsubmit="return confirm('این اثر از پروفایل شما حذف شود؟ بعد از آن می‌توانید اثر دیگری بفرستید.');">
               <?php wp_nonce_field('casting_intro_clip'); ?>
               <input type="hidden" name="intro_action" value="delete">
               <input type="hidden" name="clip_id" value="<?= casting_e((string) $clip['id']) ?>">

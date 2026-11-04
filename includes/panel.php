@@ -670,6 +670,8 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
                 <span class="nav-badge" aria-label="<?= casting_e((string) $pending_ads) ?> پوستر در انتظار"><?= (int) $pending_ads ?></span>
               <?php elseif ($item['key'] === 'contact' && $unread_contacts > 0) : ?>
                 <span class="nav-badge" aria-label="<?= casting_e((string) $unread_contacts) ?> پیام جدید"><?= (int) $unread_contacts ?></span>
+              <?php elseif ($item['key'] === 'admin-intro-clips' && (int) ($item['badge'] ?? 0) > 0) : ?>
+                <span class="negah-submitter-count" title="<?= (int) $item['badge'] ?> نفر ویدیو گذاشته‌اند"><?= (int) $item['badge'] ?></span>
               <?php endif; ?>
             </a>
           <?php endforeach; ?>

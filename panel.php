@@ -154,6 +154,18 @@ casting_render_panel_completion_card($profile, $user_id);
         <a class="btn btn-ghost" href="<?= casting_e(casting_url('my-gallery.php')) ?>">افزودن پست</a>
       <?php endif; ?>
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('intro-clip.php')) ?>">۷رخ از نگاه تو</a>
+      <?php
+      if (!function_exists('casting_user_can_review_intro_clips')) {
+          require_once __DIR__ . '/includes/intro-clip.php';
+      }
+      if (casting_user_can_review_intro_clips($user_id)) :
+          $clip_people = casting_intro_clip_submitter_count();
+          ?>
+        <a class="btn btn-ghost negah-submitter-link" href="<?= casting_e(casting_url('admin-intro-clips.php')) ?>">
+          <strong class="negah-submitter-count"><?= (int) $clip_people ?></strong>
+          نفر ویدیو گذاشته‌اند
+        </a>
+      <?php endif; ?>
       <a class="btn btn-ghost" href="<?= casting_e(casting_url('settings.php')) ?>">تنظیمات</a>
     </div>
   </header>

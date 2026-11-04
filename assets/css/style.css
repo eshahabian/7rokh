@@ -13573,3 +13573,19 @@ html[data-theme="day"] .negah-consent {
   font-weight: 700;
 }
 
+.negah-submitter-count {
+  color: #d1242f;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.negah-submitter-link,
+.panel-nav-link .negah-submitter-count {
+  display: inline-flex;
+  align-items: center;
+}
+
+.negah-submitter-link {
+  gap: 0.35rem;
+}
+

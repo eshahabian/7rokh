@@ -87,6 +87,9 @@ casting_render_flash();
               · مدت: <?= casting_e(casting_intro_clip_duration_label((float) $item['duration'])) ?>
             </p>
             <p class="meta" dir="auto">فایل: <?= casting_e((string) $item['file']) ?></p>
+            <?php if (!empty($item['owner_hidden'])) : ?>
+              <p class="meta">این اثر از پروفایل خود کاربر برداشته شده و فایل روی هاست مانده است.</p>
+            <?php endif; ?>
             <div class="cta-row">
               <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('member.php?id=' . $owner_id)) ?>">پروفایل</a>
               <form method="post" action="admin-intro-clips.php" onsubmit="return confirm('کلیپ این کاربر حذف شود؟');">
