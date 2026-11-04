@@ -13501,3 +13501,75 @@ a.btn[href*="intro-clip.php"] {
   line-height: 1.35;
 }
 
+.negah-guide {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0 0 1.35rem;
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.9;
+}
+
+.negah-guide h2,
+.negah-guide h3,
+.negah-guide h4 {
+  margin: 0;
+  font-family: var(--font);
+  line-height: 1.55;
+}
+
+.negah-guide h2 {
+  font-size: 1.15rem;
+}
+
+.negah-guide h3 {
+  margin-top: 0.45rem;
+  font-size: 1.02rem;
+}
+
+.negah-guide h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.negah-guide p {
+  margin: 0;
+}
+
+.negah-guide ul,
+.negah-guide ol {
+  margin: 0;
+  padding-inline-start: 1.35rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.negah-guide-note {
+  font-weight: 700;
+}
+
+.negah-consent {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+html[data-theme="day"] .negah-consent {
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.negah-consent-text {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+  line-height: 1.9;
+}
+
+.negah-consent .checkbox-row span {
+  color: var(--ink);
+  font-weight: 700;
+}
+

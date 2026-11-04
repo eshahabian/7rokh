@@ -120,9 +120,10 @@ function casting_intro_clip_normalize_row(array $raw): ?array
         'bytes'        => (int) ($raw['bytes'] ?? 0),
         'duration'     => (float) ($raw['duration'] ?? 0),
         'mime'         => (string) ($raw['mime'] ?? 'video/mp4'),
-        'uploaded_at'  => $uploaded_at,
-        'display_name' => (string) ($raw['display_name'] ?? ''),
-        'mobile'       => (string) ($raw['mobile'] ?? ''),
+        'uploaded_at'        => $uploaded_at,
+        'display_name'       => (string) ($raw['display_name'] ?? ''),
+        'mobile'             => (string) ($raw['mobile'] ?? ''),
+        'rights_accepted_at' => (string) ($raw['rights_accepted_at'] ?? ''),
     ];
 }
 
@@ -368,6 +369,9 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
     if (!casting_user_can_upload_intro_clip($user_id)) {
         return ['ok' => false, 'error' => 'ارسال اثر فقط برای اعضایی است که اشتراک ویژه فعال دارند.'];
     }
+    if ((string) ($_POST['intro_rights_accepted'] ?? '') !== '1') {
+        return ['ok' => false, 'error' => 'برای ارسال اثر، شرایط استفاده از اثر را بپذیرید.'];
+    }
     if (empty($_FILES[$field]['name']) || !is_array($_FILES[$field])) {
         return ['ok' => false, 'error' => 'یک ویدیو انتخاب کنید.'];
     }
@@ -486,9 +490,10 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
         'bytes'        => (int) filesize($dest),
         'duration'     => $saved_duration,
         'mime'         => $mime,
-        'uploaded_at'  => current_time('mysql'),
-        'display_name' => $display !== '' ? $display : (string) $user->user_login,
-        'mobile'       => $mobile,
+        'uploaded_at'        => current_time('mysql'),
+        'display_name'       => $display !== '' ? $display : (string) $user->user_login,
+        'mobile'             => $mobile,
+        'rights_accepted_at' => current_time('mysql'),
     ];
     $rows = casting_intro_clip_rows($user_id);
     array_unshift($rows, $row);
