@@ -85,7 +85,7 @@ casting_render_flash();
     <p class="negah-guide-note">برای نام‌گذاری فایل از حروف لاتین استفاده کنید.</p>
   </div>
 
-  <?php if ($is_admin) : ?>
+  <?php if (casting_user_can_review_intro_clips($user_id)) : ?>
     <p class="cta-row">
       <a class="btn btn-ghost btn-sm" href="<?= casting_e(casting_url('admin-intro-clips.php')) ?>">کلیپ‌های اعضا</a>
     </p>

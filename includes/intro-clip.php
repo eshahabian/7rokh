@@ -5,7 +5,7 @@ declare(strict_types=1);
  * اثر مسابقه «۷رخ از نگاه تو» — بین ۳۰ تا ۹۰ ثانیه.
  * هر ارسال جدا می‌ماند و با تاریخ ارسال از بقیه جدا می‌شود.
  * آپلود: عضو دارای اشتراک ویژه، یا مدیر پورتال (مستثنی از شرط اشتراک).
- * مشاهده فهرست: فقط مدیران پورتال (eshahabian و ardavan).
+ * مشاهده فهرست کلیپ‌ها: فقط نام‌های کاربری eshahabian و ardavan.
  */
 
 const CASTING_INTRO_CLIP_MIN_SECONDS = 30.0;
@@ -53,7 +53,16 @@ function casting_user_can_upload_intro_clip(int $user_id): bool
 
 function casting_user_can_review_intro_clips(int $user_id): bool
 {
-    return casting_intro_clip_is_portal_admin($user_id);
+    if ($user_id <= 0 || !function_exists('get_user_by')) {
+        return false;
+    }
+    $user = get_user_by('id', $user_id);
+    if (!$user) {
+        return false;
+    }
+    $login = strtolower((string) $user->user_login);
+
+    return in_array($login, ['eshahabian', 'ardavan'], true);
 }
 
 function casting_user_can_view_intro_clip(int $viewer_id, int $owner_id): bool
