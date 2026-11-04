@@ -153,7 +153,7 @@ function casting_brand(): string
 }
 
 /**
- * نمایش رنگی برند: ۷ سفید، رخ زرد
+ * نمایش رنگی برند: ۷ و رخ هر دو به رنگ رخ
  */
 function casting_brand_html(): string
 {

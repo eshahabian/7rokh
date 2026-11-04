@@ -368,7 +368,7 @@ a:hover {
   color: inherit;
 }
 
-/* فقط خودِ «۷ رخ»: فونت متمایز + بولد، ۷ سفید، رخ زرد */
+/* فقط خودِ «۷ رخ»: فونت متمایز + بولد؛ ۷ و رخ هر دو به رنگ رخ */
 .brand-mark {
   display: inline;
   white-space: nowrap;
@@ -389,20 +389,9 @@ a:hover {
   letter-spacing: inherit;
 }
 
-.brand-mark-7 {
-  color: #ffffff !important;
-}
-
+.brand-mark-7,
 .brand-mark-rokh {
-  color: #f5c542 !important;
-}
-
-html[data-theme="day"] .brand-mark-7 {
-  color: #111827 !important;
-}
-
-html[data-theme="day"] .brand-mark-rokh {
-  color: #c99212 !important;
+  color: var(--brand-rokh) !important;
 }
 
 /* در منوها کمی درشت‌تر تا بیشتر به چشم بیاید */
@@ -497,13 +486,10 @@ html[data-theme="day"] .site-header-quick-link.nav-register-btn.is-active {
   margin: 0;
 }
 
-/* «سایت» مثل بقیه منو؛ فقط ۷ سفید و رخ زرد */
-.nav a.nav-external .brand-mark-7 {
-  color: #ffffff !important;
-}
-
+/* «سایت» مثل بقیه منو؛ ۷ و رخ هر دو به رنگ رخ */
+.nav a.nav-external .brand-mark-7,
 .nav a.nav-external .brand-mark-rokh {
-  color: #f5c542 !important;
+  color: var(--brand-rokh) !important;
 }
 
 .nav a.is-active {
@@ -12173,25 +12159,12 @@ html[data-theme="day"] .scroll-top:hover {
 }
 
 .panel-nav-link-external .panel-nav-label .brand-mark-7,
-.panel-nav-link .brand-mark-7,
-.nav a .brand-mark-7 {
-  color: #ffffff !important;
-}
-
 .panel-nav-link-external .panel-nav-label .brand-mark-rokh,
+.panel-nav-link .brand-mark-7,
 .panel-nav-link .brand-mark-rokh,
+.nav a .brand-mark-7,
 .nav a .brand-mark-rokh {
-  color: #f5c542 !important;
-}
-
-html[data-theme="day"] .panel-nav-link .brand-mark-7,
-html[data-theme="day"] .nav a .brand-mark-7 {
-  color: #111827 !important;
-}
-
-html[data-theme="day"] .panel-nav-link .brand-mark-rokh,
-html[data-theme="day"] .nav a .brand-mark-rokh {
-  color: #c99212 !important;
+  color: var(--brand-rokh) !important;
 }
 
 /* کارگردان — دیده‌شده، هایلایت، یادداشت */
@@ -13481,12 +13454,40 @@ html[data-theme="day"] .ig-profile .referral-block {
   color: var(--nav-hover) !important;
 }
 
-/* فراخوان ۷رخ از نگاه تو — هم‌اندازه اسلایدشو (۱۶ / ۶٫۷۵) */
+.site-header .nav a:hover .brand-mark-7,
+.site-header .nav a:hover .brand-mark-rokh,
+.site-header .nav a.is-active .brand-mark-7,
+.site-header .nav a.is-active .brand-mark-rokh,
+.site-header-quick-link:hover .brand-mark-7,
+.site-header-quick-link:hover .brand-mark-rokh,
+.site-header-quick-link.is-active .brand-mark-7,
+.site-header-quick-link.is-active .brand-mark-rokh,
+.panel-nav-link:hover .brand-mark-7,
+.panel-nav-link:hover .brand-mark-rokh,
+.nav a:hover .brand-mark-7,
+.nav a:hover .brand-mark-rokh,
+.nav a.is-active .brand-mark-7,
+.nav a.is-active .brand-mark-rokh {
+  color: var(--brand-rokh) !important;
+}
+
+/* فراخوان ۷رخ از نگاه تو — پوستر افقی تمام‌عرض */
 .negah-banner-frame {
-  container-type: inline-size;
   width: 100%;
   margin: 0 0 1rem;
 }
+
+.negah-banner-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  border-radius: calc(var(--radius) + 4px);
+  border: 1px solid rgba(176, 138, 62, 0.45);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
 .nav a.nav-negah,
 .panel-nav-link[href*="intro-clip.php"] .panel-nav-label,
 .page-negah .panel-page-heading-title,
@@ -13500,230 +13501,3 @@ a.btn[href*="intro-clip.php"] {
   line-height: 1.35;
 }
 
-.negah-banner {
-  --negah-ink: #1c1c1c;
-  --negah-gold: #b08a3e;
-  --negah-gold-deep: #8d6a28;
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1.15fr) minmax(140px, 0.95fr) minmax(0, 1.05fr);
-  grid-template-areas:
-    "brand copy art prize"
-    "send send send send"
-    "legal legal legal legal";
-  align-items: center;
-  gap: 0.35rem 0.85rem;
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 1rem 1.25rem 0.75rem;
-  aspect-ratio: 16 / 6.75;
-  min-height: calc(260px * 1.5);
-  overflow: hidden;
-  border: 1px solid rgba(176, 138, 62, 0.45);
-  border-radius: calc(var(--radius) + 4px);
-  background:
-    radial-gradient(ellipse at 80% 20%, rgba(198, 161, 90, 0.18), transparent 42%),
-    radial-gradient(ellipse at 18% 80%, rgba(198, 161, 90, 0.12), transparent 36%),
-    #fffaf4;
-  color: var(--negah-ink);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
-}
-
-.negah-banner-brand {
-  grid-area: brand;
-}
-
-.negah-banner-brand img {
-  display: block;
-  width: auto;
-  height: clamp(64px, 8vw, 92px);
-  border-radius: 10px;
-  background: #000;
-}
-
-.negah-banner-copy {
-  grid-area: copy;
-  min-width: 0;
-}
-
-.negah-banner-copy h2 {
-  margin: 0;
-  font-family: "Lalezar", "Vazirmatn", Tahoma, sans-serif;
-  font-weight: 400;
-  font-size: clamp(1.7rem, 3.1vw, 3.15rem);
-  line-height: 1.15;
-  color: #161616;
-}
-
-.negah-banner-copy p {
-  margin: 0.35rem 0 0;
-  font-family: "Vazirmatn", Tahoma, sans-serif;
-  font-weight: 700;
-  font-size: clamp(0.82rem, 1.25vw, 1.12rem);
-  line-height: 1.55;
-  color: #2a2a2a;
-}
-
-.negah-banner-art {
-  grid-area: art;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 0.65rem;
-  min-width: 0;
-}
-
-.negah-filmstrip {
-  display: flex;
-  gap: 5px;
-  padding: 10px 8px;
-  border-radius: 6px;
-  background:
-    radial-gradient(circle at 8px 4px, #c6a15a 1.5px, transparent 1.7px) 0 0 / 12px 100% repeat-x,
-    radial-gradient(circle at 8px calc(100% - 4px), #c6a15a 1.5px, transparent 1.7px) 0 0 / 12px 100% repeat-x,
-    linear-gradient(#e7d3a4, #e7d3a4) top / 100% 7px no-repeat,
-    linear-gradient(#e7d3a4, #e7d3a4) bottom / 100% 7px no-repeat,
-    #fbf6ec;
-  transform: rotate(-7deg);
-  box-shadow: 0 8px 18px rgba(141, 106, 40, 0.12);
-}
-
-.negah-filmstrip span {
-  width: 18px;
-  height: 28px;
-  border-radius: 2px;
-  background: #fff;
-  box-shadow: inset 0 0 0 1px #c6a15a;
-}
-
-.negah-masks {
-  display: block;
-  width: min(92px, 38%);
-  height: auto;
-  flex: 0 0 auto;
-}
-
-.negah-banner-prize {
-  grid-area: prize;
-  text-align: center;
-  min-width: 0;
-}
-
-.negah-banner-prize span {
-  display: block;
-  font-family: "Vazirmatn", Tahoma, sans-serif;
-  font-weight: 700;
-  font-size: clamp(0.85rem, 1.2vw, 1.05rem);
-}
-
-.negah-banner-prize strong {
-  display: block;
-  margin-top: 0.1rem;
-  font-family: "Lalezar", "Vazirmatn", Tahoma, sans-serif;
-  font-weight: 400;
-  font-size: clamp(1.35rem, 2.5vw, 2.45rem);
-  line-height: 1.2;
-  color: var(--negah-gold-deep);
-}
-
-.negah-banner-prize i {
-  display: block;
-  width: 42%;
-  height: 1px;
-  margin: 0.45rem auto;
-  background: var(--negah-gold);
-}
-
-.negah-banner-prize ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-family: "Vazirmatn", Tahoma, sans-serif;
-  font-weight: 600;
-  font-size: clamp(0.72rem, 1.05vw, 0.92rem);
-  line-height: 1.7;
-}
-
-.negah-banner-send,
-.negah-banner-legal {
-  margin: 0;
-  text-align: center;
-  font-family: "Vazirmatn", Tahoma, sans-serif;
-}
-
-.negah-banner-send {
-  grid-area: send;
-  font-weight: 700;
-  font-size: clamp(0.78rem, 1.1vw, 0.98rem);
-}
-
-.negah-banner-legal {
-  grid-area: legal;
-  font-size: clamp(0.62rem, 0.85vw, 0.75rem);
-  line-height: 1.6;
-  color: #4a4a4a;
-}
-
-@container (max-width: 760px) {
-  .negah-banner {
-    aspect-ratio: auto;
-    min-height: 0;
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "brand"
-      "copy"
-      "art"
-      "prize"
-      "send"
-      "legal";
-    justify-items: center;
-    text-align: center;
-    padding: 1.15rem 1rem 1rem;
-  }
-
-  .negah-banner-copy p br {
-    display: none;
-  }
-
-  .negah-banner-art {
-    flex-direction: column;
-  }
-
-  .negah-filmstrip span {
-    width: 22px;
-    height: 34px;
-  }
-}
-
-@media (max-width: 860px) {
-  .negah-banner {
-    aspect-ratio: auto;
-    min-height: 0;
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "brand"
-      "copy"
-      "art"
-      "prize"
-      "send"
-      "legal";
-    justify-items: center;
-    text-align: center;
-    padding: 1.15rem 1rem 1rem;
-  }
-
-  .negah-banner-copy p br {
-    display: none;
-  }
-
-  .negah-banner-art {
-    flex-direction: column;
-  }
-
-  .negah-filmstrip span {
-    width: 22px;
-    height: 34px;
-  }
-}

@@ -45,39 +45,13 @@ casting_render_panel_start('۷رخ از نگاه تو', 'intro-clip', 'page-pane
 casting_render_flash();
 ?>
 <div class="negah-banner-frame">
-<section class="negah-banner" aria-label="فراخوان ۷رخ از نگاه تو">
-  <div class="negah-banner-brand">
-    <img src="<?= casting_e(casting_asset('img/logo.png')) ?>" alt="۷رخ" width="72" height="84">
-  </div>
-  <div class="negah-banner-copy">
-    <h2>۷رخ از نگاه تو</h2>
-    <p>مسابقه تولید محتوا<br>و ساخت تیزر تبلیغاتی</p>
-  </div>
-  <div class="negah-banner-art" aria-hidden="true">
-    <div class="negah-filmstrip">
-      <span></span><span></span><span></span><span></span><span></span><span></span>
-    </div>
-    <svg class="negah-masks" viewBox="0 0 120 78" fill="none">
-      <path d="M18 18c0-8 8-14 20-14s20 6 20 14v16c0 10-8 20-20 24-12-4-20-14-20-24V18z" stroke="#c6a15a" stroke-width="1.6"/>
-      <path d="M28 28c1.2 2 2.2 2 3.4 0M44 28c1.2 2 2.2 2 3.4 0" stroke="#c6a15a" stroke-width="1.4" stroke-linecap="round"/>
-      <path d="M32 46c4 4 10 4 14 0" stroke="#c6a15a" stroke-width="1.4" stroke-linecap="round"/>
-      <path d="M62 18c0-8 8-14 20-14s20 6 20 14v16c0 10-8 20-20 24-12-4-20-14-20-24V18z" stroke="#c6a15a" stroke-width="1.6"/>
-      <path d="M72 28c1.2-2 2.2-2 3.4 0M88 28c1.2-2 2.2-2 3.4 0" stroke="#c6a15a" stroke-width="1.4" stroke-linecap="round"/>
-      <path d="M76 48c4-4 10-4 14 0" stroke="#c6a15a" stroke-width="1.4" stroke-linecap="round"/>
-    </svg>
-  </div>
-  <div class="negah-banner-prize">
-    <span>جایزه:</span>
-    <strong>۵۰ میلیون تومان</strong>
-    <i></i>
-    <ul>
-      <li>مدت اثر: ۳۰ تا ۹۰ ثانیه</li>
-      <li>آخرین مهلت ارسال: ۱۵ آذر ۱۴۰۵</li>
-    </ul>
-  </div>
-  <p class="negah-banner-send">ارسال اثر از طریق پرتال ۷رخ</p>
-  <p class="negah-banner-legal">حق استفاده از تمامی آثار ارسالی در فضای مجازی و بستر اینترنت، برای ۷رخ محفوظ است.</p>
-</section>
+  <img
+    class="negah-banner-photo"
+    src="<?= casting_e(casting_asset('images/negah-banner.jpg')) ?>"
+    alt="۷رخ از نگاه تو — مسابقه تولید محتوا و ساخت تیزر تبلیغاتی، جایزه ۴۹ میلیون تومان"
+    width="1024"
+    height="512"
+  >
 </div>
 <section class="dash-card">
   <?php casting_render_panel_heading('۷رخ از نگاه تو'); ?>
