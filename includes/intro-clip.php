@@ -134,6 +134,7 @@ function casting_intro_clip_normalize_row(array $raw): ?array
         'mobile'             => (string) ($raw['mobile'] ?? ''),
         'rights_accepted_at' => (string) ($raw['rights_accepted_at'] ?? ''),
         'owner_hidden'       => (string) ($raw['owner_hidden'] ?? '') === '1' ? '1' : '',
+        'dir'                => rtrim(str_replace('\\', '/', (string) ($raw['dir'] ?? '')), '/'),
     ];
 }
 
@@ -198,7 +199,14 @@ function casting_intro_clip_dir_is_allowed(string $dir): bool
     return $base === 'casting-intro-clips';
 }
 
+function casting_intro_clip_fs_path(string $dir): string
+{
+    return str_replace('/', DIRECTORY_SEPARATOR, rtrim(str_replace('\\', '/', $dir), '/'));
+}
+
 /**
+ * پوشه خصوصی کنار public_html، بعد پوشه آپلود خود وردپرس داخل سایت.
+ *
  * @return list<string>
  */
 function casting_intro_clip_candidate_dirs(): array
@@ -222,6 +230,7 @@ function casting_intro_clip_candidate_dirs(): array
         if ($parent !== '' && $parent !== '.' && $parent !== $root) {
             $push($parent . '/casting-intro-clips');
         }
+        $push($root . '/wp-content/uploads/casting-intro-clips');
     }
     if (!function_exists('wp_upload_dir') && defined('ABSPATH')) {
         require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -236,65 +245,168 @@ function casting_intro_clip_candidate_dirs(): array
     return array_values($dirs);
 }
 
-function casting_intro_clip_storage_dir(): string
+function casting_intro_clip_dir_probe(string $fs): bool
 {
-    $readable = '';
-    foreach (casting_intro_clip_candidate_dirs() as $dir) {
-        $fs = str_replace('/', DIRECTORY_SEPARATOR, $dir);
-        if (!is_dir($fs)) {
-            continue;
-        }
-        if ($readable === '') {
-            $readable = $fs;
-        }
-        if (is_writable($fs)) {
-            casting_intro_clip_protect_dir($fs);
-            update_option('casting_intro_clip_dir', $fs, false);
-
-            return $fs;
-        }
+    if ($fs === '' || !is_dir($fs) || !is_writable($fs)) {
+        return false;
+    }
+    $probe = $fs . DIRECTORY_SEPARATOR . '.write-probe-' . bin2hex(random_bytes(3));
+    $written = @file_put_contents($probe, 'ok');
+    $visible = $written !== false && is_file($probe);
+    if (is_file($probe)) {
+        @unlink($probe);
     }
 
+    return $visible;
+}
+
+function casting_intro_clip_storage_dir(): string
+{
+    $usable = [];
     foreach (casting_intro_clip_candidate_dirs() as $dir) {
-        $fs = str_replace('/', DIRECTORY_SEPARATOR, $dir);
+        $fs = casting_intro_clip_fs_path($dir);
         if (!is_dir($fs) && function_exists('wp_mkdir_p')) {
             wp_mkdir_p($fs);
         }
-        if (!is_dir($fs) || !is_writable($fs)) {
+        if (!casting_intro_clip_dir_probe($fs)) {
             continue;
         }
-        casting_intro_clip_protect_dir($fs);
-        update_option('casting_intro_clip_dir', $fs, false);
-
-        return $fs;
+        $usable[] = $fs;
+    }
+    if ($usable === []) {
+        return '';
     }
 
-    return $readable;
+    $uploads = '';
+    $private = '';
+    foreach ($usable as $fs) {
+        $norm = str_replace('\\', '/', $fs);
+        if (str_contains($norm, '/wp-content/uploads/casting-intro-clips')) {
+            if ($uploads === '') {
+                $uploads = $fs;
+            }
+            continue;
+        }
+        if ($private === '') {
+            $private = $fs;
+        }
+    }
+    $chosen = $private !== '' ? $private : $uploads;
+    if ($chosen === '') {
+        $chosen = $usable[0];
+    }
+    casting_intro_clip_protect_dir($chosen);
+    update_option('casting_intro_clip_dir', $chosen, false);
+
+    return $chosen;
 }
 
-function casting_intro_clip_locate_file(string $filename): string
+/**
+ * @return list<string>
+ */
+function casting_intro_clip_file_tokens(string $filename): array
+{
+    $tokens = [];
+    if (preg_match_all('/\d{8,}/', $filename, $nums)) {
+        foreach ($nums[0] as $token) {
+            $tokens[] = $token;
+        }
+    }
+    if (preg_match_all('/[a-f0-9]{6,}/i', $filename, $hex)) {
+        foreach ($hex[0] as $token) {
+            if (!ctype_digit($token)) {
+                $tokens[] = strtolower($token);
+            }
+        }
+    }
+    if (preg_match('/\d{4}-\d{2}-\d{2}/', $filename, $date)) {
+        $tokens[] = $date[0];
+    }
+
+    return array_values(array_unique($tokens));
+}
+
+function casting_intro_clip_names_match(string $wanted, string $actual): bool
+{
+    if ($wanted === $actual) {
+        return true;
+    }
+    $tokens = casting_intro_clip_file_tokens($wanted);
+    if ($tokens === []) {
+        return false;
+    }
+    $hay = strtolower($actual);
+    foreach ($tokens as $token) {
+        if (!str_contains($hay, strtolower($token))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function casting_intro_clip_locate_file(string $filename, string $preferred_dir = ''): string
 {
     $filename = basename(str_replace('\\', '/', $filename));
     if ($filename === '' || $filename === '.' || $filename === '..') {
         return '';
     }
+
+    $dirs = [];
+    $push = static function (string $dir) use (&$dirs): void {
+        $dir = rtrim(str_replace('\\', '/', $dir), '/');
+        if ($dir === '' || isset($dirs[$dir])) {
+            return;
+        }
+        if (!casting_intro_clip_dir_is_allowed($dir)) {
+            return;
+        }
+        $dirs[$dir] = $dir;
+    };
+    if ($preferred_dir !== '') {
+        $push($preferred_dir);
+    }
     foreach (casting_intro_clip_candidate_dirs() as $dir) {
-        $fs = str_replace('/', DIRECTORY_SEPARATOR, $dir);
+        $push($dir);
+    }
+
+    foreach ($dirs as $dir) {
+        $fs = casting_intro_clip_fs_path($dir);
         if (!is_dir($fs)) {
             continue;
         }
-        $path = $fs . DIRECTORY_SEPARATOR . $filename;
-        if (!is_file($path)) {
+        $direct = $fs . DIRECTORY_SEPARATOR . $filename;
+        if (is_file($direct)) {
+            return $direct;
+        }
+        $listed = @scandir($fs);
+        if (!is_array($listed)) {
             continue;
         }
-        $real = realpath($path);
-        $found = $real !== false ? $real : $path;
-        $foundNorm = str_replace('\\', '/', $found);
-        $dirNorm = rtrim(str_replace('\\', '/', $dir), '/') . '/';
-        $base = realpath($fs);
-        $baseNorm = $base !== false ? rtrim(str_replace('\\', '/', $base), '/') . '/' : $dirNorm;
-        if (str_starts_with($foundNorm, $baseNorm) || str_starts_with($foundNorm, $dirNorm)) {
-            return $found;
+        $fallback = '';
+        foreach ($listed as $entry) {
+            if ($entry === '.' || $entry === '..' || str_contains($entry, '/') || str_contains($entry, '\\')) {
+                continue;
+            }
+            $path = $fs . DIRECTORY_SEPARATOR . $entry;
+            if (!is_file($path)) {
+                continue;
+            }
+            $same = $entry === $filename;
+            if (!$same && function_exists('normalizer_normalize')) {
+                $left = normalizer_normalize($entry, Normalizer::FORM_C);
+                $right = normalizer_normalize($filename, Normalizer::FORM_C);
+                $same = is_string($left) && is_string($right) && $left === $right;
+            }
+            if ($same) {
+                return $path;
+            }
+            if ($fallback === '' && casting_intro_clip_names_match($filename, $entry) && !str_contains($entry, '.uploading.')) {
+                $fallback = $path;
+            }
+        }
+        if ($fallback !== '') {
+            return $fallback;
         }
     }
 
@@ -321,7 +433,55 @@ function casting_intro_clip_absolute_path(int $user_id, string $clip_id): string
     if ($row === null) {
         return '';
     }
-    return casting_intro_clip_locate_file((string) $row['file']);
+    $path = casting_intro_clip_locate_file((string) $row['file'], (string) ($row['dir'] ?? ''));
+    if ($path === '') {
+        return '';
+    }
+    $found_file = basename(str_replace('\\', '/', $path));
+    $found_dir = rtrim(str_replace('\\', '/', dirname($path)), '/');
+    if ($found_file !== (string) $row['file'] || $found_dir !== (string) ($row['dir'] ?? '')) {
+        casting_intro_clip_remember_location($user_id, $clip_id, $found_dir, $found_file);
+    }
+
+    return $path;
+}
+
+function casting_intro_clip_remember_location(int $user_id, string $clip_id, string $dir, string $file): void
+{
+    $rows = casting_intro_clip_rows($user_id);
+    $changed = false;
+    foreach ($rows as $index => $row) {
+        if ($row['id'] !== $clip_id) {
+            continue;
+        }
+        $rows[$index]['dir'] = $dir;
+        $rows[$index]['file'] = $file;
+        $changed = true;
+        break;
+    }
+    if ($changed) {
+        update_user_meta($user_id, CASTING_INTRO_CLIP_META, $rows);
+    }
+}
+
+function casting_intro_clip_ascii_stem(string $login, string $mobile, string $shamsi, int $user_id): string
+{
+    $login = strtolower($login);
+    $login = preg_replace('/[^a-z0-9]+/', '-', $login) ?? '';
+    $login = trim($login, '-');
+    if ($login === '') {
+        $login = 'user-' . $user_id;
+    }
+    $mobile = preg_replace('/\D+/', '', $mobile) ?? '';
+    if ($mobile === '') {
+        $mobile = 'nomobile';
+    }
+    $shamsi = preg_replace('/[^0-9-]/', '', $shamsi) ?? '';
+    if ($shamsi === '') {
+        $shamsi = 'date';
+    }
+
+    return $login . '.' . $mobile . '.' . $shamsi;
 }
 
 function casting_intro_clip_probe_duration(string $path, string $ext): float
@@ -526,7 +686,7 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
     $phone_part = $mobile !== '' ? $mobile : 'بدون-شماره';
     $uploaded_at = current_time('mysql');
     $shamsi = casting_intro_clip_shamsi_file_date($uploaded_at);
-    $filename = casting_intro_clip_unique_filename($user_id, $label . '.' . $phone_part . '.' . $shamsi, $ext);
+    $filename = casting_intro_clip_unique_filename($dir, $user_id, $label . '.' . $phone_part . '.' . $shamsi, $ext);
 
     $dest = $dir . DIRECTORY_SEPARATOR . $filename;
     $staging_base = $filename;
@@ -559,20 +719,36 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
 
         return ['ok' => false, 'error' => 'جابه‌جایی فایل روی هاست ناموفق بود.'];
     }
-    @chmod($dest, 0640);
+    if (!is_file($dest)) {
+        $ascii = casting_intro_clip_ascii_stem((string) $user->user_login, $phone_part, $shamsi, $user_id);
+        $ascii_name = $ascii . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
+        $ascii_dest = $dir . DIRECTORY_SEPARATOR . $ascii_name;
+        if ((@rename($dest, $ascii_dest) || @copy($dest, $ascii_dest)) && is_file($ascii_dest)) {
+            if (is_file($dest) && $dest !== $ascii_dest) {
+                @unlink($dest);
+            }
+            $dest = $ascii_dest;
+            $filename = $ascii_name;
+        }
+    }
+    if (!is_file($dest)) {
+        return ['ok' => false, 'error' => 'فایل بعد از ذخیره در پوشه هاست دیده نشد.'];
+    }
+    @chmod($dest, 0644);
 
     $mime = $ftype !== '' ? $ftype : 'video/' . ($ext === 'mov' ? 'quicktime' : $ext);
     $row = [
-        'id'           => bin2hex(random_bytes(6)),
-        'file'         => $filename,
-        'bytes'        => (int) filesize($dest),
-        'duration'     => $saved_duration,
-        'mime'         => $mime,
+        'id'                 => bin2hex(random_bytes(6)),
+        'file'               => $filename,
+        'bytes'              => (int) filesize($dest),
+        'duration'           => $saved_duration,
+        'mime'               => $mime,
         'uploaded_at'        => $uploaded_at,
         'display_name'       => $display !== '' ? $display : (string) $user->user_login,
         'mobile'             => $mobile,
         'rights_accepted_at' => $uploaded_at,
         'owner_hidden'       => '',
+        'dir'                => rtrim(str_replace('\\', '/', $dir), '/'),
     ];
     $rows = casting_intro_clip_rows($user_id);
     array_unshift($rows, $row);
@@ -582,7 +758,7 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
     return ['ok' => true, 'error' => ''];
 }
 
-function casting_intro_clip_unique_filename(int $user_id, string $stem, string $ext): string
+function casting_intro_clip_unique_filename(string $dir, int $user_id, string $stem, string $ext): string
 {
     $stem = casting_intro_clip_safe_label($stem, 110);
     if ($stem === '') {
@@ -590,7 +766,6 @@ function casting_intro_clip_unique_filename(int $user_id, string $stem, string $
     }
     $ext = strtolower($ext);
     $candidate = $stem . '.' . $ext;
-    $dir = casting_intro_clip_storage_dir();
     $path = $dir . DIRECTORY_SEPARATOR . $candidate;
     if ($dir !== '' && !is_file($path)) {
         return $candidate;

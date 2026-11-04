@@ -43,7 +43,7 @@ if ($q !== '') {
 $storage_dir = casting_intro_clip_storage_dir();
 if ($storage_dir === '') {
     $candidates = casting_intro_clip_candidate_dirs();
-    $storage_dir = $candidates[0] ?? '/home/rokhcom/casting-intro-clips';
+    $storage_dir = $candidates[0] ?? '';
 }
 
 casting_render_panel_start('کلیپ‌های اعضا', 'admin-intro-clips', 'page-panel page-admin-intro');
@@ -51,7 +51,8 @@ casting_render_flash();
 ?>
 <section class="dash-card">
   <?php casting_render_panel_heading('کلیپ‌های اعضا'); ?>
-  <p class="meta" dir="ltr">پوشه ویدیوها روی هاست: <?= casting_e(str_replace('\\', '/', $storage_dir)) ?></p>
+  <p class="meta">پوشه ویدیوها روی هاست ۷رخ:</p>
+  <p class="meta" dir="ltr"><?= casting_e(str_replace('\\', '/', $storage_dir)) ?></p>
 
   <form class="form" method="get" action="admin-intro-clips.php">
     <div class="field">
