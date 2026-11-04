@@ -231,6 +231,18 @@ function casting_intro_clip_candidate_dirs(): array
             $push($parent . '/casting-intro-clips');
         }
         $push($root . '/wp-content/uploads/casting-intro-clips');
+        if (preg_match('#^(.*?)/(?:public_html|7rokh\\.ir)(?:/|$)#', $root, $homeMatch) === 1) {
+            $push($homeMatch[1] . '/casting-intro-clips');
+        }
+    }
+    $walk = str_replace('\\', '/', dirname(__DIR__));
+    for ($step = 0; $step < 6 && $walk !== '' && $walk !== '/' && $walk !== '.'; $step++) {
+        $push($walk . '/casting-intro-clips');
+        $up = dirname($walk);
+        if ($up === $walk) {
+            break;
+        }
+        $walk = $up;
     }
     if (!function_exists('wp_upload_dir') && defined('ABSPATH')) {
         require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -328,21 +340,30 @@ function casting_intro_clip_file_tokens(string $filename): array
 
 function casting_intro_clip_names_match(string $wanted, string $actual): bool
 {
+    return casting_intro_clip_name_score($wanted, $actual) > 0;
+}
+
+function casting_intro_clip_name_score(string $wanted, string $actual): int
+{
     if ($wanted === $actual) {
-        return true;
-    }
-    $tokens = casting_intro_clip_file_tokens($wanted);
-    if ($tokens === []) {
-        return false;
+        return 1000;
     }
     $hay = strtolower($actual);
-    foreach ($tokens as $token) {
-        if (!str_contains($hay, strtolower($token))) {
-            return false;
+    $score = 0;
+    if (preg_match('/09\d{9}/', $wanted, $mobile) === 1 && str_contains($hay, $mobile[0])) {
+        $score += 100;
+    }
+    foreach (casting_intro_clip_file_tokens($wanted) as $token) {
+        if (str_contains($hay, strtolower($token))) {
+            $score += 20;
         }
     }
+    if (preg_match('/[a-f0-9]{6}$/i', pathinfo($wanted, PATHINFO_FILENAME), $suffix) === 1
+        && str_contains($hay, strtolower($suffix[0]))) {
+        $score += 40;
+    }
 
-    return true;
+    return $score;
 }
 
 function casting_intro_clip_locate_file(string $filename, string $preferred_dir = ''): string
@@ -384,8 +405,13 @@ function casting_intro_clip_locate_file(string $filename, string $preferred_dir 
             continue;
         }
         $fallback = '';
+        $fallbackScore = 0;
+        $fallbackMtime = 0;
         foreach ($listed as $entry) {
             if ($entry === '.' || $entry === '..' || str_contains($entry, '/') || str_contains($entry, '\\')) {
+                continue;
+            }
+            if (!preg_match('/\.(mp4|webm|mov)$/i', $entry) || str_contains($entry, '.uploading.')) {
                 continue;
             }
             $path = $fs . DIRECTORY_SEPARATOR . $entry;
@@ -401,11 +427,15 @@ function casting_intro_clip_locate_file(string $filename, string $preferred_dir 
             if ($same) {
                 return $path;
             }
-            if ($fallback === '' && casting_intro_clip_names_match($filename, $entry) && !str_contains($entry, '.uploading.')) {
+            $score = casting_intro_clip_name_score($filename, $entry);
+            $mtime = (int) @filemtime($path);
+            if ($score > $fallbackScore || ($score === $fallbackScore && $score > 0 && $mtime >= $fallbackMtime)) {
                 $fallback = $path;
+                $fallbackScore = $score;
+                $fallbackMtime = $mtime;
             }
         }
-        if ($fallback !== '') {
+        if ($fallback !== '' && $fallbackScore >= 100) {
             return $fallback;
         }
     }
