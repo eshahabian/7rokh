@@ -630,49 +630,26 @@ function casting_intro_clip_stream_url(int $owner_id, string $clip_id): string
 
 function casting_intro_clip_render_player(string $src, string $name, string $mobile): void
 {
-    static $script_sent = false;
     $name = trim($name);
     $mobile = trim($mobile);
     if ($src === '') {
         return;
     }
+    $label = $name;
+    if ($mobile !== '') {
+        $label = $label === '' ? $mobile : $name . ' · ' . $mobile;
+    }
     ?>
     <div class="negah-clip-frame">
-      <video src="<?= casting_e($src) ?>" controls preload="metadata" playsinline controlslist="nofullscreen nodownload"></video>
-      <?php if ($name !== '' || $mobile !== '') : ?>
-        <div class="negah-clip-watermark" aria-hidden="true">
-          <?php for ($i = 0; $i < 2; $i++) : ?>
-            <span>
-              <?php if ($name !== '') : ?><em><?= casting_e($name) ?></em><?php endif; ?>
-              <?php if ($mobile !== '') : ?><bdi dir="ltr"><?= casting_e($mobile) ?></bdi><?php endif; ?>
-            </span>
+      <video src="<?= casting_e($src) ?>" controls preload="metadata" playsinline></video>
+      <?php if ($label !== '') : ?>
+        <div class="media-watermark" aria-hidden="true">
+          <?php for ($i = 0; $i < 3; $i++) : ?>
+            <span><?= casting_e($label) ?></span>
           <?php endfor; ?>
         </div>
       <?php endif; ?>
-      <button type="button" class="negah-clip-full" aria-label="بزرگ‌نمایی ویدیو">بزرگ</button>
     </div>
-    <?php
-    if ($script_sent) {
-        return;
-    }
-    $script_sent = true;
-    ?>
-    <script>
-      document.addEventListener('click', function (event) {
-        var btn = event.target.closest('.negah-clip-full');
-        if (!btn) return;
-        var frame = btn.closest('.negah-clip-frame');
-        if (!frame) return;
-        event.preventDefault();
-        if (document.fullscreenElement === frame) {
-          document.exitFullscreen();
-          return;
-        }
-        if (frame.requestFullscreen) {
-          frame.requestFullscreen();
-        }
-      });
-    </script>
     <?php
 }
 
