@@ -172,9 +172,17 @@ casting_render_flash();
           ?>
         <article class="admin-media-card">
           <div class="admin-media-preview">
-            <?php if (!$missing && $stream !== '') : ?>
-              <video src="<?= casting_e($stream) ?>" controls preload="metadata" playsinline></video>
-            <?php else : ?>
+            <?php if (!$missing && $stream !== '') :
+                $wm_name = trim((string) ($clip['display_name'] ?? ''));
+                if ($wm_name === '') {
+                    $wm_name = trim((string) $user->display_name);
+                }
+                $wm_mobile = trim((string) ($clip['mobile'] ?? ''));
+                if ($wm_mobile === '') {
+                    $wm_mobile = casting_intro_clip_mobile($user_id);
+                }
+                casting_intro_clip_render_player($stream, $wm_name, $wm_mobile);
+            else : ?>
               <p class="empty-state">فایل روی هاست پیدا نشد.</p>
             <?php endif; ?>
           </div>

@@ -74,9 +74,9 @@ casting_render_flash();
           ?>
         <article class="admin-media-card">
           <div class="admin-media-preview">
-            <?php if ($stream !== '') : ?>
-              <video src="<?= casting_e($stream) ?>" controls preload="metadata" playsinline></video>
-            <?php else : ?>
+            <?php if ($stream !== '') :
+                casting_intro_clip_render_player($stream, (string) $item['name'], (string) $item['mobile']);
+            else : ?>
               <p class="empty-state">فایل در پوشه هاست پیدا نشد.</p>
             <?php endif; ?>
           </div>
