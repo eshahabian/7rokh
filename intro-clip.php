@@ -18,13 +18,26 @@ $is_admin = casting_intro_clip_is_portal_admin($user_id);
 $mobile = casting_intro_clip_mobile($user_id);
 $can_submit = $can_upload && ($mobile !== '' || $is_admin);
 
+$intro_clip_is_ajax = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
+$intro_clip_json = static function (bool $ok, string $message) use ($intro_clip_is_ajax): void {
+    if (!$intro_clip_is_ajax) {
+        return;
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok' => $ok, 'message' => $message], JSON_UNESCAPED_UNICODE);
+    exit;
+};
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (casting_upload_post_too_large()) {
-        casting_set_flash('error', casting_upload_post_too_large_message());
+        $message = casting_upload_post_too_large_message();
+        $intro_clip_json(false, $message);
+        casting_set_flash('error', $message);
         casting_redirect('intro-clip.php');
     }
     $nonce = (string) ($_POST['_wpnonce'] ?? '');
     if ($nonce === '' || !wp_verify_nonce($nonce, 'casting_intro_clip')) {
+        $intro_clip_json(false, 'نشست منقضی شده. دوباره تلاش کنید.');
         casting_set_flash('error', 'نشست منقضی شده. دوباره تلاش کنید.');
         casting_redirect('intro-clip.php');
     }
@@ -34,6 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'اثر از پروفایل شما حذف شد. می‌توانید اثر دیگری بفرستید.' : $res['error']);
     } else {
         $res = casting_intro_clip_save_upload($user_id, 'intro_clip');
+        if ($intro_clip_is_ajax) {
+            if (!empty($res['ok'])) {
+                casting_set_flash('success', 'اثر ذخیره شد.');
+            }
+            $intro_clip_json(!empty($res['ok']), !empty($res['ok']) ? 'اثر ذخیره شد.' : (string) ($res['error'] ?? 'ارسال اثر ناموفق بود.'));
+        }
         casting_set_flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'اثر ذخیره شد.' : $res['error']);
     }
     casting_redirect('intro-clip.php');
@@ -132,7 +151,13 @@ casting_render_flash();
           <span>شرایط استفاده از اثر را خواندم و می‌پذیرم.</span>
         </label>
       </div>
-      <button class="btn btn-primary" type="submit">ارسال اثر</button>
+      <button class="btn btn-primary" type="submit" id="intro-clip-submit">ارسال اثر</button>
+      <div id="intro-clip-progress" class="negah-upload-progress" hidden>
+        <div class="negah-upload-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="intro-clip-progress-text">
+          <span id="intro-clip-progress-fill"></span>
+        </div>
+        <p id="intro-clip-progress-text" class="negah-upload-progress-text">در حال ارسال · تا الان ۰٪ آپلود شده</p>
+      </div>
     </form>
   <?php endif; ?>
 
@@ -206,6 +231,87 @@ casting_render_flash();
         note.textContent = 'پیش‌نمایش مدت ممکن نشد. سرور هنگام ذخیره، بازه ۳۰ تا ۹۰ ثانیه را بررسی می‌کند.';
       };
       video.src = url;
+    });
+
+    var form = document.getElementById('intro-clip-form');
+    var submitBtn = document.getElementById('intro-clip-submit');
+    var progress = document.getElementById('intro-clip-progress');
+    var progressFill = document.getElementById('intro-clip-progress-fill');
+    var progressText = document.getElementById('intro-clip-progress-text');
+    var progressBar = progress ? progress.querySelector('[role="progressbar"]') : null;
+    if (!form || !submitBtn || !progress) return;
+
+    var faDigits = function (value) {
+      return String(value).replace(/\d/g, function (digit) {
+        return '۰۱۲۳۴۵۶۷۸۹'.charAt(Number(digit));
+      });
+    };
+    var setProgress = function (pct) {
+      var safe = Math.max(0, Math.min(100, pct));
+      if (progressFill) progressFill.style.width = safe + '%';
+      if (progressBar) progressBar.setAttribute('aria-valuenow', String(safe));
+      if (progressText) {
+        progressText.textContent = 'در حال ارسال · تا الان ' + faDigits(safe) + '٪ آپلود شده';
+      }
+    };
+    var resetSubmit = function (message) {
+      form.dataset.sending = '';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'ارسال اثر';
+      input.disabled = false;
+      var consent = document.getElementById('intro_rights_accepted');
+      if (consent) consent.disabled = false;
+      if (message && progressText) progressText.textContent = message;
+    };
+
+    form.addEventListener('submit', function (event) {
+      if (form.dataset.sending === '1') {
+        event.preventDefault();
+        return;
+      }
+      if (!form.checkValidity()) {
+        return;
+      }
+      event.preventDefault();
+      var file = input.files && input.files[0];
+      if (!file) return;
+      form.dataset.sending = '1';
+      var payload = new FormData(form);
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'در حال ارسال';
+      input.disabled = true;
+      var consent = document.getElementById('intro_rights_accepted');
+      if (consent) consent.disabled = true;
+      progress.hidden = false;
+      setProgress(0);
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', form.getAttribute('action') || 'intro-clip.php');
+      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      xhr.setRequestHeader('Accept', 'application/json');
+      xhr.upload.addEventListener('progress', function (ev) {
+        if (!ev.lengthComputable || ev.total <= 0) return;
+        setProgress(Math.round((ev.loaded / ev.total) * 100));
+      });
+      xhr.addEventListener('load', function () {
+        var data = null;
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch (err) {
+          data = null;
+        }
+        if (xhr.status >= 200 && xhr.status < 300 && data && data.ok) {
+          setProgress(100);
+          window.location.href = 'intro-clip.php';
+          return;
+        }
+        var message = data && data.message ? data.message : 'ارسال اثر ناموفق بود. دوباره تلاش کنید.';
+        resetSubmit(message);
+      });
+      xhr.addEventListener('error', function () {
+        resetSubmit('ارتباط هنگام ارسال قطع شد. دوباره تلاش کنید.');
+      });
+      xhr.send(payload);
     });
   })();
 </script>

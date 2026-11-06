@@ -13593,6 +13593,34 @@ html[data-theme="day"] .negah-consent {
   gap: 0.35rem;
 }
 
+.negah-upload-progress {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.negah-upload-progress-track {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(209, 36, 47, 0.15);
+  overflow: hidden;
+}
+
+.negah-upload-progress-track span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: #d1242f;
+  transition: width 0.15s linear;
+}
+
+.negah-upload-progress-text {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 .page-admin-intro .admin-media-card,
 .page-negah .admin-media-list .admin-media-card {
   grid-template-columns: 148px minmax(0, 1fr);
