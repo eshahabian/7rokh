@@ -630,26 +630,12 @@ function casting_intro_clip_stream_url(int $owner_id, string $clip_id): string
 
 function casting_intro_clip_render_player(string $src, string $name, string $mobile): void
 {
-    $name = trim($name);
-    $mobile = trim($mobile);
+    unset($name, $mobile);
     if ($src === '') {
         return;
     }
-    $label = $name;
-    if ($mobile !== '') {
-        $label = $label === '' ? $mobile : $name . ' · ' . $mobile;
-    }
     ?>
-    <div class="negah-clip-frame">
-      <video src="<?= casting_e($src) ?>" controls preload="metadata" playsinline></video>
-      <?php if ($label !== '') : ?>
-        <div class="media-watermark" aria-hidden="true">
-          <?php for ($i = 0; $i < 3; $i++) : ?>
-            <span><?= casting_e($label) ?></span>
-          <?php endfor; ?>
-        </div>
-      <?php endif; ?>
-    </div>
+    <video src="<?= casting_e($src) ?>" controls preload="metadata" playsinline></video>
     <?php
 }
 
@@ -791,7 +777,24 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
     }
     @chmod($dest, 0644);
 
+    @set_time_limit(180);
+    $wm_name = $display !== '' ? $display : (string) $user->user_login;
+    $wm_label = $mobile !== '' ? $wm_name . ' · ' . $mobile : $wm_name;
+    $burned = casting_intro_clip_burn_watermark($dest, $wm_label);
+    if (($burned['path'] ?? '') !== '' && is_file($burned['path'])) {
+        $dest = $burned['path'];
+        $filename = basename($dest);
+        $ext = strtolower((string) pathinfo($filename, PATHINFO_EXTENSION));
+    }
+
     $mime = $ftype !== '' ? $ftype : 'video/' . ($ext === 'mov' ? 'quicktime' : $ext);
+    if ($ext === 'mp4') {
+        $mime = 'video/mp4';
+    } elseif ($ext === 'webm') {
+        $mime = 'video/webm';
+    } elseif ($ext === 'mov') {
+        $mime = 'video/quicktime';
+    }
     $row = [
         'id'                 => bin2hex(random_bytes(6)),
         'file'               => $filename,
@@ -1032,9 +1035,389 @@ function casting_intro_clip_notify_reviewers(int $uploader_id, string $display_n
     }
 }
 
-function casting_intro_clip_output(int $owner_id, string $clip_id): void
+function casting_intro_clip_bin(string $name): string
+{
+    $suffix = DIRECTORY_SEPARATOR === '\\' ? '.exe' : '';
+    $candidates = [
+        '/usr/bin/' . $name,
+        '/usr/local/bin/' . $name,
+        '/bin/' . $name,
+    ];
+    $env = getenv('PATH');
+    if (is_string($env) && $env !== '') {
+        foreach (explode(PATH_SEPARATOR, $env) as $dir) {
+            $dir = trim($dir);
+            if ($dir === '') {
+                continue;
+            }
+            $candidates[] = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . $name . $suffix;
+        }
+    }
+    foreach ($candidates as $bin) {
+        if (is_file($bin)) {
+            return $bin;
+        }
+    }
+
+    return $name;
+}
+
+function casting_intro_clip_proc_enabled(): bool
+{
+    if (!function_exists('proc_open')) {
+        return false;
+    }
+    $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+
+    return !in_array('proc_open', $disabled, true);
+}
+
+/**
+ * @param list<string> $command
+ * @return array{code:int,out:string}
+ */
+function casting_intro_clip_proc(array $command): array
+{
+    if (!casting_intro_clip_proc_enabled()) {
+        return ['code' => 127, 'out' => ''];
+    }
+    $desc = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+    $proc = @proc_open($command, $desc, $pipes, null, null, ['bypass_shell' => true]);
+    if (!is_resource($proc)) {
+        return ['code' => 127, 'out' => ''];
+    }
+    fclose($pipes[0]);
+    stream_set_blocking($pipes[1], false);
+    stream_set_blocking($pipes[2], false);
+    $out = '';
+    $deadline = time() + 150;
+    $code = 1;
+    while (true) {
+        $status = proc_get_status($proc);
+        $out .= (string) stream_get_contents($pipes[1]);
+        $out .= (string) stream_get_contents($pipes[2]);
+        if (!$status['running']) {
+            $code = (int) $status['exitcode'];
+            break;
+        }
+        if (time() > $deadline) {
+            @proc_terminate($proc);
+            $code = 124;
+            break;
+        }
+        usleep(100000);
+    }
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    proc_close($proc);
+
+    return ['code' => $code, 'out' => $out];
+}
+
+function casting_intro_clip_ff_escape(string $path): string
+{
+    $path = str_replace('\\', '/', $path);
+
+    return str_replace(['\\', ':', "'", ','], ['\\\\', '\\:', "\\'", '\\,'], $path);
+}
+
+function casting_intro_clip_watermark_font(): string
+{
+    $path = dirname(__DIR__) . '/assets/fonts/Vazirmatn-Medium.ttf';
+
+    return is_file($path) ? $path : '';
+}
+
+/**
+ * @return array{0:int,1:int}
+ */
+function casting_intro_clip_video_size(string $ffprobe, string $file): array
+{
+    $ran = casting_intro_clip_proc([
+        $ffprobe,
+        '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=width,height',
+        '-of', 'csv=s=x:p=0',
+        $file,
+    ]);
+    if (preg_match('/(\d+)x(\d+)/', $ran['out'], $match) !== 1) {
+        return [0, 0];
+    }
+
+    return [(int) $match[1], (int) $match[2]];
+}
+
+function casting_intro_clip_watermark_label_text(string $label): string
+{
+    $label = str_replace(["\r", "\n", "\t", '{', '}', '\\'], ' ', $label);
+    $clean = preg_replace('/\s+/u', ' ', $label);
+
+    return trim(is_string($clean) ? $clean : $label);
+}
+
+function casting_intro_clip_write_ass(string $file, int $width, int $height, string $label): bool
+{
+    $label = casting_intro_clip_watermark_label_text($label);
+    if ($label === '' || $width < 16 || $height < 16) {
+        return false;
+    }
+    $fontSize = (int) max(18, round(min($width, $height) / 24));
+    $center = (int) round($width / 2);
+    $lines = [
+        (int) round($height * 0.32),
+        (int) round($height * 0.50),
+        (int) round($height * 0.68),
+    ];
+    $events = '';
+    foreach ($lines as $y) {
+        $events .= 'Dialogue: 0,0:00:00.00,2:00:00.00,WM,,0,0,0,,{\an5\pos(' . $center . ',' . $y . ')}' . $label . "\n";
+    }
+    $body = "[Script Info]\n"
+        . "ScriptType: v4.00+\n"
+        . "PlayResX: {$width}\n"
+        . "PlayResY: {$height}\n"
+        . "WrapStyle: 2\n"
+        . "ScaledBorderAndShadow: yes\n\n"
+        . "[V4+ Styles]\n"
+        . "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
+        . "Style: WM,Vazirmatn Medium,{$fontSize},&HB4FFFFFF,&H000000FF,&H99000000,&H00000000,0,0,0,0,100,100,0,-16,1,1,0,5,20,20,20,1\n\n"
+        . "[Events]\n"
+        . "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+        . $events;
+
+    return file_put_contents($file, "\xEF\xBB\xBF" . $body) !== false;
+}
+
+/**
+ * نام و شماره را روی خود فریم‌های ویدیو حک می‌کند.
+ *
+ * @return array{ok:bool,path:string}
+ */
+function casting_intro_clip_burn_watermark(string $path, string $label): array
+{
+    $label = casting_intro_clip_watermark_label_text($label);
+    if ($path === '' || !is_file($path) || $label === '') {
+        return ['ok' => false, 'path' => $path];
+    }
+    if (is_file($path . '.wmok')) {
+        return ['ok' => true, 'path' => $path];
+    }
+    $font = casting_intro_clip_watermark_font();
+    if ($font === '' || !casting_intro_clip_proc_enabled()) {
+        return ['ok' => false, 'path' => $path];
+    }
+    @set_time_limit(180);
+    $ffmpeg = casting_intro_clip_bin('ffmpeg');
+    $ffprobe = casting_intro_clip_bin('ffprobe');
+    $ext = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+    if (!in_array($ext, ['mp4', 'webm', 'mov'], true)) {
+        $ext = 'mp4';
+    }
+    $work = rtrim(sys_get_temp_dir(), '/\\');
+    if ($work === '' || !is_writable($work)) {
+        $work = dirname($path);
+    }
+    $key = 'negah-' . bin2hex(random_bytes(6));
+    $tmpIn = $work . DIRECTORY_SEPARATOR . $key . '-in.' . $ext;
+    $tmpOut = $work . DIRECTORY_SEPARATOR . $key . '-out.mp4';
+    $ass = $work . DIRECTORY_SEPARATOR . $key . '.ass';
+    $textFile = $work . DIRECTORY_SEPARATOR . $key . '.txt';
+    $fontDir = $work . DIRECTORY_SEPARATOR . $key . '-fonts';
+    $cleanup = static function () use ($tmpIn, $tmpOut, $ass, $textFile, $fontDir): void {
+        foreach ([$tmpIn, $tmpOut, $ass, $textFile] as $file) {
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
+        if (is_dir($fontDir)) {
+            foreach (scandir($fontDir) ?: [] as $item) {
+                if ($item === '.' || $item === '..') {
+                    continue;
+                }
+                @unlink($fontDir . DIRECTORY_SEPARATOR . $item);
+            }
+            @rmdir($fontDir);
+        }
+    };
+    if (!@copy($path, $tmpIn)) {
+        return ['ok' => false, 'path' => $path];
+    }
+    [$width, $height] = casting_intro_clip_video_size($ffprobe, $tmpIn);
+    if ($width < 16 || $height < 16) {
+        $width = 720;
+        $height = 1280;
+    }
+    if (!casting_intro_clip_write_ass($ass, $width, $height, $label) || !@mkdir($fontDir, 0700, true) || !@copy($font, $fontDir . DIRECTORY_SEPARATOR . 'Vazirmatn-Medium.ttf')) {
+        $cleanup();
+
+        return ['ok' => false, 'path' => $path];
+    }
+    file_put_contents($textFile, $label);
+    $format = $ext === 'mov' ? 'mov' : 'mp4';
+    $vfSub = 'subtitles=' . casting_intro_clip_ff_escape($ass) . ':charenc=UTF-8:fontsdir=' . casting_intro_clip_ff_escape($fontDir);
+    $fontEsc = casting_intro_clip_ff_escape($fontDir . DIRECTORY_SEPARATOR . 'Vazirmatn-Medium.ttf');
+    $textEsc = casting_intro_clip_ff_escape($textFile);
+    $draw = static function (string $y) use ($fontEsc, $textEsc): string {
+        return "drawtext=fontfile='{$fontEsc}':textfile='{$textEsc}':reload=0:fontsize=h/26:fontcolor=white@0.34:shadowcolor=black@0.45:shadowx=1:shadowy=1:x=(w-text_w)/2:y={$y}";
+    };
+    $vfDraw = $draw('h*0.32') . ',' . $draw('h*0.50') . ',' . $draw('h*0.68');
+    $encoded = false;
+    foreach ([$vfSub, $vfDraw] as $vf) {
+        foreach ([true, false] as $copyAudio) {
+            if (is_file($tmpOut)) {
+                @unlink($tmpOut);
+            }
+            $command = [
+                $ffmpeg, '-y', '-i', $tmpIn,
+                '-vf', $vf,
+                '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-pix_fmt', 'yuv420p', '-threads', '2',
+            ];
+            if ($copyAudio) {
+                $command[] = '-c:a';
+                $command[] = 'copy';
+            } else {
+                array_push($command, '-c:a', 'aac', '-b:a', '128k');
+            }
+            array_push($command, '-movflags', '+faststart', '-f', $format, $tmpOut);
+            $ran = casting_intro_clip_proc($command);
+            if ($ran['code'] === 0 && is_file($tmpOut) && filesize($tmpOut) > 1000) {
+                $encoded = true;
+                break 2;
+            }
+        }
+    }
+    if (!$encoded) {
+        $cleanup();
+
+        return ['ok' => false, 'path' => $path];
+    }
+    $final = $path;
+    if ($ext === 'webm') {
+        $final = substr($path, 0, -strlen($ext)) . 'mp4';
+    }
+    if (!@copy($tmpOut, $final)) {
+        $cleanup();
+
+        return ['ok' => false, 'path' => $path];
+    }
+    @chmod($final, 0644);
+    if ($final !== $path && is_file($path)) {
+        @unlink($path);
+        @unlink($path . '.wmok');
+        @unlink($path . '.wmfail');
+    }
+    @file_put_contents($final . '.wmok', '1');
+    @unlink($final . '.wmfail');
+    $cleanup();
+
+    return ['ok' => true, 'path' => $final];
+}
+
+function casting_intro_clip_store_file_meta(int $user_id, string $clip_id, string $basename, int $bytes, string $mime): void
+{
+    $clip_id = strtolower($clip_id);
+    $rows = casting_intro_clip_rows($user_id);
+    $changed = false;
+    foreach ($rows as $index => $row) {
+        if ($row['id'] !== $clip_id) {
+            continue;
+        }
+        $rows[$index]['file'] = $basename;
+        $rows[$index]['bytes'] = $bytes;
+        if ($mime !== '') {
+            $rows[$index]['mime'] = $mime;
+        }
+        $changed = true;
+        break;
+    }
+    if ($changed) {
+        update_user_meta($user_id, CASTING_INTRO_CLIP_META, $rows);
+    }
+}
+
+function casting_intro_clip_ensure_watermark(int $owner_id, string $clip_id): string
 {
     $path = casting_intro_clip_absolute_path($owner_id, $clip_id);
+    $row = casting_intro_clip_row($owner_id, $clip_id);
+    if ($path === '' || $row === null) {
+        return '';
+    }
+    if (is_file($path . '.wmok')) {
+        return $path;
+    }
+    $fail = $path . '.wmfail';
+    if (is_file($fail) && (time() - (int) @filemtime($fail)) < 3600) {
+        return $path;
+    }
+    $label = trim((string) $row['display_name']);
+    $mobile = trim((string) $row['mobile']);
+    if ($label === '' && function_exists('get_user_by')) {
+        $user = get_user_by('id', $owner_id);
+        if ($user) {
+            $label = trim((string) $user->display_name);
+        }
+    }
+    if ($mobile === '') {
+        $mobile = casting_intro_clip_mobile($owner_id);
+    }
+    if ($mobile !== '') {
+        $label = $label === '' ? $mobile : $label . ' · ' . $mobile;
+    }
+    if ($label === '') {
+        return $path;
+    }
+    $lockPath = $path . '.wmlock';
+    $lock = @fopen($lockPath, 'c');
+    if ($lock === false) {
+        return $path;
+    }
+    @set_time_limit(180);
+    if (!flock($lock, LOCK_EX)) {
+        fclose($lock);
+
+        return $path;
+    }
+    clearstatcache();
+    $path = casting_intro_clip_absolute_path($owner_id, $clip_id);
+    if ($path === '') {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+        @unlink($lockPath);
+
+        return '';
+    }
+    if (is_file($path . '.wmok')) {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+        @unlink($lockPath);
+
+        return $path;
+    }
+    $burned = casting_intro_clip_burn_watermark($path, $label);
+    if ($burned['ok'] && $burned['path'] !== '' && is_file($burned['path'])) {
+        $base = basename($burned['path']);
+        $mime = str_ends_with(strtolower($base), '.mp4') ? 'video/mp4' : (string) $row['mime'];
+        casting_intro_clip_store_file_meta($owner_id, $clip_id, $base, (int) filesize($burned['path']), $mime);
+        $path = $burned['path'];
+    } else {
+        @file_put_contents($path . '.wmfail', (string) time());
+    }
+    flock($lock, LOCK_UN);
+    fclose($lock);
+    @unlink($lockPath);
+
+    return $path;
+}
+
+function casting_intro_clip_output(int $owner_id, string $clip_id): void
+{
+    @set_time_limit(180);
+    $path = casting_intro_clip_ensure_watermark($owner_id, $clip_id);
     $row = casting_intro_clip_row($owner_id, $clip_id);
     if ($path === '' || $row === null) {
         status_header(404);

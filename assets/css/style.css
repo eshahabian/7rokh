@@ -13634,16 +13634,6 @@ html[data-theme="day"] .negah-consent {
   height: 260px;
 }
 
-.negah-clip-frame {
-  position: absolute;
-  inset: 0;
-  background: #111;
-}
-
-.negah-clip-frame .media-watermark span {
-  font-size: 0.52rem;
-}
-
 .page-admin-intro .admin-media-preview video,
 .page-negah .admin-media-list .admin-media-preview video {
   position: absolute;
