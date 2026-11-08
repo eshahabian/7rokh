@@ -9,6 +9,10 @@ declare(strict_types=1);
 function casting_activity_categories(): array
 {
     return [
+        'journalism' => [
+            'label' => 'خبرنگار',
+            'items' => ['reporter' => 'خبرنگار'],
+        ],
         'acting' => [
             'label' => 'بازیگری',
             'items' => [

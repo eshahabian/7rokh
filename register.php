@@ -226,6 +226,14 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                         } else {
                             $user_id = (int) $result['user_id'];
+                            $registration_activities = casting_parse_activities_post($_POST, $user_id);
+                            if ($registration_activities !== []) {
+                                update_user_meta($user_id, 'casting_activities', $registration_activities);
+                            }
+                            $person_name = trim(sanitize_text_field(wp_unslash((string) ($_POST['person_name'] ?? ''))));
+                            if ($person_name !== '') {
+                                wp_update_user(['ID' => $user_id, 'display_name' => $person_name]);
+                            }
                             if (trim($referral_code) !== '' && function_exists('casting_apply_referral_code')) {
                                 casting_apply_referral_code($user_id, $referral_code);
                             }
@@ -385,6 +393,12 @@ if ($otp_notice !== '') {
           </label>
         </div>
 
+        <div class="field">
+          <label for="person-name">نام و نام خانوادگی (اختیاری)</label>
+          <input id="person-name" name="person_name" value="<?= casting_e((string) ($_POST['person_name'] ?? '')) ?>" autocomplete="name">
+        </div>
+        <?php casting_render_activity_fields(casting_parse_activities_post($_POST), false); ?>
+        <p class="field-hint">برای خبرنگاران، عکس و اطلاعات تکمیلی پروفایل اختیاری است.</p>
         <button class="btn btn-primary" type="submit" name="casting_submit" value="1" data-register-submit<?= $account_unlocked ? '' : ' disabled' ?>>ایجاد حساب</button>
         <p class="field-hint">برای فعال شدن دکمه، تیک «پذیرش قوانین» را بزنید.</p>
       </fieldset>

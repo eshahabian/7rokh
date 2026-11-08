@@ -47,10 +47,11 @@ function casting_panel_nav_groups(): array
             'items' => [
                 [
                     'key'      => 'news',
-                    'label'    => 'اخبار ۷ رخ',
+                    'label'    => 'پایگاه خبری 7رخ',
                     'href'     => casting_main_site_url(),
                     'external' => true,
                 ],
+                ['key' => 'reporters', 'label' => 'خبرنگاران', 'href' => 'reporters.php'],
             ],
         ],
         [

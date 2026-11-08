@@ -1801,6 +1801,7 @@
 
     const syncTalentProfileFields = () => {
       const hideTalentFields = !hasActingSpecialty();
+      const isReporter = [...activityBox.querySelectorAll('[data-activity-specialty]')].some(el => el.value === 'reporter');
       const enableArtisticWorks = hasDirectingSpecialty();
 
       form.querySelectorAll("[data-talent-profile-field]").forEach((wrap) => {
@@ -1856,7 +1857,7 @@
         nonTalentPhoto.querySelectorAll("input, select, textarea, button").forEach((el) => {
           if (hideTalentFields) {
             if (el.dataset.talentWasRequired === "1" || el.hasAttribute("data-profile-photo-single")) {
-              el.required = true;
+              el.required = !isReporter;
             }
             el.disabled = false;
           } else {
