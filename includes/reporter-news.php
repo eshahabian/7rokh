@@ -7,6 +7,80 @@ function casting_news_reviewer(int $id): bool
     return $user && in_array(strtolower((string) $user->user_login), ['eshahabian', 'ardavan'], true);
 }
 
+function casting_news_state(array $row): string
+{
+    $state = (string) ($row['state'] ?? 'inbox');
+    return in_array($state, ['inbox', 'archived', 'deleted'], true) ? $state : 'inbox';
+}
+
+/** Move a completed submission without deleting either its content or media. */
+function casting_news_move(int $reviewer, string $owner, string $id, string $state): void
+{
+    if (!casting_news_reviewer($reviewer)) {
+        throw new RuntimeException('اجازه مدیریت خبرها را ندارید.');
+    }
+    if (!preg_match('/^[1-9][0-9]*$/D', $owner) || !preg_match('/^[a-f0-9]{32}$/D', $id)
+        || !in_array($state, ['inbox', 'archived', 'deleted'], true)) {
+        throw new RuntimeException('درخواست مدیریت خبر نامعتبر است.');
+    }
+    $base = casting_news_dir() . '/' . $owner . '/' . $id;
+    if (!is_file($base . '.json')) { throw new RuntimeException('خبر پیدا نشد.'); }
+    $lock = fopen($base . '.lock', 'c+b');
+    if (!$lock || !flock($lock, LOCK_EX)) { throw new RuntimeException('ذخیره تغییرات ممکن نشد.'); }
+    try {
+        $row = json_decode((string) file_get_contents($base . '.json'), true, 512, JSON_THROW_ON_ERROR);
+        if (empty($row['done'])) { throw new RuntimeException('خبر هنوز ارسال نشده است.'); }
+        if (casting_news_state($row) === $state) { return; }
+        $row['state'] = $state;
+        $row['state_changed_at'] = gmdate('c');
+        $row['state_changed_by'] = $reviewer;
+        if ($state === 'archived') { $row['archived_at'] = $row['state_changed_at']; }
+        if ($state === 'deleted') { $row['deleted_at'] = $row['state_changed_at']; }
+        $json = json_encode($row, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        if (file_put_contents($base . '.json.tmp', $json) !== strlen($json) || !rename($base . '.json.tmp', $base . '.json')) {
+            throw new RuntimeException('ذخیره تغییرات ممکن نشد.');
+        }
+    } finally {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+    }
+}
+
+/** Use the portal's Jalali calendar and Tehran time for archive day groups. */
+function casting_news_date(string $value, bool $with_time = false): string
+{
+    require_once __DIR__ . '/jalali.php';
+    try { $date = (new DateTimeImmutable($value))->setTimezone(new DateTimeZone('Asia/Tehran')); }
+    catch (Throwable $e) { return 'تاریخ نامشخص'; }
+    [$year, $month, $day] = casting_gregorian_to_jalali((int) $date->format('Y'), (int) $date->format('m'), (int) $date->format('d'));
+    return sprintf('%04d/%02d/%02d', $year, $month, $day) . ($with_time ? ' — ' . $date->format('H:i') : '');
+}
+
+function casting_news_render_card(array $row): void
+{
+    $state = casting_news_state($row);
+    ?>
+    <article class="dash-card">
+      <h3><?= casting_e($row['title']) ?></h3>
+      <p><?= casting_e($row['reporter']) ?> — ارسال: <?= casting_e(casting_news_date($row['created'], true)) ?></p>
+      <p><strong><?= nl2br(casting_e($row['lead'])) ?></strong></p>
+      <div style="white-space:pre-wrap;overflow-wrap:anywhere"><?= casting_e($row['body']) ?></div>
+      <?php if ($row['size'] > 0): ?>
+      <p><a class="btn btn-ghost" href="<?= casting_e(casting_url('reporters.php?download=' . $row['id'] . '&owner=' . $row['uid'])) ?>">دریافت <?= casting_e($row['name']) ?></a></p>
+      <?php endif; ?>
+      <form method="post" action="<?= casting_e(casting_url('reporters.php')) ?>" class="cta-row">
+        <?php wp_nonce_field('casting_news_manage'); ?>
+        <input type="hidden" name="news_manage" value="1">
+        <input type="hidden" name="owner" value="<?= (int) $row['uid'] ?>">
+        <input type="hidden" name="id" value="<?= casting_e($row['id']) ?>">
+        <?php if ($state !== 'inbox'): ?><button class="btn btn-ghost" name="state" value="inbox">بازگرداندن به دریافتی‌ها</button><?php endif; ?>
+        <?php if ($state !== 'archived'): ?><button class="btn btn-primary" name="state" value="archived">انتقال به آرشیو</button><?php endif; ?>
+        <?php if ($state !== 'deleted'): ?><button class="btn btn-ghost" name="state" value="deleted">حذف</button><?php endif; ?>
+      </form>
+    </article>
+    <?php
+}
+
 /** Storage must be outside the document root: arbitrary originals are never public. */
 function casting_news_dir(): string
 {

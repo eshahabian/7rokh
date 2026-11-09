@@ -6,6 +6,18 @@ require_once __DIR__ . '/includes/reporter-news.php';
 $user = casting_require_casting_user();
 $uid = (int) $user->ID;
 casting_nocache();
+$reviewer = casting_news_reviewer($uid);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['news_manage'])) {
+    if (!$reviewer || !wp_verify_nonce((string) ($_POST['_wpnonce'] ?? ''), 'casting_news_manage')) {
+        http_response_code(403);
+        exit('دسترسی غیرمجاز یا نشست منقضی شده است.');
+    }
+    try {
+        casting_news_move($uid, (string) ($_POST['owner'] ?? ''), (string) ($_POST['id'] ?? ''), (string) ($_POST['state'] ?? ''));
+        casting_set_flash('success', 'وضعیت خبر تغییر کرد.');
+    } catch (Throwable $e) { casting_set_flash('error', $e->getMessage()); }
+    casting_redirect('reporters.php#news-management');
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Release the PHP session lock so reconnect/status requests can proceed.
     if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
@@ -30,6 +42,7 @@ if (isset($_GET['download'])) {
     exit;
 }
 casting_render_panel_start('خبرنگاران', 'reporters');
+casting_render_flash();
 ?>
 <section class="dash-card">
   <?php casting_render_panel_heading('خبرنگاران'); ?>
@@ -47,8 +60,9 @@ casting_render_panel_start('خبرنگاران', 'reporters');
   </form>
 </section>
 <?php if ($reviewer): ?>
-<section class="dash-card">
-  <h2>خبرهای دریافتی</h2>
+<section class="dash-card" id="news-management">
+  <h2>مدیریت خبرها</h2>
+  <p>خبرها را پس از بررسی به آرشیو منتقل کنید. حذف، خبر را به بخش حذف‌شده‌ها می‌برد و متن و فایل آن محفوظ می‌ماند.</p>
   <?php
   try {
       $rows = [];
@@ -57,18 +71,22 @@ casting_render_panel_start('خبرنگاران', 'reporters');
           if (!empty($row['done'])) { $rows[] = $row; }
       }
       usort($rows, static fn(array $a, array $b): int => strcmp($b['created'], $a['created']));
-      if (!$rows) { echo '<p>هنوز خبری دریافت نشده است.</p>'; }
-      foreach ($rows as $row): ?>
-        <article class="dash-card">
-          <h3><?= casting_e($row['title']) ?></h3>
-          <p><?= casting_e($row['reporter']) ?> — <?= casting_e($row['created']) ?></p>
-          <p><strong><?= nl2br(casting_e($row['lead'])) ?></strong></p>
-          <div style="white-space:pre-wrap;overflow-wrap:anywhere"><?= casting_e($row['body']) ?></div>
-          <?php if ($row['size'] > 0): ?>
-          <a class="btn btn-ghost" href="<?= casting_e(casting_url('reporters.php?download=' . $row['id'] . '&owner=' . $row['uid'])) ?>">دریافت <?= casting_e($row['name']) ?></a>
-          <?php endif; ?>
-        </article>
-      <?php endforeach;
+      foreach (['inbox' => 'خبرهای دریافتی', 'archived' => 'آرشیو خبرها', 'deleted' => 'حذف‌شده‌ها'] as $state => $label) {
+          $items = array_values(array_filter($rows, static fn(array $row): bool => casting_news_state($row) === $state));
+          echo '<details' . ($state === 'inbox' ? ' open' : '') . '><summary style="padding:16px;cursor:pointer"><strong>' . casting_e($label) . ' (' . count($items) . ')</strong></summary>';
+          if (!$items) { echo '<p class="empty-state">خبری در این بخش نیست.</p>'; }
+          $day = '';
+          foreach ($items as $row) {
+              // Group by original submission date so archive organization stays stable.
+              $row_day = casting_news_date($row['created']);
+              if ($row_day !== $day) {
+                  echo '<h3>' . casting_e($row_day) . '</h3>';
+                  $day = $row_day;
+              }
+              casting_news_render_card($row);
+          }
+          echo '</details>';
+      }
   } catch (Throwable $e) { echo '<p role="alert">' . casting_e($e->getMessage()) . '</p>'; }
   ?>
 </section>
