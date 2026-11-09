@@ -3,6 +3,10 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/panel.php';
 require_once __DIR__ . '/includes/reporter-news.php';
+if (!casting_current_user()) {
+    $_SESSION['casting_login_intent'] = 'reporters';
+    casting_redirect('login.php?intent=reporters');
+}
 $user = casting_require_casting_user();
 $uid = (int) $user->ID;
 casting_nocache();

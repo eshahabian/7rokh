@@ -319,6 +319,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <?php if ($panel_menu) : ?>
         <?php casting_render_panel_menu_toggle($panel_menu_badge); ?>
         <div class="site-header-bar-actions">
+          <a class="site-header-app-link<?= $active === 'reporters' ? ' is-active' : '' ?>" href="<?= casting_e(casting_url('reporters.php')) ?>">خبرنگاران</a>
           <a class="site-header-app-link<?= $active === 'app' ? ' is-active' : '' ?>" href="<?= casting_e(casting_url('app.php')) ?>" data-app-download>اپلیکیشن</a>
           <div class="site-header-panel-theme">
             <?php casting_render_theme_toggle(); ?>
@@ -335,6 +336,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
       <?php if (!$panel_menu && !$is_member) : ?>
         <nav class="site-header-quick" aria-label="دسترسی سریع">
           <a href="<?= casting_e(casting_main_site_url()) ?>" class="site-header-quick-link"><?= casting_brand_html() ?></a>
+          <a href="<?= casting_e(casting_url('reporters.php')) ?>" class="site-header-quick-link">خبرنگاران</a>
           <a href="register.php" class="site-header-quick-link nav-auth-link nav-register-btn<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
           <a href="login.php" class="site-header-quick-link nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود</a>
           <a href="<?= casting_e(casting_url('app.php')) ?>" class="site-header-quick-link<?= $active === 'app' ? ' is-active' : '' ?>" data-app-download>اپلیکیشن</a>
@@ -343,6 +345,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
     </div>
     <nav class="nav" id="site-main-nav" aria-label="منوی اصلی" data-site-nav>
       <a href="<?= casting_e(casting_main_site_url()) ?>" class="nav-external">سایت <?= casting_brand_html() ?></a>
+      <a href="<?= casting_e(casting_url('reporters.php')) ?>" class="<?= $active === 'reporters' ? 'is-active' : '' ?>">خبرنگاران</a>
       <?php if ($is_member) : ?>
         <a href="<?= casting_e(casting_url('intro-clip.php')) ?>" class="nav-negah<?= $active === 'intro-clip' ? ' is-active' : '' ?>">۷رخ از نگاه تو</a>
         <a href="home.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>

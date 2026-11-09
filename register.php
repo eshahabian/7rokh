@@ -22,7 +22,7 @@ if (!casting_safe_require_once(__DIR__ . '/includes/layout.php')) {
 casting_nocache();
 
 $intent = sanitize_key((string) ($_GET['intent'] ?? $_POST['intent'] ?? ''));
-if ($intent === 'cart' || $intent === 'negah') {
+if (in_array($intent, ['cart', 'negah', 'reporters'], true)) {
     $_SESSION['casting_login_intent'] = $intent;
 }
 
@@ -68,6 +68,10 @@ $current = casting_current_user();
 if ($current) {
     $existing_role = casting_get_user_role((int) $current->ID);
     if ($existing_role === 'talent' || casting_is_employer_role($existing_role)) {
+        if ((string) ($_SESSION['casting_login_intent'] ?? '') === 'reporters') {
+            unset($_SESSION['casting_login_intent']);
+            casting_redirect('reporters.php');
+        }
         casting_redirect('home.php');
     }
 }
@@ -255,6 +259,9 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                 casting_set_flash('success', 'ثبت‌نام و ورود با موفقیت انجام شد.');
                                 $after_intent = (string) ($_SESSION['casting_login_intent'] ?? '');
                                 unset($_SESSION['casting_login_intent']);
+                                if ($after_intent === 'reporters') {
+                                    casting_redirect('reporters.php');
+                                }
                                 if ($after_intent === 'negah') {
                                     casting_redirect('intro-clip.php');
                                 }
@@ -264,7 +271,7 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                 casting_redirect('edit-profile.php?welcome=1');
                             }
                             $pending_intent = (string) ($_SESSION['casting_login_intent'] ?? '');
-                            casting_redirect('login.php?registered=1' . (in_array($pending_intent, ['cart', 'negah'], true) ? '&intent=' . rawurlencode($pending_intent) : ''));
+                            casting_redirect('login.php?registered=1' . (in_array($pending_intent, ['cart', 'negah', 'reporters'], true) ? '&intent=' . rawurlencode($pending_intent) : ''));
                         }
                     } catch (Throwable $e) {
                         $error = 'خطای سرور در ثبت‌نام: ' . $e->getMessage();
@@ -313,6 +320,9 @@ if ($otp_notice !== '') {
     <p class="lede-req-note" role="note">موارد ستاره‌دار الزامی می‌باشد.</p>
 
     <form class="form" method="post" action="register.php" autocomplete="on" data-register-form<?= $focus_field !== '' ? ' data-focus-field="' . casting_e($focus_field) . '"' : '' ?><?= $invalid_fields !== [] ? ' data-invalid-fields="' . casting_e(implode(',', $invalid_fields)) . '"' : '' ?>>
+      <?php if ((string) ($_SESSION['casting_login_intent'] ?? '') === 'reporters'): ?>
+      <input type="hidden" name="intent" value="reporters">
+      <?php endif; ?>
       <?php wp_nonce_field('casting_register'); ?>
       <?php if ($register_path !== '') : ?>
         <input type="hidden" name="path" value="<?= casting_e($register_path) ?>">
@@ -405,7 +415,7 @@ if ($otp_notice !== '') {
     </form>
 
     <p class="form-foot">
-      قبلاً ثبت‌نام کرده‌اید؟ <a href="login.php">ورود</a>
+      قبلاً ثبت‌نام کرده‌اید؟ <a href="login.php<?= (string) ($_SESSION['casting_login_intent'] ?? '') === 'reporters' ? '?intent=reporters' : '' ?>">ورود</a>
     </p>
   </section>
 </main>

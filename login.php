@@ -9,10 +9,19 @@ require_once __DIR__ . '/includes/layout.php';
 
 casting_nocache();
 
+$intent = sanitize_key((string) ($_GET['intent'] ?? $_POST['intent'] ?? ''));
+if (in_array($intent, ['cart', 'negah', 'reporters'], true)) {
+    $_SESSION['casting_login_intent'] = $intent;
+}
+
 $user = casting_current_user();
 if ($user) {
     $role = casting_get_user_role((int) $user->ID);
     if ($role !== '') {
+        if ((string) ($_SESSION['casting_login_intent'] ?? '') === 'reporters') {
+            unset($_SESSION['casting_login_intent']);
+            casting_redirect('reporters.php');
+        }
         $uid = (int) $user->ID;
         if (function_exists('casting_profile_needs_completion')) {
             require_once __DIR__ . '/includes/panel-profile.php';
@@ -34,13 +43,12 @@ $otp_sent = false;
 $need_confirm = false;
 $force_login = !empty($_POST['force_login']);
 
-$intent = sanitize_key((string) ($_GET['intent'] ?? $_POST['intent'] ?? ''));
-if ($intent === 'cart' || $intent === 'negah') {
-    $_SESSION['casting_login_intent'] = $intent;
-}
 $login_intent = (string) ($_SESSION['casting_login_intent'] ?? '');
-$intent_qs = in_array($login_intent, ['cart', 'negah'], true) ? 'intent=' . rawurlencode($login_intent) : '';
+$intent_qs = in_array($login_intent, ['cart', 'negah', 'reporters'], true) ? 'intent=' . rawurlencode($login_intent) : '';
 $intent_notice = '';
+if ($login_intent === 'reporters' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $intent_notice = 'برای ارسال خبر وارد شوید. اگر حساب ندارید، ثبت‌نام کنید؛ سپس مستقیم به بخش خبرنگاران برمی‌گردید.';
+}
 if ($login_intent === 'cart' && $error === '' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     $intent_notice = 'برای خرید ابتدا وارد شوید.';
 }
@@ -51,6 +59,9 @@ if ($login_intent === 'negah' && $error === '' && $_SERVER['REQUEST_METHOD'] !==
 $login_redirect_after = static function (string $role, int $user_id = 0): void {
     $intent = (string) ($_SESSION['casting_login_intent'] ?? '');
     unset($_SESSION['casting_login_intent']);
+    if ($intent === 'reporters') {
+        casting_redirect('reporters.php');
+    }
     if ($intent === 'negah') {
         casting_redirect('intro-clip.php');
     }
