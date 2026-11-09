@@ -16,7 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['news_manage'])) {
         casting_news_move($uid, (string) ($_POST['owner'] ?? ''), (string) ($_POST['id'] ?? ''), (string) ($_POST['state'] ?? ''));
         casting_set_flash('success', 'وضعیت خبر تغییر کرد.');
     } catch (Throwable $e) { casting_set_flash('error', $e->getMessage()); }
-    casting_redirect('reporters.php#news-management');
+    $tab = in_array((string) ($_POST['state'] ?? ''), ['inbox', 'archived', 'deleted'], true) ? (string) $_POST['state'] : 'inbox';
+    casting_redirect('reporters.php?news_tab=' . $tab . '#news-management');
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Release the PHP session lock so reconnect/status requests can proceed.
@@ -71,9 +72,18 @@ casting_render_flash();
           if (!empty($row['done'])) { $rows[] = $row; }
       }
       usort($rows, static fn(array $a, array $b): int => strcmp($b['created'], $a['created']));
-      foreach (['inbox' => 'خبرهای دریافتی', 'archived' => 'آرشیو خبرها', 'deleted' => 'حذف‌شده‌ها'] as $state => $label) {
+      $tabs = ['inbox' => 'خبرهای دریافتی', 'archived' => 'آرشیو خبرها', 'deleted' => 'حذف‌شده‌ها'];
+      $active_tab = isset($tabs[(string) ($_GET['news_tab'] ?? '')]) ? (string) $_GET['news_tab'] : 'inbox';
+      echo '<nav class="news-tabs" aria-label="بخش‌های مدیریت خبرها">';
+      foreach ($tabs as $state => $label) {
+          $count = count(array_filter($rows, static fn(array $row): bool => casting_news_state($row) === $state));
+          echo '<a class="news-tab" href="' . casting_e(casting_url('reporters.php?news_tab=' . $state . '#news-management')) . '"' . ($state === $active_tab ? ' aria-current="page"' : '') . '>' . casting_e($label) . ' <span class="news-tab-count">' . $count . '</span></a>';
+      }
+      echo '</nav>';
+      foreach ($tabs as $state => $label) {
+          if ($state !== $active_tab) { continue; }
           $items = array_values(array_filter($rows, static fn(array $row): bool => casting_news_state($row) === $state));
-          echo '<details' . ($state === 'inbox' ? ' open' : '') . '><summary style="padding:16px;cursor:pointer"><strong>' . casting_e($label) . ' (' . count($items) . ')</strong></summary>';
+          echo '<section class="news-tab-content" aria-label="' . casting_e($label) . '">';
           if (!$items) { echo '<p class="empty-state">خبری در این بخش نیست.</p>'; }
           $day = '';
           foreach ($items as $row) {
@@ -85,11 +95,12 @@ casting_render_flash();
               }
               casting_news_render_card($row);
           }
-          echo '</details>';
+          echo '</section>';
       }
   } catch (Throwable $e) { echo '<p role="alert">' . casting_e($e->getMessage()) . '</p>'; }
   ?>
 </section>
 <?php endif; ?>
+<link rel="stylesheet" href="<?= casting_e(casting_asset('css/reporter-news.css')) ?>">
 <script src="<?= casting_e(casting_asset('js/reporter-news.js')) ?>" defer></script>
 <?php casting_render_panel_end(); ?>
