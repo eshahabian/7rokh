@@ -540,14 +540,7 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
             get_user_meta($user_id, 'casting_activities', true),
             $user_id
         );
-        if (casting_user_is_portal_owner($user_id)) {
-            $sidebar_primary_activity = 'مدیر سایت';
-        } else {
-            $sidebar_primary_activity = casting_user_primary_activity_label($user_id);
-            if ($sidebar_primary_activity === '') {
-                $sidebar_primary_activity = casting_user_public_role_label($user_id);
-            }
-        }
+        $sidebar_primary_activity = casting_user_public_role_label($user_id);
         $sidebar_show_views = casting_activities_has_acting($sidebar_activities);
         if ($sidebar_show_views) {
             if (!function_exists('casting_profile_view_stats')) {
@@ -2222,10 +2215,7 @@ function casting_suggested_members_for(int $viewer_id, int $limit = 5): array
             }
             $profile = casting_get_profile($id);
             $photo = casting_member_card_photo_url($id, $profile);
-            $role = casting_user_primary_activity_label($id);
-            if ($role === '') {
-                $role = casting_user_public_role_label($id);
-            }
+            $role = casting_user_public_role_label($id);
         } catch (Throwable $e) {
             continue;
         }

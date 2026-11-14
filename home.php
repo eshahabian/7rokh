@@ -35,7 +35,7 @@ $premium_members = casting_home_premium_members(24, $user_id);
 $newest_members = casting_newest_members(24, $user_id);
 
 $panel_title = 'خانه';
-$primary_activity = casting_user_primary_activity_label($user_id);
+$primary_activity = casting_user_public_role_label($user_id);
 if ($primary_activity !== '') {
     $panel_title .= ' · ' . $primary_activity;
 }

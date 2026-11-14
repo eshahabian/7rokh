@@ -94,6 +94,15 @@ function casting_process_profile_post(int $user_id): array
 
         return $out;
     }
+    if (function_exists('casting_activities_post_incomplete_error')) {
+        $activity_error = casting_activities_post_incomplete_error($_POST);
+        if ($activity_error !== null) {
+            $out['error'] = $activity_error;
+            $out['errors'] = [$activity_error];
+
+            return $out;
+        }
+    }
 
     try {
     $video = casting_handle_video_upload($user_id);

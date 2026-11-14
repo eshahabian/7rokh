@@ -179,7 +179,7 @@ function casting_role_label(string $role): string
 
 /**
  * برچسب نقش عمومی کاربر برای کارت‌ها، چت، پروفایل و …
- * اولویت با اولین نوع فعالیت است (مثلاً «بازیگر تئاتر» به‌جای «هنرمند»).
+ * همهٔ تخصص‌های انتخاب‌شده نشان داده می‌شوند (مثلاً «کارگردان سینما، بازیگر تئاتر»).
  * مدیر اصلی پورتال همیشه «مدیر سایت» دیده می‌شود.
  */
 function casting_user_public_role_label(int $user_id): string
@@ -194,14 +194,14 @@ function casting_user_public_role_label(int $user_id): string
         return 'مدیر سایت';
     }
 
-    if (!function_exists('casting_user_primary_activity_label')) {
+    if (!function_exists('casting_user_activity_labels_text')) {
         $activities_file = __DIR__ . '/activities.php';
         if (is_file($activities_file)) {
             require_once $activities_file;
         }
     }
-    if (function_exists('casting_user_primary_activity_label')) {
-        $activity = casting_user_primary_activity_label($user_id);
+    if (function_exists('casting_user_activity_labels_text')) {
+        $activity = casting_user_activity_labels_text($user_id);
         if ($activity !== '') {
             return $activity;
         }

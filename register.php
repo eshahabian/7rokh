@@ -216,6 +216,15 @@ if ($error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
+                if ($error === '' && !$password_mismatch && $otp_ok && function_exists('casting_activities_post_incomplete_error')) {
+                    $activity_error = casting_activities_post_incomplete_error($_POST);
+                    if ($activity_error !== null) {
+                        $error = $activity_error;
+                        $focus_field = 'activities';
+                        $invalid_fields = ['activities'];
+                    }
+                }
+
                 if ($error === '' && !$password_mismatch && $otp_ok) {
                     try {
                         $role = casting_register_role_from_path($register_path);

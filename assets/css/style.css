@@ -2066,13 +2066,17 @@ fieldset.field legend {
 .chip {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
   background: var(--accent-dim);
   color: var(--accent-strong);
   font-size: 0.85rem;
   font-weight: 600;
+  line-height: 1.45;
   margin-bottom: 1rem;
+  white-space: normal;
 }
 
 .membership-number-line {
@@ -7569,6 +7573,8 @@ html[data-theme="day"] .ad-spec-box {
 .ig-profile-role {
   margin: 0;
   font-weight: 600;
+  line-height: 1.5;
+  white-space: normal;
 }
 
 .ig-profile-place,

@@ -174,11 +174,16 @@ function casting_landing_photo_members(int $limit = 16): array
         if ($name === '') {
             continue;
         }
-        $role_label = 'بازیگر';
-        if ($role === 'director') {
-            $role_label = 'کارگردان';
-        } elseif ($role === 'producer') {
-            $role_label = 'تهیه‌کننده';
+        $role_label = function_exists('casting_user_public_role_label')
+            ? casting_user_public_role_label($id)
+            : '';
+        if ($role_label === '') {
+            $role_label = 'بازیگر';
+            if ($role === 'director') {
+                $role_label = 'کارگردان';
+            } elseif ($role === 'producer') {
+                $role_label = 'تهیه‌کننده';
+            }
         }
         $out[] = [
             'id'         => $id,

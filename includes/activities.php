@@ -313,13 +313,50 @@ function casting_user_primary_activity_key(int $user_id): string
 
 function casting_user_primary_activity_label(int $user_id): string
 {
-    $key = casting_user_primary_activity_key($user_id);
-    if ($key === '') {
-        return '';
+    $labels = casting_user_activity_labels($user_id);
+
+    return $labels[0] ?? '';
+}
+
+/**
+ * همهٔ تخصص‌های قابل‌نمایش، به ترتیب انتخاب کاربر.
+ *
+ * @return list<string>
+ */
+function casting_user_activity_labels(int $user_id): array
+{
+    if ($user_id <= 0) {
+        return [];
+    }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id) && function_exists('casting_sync_portal_owner_activities')) {
+        casting_sync_portal_owner_activities($user_id);
+    }
+    $activities = casting_normalize_activities(get_user_meta($user_id, 'casting_activities', true), $user_id);
+    if ($activities === []) {
+        return [];
     }
     $labels = casting_activity_labels_for_user($user_id);
+    $out = [];
+    foreach ($activities as $key) {
+        $key = (string) $key;
+        if ($key === 'it' || $key === 'activity_none') {
+            continue;
+        }
+        if (!isset($labels[$key])) {
+            continue;
+        }
+        $label = (string) $labels[$key];
+        if ($label !== '' && !in_array($label, $out, true)) {
+            $out[] = $label;
+        }
+    }
 
-    return (string) ($labels[$key] ?? '');
+    return $out;
+}
+
+function casting_user_activity_labels_text(int $user_id): string
+{
+    return implode('، ', casting_user_activity_labels($user_id));
 }
 
 /**
@@ -541,6 +578,41 @@ function casting_parse_activities_post(array $post, int $user_id = 0): array
         }
     }
     return $out;
+}
+
+/**
+ * ردیفی که دسته دارد ولی تخصص ندارد نباید بی‌صدا حذف شود.
+ */
+function casting_activities_post_incomplete_error(array $post): ?string
+{
+    $raw = $post['activity_items'] ?? null;
+    if (!is_array($raw)) {
+        return null;
+    }
+    $categories = casting_activity_categories();
+    foreach ($raw as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $cat = sanitize_key((string) ($item['category'] ?? ''));
+        $specialty = sanitize_key((string) ($item['specialty'] ?? ''));
+        if ($cat === '' && $specialty === '') {
+            continue;
+        }
+        if ($cat !== '' && $specialty !== '' && isset($categories[$cat]['items'][$specialty])) {
+            continue;
+        }
+        $label = ($cat !== '' && isset($categories[$cat]['label']))
+            ? (string) $categories[$cat]['label']
+            : '';
+        if ($label !== '' && $specialty === '') {
+            return 'برای «' . $label . '» تخصص را هم انتخاب کنید. فقط انتخاب دسته کافی نیست.';
+        }
+
+        return 'نوع فعالیت را کامل انتخاب کنید: هم تخصص هنری و هم تخصص همان رشته.';
+    }
+
+    return null;
 }
 
 /**
