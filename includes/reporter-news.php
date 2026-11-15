@@ -65,6 +65,7 @@ function casting_news_render_card(array $row): void
       <p><?= casting_e($row['reporter']) ?> — ارسال: <?= casting_e(casting_news_date($row['created'], true)) ?></p>
       <p><strong><?= nl2br(casting_e($row['lead'])) ?></strong></p>
       <div style="white-space:pre-wrap;overflow-wrap:anywhere"><?= casting_e($row['body']) ?></div>
+      <?php if (function_exists('casting_news_render_publish')) { casting_news_render_publish($row); } ?>
       <?php if ($row['size'] > 0): ?>
       <p><a class="btn btn-ghost" href="<?= casting_e(casting_url('reporters.php?download=' . $row['id'] . '&owner=' . $row['uid'])) ?>">دریافت <?= casting_e($row['name']) ?></a></p>
       <?php endif; ?>

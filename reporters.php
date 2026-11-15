@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/panel.php';
 require_once __DIR__ . '/includes/reporter-news.php';
+require_once __DIR__ . '/includes/reporter-publish.php';
 if (!casting_current_user()) {
     $_SESSION['casting_login_intent'] = 'reporters';
     casting_redirect('login.php?intent=reporters');
@@ -11,6 +12,17 @@ $user = casting_require_casting_user();
 $uid = (int) $user->ID;
 casting_nocache();
 $reviewer = casting_news_reviewer($uid);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['news_publish'])) {
+    if (!$reviewer || !wp_verify_nonce((string) ($_POST['_wpnonce'] ?? ''), 'casting_news_publish')) {
+        http_response_code(403);
+        exit('دسترسی غیرمجاز یا نشست منقضی شده است.');
+    }
+    try {
+        casting_news_publish($uid, (string) ($_POST['owner'] ?? ''), (string) ($_POST['id'] ?? ''), $_POST);
+        casting_set_flash('success', 'خبر در سایت منتشر شد. لینک آن در کارت خبر قرار دارد.');
+    } catch (Throwable $e) { casting_set_flash('error', $e->getMessage()); }
+    casting_redirect('reporters.php#news-management');
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['news_manage'])) {
     if (!$reviewer || !wp_verify_nonce((string) ($_POST['_wpnonce'] ?? ''), 'casting_news_manage')) {
         http_response_code(403);
@@ -107,4 +119,5 @@ casting_render_flash();
 <?php endif; ?>
 <link rel="stylesheet" href="<?= casting_e(casting_asset('css/reporter-news.css')) ?>">
 <script src="<?= casting_e(casting_asset('js/reporter-news.js')) ?>" defer></script>
+<script src="<?= casting_e(casting_asset('js/reporter-publish.js')) ?>" defer></script>
 <?php casting_render_panel_end(); ?>
