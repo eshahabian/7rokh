@@ -63,7 +63,7 @@ casting_render_flash();
 ?>
 <section class="dash-card">
   <?php casting_render_panel_heading('خبرنگاران'); ?>
-  <p>خبر خود را برای پایگاه خبری 7رخ ارسال کنید. خبر و فایل ارسالی فقط برای eshahabian و ardavan قابل مشاهده است.</p>
+  <p>خبر خود را برای پایگاه خبری 7رخ ارسال کنید.</p>
   <form id="reporter-news-form" class="form" data-user="<?= $uid ?>">
     <?php wp_nonce_field('casting_news'); ?>
     <div class="field"><label for="reporter-name">نام و نام خانوادگی خبرنگار</label><input id="reporter-name" value="<?= casting_e((string) $user->display_name) ?>" readonly></div>
