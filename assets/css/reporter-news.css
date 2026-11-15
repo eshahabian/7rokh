@@ -40,3 +40,55 @@
   font-size: .85em;
 }
 .news-tab-content { min-width: 0; }
+.news-card-actions,
+.news-manage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.news-card-actions { margin-top: 20px; }
+.news-manage-actions { margin: 0; padding: 0; }
+.news-card-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 48px;
+  margin: 0;
+}
+
+.news-publish-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 20px;
+}
+.news-publish-form > label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.news-publish-form input:not([type="checkbox"]):not([type="hidden"]),
+.news-publish-form textarea,
+.news-publish-form select {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  font: inherit;
+  line-height: 1.9;
+}
+.news-publish-form textarea { resize: vertical; }
+.news-publish-form textarea[name="publish_lead"] { min-height: 140px; }
+.news-publish-form textarea[name="publish_body"] { min-height: 360px; }
+.news-publish-form fieldset { min-width: 0; margin: 0; padding: 16px; }
+.news-publish-form fieldset label { display: inline-flex; align-items: center; gap: 8px; margin: 8px 0 8px 20px; }
+.news-publish-form > label:has(input[type="checkbox"]) { flex-direction: row; align-items: baseline; }
+.news-publish-preview { padding: 20px; border: 1px solid #b9a57266; border-radius: 12px; }

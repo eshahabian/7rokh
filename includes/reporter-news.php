@@ -66,10 +66,11 @@ function casting_news_render_card(array $row): void
       <p><strong><?= nl2br(casting_e($row['lead'])) ?></strong></p>
       <div style="white-space:pre-wrap;overflow-wrap:anywhere"><?= casting_e($row['body']) ?></div>
       <?php if (function_exists('casting_news_render_publish')) { casting_news_render_publish($row); } ?>
+      <div class="news-card-actions">
       <?php if ($row['size'] > 0): ?>
-      <p><a class="btn btn-ghost" href="<?= casting_e(casting_url('reporters.php?download=' . $row['id'] . '&owner=' . $row['uid'])) ?>">دریافت <?= casting_e($row['name']) ?></a></p>
+      <a class="btn btn-ghost" href="<?= casting_e(casting_url('reporters.php?download=' . $row['id'] . '&owner=' . $row['uid'])) ?>">دریافت <?= casting_e($row['name']) ?></a>
       <?php endif; ?>
-      <form method="post" action="<?= casting_e(casting_url('reporters.php')) ?>" class="cta-row">
+      <form method="post" action="<?= casting_e(casting_url('reporters.php')) ?>" class="news-manage-actions">
         <?php wp_nonce_field('casting_news_manage'); ?>
         <input type="hidden" name="news_manage" value="1">
         <input type="hidden" name="owner" value="<?= (int) $row['uid'] ?>">
@@ -78,6 +79,7 @@ function casting_news_render_card(array $row): void
         <?php if ($state !== 'archived'): ?><button class="btn btn-primary" name="state" value="archived">انتقال به آرشیو</button><?php endif; ?>
         <?php if ($state !== 'deleted'): ?><button class="btn btn-ghost" name="state" value="deleted">حذف</button><?php endif; ?>
       </form>
+      </div>
     </article>
     <?php
 }
