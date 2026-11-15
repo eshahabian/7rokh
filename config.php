@@ -17,7 +17,7 @@ define('CASTING_WP_LOAD', __DIR__ . '/../wp-load.php');
 define('CASTING_BRAND', '۷ رخ');
 
 /** آدرس سایت اصلی */
-define('CASTING_MAIN_SITE_URL', 'https://7rokh.com');
+define('CASTING_MAIN_SITE_URL', 'https://7rokh.ir');
 
 /** نقش‌های مجاز */
 define('CASTING_ROLES', [

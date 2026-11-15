@@ -1,17 +1,5 @@
-# پورتال ۷ رخ — برای کل دامنه فقط robots ریشهٔ سایت (7rokh.com) خوانده می‌شود.
-# این فایل راهنماست؛ آدرس Sitemap را در Google Search Console هم ثبت کنید.
-
+# Documentation only: crawlers read the domain root /robots.txt.
+# Merge docs/robots-root-portal.txt into the existing root robots file.
 User-agent: *
-Allow: /
-Disallow: /includes/
-Disallow: /mu-plugin/
-Disallow: /admin-
-Disallow: /checkout
-Disallow: /session-ping.php
-Disallow: /media-stream.php
-Disallow: /chat-dock-api.php
-Disallow: /portal-health.php
-Disallow: /cart-count.php
-Disallow: /profile-completion-sms-cron.php
-
-Sitemap: https://7rokh.com/casting-portal/sitemap.php
+Allow: /casting-portal/
+Sitemap: https://7rokh.ir/casting-portal/sitemap.php

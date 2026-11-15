@@ -10,7 +10,7 @@ header('Content-Type: application/xml; charset=UTF-8');
 header('X-Robots-Tag: noindex');
 header('Cache-Control: public, max-age=3600');
 
-$origin = 'https://7rokh.com';
+$origin = 'https://7rokh.ir';
 if (is_file(__DIR__ . '/config.php')) {
     require_once __DIR__ . '/config.php';
     if (defined('CASTING_MAIN_SITE_URL') && trim((string) CASTING_MAIN_SITE_URL) !== '') {
@@ -19,23 +19,11 @@ if (is_file(__DIR__ . '/config.php')) {
 }
 
 $base = $origin . '/casting-portal';
-$today = gmdate('Y-m-d');
-
-/** @var list<array{loc:string,changefreq:string,priority:string,lastmod?:string}> $urls */
-$urls = [
-    ['loc' => $base . '/', 'changefreq' => 'daily', 'priority' => '1.0', 'lastmod' => $today],
-    ['loc' => $base . '/register.php', 'changefreq' => 'monthly', 'priority' => '0.9', 'lastmod' => $today],
-    ['loc' => $base . '/register.php?path=talent', 'changefreq' => 'monthly', 'priority' => '0.8', 'lastmod' => $today],
-    ['loc' => $base . '/register.php?path=hire', 'changefreq' => 'monthly', 'priority' => '0.8', 'lastmod' => $today],
-    ['loc' => $base . '/login.php', 'changefreq' => 'monthly', 'priority' => '0.7', 'lastmod' => $today],
-    ['loc' => $base . '/cart.php', 'changefreq' => 'weekly', 'priority' => '0.8', 'lastmod' => $today],
-    ['loc' => $base . '/faq.php', 'changefreq' => 'monthly', 'priority' => '0.7', 'lastmod' => $today],
-    ['loc' => $base . '/rules.php', 'changefreq' => 'monthly', 'priority' => '0.6', 'lastmod' => $today],
-    ['loc' => $base . '/contact.php', 'changefreq' => 'yearly', 'priority' => '0.5', 'lastmod' => $today],
-    ['loc' => $base . '/app.php', 'changefreq' => 'monthly', 'priority' => '0.6', 'lastmod' => $today],
-    ['loc' => $base . '/forgot-password.php', 'changefreq' => 'yearly', 'priority' => '0.3', 'lastmod' => $today],
-];
-
+require_once __DIR__ . '/includes/seo.php';
+$urls = [];
+foreach (casting_seo_pages() as $page => $metadata) {
+    $urls[] = ['loc' => $base . '/' . ($page === 'index.php' ? '' : $page), 'changefreq' => 'monthly', 'priority' => $page === 'index.php' ? '1.0' : '0.6'];
+}
 echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 ?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

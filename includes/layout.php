@@ -2,10 +2,11 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/pwa.php';
+require_once __DIR__ . '/seo.php';
 
 function casting_main_site_url(): string
 {
-    return defined('CASTING_MAIN_SITE_URL') ? (string) CASTING_MAIN_SITE_URL : 'https://7rokh.com';
+    return defined('CASTING_MAIN_SITE_URL') ? (string) CASTING_MAIN_SITE_URL : 'https://7rokh.ir';
 }
 
 function casting_is_native_app_request(): bool
@@ -26,7 +27,8 @@ function casting_is_native_app_request(): bool
 function casting_render_head(string $title, string $body_class = ''): void
 {
     $brand = casting_e(casting_brand());
-    $full_title = casting_e($title) . ' | ' . $brand;
+    $seo_page = casting_seo_pages()[casting_seo_page()] ?? null;
+    $full_title = casting_e($seo_page ? $seo_page[0] : $title) . ' | ' . $brand;
     $css = casting_e(casting_asset('css/style.css'));
     $css_file = dirname(__DIR__) . '/assets/css/style.css';
     $css_v = is_file($css_file) ? (string) filemtime($css_file) : '214';
@@ -37,6 +39,7 @@ function casting_render_head(string $title, string $body_class = ''): void
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title><?= $full_title ?></title>
+  <?php casting_render_seo_head(); ?>
   <?php casting_render_pwa_head(); ?>
   <link rel="preload" href="<?= casting_e(casting_asset('fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="<?= casting_e(casting_asset('fonts/Shoor-SemiBold.woff2')) ?>" as="font" type="font/woff2" crossorigin>

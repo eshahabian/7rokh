@@ -1,0 +1,9 @@
+# Merge into the EXISTING User-agent: * group at https://7rokh.ir/robots.txt.
+# Preserve all WordPress rules. Do not block login/account pages:
+# crawlers must be able to read their noindex headers.
+Disallow: /casting-portal/includes/
+Disallow: /casting-portal/mu-plugin/
+Disallow: /casting-portal/tools/
+
+# Preserve existing WordPress Sitemap directives too.
+Sitemap: https://7rokh.ir/casting-portal/sitemap.php

@@ -6,6 +6,10 @@ require_once __DIR__ . '/../cast-admin/core.php';
 \CastingCms\start_runtime();
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/seo.php';
+if (!casting_seo_indexable() && !headers_sent()) {
+    header('X-Robots-Tag: noindex, follow');
+}
 
 $casting_is_portal_request = static function (): bool {
     $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
