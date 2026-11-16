@@ -17,7 +17,7 @@
   for (const field of ['title', 'lead', 'body']) {
     if (draft && draft[field]) form.elements[field].value = draft[field];
   }
-  if (draft) status.textContent = 'پیش‌نویس بازیابی شد. همان عکس را دوباره انتخاب کنید. اگر ویدیو داشتید، همان ویدیو را هم در بخش جداگانه انتخاب کنید.';
+  if (draft) status.textContent = 'پیش‌نویس بازیابی شد.';
   const persist = () => {
     draft = draft || {};
     for (const field of ['title', 'lead', 'body']) draft[field] = form.elements[field].value;

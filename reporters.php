@@ -74,12 +74,12 @@ casting_render_flash();
     <div class="field news-photo-field">
       <label for="news-photo">عکس خبر</label>
       <input id="news-photo" type="file" accept="image/*,.heic,.heif" required>
-      <p class="field-hint">حداقل یک عکس الزامی است. پس از بستن صفحه، همان عکس را دوباره انتخاب کنید.</p>
+      <p class="field-hint">حداقل یک عکس الزامی است.</p>
     </div>
     <div class="field news-video-field">
       <label for="news-video">ویدیو (اختیاری)</label>
       <input id="news-video" type="file" accept="video/*,.mp4,.webm,.mov,.mkv,.avi,.m4v">
-      <p class="field-hint">ویدیو جدا از عکس بارگذاری می‌شود و اجباری نیست. اگر انتخاب کردید، پس از بستن صفحه همان ویدیو را دوباره انتخاب کنید.</p>
+      <p class="field-hint">ویدیو جدا از عکس بارگذاری می‌شود و اجباری نیست.</p>
     </div>
     <button class="btn btn-primary" type="submit">ارسال</button>
     <progress id="news-progress" max="100" value="0" hidden style="width:100%"></progress>
