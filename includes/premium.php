@@ -97,8 +97,29 @@ function casting_premium_sync_expiry(int $user_id): void
     }
 }
 
+/**
+ * مدیران اصلی پورتال (eshahabian و ardavan) همیشه اشتراک ویژه دارند.
+ */
+function casting_user_has_permanent_premium(int $user_id): bool
+{
+    if ($user_id <= 0) {
+        return false;
+    }
+    if (function_exists('casting_user_is_listed_portal_admin') && casting_user_is_listed_portal_admin($user_id)) {
+        return true;
+    }
+    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($user_id)) {
+        return true;
+    }
+
+    return false;
+}
+
 function casting_premium_expire_timestamp(int $user_id): ?int
 {
+    if (casting_user_has_permanent_premium($user_id)) {
+        return null;
+    }
     casting_premium_sync_expiry($user_id);
     $until = (string) get_user_meta($user_id, 'casting_premium_until', true);
     if ($until === '') {
@@ -110,6 +131,9 @@ function casting_premium_expire_timestamp(int $user_id): ?int
 
 function casting_user_is_premium(int $user_id): bool
 {
+    if (casting_user_has_permanent_premium($user_id)) {
+        return true;
+    }
     casting_premium_sync_expiry($user_id);
     $until = (string) get_user_meta($user_id, 'casting_premium_until', true);
     if ($until === '') {
@@ -154,6 +178,9 @@ function casting_premium_until_label(int $user_id): string
     if (!casting_user_is_premium($user_id)) {
         return '';
     }
+    if (casting_user_has_permanent_premium($user_id)) {
+        return 'دائمی';
+    }
     return (string) get_user_meta($user_id, 'casting_premium_until', true);
 }
 
@@ -177,6 +204,9 @@ function casting_premium_until_parts(string $until): array
 
 function casting_premium_countdown_summary(int $user_id): string
 {
+    if (casting_user_has_permanent_premium($user_id)) {
+        return 'دائمی';
+    }
     $until_ts = casting_premium_expire_timestamp($user_id);
     if ($until_ts === null) {
         return '';
@@ -196,6 +226,9 @@ function casting_premium_countdown_summary(int $user_id): string
 
 function casting_premium_countdown_nav_label(int $user_id): string
 {
+    if (casting_user_has_permanent_premium($user_id)) {
+        return 'دائمی';
+    }
     $until_ts = casting_premium_expire_timestamp($user_id);
     if ($until_ts === null) {
         return '';
@@ -216,6 +249,16 @@ function casting_premium_countdown_nav_label(int $user_id): string
 function casting_render_premium_countdown(int $user_id): void
 {
     if (!casting_user_is_premium($user_id)) {
+        return;
+    }
+    if (casting_user_has_permanent_premium($user_id)) {
+        ?>
+<div class="premium-countdown">
+  <p class="premium-countdown-title">حساب ویژه</p>
+  <p class="premium-countdown-value">دائمی</p>
+  <p class="premium-countdown-meta">مدیران اصلی پورتال همیشه اشتراک ویژه دارند.</p>
+</div>
+        <?php
         return;
     }
     $until = casting_premium_until_label($user_id);
@@ -669,6 +712,9 @@ function casting_admin_revoke_premium(int $target_id, int $admin_id, string $not
     if ($target_id <= 0 || casting_get_user_role($target_id) === '') {
         return ['ok' => false, 'error' => 'کاربر پیدا نشد.'];
     }
+    if (casting_user_has_permanent_premium($target_id)) {
+        return ['ok' => false, 'error' => 'اشتراک ویژه مدیران اصلی پورتال دائمی است و لغو نمی‌شود.'];
+    }
     if (!casting_user_is_premium($target_id)) {
         return ['ok' => true, 'error' => ''];
     }
@@ -707,7 +753,7 @@ function casting_premium_repair_orphan_once(int $admin_id): array
 
     $revoked = [];
     $mark = static function (int $uid, string $label) use (&$revoked, $admin_id): void {
-        if (!casting_user_is_premium($uid)) {
+        if (!casting_user_is_premium($uid) || casting_user_has_permanent_premium($uid)) {
             return;
         }
         casting_premium_clear_for_user(

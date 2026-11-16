@@ -306,7 +306,9 @@ function casting_render_panel_nav_item_list(array $items, array $ctx): void
         ?>
           <a class="panel-nav-link<?= $is_external ? ' panel-nav-link-external' : '' ?> <?= $current === $item['key'] ? 'is-active' : '' ?>" href="<?= casting_e($href) ?>">
             <span class="panel-nav-label"><?= casting_brandify($item_label) ?></span>
-            <?php if ($item['key'] === 'membership' && $panel_premium_until !== null && $user) : ?>
+            <?php if ($item['key'] === 'membership' && $user && function_exists('casting_user_has_permanent_premium') && casting_user_has_permanent_premium((int) $user->ID)) : ?>
+              <span class="nav-premium-countdown" title="اشتراک ویژه دائمی مدیران اصلی">دائمی</span>
+            <?php elseif ($item['key'] === 'membership' && $panel_premium_until !== null && $user) : ?>
               <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
                 <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
               </span>
@@ -602,7 +604,9 @@ function casting_render_panel_sidebar(string $active, string $page_title = ''): 
           <a
             class="panel-sidebar-title panel-sidebar-title-desktop panel-sidebar-home<?= in_array($active, ['panel', 'home'], true) ? ' is-active' : '' ?>"
             href="<?= casting_e(casting_url($active === 'home' ? 'home.php' : 'panel.php')) ?>"
-          ><?= casting_e($sidebar_page_title) ?><?php if ($panel_premium_until !== null && $user) : ?>
+          ><?= casting_e($sidebar_page_title) ?><?php if ($user && function_exists('casting_user_has_permanent_premium') && casting_user_has_permanent_premium((int) $user->ID)) : ?>
+            <span class="nav-premium-countdown" title="اشتراک ویژه دائمی مدیران اصلی">دائمی</span>
+          <?php elseif ($panel_premium_until !== null && $user) : ?>
             <span class="nav-premium-countdown" data-premium-until-ts="<?= (int) $panel_premium_until ?>" title="زمان باقی‌مانده حساب ویژه">
               <span data-premium-countdown><?= casting_e(casting_premium_countdown_nav_label((int) $user->ID)) ?></span>
             </span>

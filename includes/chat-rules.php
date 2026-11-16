@@ -112,10 +112,11 @@ function casting_can_start_chat(int $from_id, int $to_id): array
         return ['ok' => false, 'error' => 'به‌دلیل بلاک، امکان گفتگو وجود ندارد.'];
     }
 
-    // فقط مالک پورتال (eshahabian) از قوانین سمتی معاف است
-    if (casting_user_is_portal_owner($from_id)) {
-        $to_role = casting_get_user_role($to_id);
-        if ($to_role !== '') {
+    // مدیران اصلی (eshahabian و ardavan) از جدول تخصص، پروژه و اشتراک معاف‌اند
+    if (casting_user_is_portal_owner($from_id)
+        || (function_exists('casting_user_is_listed_portal_admin') && casting_user_is_listed_portal_admin($from_id))
+        || (function_exists('casting_user_is_super_admin') && casting_user_is_super_admin($from_id))) {
+        if (get_user_by('id', $to_id)) {
             return ['ok' => true, 'error' => ''];
         }
     }

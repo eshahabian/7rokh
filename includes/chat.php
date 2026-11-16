@@ -495,7 +495,9 @@ function casting_dm_thread_closed_by(int $user_a, int $user_b): int
  */
 function casting_message_access_can_initiate_freely(int $from_id, int $to_id): bool
 {
-    if (function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($from_id)) {
+    if ((function_exists('casting_user_is_portal_owner') && casting_user_is_portal_owner($from_id))
+        || (function_exists('casting_user_is_listed_portal_admin') && casting_user_is_listed_portal_admin($from_id))
+        || (function_exists('casting_user_is_super_admin') && casting_user_is_super_admin($from_id))) {
         return true;
     }
     if (!function_exists('casting_message_access_user_specs')) {
