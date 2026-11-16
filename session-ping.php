@@ -10,6 +10,6 @@ $user = casting_require_api_casting_user();
 
     echo wp_json_encode([
     'ok'           => true,
-    'idle_seconds' => function_exists('casting_session_idle_seconds') ? casting_session_idle_seconds() : 900,
+    'idle_seconds' => function_exists('casting_session_idle_seconds') ? casting_session_idle_seconds() : 1800,
     'user_id'      => (int) $user->ID,
 ]);

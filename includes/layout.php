@@ -484,7 +484,7 @@ function casting_render_footer(bool $show_home_verse = false): void
     };
     window.CASTING_SESSION = {
       active: <?= casting_current_user() ? 'true' : 'false' ?>,
-      idleSeconds: <?= (int) (function_exists('casting_session_idle_seconds') ? casting_session_idle_seconds() : 900) ?>,
+      idleSeconds: <?= (int) (function_exists('casting_session_idle_seconds') ? casting_session_idle_seconds() : 1800) ?>,
       pingUrl: <?= wp_json_encode(casting_url('session-ping.php')) ?>,
       logoutUrl: <?= wp_json_encode(casting_url('logout.php?reason=idle')) ?>
     };

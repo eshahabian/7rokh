@@ -4012,10 +4012,10 @@
     }
   });
 
-  // خروج واقعی پس از ۱۵ دقیقه بدون کلیک/اسکرول/تایپ — پینگ پس‌زمینه تمدید نمی‌کند
+  // خروج واقعی پس از ۳۰ دقیقه بدون کلیک/اسکرول/تایپ — پینگ پس‌زمینه تمدید نمی‌کند
   const sessionCfg = window.CASTING_SESSION;
   if (sessionCfg && sessionCfg.active) {
-    const idleMs = Math.max(60, Number(sessionCfg.idleSeconds) || 900) * 1000;
+    const idleMs = Math.max(60, Number(sessionCfg.idleSeconds) || 1800) * 1000;
     const pingUrl = String(sessionCfg.pingUrl || "");
     const logoutUrl = String(sessionCfg.logoutUrl || "logout.php?reason=idle");
     const LAST_KEY = "casting_last_activity_at";
