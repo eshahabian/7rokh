@@ -92,3 +92,16 @@
 .news-publish-form fieldset label { display: inline-flex; align-items: center; gap: 8px; margin: 8px 0 8px 20px; }
 .news-publish-form > label:has(input[type="checkbox"]) { flex-direction: row; align-items: baseline; }
 .news-publish-preview { padding: 20px; border: 1px solid #b9a57266; border-radius: 12px; }
+.news-photo-field,
+.news-video-field {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #b9a57266;
+  border-radius: 12px;
+}
+.news-photo-field input[type="file"],
+.news-video-field input[type="file"] {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+}

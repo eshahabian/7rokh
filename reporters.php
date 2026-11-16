@@ -49,13 +49,14 @@ if (isset($_GET['download'])) {
     if (!preg_match('/^[a-f0-9]{32}$/D', $id) || !preg_match('/^[1-9][0-9]*$/D', $owner)) { http_response_code(404); exit; }
     $base = casting_news_dir() . '/' . $owner . '/' . $id;
     $meta = is_file($base . '.json') ? json_decode((string) file_get_contents($base . '.json'), true) : null;
-    if (empty($meta['done']) || !is_file($base . '.bin')) { http_response_code(404); exit; }
+    $file = casting_news_download_file($base, is_array($meta) ? $meta : [], (string) ($_GET['file'] ?? ''));
+    if ($file === null) { http_response_code(404); exit; }
     header('Content-Type: application/octet-stream');
     header('X-Content-Type-Options: nosniff');
-    header('Content-Disposition: attachment; filename="news-media"; filename*=UTF-8\'\'' . rawurlencode($meta['name']));
-    header('Content-Length: ' . filesize($base . '.bin'));
+    header('Content-Disposition: attachment; filename="news-media"; filename*=UTF-8\'\'' . rawurlencode($file['name']));
+    header('Content-Length: ' . filesize($file['path']));
     if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
-    readfile($base . '.bin');
+    readfile($file['path']);
     exit;
 }
 casting_render_panel_start('خبرنگاران', 'reporters');
@@ -70,7 +71,16 @@ casting_render_flash();
     <div class="field"><label for="news-title">تیتر خبر</label><input id="news-title" name="title" required></div>
     <div class="field"><label for="news-lead">لید خبر</label><textarea id="news-lead" name="lead" rows="3" required></textarea></div>
     <div class="field"><label for="news-body">متن خبر</label><textarea id="news-body" name="body" rows="10" required></textarea></div>
-    <div class="field"><label for="news-media">عکس یا ویدیو (اختیاری)</label><input id="news-media" type="file"><p class="field-hint">همه فرمت‌ها پذیرفته می‌شوند؛ سقف حجم در پورتال تعیین نشده است. پس از بستن صفحه، برای ادامه همان فایل را دوباره انتخاب کنید.</p></div>
+    <div class="field news-photo-field">
+      <label for="news-photo">عکس خبر</label>
+      <input id="news-photo" type="file" accept="image/*,.heic,.heif" required>
+      <p class="field-hint">حداقل یک عکس الزامی است. پس از بستن صفحه، همان عکس را دوباره انتخاب کنید.</p>
+    </div>
+    <div class="field news-video-field">
+      <label for="news-video">ویدیو (اختیاری)</label>
+      <input id="news-video" type="file" accept="video/*,.mp4,.webm,.mov,.mkv,.avi,.m4v">
+      <p class="field-hint">ویدیو جدا از عکس بارگذاری می‌شود و اجباری نیست. اگر انتخاب کردید، پس از بستن صفحه همان ویدیو را دوباره انتخاب کنید.</p>
+    </div>
     <button class="btn btn-primary" type="submit">ارسال</button>
     <progress id="news-progress" max="100" value="0" hidden style="width:100%"></progress>
     <p id="news-status" role="status" aria-live="polite"></p>
