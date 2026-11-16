@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Casting Portal — اینماد در فوتر سایت
  * Description: کد رسمی اینماد در ویجت فوتر JNews + جلوگیری از فشرده شدن تصویر
- * Version: 1.1
+ * Version: 1.2
  *
  * نصب: public_html/wp-content/mu-plugins/casting-main-enamad.php
  * (خودکار با deploy — .cpanel.yml)
@@ -64,7 +64,7 @@ function casting_main_enamad_enqueue_assets(): void
 }
 CSS;
 
-    wp_register_style('casting-main-enamad', false, [], '1.1');
+    wp_register_style('casting-main-enamad', false, [], '1.2');
     wp_enqueue_style('casting-main-enamad');
     wp_add_inline_style('casting-main-enamad', trim($css));
 }
@@ -81,21 +81,42 @@ function casting_main_enamad_footer_script(): void
 (function () {
   var MARKUP = <?= wp_json_encode($markup) ?>;
 
+  function hasSeal(root) {
+    return !!(root && root.querySelector('a[href*="enamad.ir"], img[src*="trustseal.enamad"]'));
+  }
+
+  function widgetOf(title) {
+    var node = title;
+    while (node && node !== document.body) {
+      var cls = ' ' + (node.className || '') + ' ';
+      if (cls.indexOf(' footer_widget ') !== -1) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return title.parentElement || null;
+  }
+
+  // عنوان JNews داخل .jeg_footer_heading است و کد اینماد در .textwidget کنار آن.
+  // اگر فقط parent عنوان را بگردیم، مهر موجود دیده نمی‌شود و لوگو دوباره تزریق می‌شود.
   function inject() {
+    var footer = document.querySelector('.jeg_footer');
+    if (hasSeal(footer)) {
+      return;
+    }
+
     var titles = document.querySelectorAll('.jeg_footer_title');
     for (var i = 0; i < titles.length; i++) {
       var title = titles[i];
       if (!/enamad/i.test(title.textContent || '')) {
         continue;
       }
-      var box = title.parentElement;
-      if (!box) {
-        continue;
-      }
-      if (box.querySelector('a[href*="enamad.ir"]')) {
+      var widget = widgetOf(title);
+      if (!widget || hasSeal(widget)) {
         return;
       }
-      box.insertAdjacentHTML('beforeend', MARKUP);
+      var content = widget.querySelector('.textwidget, .custom-html-widget');
+      (content || widget).insertAdjacentHTML('beforeend', MARKUP);
       return;
     }
   }
