@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/admin-message-sms.php';
+
 const CASTING_CONTACT_INBOX_MAX = 500;
 
 /**
@@ -83,12 +85,13 @@ function casting_contact_load_inbox(): array
     return is_array($inbox) ? $inbox : [];
 }
 
-function casting_contact_save_inbox(array $inbox): void
+function casting_contact_save_inbox(array $inbox): bool
 {
     if (count($inbox) > CASTING_CONTACT_INBOX_MAX) {
         $inbox = array_slice($inbox, 0, CASTING_CONTACT_INBOX_MAX);
     }
-    update_option('casting_contact_inbox', $inbox, false);
+    return update_option('casting_contact_inbox', $inbox, false)
+        || get_option('casting_contact_inbox', []) === $inbox;
 }
 
 function casting_contact_keep_sender_login(): string
@@ -701,7 +704,10 @@ function casting_contact_reply(string $message_id, int $admin_id, string $reply)
     if (!$found) {
         return ['ok' => false, 'error' => 'پیام پیدا نشد.', 'via' => ''];
     }
-    casting_contact_save_inbox($inbox);
+    if (!casting_contact_save_inbox($inbox)) {
+        return ['ok' => false, 'error' => 'ذخیره پاسخ ناموفق بود. دوباره تلاش کنید.', 'via' => ''];
+    }
+    casting_admin_message_notify_sms($admin_id, $sender_id, 'contact');
 
     return ['ok' => true, 'error' => '', 'via' => $via];
 }

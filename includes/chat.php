@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/chat-rules.php';
+require_once __DIR__ . '/admin-message-sms.php';
 
 function casting_chat_preview(string $message, int $max = 48): string
 {
@@ -1414,6 +1415,7 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
     $id = (int) $wpdb->insert_id;
     casting_employer_maybe_consume_free_message($sender_id);
     casting_dm_maybe_send_premium_required_notice($recipient_id, $sender_id);
+    casting_admin_message_notify_sms($sender_id, $recipient_id);
 
     return ['ok' => true, 'id' => $id];
 }
@@ -1484,6 +1486,7 @@ function casting_dm_send_photo(int $sender_id, int $recipient_id, string $field 
     $id = (int) $wpdb->insert_id;
     casting_employer_maybe_consume_free_message($sender_id);
     casting_dm_maybe_send_premium_required_notice($recipient_id, $sender_id);
+    casting_admin_message_notify_sms($sender_id, $recipient_id);
 
     return [
         'ok'        => true,

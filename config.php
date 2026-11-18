@@ -168,6 +168,10 @@ if (!defined('CASTING_MOBILE_OTP_ENABLED')) {
 if (!defined('CASTING_SMS_ENABLED')) {
     define('CASTING_SMS_ENABLED', true);
 }
+/** SMS notification for new messages/contact replies from eshahabian and ardavan. */
+if (!defined('CASTING_ADMIN_MESSAGE_SMS_ENABLED')) {
+    define('CASTING_ADMIN_MESSAGE_SMS_ENABLED', true);
+}
 if (!defined('CASTING_SMS_API_KEY')) {
     define('CASTING_SMS_API_KEY', '');
 }
