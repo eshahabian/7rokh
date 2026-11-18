@@ -31,6 +31,12 @@ Options -Indexes
 # جلوگیری از اجرای مستقیم فایل‌های includes و mu-plugin از وب
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  # Canonical homepage: redirect only explicit browser requests, not DirectoryIndex.
+  # Keep query parameters and leave POST requests untouched.
+  RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+  RewriteCond %{THE_REQUEST} \s/+casting-portal/index\.php/?(?:[?\s])
+  RewriteRule ^index\.php/?$ /casting-portal/ [R=301,L]
+
   RewriteRule ^(includes|mu-plugin|tools|\.cms-tests)/ - [F,L]
   # sitemap.xml → sitemap.php (برای ثبت در Google Search Console)
   RewriteRule ^sitemap\.xml$ sitemap.php [L]

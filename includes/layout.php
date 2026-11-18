@@ -365,7 +365,7 @@ function casting_render_header(?string $active = null, bool $panel_menu = false,
         <a href="logout.php">خروج</a>
       <?php else : ?>
         <a href="<?= casting_e(casting_url('login.php?intent=negah')) ?>" class="nav-negah">۷رخ از نگاه تو</a>
-        <a href="index.php" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
+        <a href="<?= casting_e(casting_url('')) ?>" class="<?= $active === 'home' ? 'is-active' : '' ?>">صفحه اصلی</a>
         <a href="register.php" class="nav-auth-link nav-register-btn<?= $active === 'register' ? ' is-active' : '' ?>">ثبت نام</a>
         <a href="login.php" class="nav-auth-link<?= $active === 'login' ? ' is-active' : '' ?>">ورود</a>
         <a href="<?= casting_e(casting_url('app.php')) ?>" class="<?= $active === 'app' ? 'is-active' : '' ?>" data-app-download>اپلیکیشن موبایل</a>

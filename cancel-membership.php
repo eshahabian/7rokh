@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = $result['error'];
         } else {
             casting_set_flash('success', 'عضویت شما لغو شد. امیدواریم دوباره ببینیمتان.');
-            casting_redirect('index.php');
+            casting_redirect('');
         }
     }
 }

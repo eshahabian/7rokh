@@ -18,3 +18,9 @@ foreach (['login.php', 'register.php', 'reporters.php', 'home.php', 'admin-users
     check(strpos($html, 'noindex') !== false);
 }
 echo "SEO metadata and private routes checks passed.\n";
+$_SERVER['SCRIPT_NAME'] = '/casting-portal/index.php';
+$_SERVER['REQUEST_URI'] = '/casting-portal/index.php?utm_source=test';
+check(casting_seo_canonical() === 'https://7rokh.ir/casting-portal/');
+ob_start(); casting_render_seo_head(); $html = ob_get_clean();
+check(strpos($html, '<link rel="canonical" href="https://7rokh.ir/casting-portal/">') !== false);
+echo "Homepage canonical check passed.\n";

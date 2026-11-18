@@ -23,7 +23,7 @@ function casting_pwa_start_url(): string
         return casting_url('home.php');
     }
 
-    return casting_url('index.php');
+    return casting_url('');
 }
 
 function casting_render_pwa_head(): void
