@@ -45,7 +45,7 @@ function check($condition, $message) { if (!$condition) { throw new RuntimeExcep
 foreach ([1, 2] as $id) { casting_admin_message_notify_sms($id, 3); }
 check(count($sms) === 2, 'Both managers notify, case insensitively');
 check($sms[0]['mobile'] === $mobiles[3], 'Use recipient mobile');
-check(strpos($sms[0]['body'], '/casting-portal/chat.php') !== false, 'DM links to chat');
+check(strpos($sms[0]['body'], 'http') === false && strpos($sms[0]['body'], '7rokh.ir') === false && strpos($sms[0]['body'], '/casting-portal/') === false, 'DM notification contains no link');
 foreach ([[3, 1], [4, 3], [1, 1], [0, 3], [1, 0], [1, 99]] as $args) { casting_admin_message_notify_sms(...$args); }
 check(count($sms) === 2, 'Other users/admins, self and missing recipients do not notify');
 $mobiles[3] = 'invalid'; casting_admin_message_notify_sms(1, 3);
@@ -62,7 +62,7 @@ foreach ([1, 2] as $id) {
     check($result['ok'] && count($sms) === $before + 1, 'Each manager contact reply notifies once');
     $last = $sms[count($sms) - 1];
     check(count($last['inbox'][0]['replies']) === 1, 'Persist reply before calling gateway');
-    check(strpos($last['body'], '/casting-portal/contact.php') !== false, 'Contact reply links to contact inbox');
+    check(strpos($last['body'], 'http') === false && strpos($last['body'], '7rokh.ir') === false && strpos($last['body'], '/casting-portal/') === false, 'Contact notification contains no link');
     check(strpos($last['body'], 'Private reply') === false, 'Do not disclose reply text in SMS');
 }
 $before = count($sms);

@@ -31,10 +31,9 @@ function casting_admin_message_notify_sms(int $sender_id, int $recipient_id, str
         if (!preg_match('/^09\d{9}$/', $mobile)) {
             return;
         }
-        $origin = rtrim((string) CASTING_MAIN_SITE_URL, '/');
         $body = $channel === 'contact'
-            ? "۷ رخ\nمدیریت سایت به پیام شما در تماس با ما پاسخ داده است.\nبرای مشاهده پاسخ وارد حساب خود شوید:\n" . $origin . '/casting-portal/contact.php'
-            : "۷ رخ\nشما یک پیام جدید از مدیریت سایت دارید.\nبرای مشاهده پیام وارد حساب خود شوید:\n" . $origin . '/casting-portal/chat.php';
+            ? "۷ رخ\nمدیریت سایت به پیام شما در تماس با ما پاسخ داده است.\nبرای مشاهده پاسخ وارد حساب خود شوید."
+            : "۷ رخ\nشما یک پیام جدید از مدیریت سایت دارید.\nبرای مشاهده پیام وارد حساب خود شوید.";
         $result = casting_sms_send_text($mobile, $body);
         if (empty($result['ok'])) {
             // Do not log message contents, phone numbers or gateway credentials.
