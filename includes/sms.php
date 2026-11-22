@@ -424,6 +424,55 @@ function casting_sms_last_debug(): ?array
 }
 
 /**
+ * وردپرس پیدا کردن DNS را پیش‌فرض ۱۰ ثانیه قطع می‌کند.
+ * nameserver دامنه payamakapi.ir کند است و همان سقف خطای cURL 28 می‌دهد.
+ *
+ * @param array<string,mixed> $extra
+ * @return array<string,mixed>
+ */
+function casting_sms_http_args(array $extra = []): array
+{
+    casting_sms_register_http_timeout();
+
+    return array_merge([
+        'timeout'         => 30,
+        'connect_timeout' => 30,
+        'redirection'     => 0,
+    ], $extra);
+}
+
+function casting_sms_register_http_timeout(): void
+{
+    static $done = false;
+    if ($done || !function_exists('add_filter')) {
+        return;
+    }
+    $done = true;
+    add_filter('http_api_curl', 'casting_sms_http_api_curl', 10, 3);
+}
+
+/**
+ * @param resource|\CurlHandle $handle
+ * @param array<string,mixed> $parsed_args
+ * @param string $url
+ * @return resource|\CurlHandle
+ */
+function casting_sms_http_api_curl($handle, $parsed_args, $url)
+{
+    unset($parsed_args);
+    $url = is_string($url) ? $url : '';
+    if (!str_contains($url, 'payamakapi.ir') && !str_contains($url, 'webone-sms.ir')) {
+        return $handle;
+    }
+    if (is_resource($handle) || (class_exists('CurlHandle', false) && $handle instanceof CurlHandle)) {
+        curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 30);
+        curl_setopt($handle, CURLOPT_TIMEOUT, 30);
+    }
+
+    return $handle;
+}
+
+/**
  * @return array{ok:bool,error:string,code?:int,raw?:mixed,ref_id?:string,http?:int}
  */
 function casting_sms_request(string $endpoint, array $body): array
@@ -436,9 +485,7 @@ function casting_sms_request(string $endpoint, array $body): array
         $api_key = casting_sms_api_key();
         $url = casting_sms_api_base() . ltrim($endpoint, '/');
 
-        $response = wp_remote_post($url, [
-            'timeout'     => 25,
-            'redirection' => 0,
+        $response = wp_remote_post($url, casting_sms_http_args([
             'headers'     => [
                 'Content-Type' => 'application/json',
                 'Accept'       => 'application/json',
@@ -446,7 +493,7 @@ function casting_sms_request(string $endpoint, array $body): array
             ],
             'body'        => wp_json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'data_format' => 'body',
-        ]);
+        ]));
 
         if (is_wp_error($response)) {
             $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
@@ -587,13 +634,12 @@ function casting_sms_get_credit(): array
 
         $api_key = casting_sms_api_key();
         $url = casting_sms_api_base() . 'SMS/GetCredit';
-        $response = wp_remote_get($url, [
-            'timeout' => 12,
+        $response = wp_remote_get($url, casting_sms_http_args([
             'headers' => [
                 'Accept'    => 'application/json',
                 'X-API-KEY' => $api_key,
             ],
-        ]);
+        ]));
 
         if (is_wp_error($response)) {
             return ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
@@ -782,12 +828,11 @@ function casting_sms_send_http_get(string $mobile, string $message): array
     $url = $url_base . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
     $debug_url = $url_base . '?' . http_build_query(array_merge($query, ['password' => '***']), '', '&', PHP_QUERY_RFC3986);
 
-    $response = wp_remote_get($url, [
-        'timeout' => 25,
+    $response = wp_remote_get($url, casting_sms_http_args([
         'headers' => [
             'Accept' => 'text/plain, application/json, */*',
         ],
-    ]);
+    ]));
     if (is_wp_error($response)) {
         $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
         casting_sms_remember_last([
