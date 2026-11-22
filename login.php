@@ -101,10 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $send = casting_otp_send('login', $norm);
                     if (!$send['ok']) {
                         $error = $send['error'];
-                        $otp_sent = !empty($send['code_pending']);
-                        if (!$otp_sent) {
-                            casting_rate_limit_hit('otp_send');
-                        }
+                        casting_rate_limit_hit('otp_send');
                     } else {
                         $success = 'کد تأیید به شماره موبایل ارسال شد.';
                         $otp_sent = true;

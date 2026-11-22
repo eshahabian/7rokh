@@ -127,19 +127,26 @@
     try {
       if (window.CastingApp && typeof window.CastingApp.getClipboardText === "function") {
         const nativeText = String(window.CastingApp.getClipboardText() || "");
-        if (nativeText) return nativeText;
+        if (nativeText) {
+          rememberCopiedText(nativeText);
+          return nativeText;
+        }
       }
     } catch (_err) {
       /* fall through */
     }
     try {
       if (navigator.clipboard && typeof navigator.clipboard.readText === "function") {
-        return await navigator.clipboard.readText();
+        const webText = await navigator.clipboard.readText();
+        if (webText) {
+          rememberCopiedText(String(webText));
+          return String(webText);
+        }
       }
     } catch (_err2) {
       /* fall through */
     }
-    return null;
+    return castingLastCopiedText || "";
   };
 
   const insertCastingClipboard = (field, text) => {
@@ -168,28 +175,28 @@
     }
     castingPasteBusy = true;
     try {
-      field.focus();
-      const text = await readCastingClipboard();
-      if (text) return insertCastingClipboard(field, text);
-
       const before = field.value;
       try {
+        field.focus();
         document.execCommand("paste");
       } catch (_err) {
         /* fall through */
       }
-      if (field.value !== before) return true;
-      if (field.matches("textarea[name='message']") && castingLastCopiedText) {
-        const copiedText = castingLastCopiedText;
-        castingLastCopiedText = "";
-        return insertCastingClipboard(field, copiedText);
+      if (field.value !== before) {
+        rememberCopiedText(field.value.slice(before.length) || castingLastCopiedText);
+        return true;
       }
-      window.alert(text === null
-        ? "خواندن کلیپ‌بورد ممکن نشد. از گزینهٔ جای‌گذاری صفحه‌کلید استفاده کنید."
-        : "متنی در کلیپ‌بورد نیست. ابتدا متن را کپی کنید.");
-      return false;
+      const text = await readCastingClipboard();
+      if (!text) {
+        window.alert("متنی در حافظه نیست. اول متن را کپی کنید.");
+        return false;
+      }
+      rememberCopiedText(text);
+      return insertCastingClipboard(field, text);
     } finally {
-      castingPasteBusy = false;
+      window.setTimeout(() => {
+        castingPasteBusy = false;
+      }, 400);
     }
   };
 
@@ -215,6 +222,7 @@
       await pasteIntoCastingField(field);
     };
     btn.addEventListener("click", runPaste);
+    btn.addEventListener("pointerup", runPaste);
     menu.appendChild(btn);
 
     const host = field.closest(".field") || field.parentElement;
@@ -4561,9 +4569,7 @@
       const message = (input.value || "").trim();
       if (!peerId || !message || !cfg.url || !cfg.nonce) return;
       const submitBtn = compose.querySelector('button[type="submit"]');
-      if (submitBtn?.disabled) return;
       if (submitBtn) submitBtn.disabled = true;
-      compose.setAttribute("aria-busy", "true");
       try {
         const body = new FormData();
         body.set("action", "send");
@@ -4584,8 +4590,7 @@
           }
           return;
         }
-        if (input.value.trim() === message && Number(peerIdInput.value) === peerId) input.value = "";
-        if (Number(peerIdInput.value) !== peerId) return;
+        input.value = "";
         if (errEl) {
           errEl.hidden = true;
           errEl.textContent = "";
@@ -4610,7 +4615,6 @@
         }
       } finally {
         if (submitBtn) submitBtn.disabled = false;
-        compose.removeAttribute("aria-busy");
       }
     });
 
@@ -4690,13 +4694,14 @@
     ta.style.opacity = "0";
     document.body.appendChild(ta);
     ta.select();
+    let ok = false;
     try {
-      document.execCommand("copy");
+      ok = document.execCommand("copy");
     } catch (_err2) {
-      /* The text is still available for paste in this chat page. */
+      ok = false;
     }
     ta.remove();
-    return true;
+    return ok;
   };
 
   const chatShareCartUrl = (href) => {
@@ -5320,9 +5325,7 @@
         ).trim();
         if (!message || !peerId) return;
         const submitBtn = liveForm.querySelector('button[type="submit"]');
-        if (submitBtn?.disabled) return;
         if (submitBtn) submitBtn.disabled = true;
-        liveForm.setAttribute("aria-busy", "true");
         try {
           const body = new FormData();
           body.set("action", "send");
@@ -5340,7 +5343,7 @@
             window.alert((data && data.error) || "ارسال ناموفق بود.");
             return;
           }
-          if (textarea instanceof HTMLTextAreaElement && !(hiddenMsg instanceof HTMLInputElement) && textarea.value.trim() === message) {
+          if (textarea instanceof HTMLTextAreaElement && !(hiddenMsg instanceof HTMLInputElement)) {
             textarea.value = "";
             growChatCompose(textarea);
           }
@@ -5357,7 +5360,6 @@
           window.alert("خطا در ارسال پیام.");
         } finally {
           if (submitBtn) submitBtn.disabled = false;
-          liveForm.removeAttribute("aria-busy");
         }
       });
       const photoInput = liveForm.querySelector("[data-chat-photo]");
