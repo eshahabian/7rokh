@@ -424,55 +424,6 @@ function casting_sms_last_debug(): ?array
 }
 
 /**
- * وردپرس پیدا کردن DNS را پیش‌فرض ۱۰ ثانیه قطع می‌کند.
- * nameserver دامنه payamakapi.ir کند است و همان سقف خطای cURL 28 می‌دهد.
- *
- * @param array<string,mixed> $extra
- * @return array<string,mixed>
- */
-function casting_sms_http_args(array $extra = []): array
-{
-    casting_sms_register_http_timeout();
-
-    return array_merge([
-        'timeout'         => 30,
-        'connect_timeout' => 30,
-        'redirection'     => 0,
-    ], $extra);
-}
-
-function casting_sms_register_http_timeout(): void
-{
-    static $done = false;
-    if ($done || !function_exists('add_filter')) {
-        return;
-    }
-    $done = true;
-    add_filter('http_api_curl', 'casting_sms_http_api_curl', 10, 3);
-}
-
-/**
- * @param resource|\CurlHandle $handle
- * @param array<string,mixed> $parsed_args
- * @param string $url
- * @return resource|\CurlHandle
- */
-function casting_sms_http_api_curl($handle, $parsed_args, $url)
-{
-    unset($parsed_args);
-    $url = is_string($url) ? $url : '';
-    if (!str_contains($url, 'payamakapi.ir') && !str_contains($url, 'webone-sms.ir')) {
-        return $handle;
-    }
-    if (is_resource($handle) || (class_exists('CurlHandle', false) && $handle instanceof CurlHandle)) {
-        curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 30);
-        curl_setopt($handle, CURLOPT_TIMEOUT, 30);
-    }
-
-    return $handle;
-}
-
-/**
  * @return array{ok:bool,error:string,code?:int,raw?:mixed,ref_id?:string,http?:int}
  */
 function casting_sms_request(string $endpoint, array $body): array
@@ -485,7 +436,9 @@ function casting_sms_request(string $endpoint, array $body): array
         $api_key = casting_sms_api_key();
         $url = casting_sms_api_base() . ltrim($endpoint, '/');
 
-        $response = wp_remote_post($url, casting_sms_http_args([
+        $response = wp_remote_post($url, [
+            'timeout'     => 25,
+            'redirection' => 0,
             'headers'     => [
                 'Content-Type' => 'application/json',
                 'Accept'       => 'application/json',
@@ -493,7 +446,7 @@ function casting_sms_request(string $endpoint, array $body): array
             ],
             'body'        => wp_json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'data_format' => 'body',
-        ]));
+        ]);
 
         if (is_wp_error($response)) {
             $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
@@ -634,12 +587,13 @@ function casting_sms_get_credit(): array
 
         $api_key = casting_sms_api_key();
         $url = casting_sms_api_base() . 'SMS/GetCredit';
-        $response = wp_remote_get($url, casting_sms_http_args([
+        $response = wp_remote_get($url, [
+            'timeout' => 12,
             'headers' => [
                 'Accept'    => 'application/json',
                 'X-API-KEY' => $api_key,
             ],
-        ]));
+        ]);
 
         if (is_wp_error($response)) {
             return ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
@@ -767,14 +721,10 @@ function casting_sms_otp_text(string $code): string
     return trim($rendered);
 }
 
-/** pattern = با PatternId — smart = OTP خدماتی — text = پیامک متنی خط تبلیغاتی */
+/** pattern = با PatternId — text = همان POST /SMS/Send که پیامک متنی کار می‌کند */
 function casting_sms_otp_method(): string
 {
-    if (casting_sms_otp_pattern_id() !== '') {
-        return 'pattern';
-    }
-
-    return 'smart';
+    return casting_sms_otp_pattern_id() !== '' ? 'pattern' : 'text';
 }
 
 /**
@@ -828,11 +778,12 @@ function casting_sms_send_http_get(string $mobile, string $message): array
     $url = $url_base . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
     $debug_url = $url_base . '?' . http_build_query(array_merge($query, ['password' => '***']), '', '&', PHP_QUERY_RFC3986);
 
-    $response = wp_remote_get($url, casting_sms_http_args([
+    $response = wp_remote_get($url, [
+        'timeout' => 25,
         'headers' => [
             'Accept' => 'text/plain, application/json, */*',
         ],
-    ]));
+    ]);
     if (is_wp_error($response)) {
         $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
         casting_sms_remember_last([
@@ -957,29 +908,35 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
         return ['ok' => false, 'error' => 'متن پیامک خالی است.'];
     }
 
-    if (!preg_match('/^\d{6}$/', $otp_code)) {
-        return ['ok' => false, 'error' => 'کد تأیید نامعتبر است.', 'code' => -1];
-    }
+    $last = ['ok' => false, 'error' => 'ارسال کد تأیید ناموفق بود.', 'code' => -1];
 
-    // فقط یک ارسال خدماتی. خط ۹۹۹۸ پیام را با تأخیر می‌فرستد و با درخواست دوباره کد دیگری ساخته می‌شد.
-    $content = function_exists('casting_sms_otp_text') ? casting_sms_otp_text($otp_code) : $otp_code;
+    // روش ۱ RestDocument: POST /SMS/Send با PatternId — بدون Content
     $pattern_id = casting_sms_otp_pattern_id();
-    if ($pattern_id !== '') {
-        return casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
+    if ($pattern_id !== '' && $otp_code !== '') {
+        $pattern = casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
+        if (!empty($pattern['ok'])) {
+            return $pattern;
+        }
+        $last = $pattern;
     }
 
-    $result = casting_sms_request('SMS/SmartOTP', [
-        'OTPSender' => casting_sms_otp_sender(),
-        'ToNumber'  => $mobile,
-        'Content'   => $content,
-    ]);
+    // روش ۲: همان مسیر پیامک متنی که الان کار می‌کند — POST /SMS/Send
+    // بدون PatternId نباید SmartOTP زد؛ Content باید عین الگوی پنل باشد و کد ۱۹ می‌دهد.
+    $text = casting_sms_send_text($mobile, $message);
+    if (!empty($text['ok'])) {
+        return $text;
+    }
+    $last = $text;
 
-    return [
-        'ok'     => !empty($result['ok']),
-        'error'  => (string) ($result['error'] ?? 'ارسال کد تأیید ناموفق بود.'),
-        'ref_id' => (string) ($result['ref_id'] ?? ''),
-        'code'   => (int) ($result['code'] ?? 0),
-    ];
+    if (casting_sms_http_is_configured()) {
+        $http = casting_sms_send_http_get($mobile, $message);
+        if (!empty($http['ok'])) {
+            return $http;
+        }
+        $last = $http;
+    }
+
+    return $last;
 }
 
 /**
@@ -1106,23 +1063,18 @@ function casting_sms_send_smart_otp(string $mobile, string $message, string $otp
     }
 
     $preferred = casting_sms_otp_sender();
-    $payloads = [
-        [
-            'ToNumber' => $mobile,
-        ],
-    ];
-    if ($preferred !== '') {
-        $payloads[] = [
-            'OTPSender' => $preferred,
-            'ToNumber'  => $mobile,
-        ];
+    $senders = [$preferred];
+    if (strcasecmp($preferred, 'Auto') !== 0) {
+        $senders[] = 'Auto';
     }
 
     $last = ['ok' => false, 'error' => 'ارسال OTP ناموفق بود.', 'code' => -1];
     foreach ($contents as $content) {
-        foreach ($payloads as $payload) {
-            $result = casting_sms_request('SMS/SmartOTP', $payload + [
-                'Content' => $content,
+        foreach ($senders as $otp_sender) {
+            $result = casting_sms_request('SMS/SmartOTP', [
+                'OTPSender' => $otp_sender,
+                'ToNumber'  => $mobile,
+                'Content'   => $content,
             ]);
             $code = (int) ($result['code'] ?? 0);
             if (!empty($result['ok'])) {

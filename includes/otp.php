@@ -155,52 +155,25 @@ function casting_otp_send(string $purpose, string $mobile): array
         return ['ok' => false, 'error' => 'کمی صبر کنید و دوباره کد را درخواست دهید.'];
     }
 
-    $key = casting_otp_storage_key($purpose, $mobile);
-    $row = get_transient($key);
-    $code = '';
-    $reuse = false;
-    if (is_array($row) && !empty($row['hash'])) {
-        $created = (int) ($row['created'] ?? 0);
-        $remaining = casting_otp_ttl() - (time() - $created);
-        $attempts = (int) ($row['attempts'] ?? 0);
-        if ($remaining > 15 && $attempts < casting_otp_max_attempts()) {
-            $stored = preg_replace('/\D+/', '', (string) ($row['code'] ?? '')) ?? '';
-            $stored_hash = hash_hmac('sha256', $stored, wp_salt('auth'));
-            if (preg_match('/^\d{6}$/', $stored) && hash_equals((string) $row['hash'], $stored_hash)) {
-                $code = $stored;
-                $reuse = true;
-            } else {
-                // کد قبلی هنوز معتبر است ولی رقم‌هایش را برای ارسال دوباره نداریم. جایگزینش نکن.
-                set_transient($cd_key, 1, casting_otp_resend_gap());
-
-                return ['ok' => true, 'error' => ''];
-            }
-        }
-    }
-
-    if (!$reuse) {
-        $code = (string) random_int(100000, 999999);
-        $row = [
-            'hash'     => hash_hmac('sha256', $code, wp_salt('auth')),
-            'attempts' => 0,
-            'created'  => time(),
-            'mobile'   => $mobile,
-            'purpose'  => $purpose,
-            'code'     => $code,
-        ];
-        set_transient($key, $row, casting_otp_ttl());
-    }
+    $code = (string) random_int(100000, 999999);
+    $hash = hash_hmac('sha256', $code, wp_salt('auth'));
+    set_transient(casting_otp_storage_key($purpose, $mobile), [
+        'hash'      => $hash,
+        'attempts'  => 0,
+        'created'   => time(),
+        'mobile'    => $mobile,
+        'purpose'   => $purpose,
+    ], casting_otp_ttl());
     set_transient($cd_key, 1, casting_otp_resend_gap());
 
+    $brand = casting_brand();
     $message = function_exists('casting_sms_otp_text')
         ? casting_sms_otp_text($code)
-        : ('کد ورود شما ' . $code);
+        : ('کد تأیید ' . $brand . ': ' . $code);
     $sms = casting_sms_send_otp($mobile, $message, $code);
     if (!$sms['ok']) {
-        if (!$reuse) {
-            delete_transient($key);
-            delete_transient($cd_key);
-        }
+        delete_transient(casting_otp_storage_key($purpose, $mobile));
+        delete_transient($cd_key);
         $err = trim((string) ($sms['error'] ?? ''));
         $code_num = (int) ($sms['code'] ?? 0);
         if ($code_num === 19 || str_contains($err, 'الگوی پنل')) {
