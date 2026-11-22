@@ -354,6 +354,13 @@ casting_render_flash();
                   <?php endif; ?>
                 </div>
                 <div class="chat-compose-send">
+                  <?php if (!$compose_locked) : ?>
+                    <button class="chat-compose-icon-btn" type="button" data-chat-paste title="جای‌گذاری متن" aria-label="جای‌گذاری متن">
+                      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                        <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9 5H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3M9 3h6v4H9zM8 12h8m-8 4h8"/>
+                      </svg>
+                    </button>
+                  <?php endif; ?>
                   <button class="chat-compose-icon-btn" type="button" data-chat-share-compose title="ارسال به چند نفر" aria-label="ارسال به چند نفر">
                     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
                       <circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/>

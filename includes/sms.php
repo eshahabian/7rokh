@@ -449,7 +449,7 @@ function casting_sms_request(string $endpoint, array $body): array
         ]);
 
         if (is_wp_error($response)) {
-            $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
+            $out = ['ok' => false, 'delivery_unknown' => true, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
             casting_sms_remember_last([
                 'at'       => current_time('mysql'),
                 'url'      => $url,
@@ -493,6 +493,7 @@ function casting_sms_request(string $endpoint, array $body): array
             $out = [
                 'ok'    => false,
                 'error' => $err,
+                'delivery_unknown' => $http >= 500,
                 'http'  => $http,
                 'raw'   => is_array($data) ? $data : $raw_body,
             ];
@@ -507,6 +508,7 @@ function casting_sms_request(string $endpoint, array $body): array
             $out = [
                 'ok'    => false,
                 'error' => 'پاسخ JSON نامعتبر از پنل پیامک (HTTP ' . $http . ').',
+                'delivery_unknown' => true,
                 'http'  => $http,
                 'raw'   => $raw_body,
             ];
@@ -785,7 +787,7 @@ function casting_sms_send_http_get(string $mobile, string $message): array
         ],
     ]);
     if (is_wp_error($response)) {
-        $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
+        $out = ['ok' => false, 'delivery_unknown' => true, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
         casting_sms_remember_last([
             'at'       => function_exists('current_time') ? current_time('mysql') : date('c'),
             'url'      => $debug_url,
@@ -813,7 +815,7 @@ function casting_sms_send_http_get(string $mobile, string $message): array
     ];
 
     if ($http < 200 || $http >= 300) {
-        $out = ['ok' => false, 'error' => 'پاسخ نامعتبر از پنل پیامک (HTTP ' . $http . ').', 'http' => $http];
+        $out = ['ok' => false, 'delivery_unknown' => $http >= 500, 'error' => 'پاسخ نامعتبر از پنل پیامک (HTTP ' . $http . ').', 'http' => $http];
         $debug['ok'] = false;
         $debug['parsed_error'] = $out['error'];
         casting_sms_remember_last($debug);
@@ -914,7 +916,7 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
     $pattern_id = casting_sms_otp_pattern_id();
     if ($pattern_id !== '' && $otp_code !== '') {
         $pattern = casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
-        if (!empty($pattern['ok'])) {
+        if (!empty($pattern['ok']) || !empty($pattern['delivery_unknown'])) {
             return $pattern;
         }
         $last = $pattern;
@@ -923,7 +925,7 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
     // روش ۲: همان مسیر پیامک متنی که الان کار می‌کند — POST /SMS/Send
     // بدون PatternId نباید SmartOTP زد؛ Content باید عین الگوی پنل باشد و کد ۱۹ می‌دهد.
     $text = casting_sms_send_text($mobile, $message);
-    if (!empty($text['ok'])) {
+    if (!empty($text['ok']) || !empty($text['delivery_unknown'])) {
         return $text;
     }
     $last = $text;
@@ -1038,6 +1040,7 @@ function casting_sms_send_otp_pattern(string $mobile, string $otp_code, string $
     return [
         'ok'     => $result['ok'],
         'error'  => $result['error'],
+        'delivery_unknown' => !empty($result['delivery_unknown']),
         'ref_id' => (string) ($result['ref_id'] ?? ''),
         'code'   => (int) ($result['code'] ?? 0),
     ];
@@ -1135,6 +1138,7 @@ function casting_sms_send_text(string $mobile, string $message): array
         $last = [
             'ok'     => $result['ok'],
             'error'  => $result['error'],
+            'delivery_unknown' => !empty($result['delivery_unknown']),
             'ref_id' => (string) ($result['ref_id'] ?? ''),
             'code'   => $code,
         ];

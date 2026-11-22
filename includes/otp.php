@@ -131,7 +131,7 @@ function casting_otp_cooldown_key(string $purpose, string $mobile): string
 }
 
 /**
- * @return array{ok:bool,error:string}
+ * @return array{ok:bool,error:string,code_pending?:bool}
  */
 function casting_otp_send(string $purpose, string $mobile): array
 {
@@ -152,18 +152,11 @@ function casting_otp_send(string $purpose, string $mobile): array
 
     $cd_key = casting_otp_cooldown_key($purpose, $mobile);
     if (get_transient($cd_key)) {
-        return ['ok' => false, 'error' => 'کمی صبر کنید و دوباره کد را درخواست دهید.'];
+        return ['ok' => false, 'error' => 'کمی صبر کنید و دوباره کد را درخواست دهید.', 'code_pending' => true];
     }
 
     $code = (string) random_int(100000, 999999);
     $hash = hash_hmac('sha256', $code, wp_salt('auth'));
-    set_transient(casting_otp_storage_key($purpose, $mobile), [
-        'hash'      => $hash,
-        'attempts'  => 0,
-        'created'   => time(),
-        'mobile'    => $mobile,
-        'purpose'   => $purpose,
-    ], casting_otp_ttl());
     set_transient($cd_key, 1, casting_otp_resend_gap());
 
     $brand = casting_brand();
@@ -171,8 +164,8 @@ function casting_otp_send(string $purpose, string $mobile): array
         ? casting_sms_otp_text($code)
         : ('کد تأیید ' . $brand . ': ' . $code);
     $sms = casting_sms_send_otp($mobile, $message, $code);
-    if (!$sms['ok']) {
-        delete_transient(casting_otp_storage_key($purpose, $mobile));
+    $delivery_unknown = !empty($sms['delivery_unknown']);
+    if (!$sms['ok'] && !$delivery_unknown) {
         delete_transient($cd_key);
         $err = trim((string) ($sms['error'] ?? ''));
         $code_num = (int) ($sms['code'] ?? 0);
@@ -183,6 +176,21 @@ function casting_otp_send(string $purpose, string $mobile): array
         return ['ok' => false, 'error' => $err !== '' ? $err : 'ارسال پیامک ناموفق بود.'];
     }
 
+    set_transient(casting_otp_storage_key($purpose, $mobile), [
+        'hash'      => $hash,
+        'attempts'  => 0,
+        'created'   => time(),
+        'mobile'    => $mobile,
+        'purpose'   => $purpose,
+    ], casting_otp_ttl());
+    set_transient($cd_key, 1, casting_otp_resend_gap());
+    if ($delivery_unknown) {
+        return [
+            'ok' => false,
+            'error' => 'پنل پیامک ارسال را تأیید نکرد. اگر کد رسید، آن را وارد کنید. پس از یک دقیقه می‌توانید دوباره درخواست دهید.',
+            'code_pending' => true,
+        ];
+    }
     return ['ok' => true, 'error' => ''];
 }
 

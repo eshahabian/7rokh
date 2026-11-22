@@ -34,11 +34,34 @@ function casting_admin_message_notify_sms(int $sender_id, int $recipient_id, str
         $body = $channel === 'contact'
             ? "۷ رخ\nمدیریت سایت به پیام شما در تماس با ما پاسخ داده است.\nبرای مشاهده پاسخ وارد حساب خود شوید."
             : "۷ رخ\nشما یک پیام جدید از مدیریت سایت دارید.\nبرای مشاهده پیام وارد حساب خود شوید.";
-        $result = casting_sms_send_text($mobile, $body);
-        if (empty($result['ok'])) {
-            // Do not log message contents, phone numbers or gateway credentials.
-            error_log('[casting-admin-message-sms] Delivery failed for user ' . $recipient_id);
+        $send = static function () use ($mobile, $body, $recipient_id): void {
+            try {
+                $result = casting_sms_send_text($mobile, $body);
+                if (empty($result['ok'])) {
+                    error_log('[casting-admin-message-sms] Delivery failed for user ' . $recipient_id);
+                }
+            } catch (Throwable $e) {
+                error_log('[casting-admin-message-sms] Notification failed for user ' . $recipient_id);
+            }
+        };
+        if (function_exists('fastcgi_finish_request')) {
+            static $pending = [];
+            if ($pending === []) {
+                register_shutdown_function(static function () use (&$pending): void {
+                    ignore_user_abort(true);
+                    if (session_status() === PHP_SESSION_ACTIVE) {
+                        session_write_close();
+                    }
+                    fastcgi_finish_request();
+                    foreach ($pending as $notify) {
+                        $notify();
+                    }
+                });
+            }
+            $pending[] = $send;
+            return;
         }
+        $send();
     } catch (Throwable $e) {
         // An SMS failure must never turn a saved message into a failed send.
         error_log('[casting-admin-message-sms] Notification failed for user ' . $recipient_id);
