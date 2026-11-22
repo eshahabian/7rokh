@@ -423,6 +423,27 @@ function casting_sms_last_debug(): ?array
     return is_array($data) ? $data : null;
 }
 
+/** Apply the SMS connection timeout to this WordPress request only. */
+function casting_sms_http_request(string $url, string $method, array $args)
+{
+    $args['method'] = $method;
+    $args['timeout'] = 25;
+
+    // WordPress Requests uses a separate connection timeout for cURL, including DNS.
+    $set_connect_timeout = static function ($handle, array $request_args, string $request_url) use ($url): void {
+        if ($request_url === $url) {
+            curl_setopt($handle, CURLOPT_CONNECTTIMEOUT_MS, 20000);
+        }
+    };
+
+    add_action('http_api_curl', $set_connect_timeout, 10, 3);
+    try {
+        return wp_remote_request($url, $args);
+    } finally {
+        remove_action('http_api_curl', $set_connect_timeout, 10);
+    }
+}
+
 /**
  * @return array{ok:bool,error:string,code?:int,raw?:mixed,ref_id?:string,http?:int}
  */
@@ -436,8 +457,7 @@ function casting_sms_request(string $endpoint, array $body): array
         $api_key = casting_sms_api_key();
         $url = casting_sms_api_base() . ltrim($endpoint, '/');
 
-        $response = wp_remote_post($url, [
-            'timeout'     => 25,
+        $response = casting_sms_http_request($url, 'POST', [
             'redirection' => 0,
             'headers'     => [
                 'Content-Type' => 'application/json',
@@ -587,8 +607,7 @@ function casting_sms_get_credit(): array
 
         $api_key = casting_sms_api_key();
         $url = casting_sms_api_base() . 'SMS/GetCredit';
-        $response = wp_remote_get($url, [
-            'timeout' => 12,
+        $response = casting_sms_http_request($url, 'GET', [
             'headers' => [
                 'Accept'    => 'application/json',
                 'X-API-KEY' => $api_key,
@@ -778,8 +797,7 @@ function casting_sms_send_http_get(string $mobile, string $message): array
     $url = $url_base . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
     $debug_url = $url_base . '?' . http_build_query(array_merge($query, ['password' => '***']), '', '&', PHP_QUERY_RFC3986);
 
-    $response = wp_remote_get($url, [
-        'timeout' => 25,
+    $response = casting_sms_http_request($url, 'GET', [
         'headers' => [
             'Accept' => 'text/plain, application/json, */*',
         ],
