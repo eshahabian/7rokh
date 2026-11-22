@@ -912,46 +912,29 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
         return ['ok' => false, 'error' => 'متن پیامک خالی است.'];
     }
 
-    $last = ['ok' => false, 'error' => 'ارسال کد تأیید ناموفق بود.', 'code' => -1];
+    if (!preg_match('/^\d{6}$/', $otp_code)) {
+        return ['ok' => false, 'error' => 'کد تأیید نامعتبر است.', 'code' => -1];
+    }
 
-    // روش ۱: الگو با شناسه — خط خدماتی
+    // فقط یک ارسال خدماتی. خط ۹۹۹۸ پیام را با تأخیر می‌فرستد و با درخواست دوباره کد دیگری ساخته می‌شد.
+    $content = function_exists('casting_sms_otp_text') ? casting_sms_otp_text($otp_code) : $otp_code;
     $pattern_id = casting_sms_otp_pattern_id();
-    if ($pattern_id !== '' && $otp_code !== '') {
-        $pattern = casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
-        if (!empty($pattern['ok'])) {
-            return $pattern;
-        }
-        $last = $pattern;
+    if ($pattern_id !== '') {
+        return casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
     }
 
-    // روش ۲: SmartOTP. خط ۹۹۹۸ ارسال را «موفق» ثبت می‌کند ولی پیام در صف تبلیغاتی می‌ماند
-    // و اغلب با چند بار درخواست تازه به گوشی می‌رسد.
-    $smart = casting_sms_send_smart_otp($mobile, $message, $otp_code);
-    if (!empty($smart['ok'])) {
-        return $smart;
-    }
-    $last = $smart;
-    $smart_code = (int) ($smart['code'] ?? 0);
-    if (!in_array($smart_code, [3, 17, 19, -1], true)) {
-        return $last;
-    }
+    $result = casting_sms_request('SMS/SmartOTP', [
+        'OTPSender' => casting_sms_otp_sender(),
+        'ToNumber'  => $mobile,
+        'Content'   => $content,
+    ]);
 
-    // روش ۳: اگر خط OTP الگو را رد کرد، همان متن از خط پنل
-    $text = casting_sms_send_text($mobile, $message);
-    if (!empty($text['ok'])) {
-        return $text;
-    }
-    $last = $text;
-
-    if (casting_sms_http_is_configured()) {
-        $http = casting_sms_send_http_get($mobile, $message);
-        if (!empty($http['ok'])) {
-            return $http;
-        }
-        $last = $http;
-    }
-
-    return $last;
+    return [
+        'ok'     => !empty($result['ok']),
+        'error'  => (string) ($result['error'] ?? 'ارسال کد تأیید ناموفق بود.'),
+        'ref_id' => (string) ($result['ref_id'] ?? ''),
+        'code'   => (int) ($result['code'] ?? 0),
+    ];
 }
 
 /**

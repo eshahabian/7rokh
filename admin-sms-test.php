@@ -125,7 +125,7 @@ casting_render_flash();
 ?>
 <section class="dash-card panel-wide">
   <h1>تست پیامک WebOne</h1>
-  <p class="lede">کد تأیید اول از OTP خدماتی (<code>SMS/SmartOTP</code>) می‌رود تا همان بار اول به گوشی برسد. خط ۹۹۹۸ فقط اگر آن مسیر رد شود استفاده می‌شود.</p>
+  <p class="lede">کد تأیید فقط یک‌بار از OTP خدماتی (<code>SMS/SmartOTP</code>) می‌رود. تا وقتی آن کد منقضی نشده، درخواست دوباره همان رقم‌ها را می‌فرستد.</p>
   <p class="admin-sms-pattern" dir="rtl">
     <strong>متن الگو:</strong>
     <?= casting_e($otp_template !== '' ? $otp_template : 'کد ورود شما {x}') ?>
