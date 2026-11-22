@@ -721,10 +721,14 @@ function casting_sms_otp_text(string $code): string
     return trim($rendered);
 }
 
-/** pattern = با PatternId — text = همان POST /SMS/Send که پیامک متنی کار می‌کند */
+/** pattern = با PatternId — smart = OTP خدماتی — text = پیامک متنی خط تبلیغاتی */
 function casting_sms_otp_method(): string
 {
-    return casting_sms_otp_pattern_id() !== '' ? 'pattern' : 'text';
+    if (casting_sms_otp_pattern_id() !== '') {
+        return 'pattern';
+    }
+
+    return 'smart';
 }
 
 /**
@@ -910,7 +914,7 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
 
     $last = ['ok' => false, 'error' => 'ارسال کد تأیید ناموفق بود.', 'code' => -1];
 
-    // روش ۱ RestDocument: POST /SMS/Send با PatternId — بدون Content
+    // روش ۱: الگو با شناسه — خط خدماتی
     $pattern_id = casting_sms_otp_pattern_id();
     if ($pattern_id !== '' && $otp_code !== '') {
         $pattern = casting_sms_send_otp_pattern($mobile, $otp_code, $pattern_id);
@@ -920,8 +924,19 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
         $last = $pattern;
     }
 
-    // روش ۲: همان مسیر پیامک متنی که الان کار می‌کند — POST /SMS/Send
-    // بدون PatternId نباید SmartOTP زد؛ Content باید عین الگوی پنل باشد و کد ۱۹ می‌دهد.
+    // روش ۲: SmartOTP. خط ۹۹۹۸ ارسال را «موفق» ثبت می‌کند ولی پیام در صف تبلیغاتی می‌ماند
+    // و اغلب با چند بار درخواست تازه به گوشی می‌رسد.
+    $smart = casting_sms_send_smart_otp($mobile, $message, $otp_code);
+    if (!empty($smart['ok'])) {
+        return $smart;
+    }
+    $last = $smart;
+    $smart_code = (int) ($smart['code'] ?? 0);
+    if (!in_array($smart_code, [3, 17, 19, -1], true)) {
+        return $last;
+    }
+
+    // روش ۳: اگر خط OTP الگو را رد کرد، همان متن از خط پنل
     $text = casting_sms_send_text($mobile, $message);
     if (!empty($text['ok'])) {
         return $text;
@@ -1063,18 +1078,23 @@ function casting_sms_send_smart_otp(string $mobile, string $message, string $otp
     }
 
     $preferred = casting_sms_otp_sender();
-    $senders = [$preferred];
-    if (strcasecmp($preferred, 'Auto') !== 0) {
-        $senders[] = 'Auto';
+    $payloads = [
+        [
+            'ToNumber' => $mobile,
+        ],
+    ];
+    if ($preferred !== '') {
+        $payloads[] = [
+            'OTPSender' => $preferred,
+            'ToNumber'  => $mobile,
+        ];
     }
 
     $last = ['ok' => false, 'error' => 'ارسال OTP ناموفق بود.', 'code' => -1];
     foreach ($contents as $content) {
-        foreach ($senders as $otp_sender) {
-            $result = casting_sms_request('SMS/SmartOTP', [
-                'OTPSender' => $otp_sender,
-                'ToNumber'  => $mobile,
-                'Content'   => $content,
+        foreach ($payloads as $payload) {
+            $result = casting_sms_request('SMS/SmartOTP', $payload + [
+                'Content' => $content,
             ]);
             $code = (int) ($result['code'] ?? 0);
             if (!empty($result['ok'])) {

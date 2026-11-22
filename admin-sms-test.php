@@ -125,7 +125,7 @@ casting_render_flash();
 ?>
 <section class="dash-card panel-wide">
   <h1>تست پیامک WebOne</h1>
-  <p class="lede">کد تأیید بدون PatternId با همان <code>POST /SMS/Send</code> و خط From پنل می‌رود (نه SmartOTP). اگر PatternId داشته باشید، همان مسیر با الگوی پنل استفاده می‌شود.</p>
+  <p class="lede">کد تأیید اول از OTP خدماتی (<code>SMS/SmartOTP</code>) می‌رود تا همان بار اول به گوشی برسد. خط ۹۹۹۸ فقط اگر آن مسیر رد شود استفاده می‌شود.</p>
   <p class="admin-sms-pattern" dir="rtl">
     <strong>متن الگو:</strong>
     <?= casting_e($otp_template !== '' ? $otp_template : 'کد ورود شما {x}') ?>
@@ -180,8 +180,10 @@ casting_render_flash();
     <dt>روش OTP</dt>
     <dd><?php if ($otp_method === 'pattern') : ?>
       الگو با PatternId — <code dir="ltr">POST /SMS/Send</code>
+    <?php elseif ($otp_method === 'smart') : ?>
+      OTP خدماتی — <code dir="ltr">POST /SMS/SmartOTP</code>
     <?php else : ?>
-      پیامک متنی — همان <code dir="ltr">POST /SMS/Send</code> با خط From (بدون SmartOTP)
+      پیامک متنی — <code dir="ltr">POST /SMS/Send</code>
     <?php endif; ?></dd>
     <dt>OTP Sender (SmartOTP)</dt>
     <dd><code dir="ltr"><?= casting_e($otp_sender !== '' ? $otp_sender : 'Auto') ?></code> — فقط اگر بعداً SmartOTP را روشن کنید</dd>
