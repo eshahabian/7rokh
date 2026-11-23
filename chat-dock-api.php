@@ -27,6 +27,11 @@ if ($nonce === '' || !wp_verify_nonce($nonce, 'casting_dm')) {
     exit;
 }
 
+// Read-only chat requests do not need to retain the session lock.
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
+
 if ($action === 'thread') {
     $peer_id = (int) ($_GET['peer_id'] ?? $_POST['peer_id'] ?? 0);
     if ($peer_id <= 0 || casting_get_user_role($peer_id) === '') {
@@ -42,13 +47,13 @@ if ($action === 'thread') {
         exit;
     }
 
-    $after_id = (int) ($_GET['after_id'] ?? $_POST['after_id'] ?? 0);
+    $after_id = max(0, (int) ($_GET['after_id'] ?? $_POST['after_id'] ?? 0));
     $edit_since = sanitize_text_field((string) ($_GET['edit_since'] ?? $_POST['edit_since'] ?? ''));
     $poll = ((string) ($_GET['poll'] ?? $_POST['poll'] ?? '') === '1') || $after_id > 0;
     $locked = casting_dm_thread_locked_for_user($my_id, $peer_id);
 
     // مسیر poll سبک: فقط پیام‌های جدید
-    if ($poll && $after_id > 0) {
+    if ($poll && (isset($_GET['after_id']) || isset($_POST['after_id']))) {
         if ($locked) {
             echo wp_json_encode([
                 'ok'       => true,
@@ -195,7 +200,8 @@ if ($action === 'send') {
     }
     $peer_id = (int) ($_POST['peer_id'] ?? 0);
     $message = (string) ($_POST['message'] ?? '');
-    $result = casting_dm_send($my_id, $peer_id, $message);
+    $finish_before_sms = function_exists('fastcgi_finish_request');
+    $result = casting_dm_send($my_id, $peer_id, $message, !$finish_before_sms);
     if (empty($result['ok'])) {
         http_response_code(400);
         echo wp_json_encode(['ok' => false, 'error' => (string) ($result['error'] ?? 'ارسال ناموفق بود.')]);
@@ -207,11 +213,18 @@ if ($action === 'send') {
             'id'           => (int) ($result['id'] ?? 0),
             'sender_id'    => $my_id,
             'recipient_id' => $peer_id,
-            'message'      => trim($message),
-            'created_at'   => current_time('mysql'),
+            'message'      => $result['message'],
+            'created_at'   => $result['created_at'],
             'edited_at'    => '',
         ], $my_id),
     ]);
+    if ($finish_before_sms) {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        fastcgi_finish_request();
+        casting_admin_message_notify_sms($my_id, $peer_id);
+    }
     exit;
 }
 

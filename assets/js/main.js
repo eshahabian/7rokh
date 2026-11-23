@@ -109,6 +109,14 @@
   }
 
   let castingLastCopiedText = "";
+  const CHAT_CLIPBOARD_KEY = "casting_chat_clipboard";
+  if (!window.CASTING_SESSION?.active) {
+    try {
+      sessionStorage.removeItem(CHAT_CLIPBOARD_KEY);
+    } catch (_err) {
+      /* storage unavailable */
+    }
+  }
   const rememberCopiedText = (text) => {
     const value = String(text || "");
     if (value) castingLastCopiedText = value;
@@ -146,7 +154,11 @@
     } catch (_err2) {
       /* fall through */
     }
-    return castingLastCopiedText || "";
+    try {
+      return castingLastCopiedText || sessionStorage.getItem(CHAT_CLIPBOARD_KEY) || "";
+    } catch (_err) {
+      return castingLastCopiedText;
+    }
   };
 
   const insertCastingClipboard = (field, text) => {
@@ -222,7 +234,6 @@
       await pasteIntoCastingField(field);
     };
     btn.addEventListener("click", runPaste);
-    btn.addEventListener("pointerup", runPaste);
     menu.appendChild(btn);
 
     const host = field.closest(".field") || field.parentElement;
@@ -4357,9 +4368,10 @@
     let delay = minMs;
     let timer = 0;
     let stopped = false;
+    let running = false;
 
     const schedule = () => {
-      if (stopped) return;
+      if (stopped || running) return;
       window.clearTimeout(timer);
       const wait = document.hidden ? Math.max(delay, hiddenMs) : delay;
       timer = window.setTimeout(async () => {
@@ -4369,10 +4381,13 @@
           return;
         }
         let hadNew = false;
+        running = true;
         try {
           hadNew = !!(await run());
         } catch (_err) {
           hadNew = false;
+        } finally {
+          running = false;
         }
         delay = hadNew ? minMs : Math.min(maxMs, Math.round(delay * factor));
         schedule();
@@ -4417,6 +4432,8 @@
     const fullLink = messagesDock.querySelector("[data-messages-dock-full]");
     const cfg = window.CASTING_CHAT_DOCK || {};
     let dockLastId = 0;
+    let dockThreadRequest = 0;
+    let dockThreadLoading = false;
 
     const setOpen = (open) => {
       if (!(panel instanceof HTMLElement) || !(toggle instanceof HTMLElement)) return;
@@ -4454,6 +4471,8 @@
 
     const openThread = async (peerId, meta = {}) => {
       if (!cfg.url || !cfg.nonce || !peerId) return;
+      const request = ++dockThreadRequest;
+      dockThreadLoading = true;
       dockLastId = 0;
       setOpen(true);
       showThread();
@@ -4462,7 +4481,11 @@
         peerRoleEl.textContent = meta.role || "";
         peerRoleEl.hidden = !meta.role;
       }
-      if (peerIdInput) peerIdInput.value = String(peerId);
+      if (peerIdInput) {
+        if (input && Number(peerIdInput.value) !== peerId) input.value = "";
+        peerIdInput.value = String(peerId);
+      }
+      if (compose) compose.hidden = true;
       if (fullLink) fullLink.href = (cfg.fullUrl || "chat.php") + "?with=" + encodeURIComponent(String(peerId));
       if (threadEl) threadEl.innerHTML = "<p class='meta'>در حال بارگذاری…</p>";
       if (errEl) {
@@ -4479,6 +4502,7 @@
           headers: { Accept: "application/json" },
         });
         const data = await res.json();
+        if (request !== dockThreadRequest) return;
         if (!data || !data.ok) {
           if (threadEl) threadEl.innerHTML = "";
           if (errEl) {
@@ -4522,11 +4546,14 @@
         if (typeof data.last_id === "number") dockLastId = data.last_id;
         input?.focus();
       } catch (e) {
+        if (request !== dockThreadRequest) return;
         if (threadEl) threadEl.innerHTML = "";
         if (errEl) {
           errEl.hidden = false;
           errEl.textContent = "خطا در ارتباط با سرور.";
         }
+      } finally {
+        if (request === dockThreadRequest) dockThreadLoading = false;
       }
     };
 
@@ -4569,7 +4596,13 @@
       const message = (input.value || "").trim();
       if (!peerId || !message || !cfg.url || !cfg.nonce) return;
       const submitBtn = compose.querySelector('button[type="submit"]');
+      if (submitBtn?.disabled) return;
       if (submitBtn) submitBtn.disabled = true;
+      const draft = input.value;
+      if (errEl) {
+        errEl.hidden = false;
+        errEl.textContent = "در حال ارسال پیام…";
+      }
       try {
         const body = new FormData();
         body.set("action", "send");
@@ -4583,6 +4616,7 @@
           headers: { Accept: "application/json" },
         });
         const data = await res.json();
+        if (Number(peerIdInput.value) !== peerId) return;
         if (!data || !data.ok) {
           if (errEl) {
             errEl.hidden = false;
@@ -4590,18 +4624,16 @@
           }
           return;
         }
-        input.value = "";
+        if (input.value === draft) input.value = "";
         if (errEl) {
           errEl.hidden = true;
           errEl.textContent = "";
         }
-        if (threadEl && data.message) {
+        if (threadEl && data.message && !threadEl.querySelector('[data-msg-id="' + Number(data.message.id) + '"]')) {
           const bubble = document.createElement("div");
           bubble.className = "messages-dock-bubble is-mine";
           if (data.message.id) {
             bubble.setAttribute("data-msg-id", String(data.message.id));
-            const newId = Number(data.message.id || 0);
-            if (newId > dockLastId) dockLastId = newId;
           }
           bubble.textContent = data.message.message || message;
           threadEl.appendChild(bubble);
@@ -4609,7 +4641,7 @@
         }
         dockPoll.bump();
       } catch (e) {
-        if (errEl) {
+        if (errEl && Number(peerIdInput.value) === peerId) {
           errEl.hidden = false;
           errEl.textContent = "خطا در ارسال پیام.";
         }
@@ -4629,7 +4661,8 @@
 
     const dockPoll = castingAdaptivePoll(
       async () => {
-        if (!(threadView instanceof HTMLElement) || threadView.hidden) return false;
+        if (!(threadView instanceof HTMLElement) || threadView.hidden || dockThreadLoading) return false;
+        const request = dockThreadRequest;
         const peerId = Number(peerIdInput instanceof HTMLInputElement ? peerIdInput.value : 0);
         if (!peerId || !cfg.url || !cfg.nonce) return false;
         try {
@@ -4644,7 +4677,7 @@
             headers: { Accept: "application/json" },
           });
           const data = await res.json();
-          if (!data || !data.ok || data.locked) return false;
+          if (request !== dockThreadRequest || !data || !data.ok || data.locked) return false;
           const incoming = Array.isArray(data.messages) ? data.messages : [];
           incoming.forEach((msg) => {
             if (!(threadEl instanceof HTMLElement)) return;
@@ -4653,7 +4686,10 @@
             bubble.className = "messages-dock-bubble " + (msg.is_mine ? "is-mine" : "is-theirs");
             bubble.setAttribute("data-msg-id", String(msg.id || ""));
             bubble.textContent = msg.message || "";
-            threadEl.appendChild(bubble);
+            const next = Array.from(threadEl.children).find((child) =>
+              Number(child.getAttribute("data-msg-id")) > Number(msg.id)
+            );
+            threadEl.insertBefore(bubble, next || null);
           });
           if (typeof data.last_id === "number" && data.last_id > dockLastId) {
             dockLastId = data.last_id;
@@ -4680,7 +4716,12 @@
     if (!value) return false;
     rememberCopiedText(value);
     try {
-      if (navigator.clipboard && window.isSecureContext) {
+      sessionStorage.setItem(CHAT_CLIPBOARD_KEY, value);
+    } catch (_err) {
+      // In-memory paste remains available in this page.
+    }
+    try {
+      if (!castingIsNativeAppShell() && navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(value);
         return true;
       }
@@ -4693,7 +4734,10 @@
     ta.style.position = "fixed";
     ta.style.opacity = "0";
     document.body.appendChild(ta);
+    const previousFocus = document.activeElement;
+    ta.focus({ preventScroll: true });
     ta.select();
+    ta.setSelectionRange(0, value.length);
     let ok = false;
     try {
       ok = document.execCommand("copy");
@@ -4701,6 +4745,7 @@
       ok = false;
     }
     ta.remove();
+    if (previousFocus instanceof HTMLElement) previousFocus.focus({ preventScroll: true });
     return ok;
   };
 
@@ -5112,7 +5157,7 @@
 
   const applyChatMessageUpdate = (bubble, msg) => {
     if (!(bubble instanceof HTMLElement) || !msg) return;
-    const textEl = bubble.querySelector(".chat-bubble-text");
+    const textEl = bubble.querySelector(".chat-bubble-text:not(.is-photo)");
     if (textEl) textEl.textContent = msg.message || "";
     setChatBubbleEdited(bubble, !!msg.is_edited);
     bubble.setAttribute("data-can-edit", msg.can_edit ? "1" : "0");
@@ -5132,13 +5177,15 @@
     const id = String(msg.id || "");
     const existing = id ? root.querySelector('[data-msg-id="' + id + '"]') : null;
     if (existing instanceof HTMLElement) {
-      applyChatMessageUpdate(existing, msg);
       return;
     }
     root.querySelector("[data-chat-empty]")?.remove();
     const latest = root.querySelector("#latest");
     const article = buildChatBubble(msg, peerName);
-    if (latest) root.insertBefore(article, latest);
+    const next = Array.from(root.querySelectorAll("[data-msg-id]")).find((bubble) =>
+      Number(bubble.getAttribute("data-msg-id")) > Number(id)
+    );
+    if (next || latest) root.insertBefore(article, next || latest);
     else root.appendChild(article);
     root.scrollTop = root.scrollHeight;
   };
@@ -5243,10 +5290,8 @@
         const photoUrl = bubble instanceof HTMLElement ? (bubble.getAttribute("data-photo-url") || bubble.querySelector(".chat-bubble-text.is-photo img")?.getAttribute("src") || "") : "";
         const textEl = bubble instanceof HTMLElement ? bubble.querySelector(".chat-bubble-text:not(.is-photo)") : null;
         const ok = await copyChatText(photoUrl || (textEl ? textEl.textContent : ""));
-        if (ok) {
-          copyBtn.textContent = "کپی شد";
-          window.setTimeout(() => { copyBtn.textContent = "کپی"; }, 1200);
-        }
+        copyBtn.textContent = ok ? "کپی شد" : "کپی برای جاگذاری در پورتال";
+        window.setTimeout(() => { copyBtn.textContent = "کپی"; }, 1800);
         return;
       }
       const shareBtn = target.closest("[data-chat-share]");
@@ -5314,6 +5359,10 @@
 
     const liveForm = document.querySelector("[data-chat-live-send]");
     if (liveForm instanceof HTMLFormElement) {
+      const sendStatus = document.createElement("p");
+      sendStatus.className = "field-hint";
+      sendStatus.setAttribute("role", "status");
+      liveForm.appendChild(sendStatus);
       liveForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         const textarea = liveForm.querySelector("#message, textarea[name='message']");
@@ -5323,9 +5372,16 @@
           (textarea instanceof HTMLTextAreaElement ? textarea.value : "") ||
           ""
         ).trim();
-        if (!message || !peerId) return;
         const submitBtn = liveForm.querySelector('button[type="submit"]');
+        if (submitBtn?.disabled || !peerId) return;
+        if (!message) {
+          sendStatus.textContent = "متن پیام را وارد کنید.";
+          textarea?.focus();
+          return;
+        }
+        const draft = textarea?.value;
         if (submitBtn) submitBtn.disabled = true;
+        sendStatus.textContent = "در حال ارسال پیام…";
         try {
           const body = new FormData();
           body.set("action", "send");
@@ -5340,24 +5396,20 @@
           });
           const data = await res.json();
           if (!data || !data.ok) {
-            window.alert((data && data.error) || "ارسال ناموفق بود.");
+            sendStatus.textContent = (data && data.error) || "ارسال ناموفق بود.";
             return;
           }
-          if (textarea instanceof HTMLTextAreaElement && !(hiddenMsg instanceof HTMLInputElement)) {
+          sendStatus.textContent = "پیام ارسال شد.";
+          if (textarea instanceof HTMLTextAreaElement && !textarea.readOnly && textarea.value === draft) {
             textarea.value = "";
             growChatCompose(textarea);
           }
           if (data.message) {
             appendLiveBubble(liveThread, data.message, peerName);
-            const newId = Number(data.message.id || 0);
-            if (newId > lastId) {
-              lastId = newId;
-              liveThread.setAttribute("data-last-id", String(lastId));
-            }
           }
           livePoll.bump();
         } catch (_err) {
-          window.alert("خطا در ارسال پیام.");
+          sendStatus.textContent = "پاسخ سرور دریافت نشد. پیش از ارسال دوباره، گفتگو را بررسی کنید.";
         } finally {
           if (submitBtn) submitBtn.disabled = false;
         }
@@ -5388,11 +5440,6 @@
             }
             if (data.message) {
               appendLiveBubble(liveThread, data.message, peerName);
-              const newId = Number(data.message.id || 0);
-              if (newId > lastId) {
-                lastId = newId;
-                liveThread.setAttribute("data-last-id", String(lastId));
-              }
             }
             livePoll.bump();
           } catch (_err) {

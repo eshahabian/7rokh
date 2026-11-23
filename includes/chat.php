@@ -1373,7 +1373,7 @@ function casting_chat_list(int $limit = 80): array
     return $out;
 }
 
-function casting_dm_send(int $sender_id, int $recipient_id, string $message): array
+function casting_dm_send(int $sender_id, int $recipient_id, string $message, bool $notify_by_sms = true): array
 {
     $allow = casting_can_user_send_dm($sender_id, $recipient_id);
     if (!$allow['ok']) {
@@ -1396,6 +1396,7 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
 
     casting_chat_ensure_table();
     global $wpdb;
+    $created_at = current_time('mysql');
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery
     $ok = $wpdb->insert(
         casting_dm_table(),
@@ -1403,7 +1404,7 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
             'sender_id'    => $sender_id,
             'recipient_id' => $recipient_id,
             'message'      => $message,
-            'created_at'   => current_time('mysql'),
+            'created_at'   => $created_at,
         ],
         ['%d', '%d', '%s', '%s']
     );
@@ -1415,9 +1416,11 @@ function casting_dm_send(int $sender_id, int $recipient_id, string $message): ar
     $id = (int) $wpdb->insert_id;
     casting_employer_maybe_consume_free_message($sender_id);
     casting_dm_maybe_send_premium_required_notice($recipient_id, $sender_id);
-    casting_admin_message_notify_sms($sender_id, $recipient_id);
+    if ($notify_by_sms) {
+        casting_admin_message_notify_sms($sender_id, $recipient_id);
+    }
 
-    return ['ok' => true, 'id' => $id];
+    return ['ok' => true, 'id' => $id, 'message' => $message, 'created_at' => $created_at];
 }
 
 function casting_dm_send_photo(int $sender_id, int $recipient_id, string $field = 'photo'): array
