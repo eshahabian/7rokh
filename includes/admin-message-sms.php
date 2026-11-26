@@ -4,10 +4,29 @@ declare(strict_types=1);
 /** Send an alert after a new portal message or submission has been saved. */
 function casting_admin_message_notify_sms(int $sender_id, int $recipient_id, string $channel = 'chat'): void
 {
-    try {
-        if (defined('CASTING_ADMIN_MESSAGE_SMS_ENABLED') && !CASTING_ADMIN_MESSAGE_SMS_ENABLED) {
-            return;
+    if (defined('CASTING_ADMIN_MESSAGE_SMS_ENABLED') && !CASTING_ADMIN_MESSAGE_SMS_ENABLED) {
+        return;
+    }
+
+    $finish = function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : 'fastcgi_finish_request';
+    if (!function_exists($finish)) {
+        casting_admin_message_deliver_sms($sender_id, $recipient_id, $channel);
+        return;
+    }
+
+    register_shutdown_function(static function () use ($sender_id, $recipient_id, $channel, $finish): void {
+        ignore_user_abort(true);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
         }
+        $finish();
+        casting_admin_message_deliver_sms($sender_id, $recipient_id, $channel);
+    });
+}
+
+function casting_admin_message_deliver_sms(int $sender_id, int $recipient_id, string $channel): void
+{
+    try {
         if ($channel === 'chat' && ($sender_id <= 0 || $recipient_id <= 0 || $sender_id === $recipient_id
             || !get_user_by('id', $sender_id) || !get_user_by('id', $recipient_id))) {
             return;
@@ -58,9 +77,15 @@ function casting_admin_message_notify_sms(int $sender_id, int $recipient_id, str
                 }
                 $sent_mobiles[$mobile] = true;
                 try {
-                    $result = casting_sms_send_text($mobile, $body);
+                    $result = casting_sms_send_text($mobile, $body, 8);
                     if (empty($result['ok'])) {
-                        error_log('[casting-admin-message-sms] Gateway request failed for user ' . $user_id . ' (code ' . (int) ($result['code'] ?? -1) . ')');
+                        error_log('[casting-admin-message-sms] Gateway request failed (' . $channel . ', user ' . $user_id
+                            . ', code ' . (int) ($result['code'] ?? -1) . ', HTTP ' . (int) ($result['http'] ?? 0) . ')');
+                    } else {
+                        $ref = (string) ($result['ref_id'] ?? '');
+                        if (preg_match('/^[a-zA-Z0-9-]{1,64}$/D', $ref)) {
+                            error_log('[casting-admin-message-sms] Gateway accepted (' . $channel . ', user ' . $user_id . ', ref ' . $ref . ')');
+                        }
                     }
                 } catch (Throwable $e) {
                     error_log('[casting-admin-message-sms] Gateway request failed for user ' . $user_id);

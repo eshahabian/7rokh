@@ -424,15 +424,15 @@ function casting_sms_last_debug(): ?array
 }
 
 /** Apply the SMS connection timeout to this WordPress request only. */
-function casting_sms_http_request(string $url, string $method, array $args)
+function casting_sms_http_request(string $url, string $method, array $args, int $timeout = 25)
 {
     $args['method'] = $method;
-    $args['timeout'] = 25;
+    $args['timeout'] = $timeout;
 
     // WordPress Requests uses a separate connection timeout for cURL, including DNS.
-    $set_connect_timeout = static function ($handle, array $request_args, string $request_url) use ($url): void {
+    $set_connect_timeout = static function ($handle, array $request_args, string $request_url) use ($url, $timeout): void {
         if ($request_url === $url) {
-            curl_setopt($handle, CURLOPT_CONNECTTIMEOUT_MS, 20000);
+            curl_setopt($handle, CURLOPT_CONNECTTIMEOUT_MS, min(20, $timeout) * 1000);
         }
     };
 
@@ -447,7 +447,7 @@ function casting_sms_http_request(string $url, string $method, array $args)
 /**
  * @return array{ok:bool,error:string,code?:int,raw?:mixed,ref_id?:string,http?:int}
  */
-function casting_sms_request(string $endpoint, array $body): array
+function casting_sms_request(string $endpoint, array $body, int $timeout = 25): array
 {
     try {
         if (!casting_sms_is_configured()) {
@@ -466,7 +466,7 @@ function casting_sms_request(string $endpoint, array $body): array
             ],
             'body'        => wp_json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'data_format' => 'body',
-        ]);
+        ], $timeout);
 
         if (is_wp_error($response)) {
             $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
@@ -769,7 +769,7 @@ function casting_sms_otp_content_candidates(string $message, string $otp_code): 
  *
  * @return array{ok:bool,error:string,ref_id?:string,http?:int,code?:int}
  */
-function casting_sms_send_http_get(string $mobile, string $message): array
+function casting_sms_send_http_get(string $mobile, string $message, int $timeout = 25): array
 {
     if (!casting_sms_http_is_configured()) {
         return ['ok' => false, 'error' => 'برای ارسال HTTP، CASTING_SMS_USERNAME و CASTING_SMS_PASSWORD را در config.local.php بگذارید.'];
@@ -801,7 +801,7 @@ function casting_sms_send_http_get(string $mobile, string $message): array
         'headers' => [
             'Accept' => 'text/plain, application/json, */*',
         ],
-    ]);
+    ], $timeout);
     if (is_wp_error($response)) {
         $out = ['ok' => false, 'error' => 'ارتباط با پنل پیامک برقرار نشد: ' . $response->get_error_message()];
         casting_sms_remember_last([
@@ -1122,7 +1122,7 @@ function casting_sms_send_smart_otp(string $mobile, string $message, string $otp
 /**
  * @return array{ok:bool,error:string,ref_id?:string}
  */
-function casting_sms_send_text(string $mobile, string $message): array
+function casting_sms_send_text(string $mobile, string $message, int $timeout = 25): array
 {
     if (!function_exists('casting_normalize_mobile')) {
         require_once __DIR__ . '/profile.php';
@@ -1144,20 +1144,21 @@ function casting_sms_send_text(string $mobile, string $message): array
 
     $last = ['ok' => false, 'error' => 'ارسال پیامک ناموفق بود.', 'code' => -1];
     if (casting_sms_is_configured() && casting_sms_api_key() === '') {
-        return casting_sms_send_http_get($mobile, $message);
+        return casting_sms_send_http_get($mobile, $message, $timeout);
     }
     foreach (casting_sms_from_candidates() as $from) {
         $result = casting_sms_request('SMS/Send', [
             'From'     => $from,
             'ToNumber' => $mobile,
             'Content'  => $message,
-        ]);
+        ], $timeout);
         $code = (int) ($result['code'] ?? 0);
         $last = [
             'ok'     => $result['ok'],
             'error'  => $result['error'],
             'ref_id' => (string) ($result['ref_id'] ?? ''),
             'code'   => $code,
+            'http'   => (int) ($result['http'] ?? 0),
         ];
         if (!empty($result['ok'])) {
             return $last;

@@ -200,8 +200,7 @@ if ($action === 'send') {
     }
     $peer_id = (int) ($_POST['peer_id'] ?? 0);
     $message = (string) ($_POST['message'] ?? '');
-    $finish_before_sms = function_exists('fastcgi_finish_request');
-    $result = casting_dm_send($my_id, $peer_id, $message, !$finish_before_sms);
+    $result = casting_dm_send($my_id, $peer_id, $message);
     if (empty($result['ok'])) {
         http_response_code(400);
         echo wp_json_encode(['ok' => false, 'error' => (string) ($result['error'] ?? 'ارسال ناموفق بود.')]);
@@ -218,13 +217,6 @@ if ($action === 'send') {
             'edited_at'    => '',
         ], $my_id),
     ]);
-    if ($finish_before_sms) {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-        fastcgi_finish_request();
-        casting_admin_message_notify_sms($my_id, $peer_id);
-    }
     exit;
 }
 
