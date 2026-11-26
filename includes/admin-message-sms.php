@@ -39,13 +39,14 @@ function casting_admin_message_notify_sms(int $sender_id, int $recipient_id, str
             require_once __DIR__ . '/profile.php';
         }
 
-        $notice = match ($channel) {
+        $notices = [
             'contact' => 'پاسخ جدیدی در بخش تماس با ما ثبت شد.',
             'contact_inbox' => 'پیام جدیدی در بخش تماس با ما ثبت شد.',
             'contest' => 'ویدیوی جدیدی برای مسابقه ثبت شد.',
             'news' => 'خبر جدیدی برای بررسی و انتشار ارسال شد.',
-            default => 'پیام جدیدی در پیام‌رسان پورتال ثبت شد.',
-        };
+            'chat' => 'پیام جدیدی در پیام‌رسان پورتال ثبت شد.',
+        ];
+        $notice = $notices[$channel] ?? $notices['chat'];
         $body = "۷ رخ\n" . $notice . "\nبرای بررسی وارد حساب خود شوید.";
         $sent_mobiles = [];
         $mobile_keys = $channel === 'contest' ? ['casting_mobile', 'casting_mobile2'] : ['casting_mobile'];
