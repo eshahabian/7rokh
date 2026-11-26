@@ -946,7 +946,7 @@ function casting_sms_send_otp(string $mobile, string $message, string $otp_code 
     }
     $last = $text;
 
-    if (casting_sms_http_is_configured()) {
+    if (casting_sms_api_key() !== '' && casting_sms_http_is_configured()) {
         $http = casting_sms_send_http_get($mobile, $message);
         if (!empty($http['ok'])) {
             return $http;
@@ -1143,6 +1143,9 @@ function casting_sms_send_text(string $mobile, string $message): array
     }
 
     $last = ['ok' => false, 'error' => 'ارسال پیامک ناموفق بود.', 'code' => -1];
+    if (casting_sms_is_configured() && casting_sms_api_key() === '') {
+        return casting_sms_send_http_get($mobile, $message);
+    }
     foreach (casting_sms_from_candidates() as $from) {
         $result = casting_sms_request('SMS/Send', [
             'From'     => $from,

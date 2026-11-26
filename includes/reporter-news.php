@@ -262,6 +262,7 @@ function casting_news_api(int $uid): void
     if (!$lock || !flock($lock, LOCK_EX)) {
         throw new RuntimeException('قفل ذخیره‌سازی در دسترس نیست.');
     }
+    $new_submission = false;
     try {
         $meta = is_file($base . '.json') ? json_decode((string) file_get_contents($base . '.json'), true, 512, JSON_THROW_ON_ERROR) : null;
         $action = (string) ($_POST['action'] ?? '');
@@ -358,6 +359,7 @@ function casting_news_api(int $uid): void
             $meta['reporter'] = (string) $user->display_name;
             $meta['created'] = gmdate('c');
             $meta['done'] = true;
+            $new_submission = true;
             $offset = casting_news_media_offset($photo_path);
         }
         $json = json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
@@ -367,6 +369,10 @@ function casting_news_api(int $uid): void
     } finally {
         flock($lock, LOCK_UN);
         fclose($lock);
+    }
+    if ($new_submission) {
+        require_once __DIR__ . '/admin-message-sms.php';
+        casting_admin_message_notify_sms($uid, 0, 'news');
     }
     casting_news_json(['offset' => $offset, 'done' => $meta['done']]);
 }

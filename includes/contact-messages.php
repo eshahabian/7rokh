@@ -171,7 +171,9 @@ function casting_contact_save_message(
 
     $inbox = casting_contact_load_inbox();
     array_unshift($inbox, $entry);
-    casting_contact_save_inbox($inbox);
+    if (!casting_contact_save_inbox($inbox)) {
+        return [];
+    }
 
     return $entry;
 }
@@ -260,6 +262,10 @@ function casting_contact_send_message(
         $channel
     );
 
+    if (!$saved) {
+        return ['ok' => false, 'error' => 'ذخیره پیام ناموفق بود.', 'message' => null];
+    }
+    casting_admin_message_notify_sms($user_id, $recipient_id, 'contact_inbox');
     return ['ok' => true, 'error' => '', 'message' => $saved];
 }
 

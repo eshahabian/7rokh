@@ -961,8 +961,12 @@ function casting_intro_clip_save_upload(int $user_id, string $field): array
     ];
     $rows = casting_intro_clip_rows($user_id);
     array_unshift($rows, $row);
-    update_user_meta($user_id, CASTING_INTRO_CLIP_META, $rows);
-    casting_intro_clip_notify_reviewers($user_id, (string) $row['display_name']);
+    if (!update_user_meta($user_id, CASTING_INTRO_CLIP_META, $rows)) {
+        unlink($dest);
+        return ['ok' => false, 'error' => 'ثبت اثر در پروفایل ناموفق بود.'];
+    }
+    require_once __DIR__ . '/admin-message-sms.php';
+    casting_admin_message_notify_sms($user_id, 0, 'contest');
 
     return ['ok' => true, 'error' => ''];
 }
@@ -1133,57 +1137,6 @@ function casting_intro_clip_submitter_count(): int
     }
 
     return count($people);
-}
-
-function casting_intro_clip_notify_reviewers(int $uploader_id, string $display_name): void
-{
-    if (!function_exists('casting_sms_send_text')) {
-        $sms = __DIR__ . '/sms.php';
-        if (is_file($sms)) {
-            require_once $sms;
-        }
-    }
-    if (!function_exists('casting_sms_send_text') || !function_exists('get_user_by')) {
-        return;
-    }
-    if (!function_exists('casting_normalize_mobile')) {
-        require_once __DIR__ . '/profile.php';
-    }
-
-    $name = trim($display_name);
-    if ($name === '') {
-        $name = 'یک عضو';
-    }
-    if (function_exists('mb_substr')) {
-        $name = mb_substr($name, 0, 40, 'UTF-8');
-    }
-    $count = casting_intro_clip_submitter_count();
-    $message = '۷رخ: اثر جدید از ' . $name . ' ثبت شد. ' . $count . ' نفر ویدیو گذاشته‌اند.';
-
-    foreach (['eshahabian', 'ardavan'] as $login) {
-        $reviewer = get_user_by('login', $login);
-        if (!$reviewer instanceof WP_User) {
-            continue;
-        }
-        $reviewer_id = (int) $reviewer->ID;
-        if ($reviewer_id <= 0 || $reviewer_id === $uploader_id) {
-            continue;
-        }
-        $mobiles = [];
-        foreach (['casting_mobile', 'casting_mobile2'] as $meta_key) {
-            $mobile = casting_normalize_mobile((string) get_user_meta($reviewer_id, $meta_key, true));
-            if (preg_match('/^09\d{9}$/', $mobile) === 1) {
-                $mobiles[$mobile] = true;
-            }
-        }
-        foreach (array_keys($mobiles) as $mobile) {
-            try {
-                casting_sms_send_text($mobile, $message);
-            } catch (Throwable $e) {
-                // ارسال اثر نباید به‌خاطر پیامک متوقف شود
-            }
-        }
-    }
 }
 
 function casting_intro_clip_output(int $owner_id, string $clip_id): void

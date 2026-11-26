@@ -32,6 +32,7 @@ function update_option($key, $value, $autoload = false) {
     return true;
 }
 function sanitize_key($value) { return strtolower($value); }
+function sanitize_text_field($value) { return trim(strip_tags($value)); }
 function sanitize_textarea_field($value) { return trim(strip_tags($value)); }
 function sanitize_email($value) { return trim($value); }
 function is_email($value) { return (bool) filter_var($value, FILTER_VALIDATE_EMAIL); }
@@ -46,8 +47,8 @@ foreach ([1, 2] as $id) { casting_admin_message_notify_sms($id, 3); }
 check(count($sms) === 2, 'Both managers notify, case insensitively');
 check($sms[0]['mobile'] === $mobiles[3], 'Use recipient mobile');
 check(strpos($sms[0]['body'], 'http') === false && strpos($sms[0]['body'], '7rokh.ir') === false && strpos($sms[0]['body'], '/casting-portal/') === false, 'DM notification contains no link');
-foreach ([[3, 1], [4, 3], [1, 1], [0, 3], [1, 0], [1, 99]] as $args) { casting_admin_message_notify_sms(...$args); }
-check(count($sms) === 2, 'Other users/admins, self and missing recipients do not notify');
+foreach ([[99, 3], [1, 1], [0, 3], [1, 0], [1, 99], [4, 3, 'contact']] as $args) { casting_admin_message_notify_sms(...$args); }
+check(count($sms) === 2, 'Invalid participants, self and non-manager replies with no manager mobiles do not notify');
 $mobiles[3] = 'invalid'; casting_admin_message_notify_sms(1, 3);
 $mobiles[3] = ''; casting_admin_message_notify_sms(1, 3);
 $mobiles[3] = '09123456789'; $configured = false; casting_admin_message_notify_sms(1, 3);
@@ -83,6 +84,31 @@ $sms_mode = 'success'; $before = count($sms);
 $row['user_id'] = 0; $options['casting_contact_inbox'] = [$row];
 check(casting_contact_reply('ct_test', 1, 'Guest email reply')['ok'], 'Guest email response stays supported');
 check(count($sms) === $before, 'Guest without a member mobile receives no SMS');
+
+$mobiles[1] = '09123456780';
+$mobiles[2] = '09123456781';
+$before = count($sms);
+$save_fail = true;
+check(!casting_contact_send_message('site_admin', 'Subject', 'An unsaved message', 0, 'Guest', 'guest@example.com')['ok'], 'Report failed contact submission');
+$save_fail = false;
+check(count($sms) === $before, 'Failed contact submission does not notify');
+check(casting_contact_send_message('site_admin', 'Subject', 'A private guest message', 0, 'Guest', 'guest@example.com')['ok'], 'Save guest contact submission');
+check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[2]], 'Contact submission alerts both managers');
+$before = count($sms);
+$mobiles[4] = '09123456782';
+casting_admin_message_notify_sms(3, 4);
+check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[2]], 'Member-to-member DM alerts the managers');
+$before = count($sms);
+casting_admin_message_notify_sms(1, 2);
+check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[2]], 'Manager-to-manager DM alerts the recipient once');
+foreach (['contest', 'news'] as $channel) {
+    $before = count($sms);
+    $sms_mode = 'throw';
+    casting_admin_message_notify_sms(3, 0, $channel);
+    check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[2]], 'A failed manager delivery does not stop the second attempt');
+}
+$sms_mode = 'success';
+unset($mobiles[1], $mobiles[2]);
 echo "Admin message SMS and contact reply checks passed.\n";
 
 // Exercise the real DM send functions against an in-memory database.
@@ -131,14 +157,21 @@ $sms_mode = 'throw';
 check(casting_dm_send(1, 3, 'Gateway failure')['ok'], 'Saved DM succeeds despite SMS failure');
 $sms_mode = 'success';
 $before = count($sms);
-check(casting_dm_send(4, 3, 'Other administrator')['ok'], 'Other admins can still send normally');
-check(count($sms) === $before, 'Other admins do not trigger SMS');
+$mobiles[1] = '09123456780';
+$mobiles[2] = '09123456781';
+check(casting_dm_send(3, 1, 'Private member message')['ok'], 'Member DM succeeds');
+check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[2]], 'Member DM alerts both managers once');
+check(strpos($sms[$before]['body'], 'Private member message') === false, 'SMS omits the DM text');
+$before = count($sms);
+check(casting_dm_send(1, 3, 'A manager message')['ok'], 'Manager DM succeeds');
+check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[2], $mobiles[3]], 'Manager DM alerts the other manager and the member');
+$before = count($sms);
 $photo = tempnam(sys_get_temp_dir(), 'casting-sms-photo-');
 file_put_contents($photo, base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'));
 try {
     $_FILES['photo'] = ['error' => UPLOAD_ERR_OK, 'size' => filesize($photo), 'tmp_name' => $photo];
     check(casting_dm_send_photo(2, 3)['ok'], 'Manager photo send succeeds');
-    check(count($sms) === $before + 1, 'Manager photo notifies once');
+    check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[3]], 'Manager photo alerts the other manager and the member');
 } finally {
     unlink($photo);
 }
