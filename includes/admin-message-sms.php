@@ -8,14 +8,21 @@ function casting_admin_message_notify_sms(int $sender_id, int $recipient_id, str
         return;
     }
 
-    // Deliver before the response ends. On LiteSpeed, calling litespeed_finish_request()
-    // or fastcgi_finish_request() from a shutdown function stops the process first,
-    // so the SMS never leaves.
+    // Send in this request. finish_request() inside shutdown drops the SMS on LiteSpeed.
     ignore_user_abort(true);
     if (function_exists('set_time_limit')) {
-        @set_time_limit(60);
+        @set_time_limit($channel === 'chat' ? 12 : 60);
     }
     casting_admin_message_deliver_sms($sender_id, $recipient_id, $channel);
+}
+
+function casting_admin_message_sender_is_premium(int $sender_id): bool
+{
+    if (!function_exists('casting_user_is_premium')) {
+        require_once __DIR__ . '/premium.php';
+    }
+
+    return function_exists('casting_user_is_premium') && casting_user_is_premium($sender_id);
 }
 
 function casting_admin_message_deliver_sms(int $sender_id, int $recipient_id, string $channel): void
@@ -26,19 +33,25 @@ function casting_admin_message_deliver_sms(int $sender_id, int $recipient_id, st
             return;
         }
 
-        $manager_ids = [];
-        foreach (['eshahabian', 'ardavan'] as $login) {
-            $manager = get_user_by('login', $login);
-            if ($manager && (int) $manager->ID > 0) {
-                $manager_ids[(int) $manager->ID] = true;
+        if ($channel === 'chat') {
+            if (!casting_admin_message_sender_is_premium($sender_id)) {
+                return;
             }
-        }
-        $targets = $manager_ids;
-        unset($targets[$sender_id]);
-        $alert_recipient = $channel === 'chat' || isset($manager_ids[$sender_id]);
-        if ($alert_recipient && $recipient_id > 0 && $recipient_id !== $sender_id
-            && get_user_by('id', $recipient_id)) {
-            $targets[$recipient_id] = true;
+            $targets = [$recipient_id => true];
+        } else {
+            $manager_ids = [];
+            foreach (['eshahabian', 'ardavan'] as $login) {
+                $manager = get_user_by('login', $login);
+                if ($manager && (int) $manager->ID > 0) {
+                    $manager_ids[(int) $manager->ID] = true;
+                }
+            }
+            $targets = $manager_ids;
+            unset($targets[$sender_id]);
+            if (isset($manager_ids[$sender_id]) && $recipient_id > 0 && $recipient_id !== $sender_id
+                && get_user_by('id', $recipient_id)) {
+                $targets[$recipient_id] = true;
+            }
         }
         if (!$targets) {
             return;
@@ -72,7 +85,7 @@ function casting_admin_message_deliver_sms(int $sender_id, int $recipient_id, st
                 }
                 $sent_mobiles[$mobile] = true;
                 try {
-                    $result = casting_sms_send_text($mobile, $body, 8);
+                    $result = casting_sms_send_text($mobile, $body, $channel === 'chat' ? 4 : 8);
                     if (empty($result['ok'])) {
                         error_log('[casting-admin-message-sms] Gateway request failed (' . $channel . ', user ' . $user_id
                             . ', code ' . (int) ($result['code'] ?? -1) . ', HTTP ' . (int) ($result['http'] ?? 0) . ')');

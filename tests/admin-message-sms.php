@@ -46,12 +46,14 @@ function is_email($value) { return (bool) filter_var($value, FILTER_VALIDATE_EMA
 function casting_strlen($value) { return strlen($value); }
 function current_time($format) { return '2026-11-18 12:00:00'; }
 function casting_user_is_listed_portal_admin($id) { return in_array($id, [1, 2, 4], true); }
+$premium_ids = [1, 2];
+function casting_user_is_premium($id) { global $premium_ids; return in_array((int) $id, $premium_ids, true); }
 function casting_send_mail($email, $subject, $body) { return ['ok' => true]; }
 require_once dirname(__DIR__) . '/includes/contact-messages.php';
 function check($condition, $message) { if (!$condition) { throw new RuntimeException($message); } }
 
 foreach ([1, 2] as $id) { casting_admin_message_notify_sms($id, 3); }
-check(count($sms) === 2, 'Both managers notify, case insensitively');
+check(count($sms) === 2, 'Premium manager DMs alert the recipient');
 check($sms[0]['mobile'] === $mobiles[3], 'Use recipient mobile');
 check(strpos($sms[0]['body'], 'http') === false && strpos($sms[0]['body'], '7rokh.ir') === false && strpos($sms[0]['body'], '/casting-portal/') === false, 'DM notification contains no link');
 foreach ([[99, 3], [1, 1], [0, 3], [1, 0], [1, 99], [4, 3, 'contact']] as $args) { casting_admin_message_notify_sms(...$args); }
@@ -104,7 +106,12 @@ check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobi
 $before = count($sms);
 $mobiles[4] = '09123456782';
 casting_admin_message_notify_sms(3, 4);
-check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[2], $mobiles[4]], 'Member-to-member DM alerts the managers and the recipient');
+check(count($sms) === $before, 'Non-premium member DM does not send SMS');
+$premium_ids[] = 3;
+$before = count($sms);
+casting_admin_message_notify_sms(3, 4);
+check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[4]], 'Premium member DM alerts only the recipient');
+$premium_ids = [1, 2];
 $before = count($sms);
 casting_admin_message_notify_sms(1, 2);
 check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[2]], 'Manager-to-manager DM alerts the recipient once');
@@ -118,11 +125,19 @@ $sms_mode = 'success';
 $mobiles2[1] = '09120000001';
 $mobiles2[2] = '09120000002';
 $both_numbers = ['09123456780', '09120000001', '09123456781', '09120000002'];
-foreach (['chat' => [3, 1], 'news' => [3, 0], 'contest' => [3, 0]] as $channel => $pair) {
+foreach (['news', 'contest'] as $channel) {
     $before = count($sms);
-    casting_admin_message_notify_sms($pair[0], $pair[1], $channel);
+    casting_admin_message_notify_sms(3, 0, $channel);
     check(array_column(array_slice($sms, $before), 'mobile') === $both_numbers, 'Both manager numbers are alerted for ' . $channel);
 }
+$before = count($sms);
+casting_admin_message_notify_sms(3, 1, 'chat');
+check(count($sms) === $before, 'Non-premium chat does not alert the recipient');
+$premium_ids[] = 3;
+$before = count($sms);
+casting_admin_message_notify_sms(3, 1, 'chat');
+check(array_column(array_slice($sms, $before), 'mobile') === ['09123456780', '09120000001'], 'Premium chat alerts only the recipient numbers');
+$premium_ids = [1, 2];
 $mobiles2 = [];
 unset($mobiles[1], $mobiles[2]);
 echo "Admin message SMS and contact reply checks passed.\n";
@@ -176,18 +191,23 @@ $before = count($sms);
 $mobiles[1] = '09123456780';
 $mobiles[2] = '09123456781';
 check(casting_dm_send(3, 1, 'Private member message')['ok'], 'Member DM succeeds');
-check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[2]], 'Member DM alerts both managers once');
+check(count($sms) === $before, 'Non-premium member DM does not send SMS');
+$premium_ids[] = 3;
+$before = count($sms);
+check(casting_dm_send(3, 1, 'Private member message')['ok'], 'Premium member DM succeeds');
+check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1]], 'Premium member DM alerts only the recipient');
 check(strpos($sms[$before]['body'], 'Private member message') === false, 'SMS omits the DM text');
+$premium_ids = [1, 2];
 $before = count($sms);
 check(casting_dm_send(1, 3, 'A manager message')['ok'], 'Manager DM succeeds');
-check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[2], $mobiles[3]], 'Manager DM alerts the other manager and the member');
+check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[3]], 'Manager DM alerts only the recipient');
 $before = count($sms);
 $photo = tempnam(sys_get_temp_dir(), 'casting-sms-photo-');
 file_put_contents($photo, base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'));
 try {
     $_FILES['photo'] = ['error' => UPLOAD_ERR_OK, 'size' => filesize($photo), 'tmp_name' => $photo];
     check(casting_dm_send_photo(2, 3)['ok'], 'Manager photo send succeeds');
-    check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[3]], 'Manager photo alerts the other manager and the member');
+    check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[3]], 'Manager photo alerts only the recipient');
 } finally {
     unlink($photo);
 }
