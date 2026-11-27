@@ -5,6 +5,7 @@ declare(strict_types=1);
 define('CASTING_MAIN_SITE_URL', 'https://7rokh.ir');
 $users = [1 => 'eshahabian', 2 => 'Ardavan', 3 => 'member', 4 => 'other_admin'];
 $mobiles = [3 => '09123456789'];
+$mobiles2 = [];
 $options = [];
 $sms = [];
 $configured = true;
@@ -15,10 +16,16 @@ function get_user_by($field, $value) {
     $id = $field === 'id' ? (int) $value : array_search(strtolower((string) $value), array_map('strtolower', $users), true);
     return isset($users[$id]) ? (object) ['ID' => $id, 'user_login' => $users[$id], 'display_name' => $users[$id]] : false;
 }
-function get_user_meta($id, $key, $single = true) { global $mobiles; return $key === 'casting_mobile' ? ($mobiles[$id] ?? '') : ''; }
+function get_user_meta($id, $key, $single = true) {
+    global $mobiles, $mobiles2;
+    if ($key === 'casting_mobile2') {
+        return $mobiles2[$id] ?? '';
+    }
+    return $key === 'casting_mobile' ? ($mobiles[$id] ?? '') : '';
+}
 function casting_normalize_mobile($value) { return trim($value); }
 function casting_sms_is_configured() { global $configured; return $configured; }
-function casting_sms_send_text($mobile, $body) {
+function casting_sms_send_text($mobile, $body, $timeout = 25) {
     global $sms, $sms_mode, $options;
     $sms[] = ['mobile' => $mobile, 'body' => $body, 'inbox' => $options['casting_contact_inbox'] ?? [], 'dm_count' => isset($GLOBALS['wpdb']) ? count($GLOBALS['wpdb']->rows) : 0];
     if ($sms_mode === 'throw') { throw new RuntimeException('Gateway unavailable'); }
@@ -108,6 +115,15 @@ foreach (['contest', 'news'] as $channel) {
     check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[2]], 'A failed manager delivery does not stop the second attempt');
 }
 $sms_mode = 'success';
+$mobiles2[1] = '09120000001';
+$mobiles2[2] = '09120000002';
+$both_numbers = ['09123456780', '09120000001', '09123456781', '09120000002'];
+foreach (['chat' => [3, 1], 'news' => [3, 0], 'contest' => [3, 0]] as $channel => $pair) {
+    $before = count($sms);
+    casting_admin_message_notify_sms($pair[0], $pair[1], $channel);
+    check(array_column(array_slice($sms, $before), 'mobile') === $both_numbers, 'Both manager numbers are alerted for ' . $channel);
+}
+$mobiles2 = [];
 unset($mobiles[1], $mobiles[2]);
 echo "Admin message SMS and contact reply checks passed.\n";
 

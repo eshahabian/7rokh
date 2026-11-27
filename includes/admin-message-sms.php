@@ -8,20 +8,14 @@ function casting_admin_message_notify_sms(int $sender_id, int $recipient_id, str
         return;
     }
 
-    $finish = function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : 'fastcgi_finish_request';
-    if (!function_exists($finish)) {
-        casting_admin_message_deliver_sms($sender_id, $recipient_id, $channel);
-        return;
+    // Deliver before the response ends. On LiteSpeed, calling litespeed_finish_request()
+    // or fastcgi_finish_request() from a shutdown function stops the process first,
+    // so the SMS never leaves.
+    ignore_user_abort(true);
+    if (function_exists('set_time_limit')) {
+        @set_time_limit(60);
     }
-
-    register_shutdown_function(static function () use ($sender_id, $recipient_id, $channel, $finish): void {
-        ignore_user_abort(true);
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-        $finish();
-        casting_admin_message_deliver_sms($sender_id, $recipient_id, $channel);
-    });
+    casting_admin_message_deliver_sms($sender_id, $recipient_id, $channel);
 }
 
 function casting_admin_message_deliver_sms(int $sender_id, int $recipient_id, string $channel): void
@@ -68,7 +62,7 @@ function casting_admin_message_deliver_sms(int $sender_id, int $recipient_id, st
         $notice = $notices[$channel] ?? $notices['chat'];
         $body = "۷ رخ\n" . $notice . "\nبرای بررسی وارد حساب خود شوید.";
         $sent_mobiles = [];
-        $mobile_keys = $channel === 'contest' ? ['casting_mobile', 'casting_mobile2'] : ['casting_mobile'];
+        $mobile_keys = ['casting_mobile', 'casting_mobile2'];
         foreach (array_keys($targets) as $user_id) {
             foreach ($mobile_keys as $meta_key) {
                 $mobile = casting_normalize_mobile((string) get_user_meta($user_id, $meta_key, true));
@@ -91,6 +85,9 @@ function casting_admin_message_deliver_sms(int $sender_id, int $recipient_id, st
                     error_log('[casting-admin-message-sms] Gateway request failed for user ' . $user_id);
                 }
             }
+        }
+        if ($sent_mobiles === []) {
+            error_log('[casting-admin-message-sms] No valid mobile for channel ' . $channel);
         }
     } catch (Throwable $e) {
         error_log('[casting-admin-message-sms] Notification failed for channel ' . $channel);
