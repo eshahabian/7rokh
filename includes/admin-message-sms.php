@@ -35,7 +35,8 @@ function casting_admin_message_deliver_sms(int $sender_id, int $recipient_id, st
         }
         $targets = $manager_ids;
         unset($targets[$sender_id]);
-        if (isset($manager_ids[$sender_id]) && $recipient_id > 0 && $recipient_id !== $sender_id
+        $alert_recipient = $channel === 'chat' || isset($manager_ids[$sender_id]);
+        if ($alert_recipient && $recipient_id > 0 && $recipient_id !== $sender_id
             && get_user_by('id', $recipient_id)) {
             $targets[$recipient_id] = true;
         }

@@ -104,7 +104,7 @@ check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobi
 $before = count($sms);
 $mobiles[4] = '09123456782';
 casting_admin_message_notify_sms(3, 4);
-check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[2]], 'Member-to-member DM alerts the managers');
+check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[1], $mobiles[2], $mobiles[4]], 'Member-to-member DM alerts the managers and the recipient');
 $before = count($sms);
 casting_admin_message_notify_sms(1, 2);
 check(array_column(array_slice($sms, $before), 'mobile') === [$mobiles[2]], 'Manager-to-manager DM alerts the recipient once');
